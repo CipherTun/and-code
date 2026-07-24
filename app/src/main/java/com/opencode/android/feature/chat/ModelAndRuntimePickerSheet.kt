@@ -61,6 +61,7 @@ fun ModelAndRuntimePickerSheet(
     onSelectModel: (String, String) -> Unit,
     favoriteModelKeys: Set<String> = emptySet(),
     recentModelKeys: List<String> = emptyList(),
+    hiddenModelKeys: Set<String> = emptySet(),
     onToggleFavorite: (String, String) -> Unit = { _, _ -> },
     onDismiss: () -> Unit
 ) {
@@ -136,8 +137,9 @@ fun ModelAndRuntimePickerSheet(
                 val favoriteEntries = providers.flatMap { provider ->
                     provider.models.values
                         .filter { "$provider.id/${it.id}" in favoriteModelKeys }
+                        .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
                         .map { FavoriteEntry(provider, it) }
-                }
+                }.sortedBy { it.model.name.lowercase() }
 
                 val recentEntries = recentModelKeys.mapNotNull { key ->
                     val providerId = key.substringBefore('/')
@@ -146,6 +148,7 @@ fun ModelAndRuntimePickerSheet(
                     val model = provider.models[modelId] ?: return@mapNotNull null
                     FavoriteEntry(provider, model)
                 }.filter { entry -> "${entry.provider.id}/${entry.model.id}" !in favoriteModelKeys }
+                 .filter { query.isBlank() || it.model.name.contains(query, true) || it.model.id.contains(query, true) }
 
                 if (favoriteEntries.isNotEmpty()) {
                     item {
@@ -196,6 +199,7 @@ fun ModelAndRuntimePickerSheet(
                 providers.forEach { provider ->
                     val models = provider.models.values
                         .filter { it.status == null || it.status == "active" }
+                        .filter { "${provider.id}/${it.id}" !in hiddenModelKeys }
                         .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
                         .sortedBy { it.name.lowercase() }
                     if (models.isNotEmpty()) {

@@ -1,7 +1,7 @@
 package com.opencode.android.runtime
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import com.opencode.android.core.api.ConfiguredProvider
 import com.opencode.android.core.api.McpServer
 import com.opencode.android.core.api.OpenCodeAgent

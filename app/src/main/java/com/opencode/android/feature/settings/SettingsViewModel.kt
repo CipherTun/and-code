@@ -49,6 +49,7 @@ data class SettingsUiState(
     val providerAuthNotice: ProviderAuthNotice? = null,
     val favoriteModelKeys: Set<String> = emptySet(),
     val recentModelKeys: List<String> = emptyList(),
+    val hiddenModelKeys: Set<String> = emptySet(),
     val githubConfigured: Boolean = false,
     val githubLogin: String? = null,
     val githubMessage: String? = null,
@@ -135,6 +136,7 @@ class SettingsViewModel(
             providerAuthNotice = oauth.notice,
             favoriteModelKeys = core.preferences.favoriteModelKeys,
             recentModelKeys = core.preferences.recentModelKeys,
+            hiddenModelKeys = core.preferences.hiddenModelKeys,
             githubConfigured = githubAuth.isConfigured,
             githubLogin = settings.githubLogin,
             githubMessage = github.message,
@@ -154,6 +156,9 @@ class SettingsViewModel(
     fun setAutoAcceptPermissions(enabled: Boolean) = preferences.setAutoAcceptPermissions(enabled)
     fun toggleFavoriteModel(providerId: String, modelId: String) =
         preferences.toggleFavoriteModel(providerId, modelId)
+
+    fun toggleModelVisibility(providerId: String, modelId: String) =
+        preferences.toggleModelVisibility(providerId, modelId)
 
     fun beginGitHubDeviceFlow() {
         viewModelScope.launch {

@@ -419,6 +419,11 @@
     <string name="this_android">This Android</string>
     <string name="picker_no_providers">No connected providers yet</string>
 
+    <!-- Model visibility settings -->
+    <string name="model_visibility_row">Visible models</string>
+    <string name="model_visibility_title">Visible models</string>
+    <string name="model_visibility_caption">Uncheck models to hide them from the model picker.</string>
+
     <!-- Redesign: onboarding -->
     <string name="onboarding_welcome_title">Welcome to OpenCode</string>
     <string name="onboarding_subtitle">Write, fix, and understand code. To get started, just choose one execution path.</string>

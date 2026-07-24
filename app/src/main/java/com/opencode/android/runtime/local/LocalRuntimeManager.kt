@@ -1,7 +1,5 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import com.opencode.android.runtime.LocalRuntimeStatus
 import java.io.File
 import java.net.InetSocketAddress
@@ -15,13 +13,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
+@Serializable
 data class LocalRuntimeMetadata(
-    @SerializedName("version") val version: String,
-    @SerializedName("port") val port: Int,
-    @SerializedName("installedAt") val installedAt: Long,
-    @SerializedName("runtimeVersion") val runtimeVersion: String = "legacy",
-    @SerializedName("abi") val abi: String = "unknown"
+    @SerialName("version") val version: String,
+    @SerialName("port") val port: Int,
+    @SerialName("installedAt") val installedAt: Long,
+    @SerialName("runtimeVersion") val runtimeVersion: String = "legacy",
+    @SerialName("abi") val abi: String = "unknown"
 )
 
 class LocalRuntimeManager(
@@ -33,6 +35,7 @@ class LocalRuntimeManager(
     private val updateEngine: LocalRuntimeUpdateEngine? = null,
     private val runtimeOperations: LocalRuntimeOperations? = null
 ) {
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
     private val operationMutex = Mutex()
     private val mutableState = MutableStateFlow(computeStatus())
     val state: StateFlow<LocalRuntimeStatus> = mutableState.asStateFlow()
@@ -410,7 +413,7 @@ class LocalRuntimeManager(
         val metadataFile = File(runtimeDirectory, METADATA_FILE)
         if (!metadataFile.isFile) return LocalRuntimeStatus.NotInstalled
         val metadata = runCatching {
-            Gson().fromJson(metadataFile.readText(), LocalRuntimeMetadata::class.java)
+            json.decodeFromString<LocalRuntimeMetadata>(metadataFile.readText())
         }.getOrElse { error ->
             return LocalRuntimeStatus.Broken("Runtime metadata is invalid: ${error.message}")
         }
@@ -433,7 +436,7 @@ class LocalRuntimeManager(
         val metadataFile = File(runtimeDirectory, METADATA_FILE)
         if (!metadataFile.isFile) return null
         return runCatching {
-            Gson().fromJson(metadataFile.readText(), LocalRuntimeMetadata::class.java)
+            json.decodeFromString<LocalRuntimeMetadata>(metadataFile.readText())
         }.getOrNull()
     }
 

@@ -1,10 +1,5 @@
 package com.opencode.android.core.api
 
-import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import com.google.gson.reflect.TypeToken
 import com.opencode.android.core.security.OpenCodeUrl
 import com.opencode.android.data.connection.ConnectionProfile
 import kotlinx.coroutines.CancellationException
@@ -18,21 +13,32 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import okhttp3.Credentials
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class OpenCodeApiClient(
     private val profile: ConnectionProfile,
     private val httpClient: OkHttpClient = defaultHttpClient(),
-    private val gson: Gson = Gson(),
-    private val eventParser: OpenCodeEventParser = OpenCodeEventParser(gson)
+    private val json: Json = defaultJson,
+    private val eventParser: OpenCodeEventParser = OpenCodeEventParser(json)
 ) {
     private val baseUrl: HttpUrl = OpenCodeUrl.normalize(profile.baseUrl).getOrThrow()
     private val providerAuthHttpClient: OkHttpClient = httpClient.newBuilder()
@@ -40,25 +46,24 @@ class OpenCodeApiClient(
         .callTimeout(PROVIDER_AUTH_TIMEOUT_MINUTES, TimeUnit.MINUTES)
         .build()
 
-    suspend fun health(): OpenCodeHealth = get("global/health", OpenCodeHealth::class.java)
+    suspend fun health(): OpenCodeHealth = get("global/health")
 
     suspend fun sessions(directory: String? = null): List<OpenCodeSession> =
         getList("session", query("directory" to directory))
 
     suspend fun session(sessionId: String): OpenCodeSession =
-        get("session/${encodePath(sessionId)}", OpenCodeSession::class.java)
+        get("session/${encodePath(sessionId)}")
 
     suspend fun createSession(
         title: String? = null,
         directory: String? = null
     ): OpenCodeSession {
-        val body = JsonObject().apply {
-            title?.takeIf { it.isNotBlank() }?.let { addProperty("title", it) }
+        val body = buildJsonObject {
+            title?.takeIf { it.isNotBlank() }?.let { put("title", it) }
         }
         return post(
             "session",
             body,
-            OpenCodeSession::class.java,
             query("directory" to directory)
         )
     }
@@ -66,15 +71,14 @@ class OpenCodeApiClient(
     suspend fun messages(sessionId: String): List<OpenCodeMessage> =
         getList("session/${encodePath(sessionId)}/message")
 
-    suspend fun providers(): ProviderCatalog = get("provider", ProviderCatalog::class.java)
+    suspend fun providers(): ProviderCatalog = get("provider")
 
     suspend fun agents(): List<OpenCodeAgent> = getList("agent")
 
     suspend fun providerAuthMethods(): Map<String, List<ProviderAuthMethod>> =
         withContext(Dispatchers.IO) {
-            val type = object : TypeToken<Map<String, List<ProviderAuthMethod>>>() {}.type
             execute(requestBuilder("provider/auth").get().build()) { body ->
-                gson.fromJson<Map<String, List<ProviderAuthMethod>>>(body, type).orEmpty()
+                json.decodeFromString<Map<String, List<ProviderAuthMethod>>>(body)
             }
         }
 
@@ -84,15 +88,14 @@ class OpenCodeApiClient(
         inputs: Map<String, String> = emptyMap()
     ): ProviderAuthAuthorization = post(
         "provider/${encodePath(providerId)}/oauth/authorize",
-        JsonObject().apply {
-            addProperty("method", methodIndex)
+        buildJsonObject {
+            put("method", methodIndex)
             if (inputs.isNotEmpty()) {
-                add("inputs", JsonObject().apply {
-                    inputs.forEach { (key, value) -> addProperty(key, value) }
+                put("inputs", buildJsonObject {
+                    inputs.forEach { (key, value) -> put(key, value) }
                 })
             }
-        },
-        ProviderAuthAuthorization::class.java
+        }
     )
 
     suspend fun setProviderApiKey(
@@ -101,35 +104,34 @@ class OpenCodeApiClient(
         metadata: Map<String, String> = emptyMap()
     ): Boolean = put(
         "auth/${encodePath(providerId)}",
-        JsonObject().apply {
-            addProperty("type", "api")
-            addProperty("key", apiKey)
+        buildJsonObject {
+            put("type", "api")
+            put("key", apiKey)
             if (metadata.isNotEmpty()) {
-                add("metadata", JsonObject().apply {
-                    metadata.forEach { (key, value) -> addProperty(key, value) }
+                put("metadata", buildJsonObject {
+                    metadata.forEach { (key, value) -> put(key, value) }
                 })
             }
-        },
-        Boolean::class.java
+        }
     )
 
     suspend fun removeProviderAuth(providerId: String): Boolean =
-        delete("auth/${encodePath(providerId)}", Boolean::class.java)
+        delete("auth/${encodePath(providerId)}")
 
     suspend fun completeProviderOAuth(
         providerId: String,
         methodIndex: Int,
         code: String?
     ): Boolean = withContext(Dispatchers.IO) {
-        val body = JsonObject().apply {
-            addProperty("method", methodIndex)
-            code?.takeIf { it.isNotBlank() }?.let { addProperty("code", it) }
+        val body = buildJsonObject {
+            put("method", methodIndex)
+            code?.takeIf { it.isNotBlank() }?.let { put("code", it) }
         }
         val request = requestBuilder("provider/${encodePath(providerId)}/oauth/callback")
-            .post(gson.toJson(body).toRequestBody(JSON_MEDIA_TYPE))
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
         execute(request, providerAuthHttpClient) { responseBody ->
-            gson.fromJson(responseBody, Boolean::class.java)
+            json.decodeFromString<Boolean>(responseBody)
         }
     }
 
@@ -137,10 +139,10 @@ class OpenCodeApiClient(
         getList("project", query("directory" to directory))
 
     suspend fun currentProject(directory: String? = null): OpenCodeProject =
-        get("project/current", OpenCodeProject::class.java, query("directory" to directory))
+        get("project/current", query("directory" to directory))
 
     suspend fun pathInfo(directory: String? = null): OpenCodePathInfo =
-        get("path", OpenCodePathInfo::class.java, query("directory" to directory))
+        get("path", query("directory" to directory))
 
     suspend fun files(directory: String, path: String): List<OpenCodeFileNode> =
         getList("file", query("directory" to directory, "path" to path))
@@ -148,7 +150,6 @@ class OpenCodeApiClient(
     suspend fun fileContent(directory: String, path: String): OpenCodeFileContent =
         get(
             "file/content",
-            OpenCodeFileContent::class.java,
             query("directory" to directory, "path" to path)
         )
 
@@ -176,7 +177,7 @@ class OpenCodeApiClient(
     )
 
     suspend fun vcsInfo(directory: String): OpenCodeVcsInfo =
-        get("vcs", OpenCodeVcsInfo::class.java, query("directory" to directory))
+        get("vcs", query("directory" to directory))
 
     suspend fun vcsStatus(directory: String): List<OpenCodeFileChange> =
         getList("vcs/status", query("directory" to directory))
@@ -208,59 +209,57 @@ class OpenCodeApiClient(
     )
 
     suspend fun promptAsync(sessionId: String, request: PromptRequest) {
-        val json = JsonObject().apply {
-            request.agent?.takeIf { it.isNotBlank() }?.let { addProperty("agent", it) }
+        val body = buildJsonObject {
+            request.agent?.takeIf { it.isNotBlank() }?.let { put("agent", it) }
             if (!request.providerId.isNullOrBlank() && !request.modelId.isNullOrBlank()) {
-                add("model", JsonObject().apply {
-                    addProperty("providerID", request.providerId)
-                    addProperty("modelID", request.modelId)
+                put("model", buildJsonObject {
+                    put("providerID", request.providerId)
+                    put("modelID", request.modelId)
                 })
             }
-            request.variant?.takeIf { it.isNotBlank() }?.let { addProperty("variant", it) }
-            if (request.noReply) addProperty("noReply", true)
-            add("parts", JsonArray().apply {
+            request.variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
+            if (request.noReply) put("noReply", true)
+            put("parts", buildJsonArray {
                 if (request.text.isNotBlank()) {
-                    add(JsonObject().apply {
-                        addProperty("type", "text")
-                        addProperty("text", request.text)
+                    add(buildJsonObject {
+                        put("type", "text")
+                        put("text", request.text)
                     })
                 }
                 request.attachments.forEach { attachment ->
-                    add(JsonObject().apply {
-                        addProperty("type", "file")
-                        addProperty("mime", attachment.mime)
-                        addProperty("filename", attachment.filename)
-                        addProperty("url", attachment.url)
+                    add(buildJsonObject {
+                        put("type", "file")
+                        put("mime", attachment.mime)
+                        put("filename", attachment.filename)
+                        put("url", attachment.url)
                     })
                 }
             })
         }
-        postWithoutResponse("session/${encodePath(sessionId)}/prompt_async", json)
+        postWithoutResponse("session/${encodePath(sessionId)}/prompt_async", body)
     }
 
     suspend fun summarizeSession(sessionId: String, providerId: String, modelId: String): Boolean =
         post(
             "session/${encodePath(sessionId)}/summarize",
-            JsonObject().apply {
-                addProperty("providerID", providerId)
-                addProperty("modelID", modelId)
-            },
-            Boolean::class.java
+            buildJsonObject {
+                put("providerID", providerId)
+                put("modelID", modelId)
+            }
         )
 
     suspend fun abortSession(sessionId: String): Boolean =
-        post("session/${encodePath(sessionId)}/abort", JsonObject(), Boolean::class.java)
+        post("session/${encodePath(sessionId)}/abort", JsonObject(emptyMap()))
 
     suspend fun renameSession(
         sessionId: String,
         title: String,
         directory: String? = null
     ): OpenCodeSession {
-        val body = JsonObject().apply { addProperty("title", title) }
+        val body = buildJsonObject { put("title", title) }
         return patch(
             "session/${encodePath(sessionId)}",
             body,
-            OpenCodeSession::class.java,
             query("directory" to directory)
         )
     }
@@ -268,74 +267,71 @@ class OpenCodeApiClient(
     suspend fun deleteSession(sessionId: String, directory: String? = null): Boolean =
         delete(
             "session/${encodePath(sessionId)}",
-            Boolean::class.java,
             query("directory" to directory)
         )
 
     suspend fun archiveSession(sessionId: String, directory: String? = null): OpenCodeSession {
-        val body = JsonObject().apply { addProperty("archive", true) }
+        val body = buildJsonObject { put("archive", true) }
         return patch(
             "session/${encodePath(sessionId)}",
             body,
-            OpenCodeSession::class.java,
             query("directory" to directory)
         )
     }
 
     suspend fun mcpServers(): List<McpServer> = withContext(Dispatchers.IO) {
         execute(requestBuilder("mcp").get().build()) { body ->
-            val root = gson.fromJson(body, JsonObject::class.java)
-            root.entrySet().map { (name, value) ->
-                val server = value.asJsonObject.deepCopy().apply {
-                    remove("tools")
-                }
-                val tools = value.asJsonObject.get("tools")?.let { toolsElement ->
-                    when {
-                        toolsElement.isJsonArray -> toolsElement.asJsonArray
-                            .mapNotNull { it.takeIf(JsonElement::isJsonPrimitive)?.asString }
-                        toolsElement.isJsonObject -> toolsElement.asJsonObject.keySet().toList()
+            val root = json.parseToJsonElement(body).jsonObject
+            root.entries.map { (name, value) ->
+                val serverObj = value.jsonObject
+                val tools = serverObj["tools"]?.let { toolsElement ->
+                    when (toolsElement) {
+                        is JsonArray -> toolsElement
+                            .mapNotNull { (it as? JsonPrimitive)?.content }
+                        is JsonObject -> toolsElement.keys.toList()
                         else -> emptyList()
                     }
                 }.orEmpty()
-                gson.fromJson(server, McpServer::class.java).copy(name = name, tools = tools)
+                val serverWithoutTools = JsonObject(serverObj.filterKeys { it != "tools" })
+                json.decodeFromJsonElement(McpServer.serializer(), serverWithoutTools).copy(name = name, tools = tools)
             }
         }
     }
 
     suspend fun addMcpServer(body: JsonObject): McpServer =
-        post("mcp", body, McpServer::class.java)
+        post("mcp", body)
 
     suspend fun connectMcpServer(name: String): Boolean =
-        post("mcp/${encodePath(name)}/connect", JsonObject(), Boolean::class.java)
+        post("mcp/${encodePath(name)}/connect", JsonObject(emptyMap()))
 
     suspend fun disconnectMcpServer(name: String): Boolean =
-        post("mcp/${encodePath(name)}/disconnect", JsonObject(), Boolean::class.java)
+        post("mcp/${encodePath(name)}/disconnect", JsonObject(emptyMap()))
 
     suspend fun removeMcpAuth(name: String): Boolean =
-        delete("mcp/${encodePath(name)}/auth", Boolean::class.java)
+        delete("mcp/${encodePath(name)}/auth")
 
     suspend fun mcpAuth(name: String): JsonObject =
-        post("mcp/${encodePath(name)}/auth", JsonObject(), JsonObject::class.java)
+        post("mcp/${encodePath(name)}/auth", JsonObject(emptyMap()))
 
     suspend fun mcpAuthCallback(name: String, code: String): Boolean {
-        val body = JsonObject().apply { addProperty("code", code) }
-        return post("mcp/${encodePath(name)}/auth/callback", body, Boolean::class.java)
+        val body = buildJsonObject { put("code", code) }
+        return post("mcp/${encodePath(name)}/auth/callback", body)
     }
 
-    suspend fun config(): com.google.gson.JsonElement =
+    suspend fun config(): JsonElement =
         withContext(Dispatchers.IO) {
             execute(requestBuilder("config").get().build()) { body ->
-                gson.fromJson(body, com.google.gson.JsonElement::class.java)
+                json.parseToJsonElement(body)
             }
         }
 
-    suspend fun updateConfig(patch: JsonObject): com.google.gson.JsonElement =
+    suspend fun updateConfig(patch: JsonObject): JsonElement =
         withContext(Dispatchers.IO) {
             val request = requestBuilder("config")
-                .patch(gson.toJson(patch).toRequestBody(JSON_MEDIA_TYPE))
+                .patch(patch.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
             execute(request) { body ->
-                gson.fromJson(body, com.google.gson.JsonElement::class.java)
+                json.parseToJsonElement(body)
             }
         }
 
@@ -346,7 +342,7 @@ class OpenCodeApiClient(
     suspend fun skills(): List<OpenCodeSkill> = getList("skill")
 
     suspend fun initAgentsMd(sessionId: String): Boolean =
-        post("session/${encodePath(sessionId)}/init", JsonObject(), Boolean::class.java)
+        post("session/${encodePath(sessionId)}/init", JsonObject(emptyMap()))
 
     suspend fun respondPermission(
         sessionId: String,
@@ -354,15 +350,13 @@ class OpenCodeApiClient(
         response: String,
         remember: Boolean = false
     ): Boolean {
-        // OpenCode 1.18.x has no separate remember field; "always" persists the grant.
         val apiResponse = if (remember && response == "once") "always" else response
-        val json = JsonObject().apply {
-            addProperty("response", apiResponse)
+        val body = buildJsonObject {
+            put("response", apiResponse)
         }
         return post(
             "session/${encodePath(sessionId)}/permissions/${encodePath(permissionId)}",
-            json,
-            Boolean::class.java
+            body
         )
     }
 
@@ -371,20 +365,16 @@ class OpenCodeApiClient(
         requestId: String,
         answers: List<List<String>>
     ): Boolean {
-        val json = JsonObject().apply {
-            add(
-                "answers",
-                JsonArray().apply {
-                    answers.forEach { answerGroup ->
-                        add(JsonArray().apply { answerGroup.forEach { add(it) } })
-                    }
+        val body = buildJsonObject {
+            put("answers", buildJsonArray {
+                answers.forEach { answerGroup ->
+                    add(buildJsonArray { answerGroup.forEach { add(JsonPrimitive(it)) } })
                 }
-            )
+            })
         }
         return post(
             "session/${encodePath(sessionId)}/question/${encodePath(requestId)}",
-            json,
-            Boolean::class.java
+            body
         )
     }
 
@@ -425,8 +415,6 @@ class OpenCodeApiClient(
                             when {
                                 line.isEmpty() -> {
                                     if (data.isNotEmpty()) {
-                                        // Suspending send (never trySend): a dropped frame loses a
-                                        // chunk of the assistant's reply for good.
                                         send(eventParser.parse(data.toString()))
                                         data.setLength(0)
                                     }
@@ -437,7 +425,6 @@ class OpenCodeApiClient(
                                 }
                             }
                         }
-                        // A stream that ends mid-frame still carries a usable event.
                         if (data.isNotEmpty()) send(eventParser.parse(data.toString()))
                     }
                     throw IOException("OpenCode event stream closed")
@@ -454,12 +441,11 @@ class OpenCodeApiClient(
         }
     }.buffer(EVENT_BUFFER_CAPACITY)
 
-    private suspend fun <T> get(
+    private suspend inline fun <reified T> get(
         path: String,
-        clazz: Class<T>,
         queryParameters: List<Pair<String, String>> = emptyList()
     ): T = withContext(Dispatchers.IO) {
-        execute(requestBuilder(path, queryParameters).get().build()) { body -> gson.fromJson(body, clazz) }
+        execute(requestBuilder(path, queryParameters).get().build()) { body -> json.decodeFromString<T>(body) }
     }
 
     private suspend inline fun <reified T> getList(
@@ -467,61 +453,56 @@ class OpenCodeApiClient(
         queryParameters: List<Pair<String, String>> = emptyList()
     ): List<T> = withContext(Dispatchers.IO) {
         execute(requestBuilder(path, queryParameters).get().build()) { body ->
-            val type = object : TypeToken<List<T>>() {}.type
-            gson.fromJson<List<T>>(body, type).orEmpty()
+            json.decodeFromString<List<T>>(body)
         }
     }
 
-    private suspend fun <T> post(
+    private suspend inline fun <reified T> post(
         path: String,
         body: JsonObject,
-        clazz: Class<T>,
         queryParameters: List<Pair<String, String>> = emptyList()
     ): T = withContext(Dispatchers.IO) {
         val request = requestBuilder(path, queryParameters)
-            .post(gson.toJson(body).toRequestBody(JSON_MEDIA_TYPE))
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
-        execute(request) { responseBody -> gson.fromJson(responseBody, clazz) }
+        execute(request) { responseBody -> json.decodeFromString<T>(responseBody) }
     }
 
-    private suspend fun <T> put(
+    private suspend inline fun <reified T> put(
         path: String,
         body: JsonObject,
-        clazz: Class<T>,
         queryParameters: List<Pair<String, String>> = emptyList()
     ): T = withContext(Dispatchers.IO) {
         val request = requestBuilder(path, queryParameters)
-            .put(gson.toJson(body).toRequestBody(JSON_MEDIA_TYPE))
+            .put(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
-        execute(request) { responseBody -> gson.fromJson(responseBody, clazz) }
+        execute(request) { responseBody -> json.decodeFromString<T>(responseBody) }
     }
 
-    private suspend fun <T> patch(
+    private suspend inline fun <reified T> patch(
         path: String,
         body: JsonObject,
-        clazz: Class<T>,
         queryParameters: List<Pair<String, String>> = emptyList()
     ): T = withContext(Dispatchers.IO) {
         val request = requestBuilder(path, queryParameters)
-            .patch(gson.toJson(body).toRequestBody(JSON_MEDIA_TYPE))
+            .patch(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
-        execute(request) { responseBody -> gson.fromJson(responseBody, clazz) }
+        execute(request) { responseBody -> json.decodeFromString<T>(responseBody) }
     }
 
-    private suspend fun <T> delete(
+    private suspend inline fun <reified T> delete(
         path: String,
-        clazz: Class<T>,
         queryParameters: List<Pair<String, String>> = emptyList()
     ): T = withContext(Dispatchers.IO) {
         val request = requestBuilder(path, queryParameters)
             .delete()
             .build()
-        execute(request) { responseBody -> gson.fromJson(responseBody, clazz) }
+        execute(request) { responseBody -> json.decodeFromString<T>(responseBody) }
     }
 
     private suspend fun postWithoutResponse(path: String, body: JsonObject) = withContext(Dispatchers.IO) {
         val request = requestBuilder(path)
-            .post(gson.toJson(body).toRequestBody(JSON_MEDIA_TYPE))
+            .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
             .build()
         execute(request) { Unit }
     }
@@ -548,7 +529,6 @@ class OpenCodeApiClient(
     }
 
     private fun formatHttpError(statusCode: Int, body: String, sensitive: Boolean = false): String {
-        // Never attach bodies for auth operations or authorization failures — they may contain secrets.
         if (sensitive || statusCode == 401 || statusCode == 403) {
             return "OpenCode request failed (HTTP $statusCode)"
         }
@@ -603,10 +583,14 @@ class OpenCodeApiClient(
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         private const val MAX_ERROR_BODY_CHARS = 240
-
-        /** Deep enough that a burst of stream frames is queued rather than dropped. */
         private const val EVENT_BUFFER_CAPACITY = 512
         private const val PROVIDER_AUTH_TIMEOUT_MINUTES = 6L
+
+        val defaultJson: Json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            encodeDefaults = true
+        }
 
         fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)

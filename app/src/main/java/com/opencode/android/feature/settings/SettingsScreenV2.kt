@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.SettingsApplications
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
@@ -78,6 +79,7 @@ fun SettingsScreenV2(
     onOpenDiagnostics: () -> Unit,
     onOpenMcp: () -> Unit = {},
     onOpenServerInfo: () -> Unit = {},
+    onOpenModelVisibility: () -> Unit = {},
     currentTheme: String = "dark",
     onThemeChange: (String) -> Unit = {},
     uiFontSize: Int = 16,
@@ -227,6 +229,12 @@ fun SettingsScreenV2(
                     icon = Icons.Default.Key,
                     title = stringResource(R.string.provider_settings_row),
                     onClick = onOpenProviderSettings
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.Visibility,
+                    title = stringResource(R.string.model_visibility_row),
+                    onClick = onOpenModelVisibility
                 )
                 SettingsDivider()
                 SettingsRow(

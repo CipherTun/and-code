@@ -68,6 +68,9 @@ class OpenCodeApplication : Application() {
     lateinit var gitCloneRepository: GitCloneRepository
         private set
 
+    lateinit var commandRunner: LocalRuntimeCommandRunner
+        private set
+
     override fun onCreate() {
         super.onCreate()
         settings = SecureSettingsRepository(this)
@@ -96,7 +99,7 @@ class OpenCodeApplication : Application() {
                 }
             }
         )
-        val commandRunner = LocalRuntimeCommandRunner(
+        commandRunner = LocalRuntimeCommandRunner(
             runtimeDirectory = runtimeDirectory,
             installedRuntimeProvider = installer::installedRuntime,
             accessCoordinator = accessCoordinator

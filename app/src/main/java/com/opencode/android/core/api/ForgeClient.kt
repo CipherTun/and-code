@@ -1,9 +1,10 @@
 package com.opencode.android.core.api
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -37,7 +38,7 @@ interface ForgeClient {
 class GitHubForgeClient(private val token: String?) : ForgeClient {
 
     private val client: OkHttpClient = OkHttpClient()
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     override suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference> =
         withContext(Dispatchers.IO) {
@@ -50,7 +51,7 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val items = gson.fromJson(body, Array<GitHubPull>::class.java) ?: emptyArray()
+                    val items = json.decodeFromString<List<GitHubPull>>(body)
                     items.map { pull ->
                         ForgeReference(
                             type = "PR",
@@ -77,8 +78,7 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val result = gson.fromJson(body, GitHubSearchResult::class.java)
-                        ?: return@withContext emptyList()
+                    val result = json.decodeFromString<GitHubSearchResult>(body)
                     result.items.map { item ->
                         ForgeReference(
                             type = "Issue",
@@ -104,27 +104,30 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
         }
         .build()
 
+    @Serializable
     private data class GitHubPull(
         val number: Int = 0,
         val title: String = "",
-        @SerializedName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = ""
     )
 
+    @Serializable
     private data class GitHubSearchResult(
         val items: List<GitHubIssue> = emptyList()
     )
 
+    @Serializable
     private data class GitHubIssue(
         val number: Int = 0,
         val title: String = "",
-        @SerializedName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = ""
     )
 }
 
 class GitLabForgeClient(private val token: String?) : ForgeClient {
 
     private val client: OkHttpClient = OkHttpClient()
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     override suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference> =
         withContext(Dispatchers.IO) {
@@ -136,7 +139,7 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val items = gson.fromJson(body, Array<GitLabMR>::class.java) ?: emptyArray()
+                    val items = json.decodeFromString<List<GitLabMR>>(body)
                     items.map { mr ->
                         ForgeReference(
                             type = "MR",
@@ -162,7 +165,7 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val items = gson.fromJson(body, Array<GitLabIssue>::class.java) ?: emptyArray()
+                    val items = json.decodeFromString<List<GitLabIssue>>(body)
                     items.map { issue ->
                         ForgeReference(
                             type = "Issue",
@@ -187,23 +190,25 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
         }
         .build()
 
+    @Serializable
     private data class GitLabMR(
         val iid: Int = 0,
         val title: String = "",
-        @SerializedName("web_url") val webUrl: String = ""
+        @SerialName("web_url") val webUrl: String = ""
     )
 
+    @Serializable
     private data class GitLabIssue(
         val iid: Int = 0,
         val title: String = "",
-        @SerializedName("web_url") val webUrl: String = ""
+        @SerialName("web_url") val webUrl: String = ""
     )
 }
 
 class GiteaForgeClient(private val baseUrl: String, private val token: String?) : ForgeClient {
 
     private val client: OkHttpClient = OkHttpClient()
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     override suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference> =
         withContext(Dispatchers.IO) {
@@ -212,7 +217,7 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val items = gson.fromJson(body, Array<GiteaPull>::class.java) ?: emptyArray()
+                    val items = json.decodeFromString<List<GiteaPull>>(body)
                     items.map { pull ->
                         ForgeReference(
                             type = "PR",
@@ -235,7 +240,7 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val items = gson.fromJson(body, Array<GiteaIssue>::class.java) ?: emptyArray()
+                    val items = json.decodeFromString<List<GiteaIssue>>(body)
                     items.map { issue ->
                         ForgeReference(
                             type = "Issue",
@@ -260,15 +265,17 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
         }
         .build()
 
+    @Serializable
     private data class GiteaPull(
         val number: Int = 0,
         val title: String = "",
-        @SerializedName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = ""
     )
 
+    @Serializable
     private data class GiteaIssue(
         val number: Int = 0,
         val title: String = "",
-        @SerializedName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = ""
     )
 }

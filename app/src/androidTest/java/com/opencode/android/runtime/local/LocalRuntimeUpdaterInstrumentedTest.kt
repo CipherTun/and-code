@@ -3,9 +3,10 @@ package com.opencode.android.runtime.local
 import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.google.gson.Gson
 import java.io.File
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,6 +17,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class LocalRuntimeUpdaterInstrumentedTest {
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
     private lateinit var runtimeDirectory: File
 
     @Before
@@ -112,7 +114,7 @@ class LocalRuntimeUpdaterInstrumentedTest {
             writeText(binary)
             assertTrue(setExecutable(true, false) || canExecute())
         }
-        metadataFile().writeText(Gson().toJson(metadata(version)))
+        metadataFile().writeText(json.encodeToString(metadata(version)))
     }
 
     private fun metadata(version: String) = LocalRuntimeMetadata(
@@ -124,10 +126,10 @@ class LocalRuntimeUpdaterInstrumentedTest {
     )
 
     private fun activeMetadata(): LocalRuntimeMetadata =
-        Gson().fromJson(metadataFile().readText(), LocalRuntimeMetadata::class.java)
+        json.decodeFromString<LocalRuntimeMetadata>(metadataFile().readText())
 
     private fun rollbackMetadata(): LocalRuntimeMetadata =
-        Gson().fromJson(rollbackMetadataFile().readText(), LocalRuntimeMetadata::class.java)
+        json.decodeFromString<LocalRuntimeMetadata>(rollbackMetadataFile().readText())
 
     private fun activeBinary() =
         runtimeDirectory.resolve("environment/rootfs/usr/local/bin/opencode")

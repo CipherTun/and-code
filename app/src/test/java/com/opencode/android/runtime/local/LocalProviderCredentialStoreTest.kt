@@ -1,6 +1,8 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.JsonParser
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -29,9 +31,9 @@ class LocalProviderCredentialStoreTest {
         val authFile = memory.store.syncToRuntime(rootfs)
 
         assertTrue(authFile.exists())
-        val payload = JsonParser.parseString(authFile.readText()).asJsonObject
-        assertEquals("api", payload.getAsJsonObject("openai")["type"].asString)
-        assertEquals("sk-123", payload.getAsJsonObject("openai")["key"].asString)
+        val payload = Json.parseToJsonElement(authFile.readText()).jsonObject
+        assertEquals("api", payload["openai"]!!.jsonObject["type"]!!.jsonPrimitive.content)
+        assertEquals("sk-123", payload["openai"]!!.jsonObject["key"]!!.jsonPrimitive.content)
         assertEquals(File(rootfs, "root/.local/share/opencode/auth.json").absolutePath, authFile.absolutePath)
     }
 
@@ -52,10 +54,10 @@ class LocalProviderCredentialStoreTest {
 
         memory.store.syncToRuntime(rootfs)
 
-        val payload = JsonParser.parseString(authFile.readText()).asJsonObject
-        assertEquals("oauth-token", payload.getAsJsonObject("anthropic")["access"].asString)
-        assertEquals("custom-key", payload.getAsJsonObject("custom")["key"].asString)
-        assertEquals("new-managed-key", payload.getAsJsonObject("openai")["key"].asString)
+        val payload = Json.parseToJsonElement(authFile.readText()).jsonObject
+        assertEquals("oauth-token", payload["anthropic"]!!.jsonObject["access"]!!.jsonPrimitive.content)
+        assertEquals("custom-key", payload["custom"]!!.jsonObject["key"]!!.jsonPrimitive.content)
+        assertEquals("new-managed-key", payload["openai"]!!.jsonObject["key"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -75,9 +77,9 @@ class LocalProviderCredentialStoreTest {
         memory.store.clearCredential("openai")
         memory.store.syncToRuntime(rootfs)
 
-        val payload = JsonParser.parseString(authFile.readText()).asJsonObject
-        assertFalse(payload.has("openai"))
-        assertEquals("oauth-token", payload.getAsJsonObject("anthropic")["access"].asString)
+        val payload = Json.parseToJsonElement(authFile.readText()).jsonObject
+        assertFalse(payload.containsKey("openai"))
+        assertEquals("oauth-token", payload["anthropic"]!!.jsonObject["access"]!!.jsonPrimitive.content)
         assertTrue("openai" in memory.managedIds)
     }
 
@@ -104,8 +106,8 @@ class LocalProviderCredentialStoreTest {
         memory.store.unmanageProvider("openai")
         memory.store.syncToRuntime(rootfs)
 
-        val payload = JsonParser.parseString(authFile.readText()).asJsonObject
-        assertEquals("oauth", payload.getAsJsonObject("openai")["type"].asString)
+        val payload = Json.parseToJsonElement(authFile.readText()).jsonObject
+        assertEquals("oauth", payload["openai"]!!.jsonObject["type"]!!.jsonPrimitive.content)
         assertEquals("api-key", memory.store.credentials()["openai"])
         assertFalse("openai" in memory.managedIds)
     }

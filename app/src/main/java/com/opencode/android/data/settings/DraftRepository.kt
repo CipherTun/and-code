@@ -2,8 +2,11 @@ package com.opencode.android.data.settings
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.google.gson.Gson
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
+@Serializable
 data class Draft(
     val text: String,
     val attachments: List<String> = emptyList(),
@@ -14,18 +17,18 @@ data class Draft(
 class DraftRepository(context: Context) {
     private val preferences: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
 
     @Synchronized
     fun save(sessionId: String, draft: Draft) {
         preferences.edit()
-            .putString(key(sessionId), gson.toJson(draft))
+            .putString(key(sessionId), json.encodeToString(draft))
             .apply()
     }
 
     @Synchronized
     fun load(sessionId: String): Draft? = runCatching {
-        preferences.getString(key(sessionId), null)?.let { gson.fromJson(it, Draft::class.java) }
+        preferences.getString(key(sessionId), null)?.let { json.decodeFromString<Draft>(it) }
     }.getOrNull()
 
     @Synchronized

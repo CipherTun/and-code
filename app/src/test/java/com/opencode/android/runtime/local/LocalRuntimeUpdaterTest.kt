@@ -1,8 +1,9 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
 import java.io.File
 import java.security.MessageDigest
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -20,6 +21,7 @@ class LocalRuntimeUpdaterTest {
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
     private lateinit var runtime: File
 
     @Before
@@ -92,7 +94,7 @@ class LocalRuntimeUpdaterTest {
             parentFile.mkdirs()
             writeText("older-binary")
         }
-        rollbackMetadataFile().writeText(Gson().toJson(metadata("1.17.9")))
+        rollbackMetadataFile().writeText(json.encodeToString(metadata("1.17.9")))
         var failed = false
         val updater = updater(
             moveFile = { source, destination ->
@@ -193,7 +195,7 @@ class LocalRuntimeUpdaterTest {
             writeText("old-binary")
             setExecutable(true, false)
         }
-        rollbackMetadataFile().writeText(Gson().toJson(metadata("1.18.3")))
+        rollbackMetadataFile().writeText(json.encodeToString(metadata("1.18.3")))
 
         val error = runCatching { updater().rollback() }.exceptionOrNull()
 
@@ -255,7 +257,7 @@ class LocalRuntimeUpdaterTest {
             writeText(binary)
             setExecutable(true, false)
         }
-        metadataFile().writeText(Gson().toJson(metadata(version)))
+        metadataFile().writeText(json.encodeToString(metadata(version)))
     }
 
     private fun metadata(version: String) = LocalRuntimeMetadata(
@@ -267,10 +269,10 @@ class LocalRuntimeUpdaterTest {
     )
 
     private fun metadata(): LocalRuntimeMetadata =
-        Gson().fromJson(metadataFile().readText(), LocalRuntimeMetadata::class.java)
+        json.decodeFromString<LocalRuntimeMetadata>(metadataFile().readText())
 
     private fun rollbackMetadata(): LocalRuntimeMetadata =
-        Gson().fromJson(rollbackMetadataFile().readText(), LocalRuntimeMetadata::class.java)
+        json.decodeFromString<LocalRuntimeMetadata>(rollbackMetadataFile().readText())
 
     private fun activeBinary() = runtime.resolve("environment/rootfs/usr/local/bin/opencode")
     private fun candidateBinary() = runtime.resolve("environment/rootfs/usr/local/bin/opencode.candidate.1.19.0")

@@ -1,37 +1,43 @@
 package com.opencode.android.feature.settings
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import com.opencode.android.data.connection.SecureSettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+@Serializable
 data class GitHubDeviceCode(
-    @SerializedName("device_code") val deviceCode: String,
-    @SerializedName("user_code") val userCode: String,
-    @SerializedName("verification_uri") val verificationUri: String,
-    @SerializedName("verification_uri_complete") val verificationUriComplete: String? = null,
-    @SerializedName("interval") val intervalSeconds: Long = 5L,
-    @SerializedName("expires_in") val expiresInSeconds: Long = 900L
+    @SerialName("device_code") val deviceCode: String,
+    @SerialName("user_code") val userCode: String,
+    @SerialName("verification_uri") val verificationUri: String,
+    @SerialName("verification_uri_complete") val verificationUriComplete: String? = null,
+    @SerialName("interval") val intervalSeconds: Long = 5L,
+    @SerialName("expires_in") val expiresInSeconds: Long = 900L
 )
 
+@Serializable
 data class GitHubAccount(val login: String, val name: String? = null)
 
+@Serializable
 data class GitHubRepo(
     val name: String,
-    @SerializedName("full_name") val fullName: String,
-    @SerializedName("clone_url") val cloneUrl: String,
-    @SerializedName("private") val isPrivate: Boolean = false,
-    @SerializedName("updated_at") val updatedAt: String? = null
+    @SerialName("full_name") val fullName: String,
+    @SerialName("clone_url") val cloneUrl: String,
+    @SerialName("private") val isPrivate: Boolean = false,
+    @SerialName("updated_at") val updatedAt: String? = null
 )
 
 class GitHubAuthRepository(
     private val settings: SecureSettingsRepository,
     private val client: OkHttpClient = OkHttpClient(),
-    private val gson: Gson = Gson(),
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
     private val clientId: String
 ) {
     val isConfigured: Boolean get() = clientId.isNotBlank()
@@ -58,19 +64,24 @@ class GitHubAuthRepository(
         var delaySeconds = intervalSeconds.coerceAtLeast(1L)
         val deadline = System.currentTimeMillis() + expiresInSeconds.coerceAtLeast(1L) * 1000L
         while (System.currentTimeMillis() < deadline) {
-            val response: Map<String, Any?> = executeJson("https://github.com/login/oauth/access_token", body)
-            val accessToken = response["access_token"]?.toString()
+            val request = Request.Builder().url("https://github.com/login/oauth/access_token").post(body).header("Accept", "application/json").build()
+            val responseBody = client.newCall(request).execute().use { response ->
+                check(response.isSuccessful) { "GitHub request failed: ${response.code}" }
+                response.body?.string().orEmpty()
+            }
+            val responseJson = json.parseToJsonElement(responseBody).jsonObject
+            val accessToken = responseJson["access_token"]?.jsonPrimitive?.content
             if (!accessToken.isNullOrBlank()) {
                 return@withContext accessToken
             }
-            when (response["error"]?.toString()) {
+            when (responseJson["error"]?.jsonPrimitive?.content) {
                 null, "authorization_pending" -> Unit
                 "slow_down" -> delaySeconds += 5L
                 "access_denied" -> error("GitHub authorization was denied")
                 "expired_token" -> error("GitHub authorization expired")
                 else -> error("GitHub authorization failed")
             }
-            delaySeconds = (response["interval"]?.toString()?.toLongOrNull() ?: delaySeconds)
+            delaySeconds = (responseJson["interval"]?.jsonPrimitive?.content?.toLongOrNull() ?: delaySeconds)
                 .coerceAtLeast(1L)
             kotlinx.coroutines.delay(delaySeconds * 1000L)
         }
@@ -86,7 +97,7 @@ class GitHubAuthRepository(
             .build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@withContext null
-            val account = gson.fromJson(response.body?.string().orEmpty(), GitHubAccount::class.java)
+            val account = json.decodeFromString<GitHubAccount>(response.body?.string().orEmpty())
             settings.githubLogin = account.login
             account
         }
@@ -101,8 +112,7 @@ class GitHubAuthRepository(
             .build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@withContext emptyList()
-            val type = object : com.google.gson.reflect.TypeToken<List<GitHubRepo>>() {}.type
-            gson.fromJson<List<GitHubRepo>>(response.body?.string().orEmpty(), type).orEmpty()
+            json.decodeFromString<List<GitHubRepo>>(response.body?.string().orEmpty())
         }
     }
 
@@ -119,7 +129,7 @@ class GitHubAuthRepository(
         val request = Request.Builder().url(url).post(body).header("Accept", "application/json").build()
         client.newCall(request).execute().use { response ->
             check(response.isSuccessful) { "GitHub request failed: ${response.code}" }
-            return gson.fromJson(response.body?.string().orEmpty(), T::class.java)
+            return json.decodeFromString<T>(response.body?.string().orEmpty())
         }
     }
 }

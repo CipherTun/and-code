@@ -13,6 +13,8 @@ import com.opencode.android.core.api.PromptRequest
 import com.opencode.android.core.api.PromptAttachment
 import com.opencode.android.core.api.ProviderCatalog
 import com.opencode.android.runtime.BackendKind
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import com.opencode.android.runtime.OpenCodeBackend
 import com.opencode.android.runtime.PermissionResponse
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +52,7 @@ class ChatViewModelTest {
     fun `sending blank input does nothing`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
         viewModel.sendMessage("   ")
         advanceUntilIdle()
@@ -63,6 +66,7 @@ class ChatViewModelTest {
     fun `sending text creates a session and shows user message immediately`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
         viewModel.sendMessage("Hello")
         advanceUntilIdle()
@@ -78,6 +82,7 @@ class ChatViewModelTest {
     fun `sending attachments without text creates a prompt`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.addAttachment(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg"))
 
         viewModel.sendMessage("")
@@ -92,6 +97,7 @@ class ChatViewModelTest {
         val backend = FakeBackend()
         var refreshes = 0
         val viewModel = ChatViewModel(backend, onSessionCreated = { refreshes++ })
+        advanceUntilIdle()
 
         viewModel.sendMessage("Hello")
         advanceUntilIdle()
@@ -103,6 +109,7 @@ class ChatViewModelTest {
     fun `selected workspace is used when creating a new session`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
         viewModel.selectWorkspace("/root/demo")
         viewModel.sendMessage("Work here")
@@ -116,6 +123,7 @@ class ChatViewModelTest {
     fun `auto accept approves permissions without showing card`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.setAutoAcceptPermissions(true)
         viewModel.sendMessage("Check git")
         advanceUntilIdle()
@@ -140,6 +148,7 @@ class ChatViewModelTest {
     fun `streamed text is finalized when session becomes idle`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Hello")
         advanceUntilIdle()
 
@@ -172,6 +181,7 @@ class ChatViewModelTest {
     fun `polling refreshes changed messages while events are unavailable`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Hello")
         advanceUntilIdle()
 
@@ -189,7 +199,7 @@ class ChatViewModelTest {
                     messageId = "m-assistant",
                     type = "tool",
                     tool = "bash",
-                    state = mapOf("status" to "running")
+                    state = mapOf("status" to JsonPrimitive("running"))
                 ))
             )
         )
@@ -203,6 +213,7 @@ class ChatViewModelTest {
     fun `multiple streamed text parts are combined into one assistant message`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Hello")
         advanceUntilIdle()
 
@@ -239,6 +250,7 @@ class ChatViewModelTest {
     fun `tool part transitions from pending to running to completed`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Run a command")
         advanceUntilIdle()
 
@@ -250,7 +262,7 @@ class ChatViewModelTest {
                     messageId = "m-assistant",
                     type = "tool",
                     tool = "bash",
-                    state = mapOf("status" to "pending", "input" to mapOf("command" to "ls -la"))
+                    state = mapOf("status" to JsonPrimitive("pending"), "input" to buildJsonObject { put("command", JsonPrimitive("ls -la")) })
                 )
             )
         )
@@ -267,7 +279,7 @@ class ChatViewModelTest {
                     messageId = "m-assistant",
                     type = "tool",
                     tool = "bash",
-                    state = mapOf("status" to "running", "input" to mapOf("command" to "ls -la"))
+                    state = mapOf("status" to JsonPrimitive("running"), "input" to buildJsonObject { put("command", JsonPrimitive("ls -la")) })
                 )
             )
         )
@@ -284,9 +296,9 @@ class ChatViewModelTest {
                     type = "tool",
                     tool = "bash",
                     state = mapOf(
-                        "status" to "completed",
-                        "input" to mapOf("command" to "ls -la"),
-                        "output" to "file1\nfile2"
+                        "status" to JsonPrimitive("completed"),
+                        "input" to buildJsonObject { put("command", JsonPrimitive("ls -la")) },
+                        "output" to JsonPrimitive("file1\nfile2")
                     )
                 )
             )
@@ -301,6 +313,7 @@ class ChatViewModelTest {
     fun `reasoning delta appends to existing reasoning part`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Think about it")
         advanceUntilIdle()
 
@@ -334,6 +347,7 @@ class ChatViewModelTest {
     fun `mixed order parts are preserved in arrival order`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Do work")
         advanceUntilIdle()
 
@@ -356,7 +370,7 @@ class ChatViewModelTest {
                     messageId = "m-assistant",
                     type = "tool",
                     tool = "bash",
-                    state = mapOf("status" to "running")
+                    state = mapOf("status" to JsonPrimitive("running"))
                 )
             )
         )
@@ -384,6 +398,7 @@ class ChatViewModelTest {
     fun `permission event becomes approval card and successful response removes it`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Check git")
         advanceUntilIdle()
 
@@ -425,7 +440,7 @@ class ChatViewModelTest {
                         messageId = "hist-1",
                         type = "tool",
                         tool = "bash",
-                        state = mapOf("status" to "completed", "output" to "ok")
+                        state = mapOf("status" to JsonPrimitive("completed"), "output" to JsonPrimitive("ok"))
                     ),
                     OpenCodePart(
                         id = "p-text",
@@ -438,6 +453,7 @@ class ChatViewModelTest {
             )
         )
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
         viewModel.openSession("s1")
         advanceUntilIdle()
@@ -474,6 +490,7 @@ class ChatViewModelTest {
             )
         )
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
         viewModel.openSession("s1")
         advanceUntilIdle()
@@ -486,6 +503,7 @@ class ChatViewModelTest {
     fun `abort stops current session and clears running state`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
         viewModel.sendMessage("Long task")
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.isRunning)
@@ -502,6 +520,7 @@ class ChatViewModelTest {
         runTest(dispatcher) {
             val backend = FakeBackend()
             val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
             viewModel.sendMessage("Hello")
             // Advance only up to the poll loop's first delay() — session s1's background poll is
@@ -531,6 +550,7 @@ class ChatViewModelTest {
         runTest(dispatcher) {
             val backend = FakeBackend()
             val viewModel = ChatViewModel(backend)
+        advanceUntilIdle()
 
             viewModel.sendMessage("Long task")
             advanceUntilIdle()

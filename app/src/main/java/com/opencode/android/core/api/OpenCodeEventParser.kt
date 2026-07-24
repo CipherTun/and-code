@@ -1,99 +1,104 @@
 package com.opencode.android.core.api
 
-import com.google.gson.Gson
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 class OpenCodeEventParser(
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
 ) {
-    fun parse(json: String): OpenCodeEvent {
-        val root = runCatching { gson.fromJson(json, JsonObject::class.java) }.getOrNull()
-            ?: return OpenCodeEvent.Unknown("invalid", json)
-        val type = root.get("type")?.asString ?: return OpenCodeEvent.Unknown("missing-type", json)
-        val properties = root.getAsJsonObject("properties") ?: JsonObject()
+    fun parse(raw: String): OpenCodeEvent {
+        val root = runCatching { json.parseToJsonElement(raw).jsonObject }.getOrNull()
+            ?: return OpenCodeEvent.Unknown("invalid", raw)
+        val type = root["type"]?.jsonPrimitive?.content ?: return OpenCodeEvent.Unknown("missing-type", raw)
+        val properties = root["properties"]?.jsonObject ?: JsonObject(emptyMap())
 
         return runCatching {
             when (type) {
                 "server.connected" -> OpenCodeEvent.ServerConnected
                 "message.part.updated" -> {
-                    val part = gson.fromJson(properties.getAsJsonObject("part"), OpenCodePart::class.java)
+                    val part = json.decodeFromJsonElement(OpenCodePart.serializer(), properties["part"]!!.jsonObject)
                     OpenCodeEvent.MessagePartUpdated(part)
                 }
                 "message.part.delta" -> OpenCodeEvent.MessagePartDelta(
-                    sessionId = properties.get("sessionID").asString,
-                    messageId = properties.get("messageID").asString,
-                    partId = properties.get("partID").asString,
-                    field = properties.get("field").asString,
-                    delta = properties.get("delta").asString
+                    sessionId = properties["sessionID"]!!.jsonPrimitive.content,
+                    messageId = properties["messageID"]!!.jsonPrimitive.content,
+                    partId = properties["partID"]!!.jsonPrimitive.content,
+                    field = properties["field"]!!.jsonPrimitive.content,
+                    delta = properties["delta"]!!.jsonPrimitive.content
                 )
                 "permission.asked" -> OpenCodeEvent.PermissionAsked(
                     PermissionRequest(
-                        id = properties.get("id").asString,
-                        sessionId = properties.get("sessionID").asString,
-                        permission = properties.get("permission").asString,
-                        patterns = properties.getAsJsonArray("patterns")
-                            ?.mapNotNull { element -> element.takeIf { it.isJsonPrimitive }?.asString }
+                        id = properties["id"]!!.jsonPrimitive.content,
+                        sessionId = properties["sessionID"]!!.jsonPrimitive.content,
+                        permission = properties["permission"]!!.jsonPrimitive.content,
+                        patterns = (properties["patterns"] as? JsonArray)
+                            ?.mapNotNull { element -> (element as? JsonPrimitive)?.content }
                             .orEmpty(),
-                        metadata = properties.getAsJsonObject("metadata")
-                            ?.entrySet()
+                        metadata = (properties["metadata"] as? JsonObject)
+                            ?.entries
                             ?.associate { (key, value) -> key to value }
                             .orEmpty()
                     )
                 )
                 "question.asked" -> {
-                    val questions = properties.getAsJsonArray("questions")
+                    val questions = (properties["questions"] as? JsonArray)
                         ?.mapNotNull { element -> parseQuestionPrompt(element) }
                         .orEmpty()
                     require(questions.isNotEmpty()) { "question.asked requires at least one valid prompt" }
 
                     OpenCodeEvent.QuestionAsked(
                         QuestionRequest(
-                        id = properties.get("id").asString,
-                        sessionId = properties.get("sessionID").asString,
+                        id = properties["id"]!!.jsonPrimitive.content,
+                        sessionId = properties["sessionID"]!!.jsonPrimitive.content,
                         questions = questions,
-                        multiple = properties.get("multiple")?.takeUnless { it.isJsonNull }?.asBoolean ?: false
+                        multiple = (properties["multiple"] as? JsonPrimitive)?.boolean ?: false
                     )
                     )
                 }
-                "session.idle" -> OpenCodeEvent.SessionIdle(properties.get("sessionID").asString)
+                "session.idle" -> OpenCodeEvent.SessionIdle(properties["sessionID"]!!.jsonPrimitive.content)
                 "session.error" -> OpenCodeEvent.SessionError(
-                    sessionId = properties.get("sessionID")?.takeUnless { it.isJsonNull }?.asString,
-                    message = properties.get("error")?.toString()
+                    sessionId = (properties["sessionID"] as? JsonPrimitive)?.content,
+                    message = properties["error"]?.toString()
                 )
-                else -> OpenCodeEvent.Unknown(type, json)
+                else -> OpenCodeEvent.Unknown(type, raw)
             }
-        }.getOrElse { OpenCodeEvent.Unknown(type, json) }
+        }.getOrElse { OpenCodeEvent.Unknown(type, raw) }
     }
 
-    private fun parseQuestionPrompt(element: JsonElement): QuestionPrompt? = when {
-        element.isJsonPrimitive && element.asJsonPrimitive.isString -> QuestionPrompt(question = element.asString)
-        element.isJsonObject -> {
-            val prompt = element.asJsonObject
-            val question = prompt.get("question")?.takeUnless { it.isJsonNull }?.asString
+    private fun parseQuestionPrompt(element: kotlinx.serialization.json.JsonElement): QuestionPrompt? = when {
+        element is JsonPrimitive && element.isString -> QuestionPrompt(question = element.content)
+        element is JsonObject -> {
+            val prompt = element
+            val question = (prompt["question"] as? JsonPrimitive)?.content
             question?.let {
                 QuestionPrompt(
                     question = it,
-                    header = prompt.get("header")?.takeUnless { field -> field.isJsonNull }?.asString,
-                    options = prompt.getAsJsonArray("options")
+                    header = (prompt["header"] as? JsonPrimitive)?.content,
+                    options = (prompt["options"] as? JsonArray)
                         ?.mapNotNull { option -> parseQuestionOption(option) }
                         .orEmpty(),
-                    placeholder = prompt.get("placeholder")?.takeUnless { field -> field.isJsonNull }?.asString
+                    placeholder = (prompt["placeholder"] as? JsonPrimitive)?.content
                 )
             }
         }
         else -> null
     }
 
-    private fun parseQuestionOption(element: JsonElement): QuestionOption? = when {
-        element.isJsonPrimitive && element.asJsonPrimitive.isString -> QuestionOption(label = element.asString)
-        element.isJsonObject -> {
-            val option = element.asJsonObject
-            val label = option.get("label")?.takeUnless { it.isJsonNull }?.asString
+    private fun parseQuestionOption(element: kotlinx.serialization.json.JsonElement): QuestionOption? = when {
+        element is JsonPrimitive && element.isString -> QuestionOption(label = element.content)
+        element is JsonObject -> {
+            val option = element
+            val label = (option["label"] as? JsonPrimitive)?.content
             label?.let {
                 QuestionOption(
                     label = it,
-                    description = option.get("description")?.takeUnless { field -> field.isJsonNull }?.asString
+                    description = (option["description"] as? JsonPrimitive)?.content
                 )
             }
         }

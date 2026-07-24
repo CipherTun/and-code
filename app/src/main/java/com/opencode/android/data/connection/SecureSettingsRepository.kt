@@ -99,6 +99,10 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
                 .apply()
         }
 
+    var hiddenModelKeys: Set<String>
+        get() = preferences.getStringSet(KEY_HIDDEN_MODELS, emptySet()).orEmpty()
+        set(value) = preferences.edit().putStringSet(KEY_HIDDEN_MODELS, value).apply()
+
     var providerApiKeys: Map<String, String>
         get() = providerApiKeys()
         set(value) {
@@ -240,7 +244,8 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
         private const val KEY_AGENT_ID = "agent_id"
         private const val KEY_FAVORITE_MODELS = "favorite_models"
         private const val KEY_RECENT_MODELS = "recent_models"
-        private const val MAX_RECENT_MODELS = 5
+        private const val MAX_RECENT_MODELS = 3
+        private const val KEY_HIDDEN_MODELS = "hidden_models"
         private const val KEY_PROVIDER_API_KEYS = "provider_api_keys"
         private const val KEY_MANAGED_PROVIDER_API_KEY_IDS = "managed_provider_api_key_ids"
         private const val KEY_ASSISTANT_RUNTIME_ID = "assistant_runtime_id"

@@ -1,5 +1,7 @@
 package com.opencode.android.core.api
 
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,9 +47,9 @@ class OpenCodeEventParserTest {
         assertEquals("tool", event.part.type)
         assertEquals("bash", event.part.tool)
         assertEquals("call-1", event.part.callID)
-        assertEquals("running", event.part.state?.get("status"))
-        val input = event.part.state?.get("input") as Map<*, *>
-        assertEquals("ls -la", input["command"])
+        assertEquals(JsonPrimitive("running"), event.part.state?.get("status"))
+        val input = event.part.state?.get("input")
+        assertEquals(JsonPrimitive("ls -la"), (input as? kotlinx.serialization.json.JsonObject)?.get("command"))
     }
 
     @Test

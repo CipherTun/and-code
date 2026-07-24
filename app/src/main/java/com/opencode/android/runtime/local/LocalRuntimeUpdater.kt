@@ -1,7 +1,5 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
@@ -11,6 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 data class PreparedRuntimeUpdate(
     val release: LocalRuntimeRelease,
@@ -19,17 +21,19 @@ data class PreparedRuntimeUpdate(
     val baseVersion: String
 )
 
+@Serializable
 private data class LocalRuntimeRollbackJournal(
-    @SerializedName("currentVersion") val currentVersion: String,
-    @SerializedName("targetVersion") val targetVersion: String
+    @SerialName("currentVersion") val currentVersion: String,
+    @SerialName("targetVersion") val targetVersion: String
 )
 
+@Serializable
 private data class LocalRuntimeUpdateJournal(
-    @SerializedName("oldVersion") val oldVersion: String,
-    @SerializedName("newVersion") val newVersion: String,
-    @SerializedName("candidateFileName") val candidateFileName: String,
-    @SerializedName("candidateMetadataFileName") val candidateMetadataFileName: String,
-    @SerializedName("hadRollback") val hadRollback: Boolean
+    @SerialName("oldVersion") val oldVersion: String,
+    @SerialName("newVersion") val newVersion: String,
+    @SerialName("candidateFileName") val candidateFileName: String,
+    @SerialName("candidateMetadataFileName") val candidateMetadataFileName: String,
+    @SerialName("hadRollback") val hadRollback: Boolean
 )
 
 class LocalRuntimeUpdater(
@@ -55,7 +59,7 @@ class LocalRuntimeUpdater(
     },
     private val accessCoordinator: LocalRuntimeAccessCoordinator,
     private val nowMillis: () -> Long = System::currentTimeMillis,
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
 ) {
     private val operationMutex = Mutex()
 
@@ -491,28 +495,28 @@ class LocalRuntimeUpdater(
         normalizeOpenCodeVersion(candidateVersionProvider(file))
 
     private fun readJournal(): LocalRuntimeUpdateJournal? =
-        readJson(journalFile(), LocalRuntimeUpdateJournal::class.java)
+        readJson<LocalRuntimeUpdateJournal>(journalFile())
 
     private fun readRollbackJournal(): LocalRuntimeRollbackJournal? =
-        readJson(rollbackJournalFile(), LocalRuntimeRollbackJournal::class.java)
+        readJson<LocalRuntimeRollbackJournal>(rollbackJournalFile())
 
     private fun readMetadata(name: String): LocalRuntimeMetadata? =
         readMetadataFile(metadataFile(name))
 
     private fun readMetadataFile(file: File): LocalRuntimeMetadata? =
-        readJson(file, LocalRuntimeMetadata::class.java)
+        readJson<LocalRuntimeMetadata>(file)
 
-    private fun <T> readJson(file: File, type: Class<T>): T? {
+    private inline fun <reified T> readJson(file: File): T? {
         if (!file.isFile) return null
-        return runCatching { gson.fromJson(file.readText(), type) }.getOrNull()
+        return runCatching { json.decodeFromString<T>(file.readText()) }.getOrNull()
     }
 
-    private fun writeJsonAtomically(destination: File, value: Any) {
+    private inline fun <reified T> writeJsonAtomically(destination: File, value: T) {
         destination.parentFile?.mkdirs()
         val temporary = File(destination.parentFile, destination.name + ".write")
         temporary.delete()
         FileOutputStream(temporary).use { output ->
-            output.write(gson.toJson(value).toByteArray())
+            output.write(json.encodeToString(value).toByteArray())
             output.fd.sync()
         }
         Files.move(

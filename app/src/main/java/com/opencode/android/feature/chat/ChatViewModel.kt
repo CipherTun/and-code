@@ -20,6 +20,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
@@ -96,19 +101,19 @@ private fun OpenCodePart.toChatPart(): ChatPart? {
         "text" -> ChatPart.Text(partId, text.orEmpty())
         "reasoning" -> ChatPart.Reasoning(partId, text.orEmpty())
         "tool" -> {
-            val inputText = formatToolInput(stateMap["input"] as? Map<*, *>)
-            val rawOutput = stateMap["output"] as? String
+            val inputText = formatToolInput(stateMap["input"])
+            val rawOutput = stateMap["output"]?.jsonPrimitiveOrNull()
             val truncated = rawOutput != null && rawOutput.length > MAX_TOOL_OUTPUT_CHARS
             ChatPart.Tool(
                 id = partId,
                 name = tool ?: "tool",
-                status = parseToolStatus(stateMap["status"]),
-                title = (stateMap["title"] as? String)?.takeIf { it.isNotBlank() }
+                status = parseToolStatus(stateMap["status"]?.jsonPrimitiveOrNull()),
+                title = stateMap["title"]?.jsonPrimitiveOrNull()?.takeIf { it.isNotBlank() }
                     ?: inputText?.lineSequence()?.firstOrNull(),
                 input = inputText,
                 output = if (truncated) rawOutput?.takeLast(MAX_TOOL_OUTPUT_CHARS) else rawOutput,
                 outputTruncated = truncated,
-                error = stateMap["error"] as? String
+                error = stateMap["error"]?.jsonPrimitiveOrNull()
             )
         }
         "patch" -> ChatPart.Patch(partId, extractPatchFiles(stateMap))
@@ -116,7 +121,10 @@ private fun OpenCodePart.toChatPart(): ChatPart? {
     }
 }
 
-private fun parseToolStatus(value: Any?): ToolStatus = when (value as? String) {
+private fun JsonElement.jsonPrimitiveOrNull(): String? =
+    (this as? JsonPrimitive)?.contentOrNull ?: (this as? JsonPrimitive)?.content
+
+private fun parseToolStatus(value: String?): ToolStatus = when (value) {
     "pending" -> ToolStatus.PENDING
     "running" -> ToolStatus.RUNNING
     "completed" -> ToolStatus.COMPLETED
@@ -124,26 +132,29 @@ private fun parseToolStatus(value: Any?): ToolStatus = when (value as? String) {
     else -> ToolStatus.UNKNOWN
 }
 
-private fun formatToolInput(input: Map<*, *>?): String? {
-    if (input.isNullOrEmpty()) return null
-    (input["command"] as? String)?.let { return it }
-    (input["filePath"] as? String)?.let { path ->
-        val extra = input.entries.filterNot { it.key == "filePath" }
+private fun formatToolInput(input: JsonElement?): String? {
+    val obj = input as? JsonObject ?: return null
+    if (obj.isEmpty()) return null
+    obj["command"]?.jsonPrimitiveOrNull()?.let { return it }
+    obj["filePath"]?.jsonPrimitiveOrNull()?.let { path ->
+        val extra = obj.entries.filterNot { it.key == "filePath" }
         return if (extra.isEmpty()) {
             path
         } else {
-            path + "\n" + extra.joinToString("\n") { (key, value) -> "$key: $value" }
+            path + "\n" + extra.joinToString("\n") { (key, value) -> "$key: ${value.jsonPrimitiveOrNull() ?: value}" }
         }
     }
-    return input.entries.joinToString("\n") { (key, value) -> "$key: $value" }
+    return obj.entries.joinToString("\n") { (key, value) -> "$key: ${value.jsonPrimitiveOrNull() ?: value}" }
 }
 
-private fun extractPatchFiles(state: Map<String, Any?>): List<String> {
+private fun extractPatchFiles(state: Map<String, JsonElement>): List<String> {
     return when (val files = state["files"]) {
-        is List<*> -> files.mapNotNull { entry ->
+        is JsonArray -> files.mapNotNull { entry ->
             when (entry) {
-                is String -> entry
-                is Map<*, *> -> (entry["path"] ?: entry["file"] ?: entry["filename"])?.toString()
+                is JsonPrimitive -> entry.content
+                is JsonObject -> entry["path"]?.jsonPrimitiveOrNull()
+                    ?: entry["file"]?.jsonPrimitiveOrNull()
+                    ?: entry["filename"]?.jsonPrimitiveOrNull()
                 else -> null
             }
         }
@@ -176,6 +187,8 @@ data class ChatUiState(
     val selectedModelId: String? = null,
     val selectedAgentId: String? = null,
     val selectedWorkspacePath: String? = null,
+    val offlineQueue: List<String> = emptyList(),
+    val isOfflineQueued: Boolean = false,
     val error: String? = null
 )
 
@@ -201,6 +214,7 @@ class ChatViewModel(
     val workspaceTitleSource: StateFlow<String> = _workspaceTitleSource.asStateFlow()
 
     private val messageQueue = MutableStateFlow<List<String>>(emptyList())
+    private val offlineMessageQueue = MutableStateFlow<List<String>>(emptyList())
 
     private var eventJob: Job? = null
     private var tts: TextToSpeech? = null
@@ -395,6 +409,22 @@ class ChatViewModel(
         val currentBackend = backend
         if (currentBackend == null) {
             _uiState.update { it.copy(error = "OpenCode connection is not configured") }
+            return
+        }
+
+        if (!_uiState.value.isConnected) {
+            offlineMessageQueue.update { it + normalized }
+            val userMessage = ChatMessage(
+                isUser = true,
+                parts = listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = normalized))
+            )
+            _uiState.update {
+                it.copy(
+                    messages = it.messages + userMessage,
+                    offlineQueue = it.offlineQueue + normalized,
+                    isOfflineQueued = true
+                )
+            }
             return
         }
 
@@ -706,6 +736,7 @@ class ChatViewModel(
                             }
                     }
                 }
+                drainOfflineQueue()
             }
             is OpenCodeEvent.MessagePartUpdated -> {
                 val part = event.part
@@ -939,6 +970,14 @@ class ChatViewModel(
         queued.forEach { sendMessage(it) }
     }
 
+    private fun drainOfflineQueue() {
+        val queued = offlineMessageQueue.value
+        if (queued.isEmpty()) return
+        offlineMessageQueue.value = emptyList()
+        _uiState.update { it.copy(offlineQueue = emptyList(), isOfflineQueued = false) }
+        queued.forEach { sendMessage(it) }
+    }
+
     override fun onCleared() {
         eventJob?.cancel()
         tts?.stop()
@@ -981,6 +1020,7 @@ class ChatViewModel(
                         } else {
                             _uiState.update { it.copy(error = null, isConnected = true) }
                         }
+                        drainOfflineQueue()
                     }
                 }
         }

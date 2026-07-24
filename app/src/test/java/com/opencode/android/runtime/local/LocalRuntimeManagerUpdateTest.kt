@@ -1,8 +1,9 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
 import com.opencode.android.runtime.LocalRuntimeStatus
 import java.io.File
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -242,12 +243,11 @@ class LocalRuntimeManagerUpdateTest {
             writeText("binary-$version")
             setExecutable(true, false)
         }
-        runtime.resolve("metadata.json").writeText(Gson().toJson(metadata(version)))
+        runtime.resolve("metadata.json").writeText(Json { encodeDefaults = true }.encodeToString(metadata(version)))
     }
 
-    private fun readMetadata(): LocalRuntimeMetadata = Gson().fromJson(
-        runtime.resolve("metadata.json").readText(),
-        LocalRuntimeMetadata::class.java
+    private fun readMetadata(): LocalRuntimeMetadata = Json { ignoreUnknownKeys = true }.decodeFromString(
+        runtime.resolve("metadata.json").readText()
     )
 
     private fun metadata(version: String) = LocalRuntimeMetadata(

@@ -1,7 +1,8 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
 import java.io.File
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -10,6 +11,8 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
 class LocalRuntimeEnvironmentActivationTest {
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
+
     @get:Rule
     val temporaryFolder = TemporaryFolder()
 
@@ -86,15 +89,15 @@ class LocalRuntimeEnvironmentActivationTest {
         val active = root.resolve("environment").apply {
             mkdirs()
             resolve("marker.txt").writeText("new")
-            resolve("metadata.json").writeText(Gson().toJson(metadata("1.19.0")))
+            resolve("metadata.json").writeText(json.encodeToString(metadata("1.19.0")))
         }
         val rollback = root.resolve("environment.rollback").apply {
             mkdirs()
             resolve("marker.txt").writeText("old")
-            resolve("metadata.json").writeText(Gson().toJson(metadata("1.18.3")))
+            resolve("metadata.json").writeText(json.encodeToString(metadata("1.18.3")))
         }
         val topMetadata = root.resolve("metadata.json").apply {
-            writeText(Gson().toJson(metadata("1.19.0")))
+            writeText(json.encodeToString(metadata("1.19.0")))
         }
 
         val recovered = recoverInterruptedRuntimeEnvironment(
@@ -107,7 +110,7 @@ class LocalRuntimeEnvironmentActivationTest {
         assertEquals("old", active.resolve("marker.txt").readText())
         assertEquals(
             "1.18.3",
-            Gson().fromJson(topMetadata.readText(), LocalRuntimeMetadata::class.java).version
+            json.decodeFromString<LocalRuntimeMetadata>(topMetadata.readText()).version
         )
         assertFalse(rollback.exists())
         assertFalse(root.resolve("environment.failed").exists())

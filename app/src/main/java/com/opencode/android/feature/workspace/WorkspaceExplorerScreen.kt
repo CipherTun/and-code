@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Source
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -101,7 +102,8 @@ fun WorkspaceExplorerScreen(
     prStatus: String? = null,
     prDescription: String? = null,
     tabManager: WorkspaceTabManager? = null,
-    workspaceDeck: List<String> = emptyList()
+    workspaceDeck: List<String> = emptyList(),
+    onOpenTerminal: () -> Unit = {}
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showScripts by remember { mutableStateOf(false) }
@@ -139,6 +141,9 @@ fun WorkspaceExplorerScreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+            IconButton(onClick = onOpenTerminal) {
+                Icon(Icons.Default.Terminal, contentDescription = "Terminal")
             }
             IconButton(onClick = { showScripts = true }) {
                 Icon(Icons.Default.PlayArrow, contentDescription = "Scripts")

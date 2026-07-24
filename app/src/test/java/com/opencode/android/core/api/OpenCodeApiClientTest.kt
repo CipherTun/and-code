@@ -1,6 +1,10 @@
 package com.opencode.android.core.api
 
-import com.google.gson.JsonParser
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import com.opencode.android.data.connection.ConnectionProfile
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
@@ -59,7 +63,7 @@ class OpenCodeApiClientTest {
         assertEquals("/session?directory=%2Frepo%20with%20space", server.takeRequest().path)
         val createRequest = server.takeRequest()
         assertEquals("/session?directory=%2Frepo%20with%20space", createRequest.path)
-        assertEquals("New", JsonParser.parseString(createRequest.body.readUtf8()).asJsonObject["title"].asString)
+        assertEquals("New", Json.parseToJsonElement(createRequest.body.readUtf8()).jsonObject["title"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -79,11 +83,11 @@ class OpenCodeApiClientTest {
 
         val request = server.takeRequest()
         assertEquals("/session/s1/prompt_async", request.path)
-        val json = JsonParser.parseString(request.body.readUtf8()).asJsonObject
-        assertEquals("build", json["agent"].asString)
-        assertEquals("opencode", json.getAsJsonObject("model")["providerID"].asString)
-        assertEquals("deepseek-v4-flash-free", json.getAsJsonObject("model")["modelID"].asString)
-        assertEquals("hello", json.getAsJsonArray("parts")[0].asJsonObject["text"].asString)
+        val json = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+        assertEquals("build", json["agent"]!!.jsonPrimitive.content)
+        assertEquals("opencode", json["model"]!!.jsonObject["providerID"]!!.jsonPrimitive.content)
+        assertEquals("deepseek-v4-flash-free", json["model"]!!.jsonObject["modelID"]!!.jsonPrimitive.content)
+        assertEquals("hello", json["parts"]!!.jsonArray[0].jsonObject["text"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -96,10 +100,10 @@ class OpenCodeApiClientTest {
             attachments = listOf(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg"))
         ))
 
-        val parts = JsonParser.parseString(server.takeRequest().body.readUtf8())
-            .asJsonObject.getAsJsonArray("parts")
-        assertEquals("file", parts[0].asJsonObject["type"].asString)
-        assertEquals("file:///workspace/photo.jpg", parts[0].asJsonObject["url"].asString)
+        val parts = Json.parseToJsonElement(server.takeRequest().body.readUtf8())
+            .jsonObject["parts"]!!.jsonArray
+        assertEquals("file", parts[0].jsonObject["type"]!!.jsonPrimitive.content)
+        assertEquals("file:///workspace/photo.jpg", parts[0].jsonObject["url"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -111,9 +115,9 @@ class OpenCodeApiClientTest {
 
         val request = server.takeRequest()
         assertEquals("/session/s1/summarize", request.path)
-        val json = JsonParser.parseString(request.body.readUtf8()).asJsonObject
-        assertEquals("opencode", json["providerID"].asString)
-        assertEquals("model-1", json["modelID"].asString)
+        val json = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+        assertEquals("opencode", json["providerID"]!!.jsonPrimitive.content)
+        assertEquals("model-1", json["modelID"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -126,9 +130,9 @@ class OpenCodeApiClientTest {
         assertTrue(result)
         val request = server.takeRequest()
         assertEquals("/session/s1/permissions/perm1", request.path)
-        val json = JsonParser.parseString(request.body.readUtf8()).asJsonObject
-        assertEquals("once", json["response"].asString)
-        assertTrue(!json.has("remember"))
+        val json = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+        assertEquals("once", json["response"]!!.jsonPrimitive.content)
+        assertTrue(!json.containsKey("remember"))
     }
 
     @Test
@@ -139,8 +143,8 @@ class OpenCodeApiClientTest {
         val result = client.respondPermission("s1", "perm1", "once", remember = true)
 
         assertTrue(result)
-        val json = JsonParser.parseString(server.takeRequest().body.readUtf8()).asJsonObject
-        assertEquals("always", json["response"].asString)
+        val json = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+        assertEquals("always", json["response"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -153,10 +157,10 @@ class OpenCodeApiClientTest {
         assertTrue(result)
         val request = server.takeRequest()
         assertEquals("/session/s1/question/q-1", request.path)
-        val answers = JsonParser.parseString(request.body.readUtf8()).asJsonObject.getAsJsonArray("answers")
-        assertEquals("src", answers[0].asJsonArray[0].asString)
-        assertEquals("docs", answers[1].asJsonArray[0].asString)
-        assertEquals("tests", answers[1].asJsonArray[1].asString)
+        val answers = Json.parseToJsonElement(request.body.readUtf8()).jsonObject["answers"]!!.jsonArray
+        assertEquals("src", answers[0].jsonArray[0].jsonPrimitive.content)
+        assertEquals("docs", answers[1].jsonArray[0].jsonPrimitive.content)
+        assertEquals("tests", answers[1].jsonArray[1].jsonPrimitive.content)
     }
 
     @Test
@@ -170,7 +174,7 @@ class OpenCodeApiClientTest {
         val request = server.takeRequest()
         assertEquals("PATCH", request.method)
         assertEquals("/session/s1?directory=%2Frepo", request.path)
-        assertEquals("Renamed", JsonParser.parseString(request.body.readUtf8()).asJsonObject["title"].asString)
+        assertEquals("Renamed", Json.parseToJsonElement(request.body.readUtf8()).jsonObject["title"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -340,9 +344,9 @@ class OpenCodeApiClientTest {
         assertEquals("/provider/openai/oauth/authorize", server.takeRequest().path)
         val callback = server.takeRequest()
         assertEquals("/provider/openai/oauth/callback", callback.path)
-        val callbackJson = JsonParser.parseString(callback.body.readUtf8()).asJsonObject
-        assertEquals(0, callbackJson["method"].asInt)
-        assertEquals("abc", callbackJson["code"].asString)
+        val callbackJson = Json.parseToJsonElement(callback.body.readUtf8()).jsonObject
+        assertEquals(0, callbackJson["method"]!!.jsonPrimitive.int)
+        assertEquals("abc", callbackJson["code"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -376,10 +380,10 @@ class OpenCodeApiClientTest {
 
         val request = server.takeRequest()
         assertEquals("/provider/custom%2Fprovider/oauth/authorize", request.path)
-        val json = JsonParser.parseString(request.body.readUtf8()).asJsonObject
-        assertEquals(2, json["method"].asInt)
-        assertEquals("acme", json.getAsJsonObject("inputs")["tenant"].asString)
-        assertEquals("us", json.getAsJsonObject("inputs")["region"].asString)
+        val json = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+        assertEquals(2, json["method"]!!.jsonPrimitive.int)
+        assertEquals("acme", json["inputs"]!!.jsonObject["tenant"]!!.jsonPrimitive.content)
+        assertEquals("us", json["inputs"]!!.jsonObject["region"]!!.jsonPrimitive.content)
     }
 
     @Test
@@ -394,10 +398,10 @@ class OpenCodeApiClientTest {
         val put = server.takeRequest()
         assertEquals("PUT", put.method)
         assertEquals("/auth/custom", put.path)
-        val auth = JsonParser.parseString(put.body.readUtf8()).asJsonObject
-        assertEquals("api", auth["type"].asString)
-        assertEquals("key-value", auth["key"].asString)
-        assertEquals("us", auth.getAsJsonObject("metadata")["region"].asString)
+        val auth = Json.parseToJsonElement(put.body.readUtf8()).jsonObject
+        assertEquals("api", auth["type"]!!.jsonPrimitive.content)
+        assertEquals("key-value", auth["key"]!!.jsonPrimitive.content)
+        assertEquals("us", auth["metadata"]!!.jsonObject["region"]!!.jsonPrimitive.content)
         val delete = server.takeRequest()
         assertEquals("DELETE", delete.method)
         assertEquals("/auth/custom", delete.path)

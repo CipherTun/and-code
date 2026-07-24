@@ -81,6 +81,8 @@ import com.opencode.android.feature.settings.SettingsViewModel
 import com.opencode.android.feature.settings.VoiceSettingsScreen
 import com.opencode.android.feature.search.CommandPaletteSheet
 import com.opencode.android.feature.workspace.CodeViewerScreen
+import com.opencode.android.feature.workspace.TerminalScreen
+import com.opencode.android.feature.workspace.TerminalViewModel
 import com.opencode.android.feature.workspace.LocalRuntimeManagementScreen
 import com.opencode.android.feature.workspace.LocalRuntimeManagementViewModel
 import com.opencode.android.feature.workspace.RemoteConnectionScreen
@@ -114,6 +116,7 @@ private const val WORKSPACE_DETAIL_ROUTE = "workspace-detail"
 private const val SESSION_DETAIL_ROUTE = "session-detail"
 private const val LOCAL_RUNTIME_MANAGEMENT_ROUTE = "local-runtime-management"
 private const val ROUTE_CODE_VIEWER = "code-viewer"
+private const val ROUTE_TERMINAL = "terminal"
 
 /** Routes whose top bar exposes the hamburger menu / drawer swipe gesture. */
 private val DRAWER_ROOT_ROUTES = setOf(ROUTE_CHAT, ROUTE_SETTINGS, ROUTE_SCHEDULE)
@@ -925,9 +928,26 @@ fun OpenCodeApp(
                         onCloseFile = explorerViewModel::closeFile,
                         onNavigateUp = explorerViewModel::navigateUp,
                         onSearch = explorerViewModel::search,
-                        onRefreshChanges = explorerViewModel::refreshChanges
+                        onRefreshChanges = explorerViewModel::refreshChanges,
+                        onOpenTerminal = { navController.navigate(ROUTE_TERMINAL) }
                     )
                 }
+            }
+
+            composable(ROUTE_TERMINAL) {
+                val terminalViewModel: TerminalViewModel = viewModel(
+                    key = "terminal",
+                    factory = ViewModelFactory {
+                        TerminalViewModel(app.commandRunner)
+                    }
+                )
+                val terminalState by terminalViewModel.state.collectAsState()
+                TerminalScreen(
+                    state = terminalState,
+                    onCommand = terminalViewModel::executeCommand,
+                    onInputChange = terminalViewModel::updateInput,
+                    onClear = terminalViewModel::clear
+                )
             }
 
             composable(ROUTE_ACTIVITY) {

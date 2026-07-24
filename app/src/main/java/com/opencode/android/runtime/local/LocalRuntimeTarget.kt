@@ -191,16 +191,16 @@ class LocalRuntimeTarget(
         backend.archiveSession(sessionId)
     override suspend fun mcpServers(): List<com.opencode.android.core.api.McpServer> =
         backend.mcpServers()
-    override suspend fun addMcpServer(body: com.google.gson.JsonObject): com.opencode.android.core.api.McpServer =
+    override suspend fun addMcpServer(body: kotlinx.serialization.json.JsonObject): com.opencode.android.core.api.McpServer =
         backend.addMcpServer(body)
     override suspend fun connectMcpServer(name: String): Boolean = backend.connectMcpServer(name)
     override suspend fun disconnectMcpServer(name: String): Boolean = backend.disconnectMcpServer(name)
     override suspend fun removeMcpAuth(name: String): Boolean = backend.removeMcpAuth(name)
-    override suspend fun mcpAuth(name: String): com.google.gson.JsonObject = backend.mcpAuth(name)
+    override suspend fun mcpAuth(name: String): kotlinx.serialization.json.JsonObject = backend.mcpAuth(name)
     override suspend fun mcpAuthCallback(name: String, code: String): Boolean =
         backend.mcpAuthCallback(name, code)
-    override suspend fun config(): com.google.gson.JsonElement = backend.config()
-    override suspend fun updateConfig(patch: com.google.gson.JsonObject): com.google.gson.JsonElement =
+    override suspend fun config(): kotlinx.serialization.json.JsonElement = backend.config()
+    override suspend fun updateConfig(patch: kotlinx.serialization.json.JsonObject): kotlinx.serialization.json.JsonElement =
         backend.updateConfig(patch)
     override suspend fun configProviders(): List<com.opencode.android.core.api.ConfiguredProvider> =
         backend.configProviders()

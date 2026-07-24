@@ -1,11 +1,11 @@
 package com.opencode.android.core.api
 
-import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.annotations.SerializedName
 import com.opencode.android.feature.workspace.GitHubReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,7 +13,7 @@ import okhttp3.Request
 class GitHubApiClient(private val token: String?) {
 
     private val client: OkHttpClient = OkHttpClient()
-    private val gson: Gson = Gson()
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     suspend fun getPullRequests(owner: String, repo: String, branch: String): List<GitHubReference> =
         withContext(Dispatchers.IO) {
@@ -26,7 +26,7 @@ class GitHubApiClient(private val token: String?) {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val items = gson.fromJson(body, Array<GitHubPull>::class.java) ?: emptyArray()
+                    val items = json.decodeFromString<List<GitHubPull>>(body)
                     items.map { pull ->
                         GitHubReference(
                             type = "PR",
@@ -52,8 +52,7 @@ class GitHubApiClient(private val token: String?) {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
-                    val result = gson.fromJson(body, GitHubSearchResult::class.java)
-                        ?: return@withContext emptyList()
+                    val result = json.decodeFromString<GitHubSearchResult>(body)
                     result.items.map { item ->
                         GitHubReference(
                             type = "Issue",
@@ -78,19 +77,22 @@ class GitHubApiClient(private val token: String?) {
         }
         .build()
 
+    @Serializable
     private data class GitHubPull(
         val number: Int = 0,
         val title: String = "",
-        @SerializedName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = ""
     )
 
+    @Serializable
     private data class GitHubSearchResult(
         val items: List<GitHubIssue> = emptyList()
     )
 
+    @Serializable
     private data class GitHubIssue(
         val number: Int = 0,
         val title: String = "",
-        @SerializedName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = ""
     )
 }

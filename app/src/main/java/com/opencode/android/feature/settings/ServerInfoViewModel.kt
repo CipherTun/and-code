@@ -2,7 +2,6 @@ package com.opencode.android.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.JsonElement
 import com.opencode.android.core.api.ConfiguredProvider
 import com.opencode.android.core.api.OpenCodeCommand
 import com.opencode.android.core.api.OpenCodeSkill
@@ -12,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 data class ServerInfoUiState(
     val configJson: String? = null,
@@ -30,6 +31,7 @@ class ServerInfoViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ServerInfoUiState())
     val state: StateFlow<ServerInfoUiState> = _state.asStateFlow()
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     init {
         refresh()
@@ -80,7 +82,7 @@ class ServerInfoViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
             runCatching {
-                val patch = com.google.gson.JsonParser.parseString(draft).asJsonObject
+                val patch = json.parseToJsonElement(draft).jsonObject
                 backend.updateConfig(patch)
             }.onSuccess { result ->
                 _state.update {

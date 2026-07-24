@@ -1,28 +1,25 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import com.google.gson.reflect.TypeToken
 import com.opencode.android.data.connection.SecureSettingsRepository
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 
-/**
- * Stores provider API keys in encrypted preferences and synchronizes only
- * app-managed provider entries into OpenCode's auth.json before local startup.
- * Existing OAuth and user-managed entries are preserved.
- */
 class LocalProviderCredentialStore(
     private val load: () -> Map<String, String>,
     private val save: (Map<String, String>) -> Unit,
     private val loadManagedProviderIds: () -> Set<String> = { load().keys },
     private val saveManagedProviderIds: (Set<String>) -> Unit = {},
-    private val gson: Gson = Gson()
+    private val json: Json = defaultJson
 ) {
-    constructor(settings: SecureSettingsRepository, gson: Gson = Gson()) : this(
+    constructor(settings: SecureSettingsRepository, json: Json = defaultJson) : this(
         load = { settings.providerApiKeys() },
         save = { settings.providerApiKeys = it },
         loadManagedProviderIds = {
@@ -33,7 +30,7 @@ class LocalProviderCredentialStore(
             }
         },
         saveManagedProviderIds = { settings.managedProviderApiKeyIds = it },
-        gson = gson
+        json = json
     )
 
     fun credentials(): Map<String, String> = load()
@@ -77,29 +74,28 @@ class LocalProviderCredentialStore(
         val managedIds = managedProviderIds()
         if (managedIds.isEmpty()) return authFile
 
-        val payload = readExistingPayload(authFile)
+        val existingPayload = readExistingPayload(authFile)
         val currentCredentials = credentials()
+        val mutableEntries = existingPayload.toMutableMap()
         managedIds.forEach { providerId ->
             val apiKey = currentCredentials[providerId]?.trim().orEmpty()
             if (apiKey.isEmpty()) {
-                payload.remove(providerId)
+                mutableEntries.remove(providerId)
             } else {
-                payload.add(providerId, JsonObject().apply {
-                    addProperty("type", "api")
-                    addProperty("key", apiKey)
-                })
+                mutableEntries[providerId] = buildJsonObject {
+                    put("type", "api")
+                    put("key", apiKey)
+                }
             }
         }
-        writeAtomically(authFile, gson.toJson(payload))
+        writeAtomically(authFile, json.encodeToString<JsonObject>(JsonObject(mutableEntries)))
         return authFile
     }
 
     private fun readExistingPayload(authFile: File): JsonObject {
-        if (!authFile.isFile) return JsonObject()
+        if (!authFile.isFile) return JsonObject(emptyMap())
         return runCatching {
-            val parsed = JsonParser.parseString(authFile.readText())
-            require(parsed.isJsonObject) { "OpenCode auth.json must contain a JSON object" }
-            parsed.asJsonObject.deepCopy()
+            json.parseToJsonElement(authFile.readText()).jsonObject
         }.getOrElse { error ->
             throw IllegalStateException(
                 "Existing OpenCode auth.json is invalid and was not modified",
@@ -133,18 +129,23 @@ class LocalProviderCredentialStore(
     }
 
     companion object {
-        fun decodeMap(raw: String?, gson: Gson = Gson()): Map<String, String> {
+        private val defaultJson: Json = Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            encodeDefaults = true
+        }
+
+        fun decodeMap(raw: String?, json: Json = defaultJson): Map<String, String> {
             if (raw.isNullOrBlank()) return emptyMap()
-            val type = object : TypeToken<Map<String, String>>() {}.type
             return runCatching {
-                gson.fromJson<Map<String, String>>(raw, type).orEmpty()
+                json.decodeFromString<Map<String, String>>(raw)
                     .mapKeys { it.key.trim() }
                     .filter { it.key.isNotEmpty() && it.value.isNotBlank() }
                     .mapValues { it.value.trim() }
             }.getOrDefault(emptyMap())
         }
 
-        fun encodeMap(map: Map<String, String>, gson: Gson = Gson()): String =
-            gson.toJson(map)
+        fun encodeMap(map: Map<String, String>, json: Json = defaultJson): String =
+            json.encodeToString(map)
     }
 }

@@ -2,7 +2,6 @@ package com.opencode.android.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.JsonObject
 import com.opencode.android.core.api.McpServer
 import com.opencode.android.runtime.RuntimeRegistry
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 data class McpUiState(
     val servers: List<McpServer> = emptyList(),
@@ -99,14 +101,14 @@ class McpViewModel(
         if (current.addName.isBlank()) return
         viewModelScope.launch {
             _state.update { it.copy(isAdding = true) }
-            val body = JsonObject().apply {
-                addProperty("name", current.addName.trim())
+            val body = buildJsonObject {
+                put("name", current.addName.trim())
                 if (current.addUrl.isNotBlank()) {
-                    addProperty("type", "remote")
-                    addProperty("url", current.addUrl.trim())
+                    put("type", "remote")
+                    put("url", current.addUrl.trim())
                 } else if (current.addCommand.isNotBlank()) {
-                    addProperty("type", "local")
-                    addProperty("command", current.addCommand.trim())
+                    put("type", "local")
+                    put("command", current.addCommand.trim())
                 }
             }
             runCatching { backend.addMcpServer(body) }

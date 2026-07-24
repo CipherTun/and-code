@@ -1,11 +1,12 @@
 package com.opencode.android.runtime.local
 
 import android.content.Context
-import com.google.gson.Gson
 import com.opencode.android.R
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 
 class LocalRuntimeInstaller(
@@ -17,6 +18,8 @@ class LocalRuntimeInstaller(
     private val downloader: VerifiedRuntimeDownloader = VerifiedRuntimeDownloader(httpClient),
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator()
 ) {
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
+
     data class InstalledRuntime(
         val metadata: LocalRuntimeMetadata,
         val commandSuite: EmbeddedCommandSuite.Paths,
@@ -95,7 +98,7 @@ class LocalRuntimeInstaller(
                     runtimeVersion = manifest.runtimeVersion,
                     abi = abi
                 )
-                File(staging, METADATA_FILE).writeText(Gson().toJson(metadata))
+                File(staging, METADATA_FILE).writeText(json.encodeToString(metadata))
                 onProgress(0.96f, context.getString(R.string.install_step_activating_runtime))
                 accessCoordinator.write {
                     activateRuntimeEnvironment(
@@ -133,7 +136,7 @@ class LocalRuntimeInstaller(
         val openCode = File(rootfs, "usr/local/bin/opencode")
         if (!metadataFile.isFile || !openCode.isFile) return@read null
         val metadata = runCatching {
-            Gson().fromJson(metadataFile.readText(), LocalRuntimeMetadata::class.java)
+            json.decodeFromString<LocalRuntimeMetadata>(metadataFile.readText())
         }.getOrNull() ?: return@read null
         val commandSuite = runCatching {
             EmbeddedCommandSuite(context, runtimeDirectory, abi).ensureInstalled()

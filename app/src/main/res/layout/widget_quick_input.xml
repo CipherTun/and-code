@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="8dp"
+    android:background="#1A1A2E">
+
+    <ImageView
+        android:id="@+id/widget_app_icon"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="@string/app_name" />
+
+    <EditText
+        android:id="@+id/widget_input"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:hint="Message OpenCode…"
+        android:textColorHint="#888888"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:singleLine="true"
+        android:imeOptions="actionSend"
+        android:inputType="text"
+        android:background="@android:drawable/edit_text" />
+
+    <ImageButton
+        android:id="@+id/widget_send_button"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:src="@android:drawable/ic_menu_send"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Send"
+        android:scaleType="centerInside" />
+
+    <ImageButton
+        android:id="@+id/widget_mic_button"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="4dp"
+        android:src="@android:drawable/ic_btn_speak_now"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Voice input"
+        android:scaleType="centerInside" />
+
+</LinearLayout>

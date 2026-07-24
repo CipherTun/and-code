@@ -1,9 +1,10 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -47,7 +48,7 @@ sealed interface LocalRuntimeUpdateCheck {
 class LocalRuntimeReleaseClient(
     private val httpClient: OkHttpClient = OkHttpClient(),
     private val endpoint: HttpUrl = OFFICIAL_RELEASE_ENDPOINT.toHttpUrl(),
-    private val gson: Gson = Gson(),
+    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true },
     private val maxReleaseNotesCharacters: Int = 12_000
 ) {
     init {
@@ -76,7 +77,7 @@ class LocalRuntimeReleaseClient(
                 val body = requireNotNull(response.body) {
                     "OpenCode release response had no body"
                 }
-                gson.fromJson(body.charStream(), GitHubReleaseDto::class.java)
+                json.decodeFromString<GitHubReleaseDto>(body.string())
             }
             val latestVersion = normalizeOpenCodeVersion(releaseDto.tagName)
             val assetDto = requireNotNull(releaseDto.assets.firstOrNull { it.name == assetName }) {
@@ -107,17 +108,19 @@ class LocalRuntimeReleaseClient(
             }
         }
 
+    @Serializable
     private data class GitHubReleaseDto(
-        @SerializedName("tag_name") val tagName: String,
-        @SerializedName("body") val body: String?,
-        @SerializedName("assets") val assets: List<GitHubReleaseAssetDto> = emptyList()
+        @SerialName("tag_name") val tagName: String,
+        @SerialName("body") val body: String?,
+        @SerialName("assets") val assets: List<GitHubReleaseAssetDto> = emptyList()
     )
 
+    @Serializable
     private data class GitHubReleaseAssetDto(
-        @SerializedName("name") val name: String,
-        @SerializedName("size") val size: Long,
-        @SerializedName("browser_download_url") val downloadUrl: String,
-        @SerializedName("digest") val digest: String?
+        @SerialName("name") val name: String,
+        @SerialName("size") val size: Long,
+        @SerialName("browser_download_url") val downloadUrl: String,
+        @SerialName("digest") val digest: String?
     )
 
     companion object {

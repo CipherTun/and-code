@@ -18,6 +18,7 @@ data class AppPreferences(
     val autoAcceptPermissions: Boolean = false,
     val favoriteModelKeys: Set<String> = emptySet(),
     val recentModelKeys: List<String> = emptyList(),
+    val hiddenModelKeys: Set<String> = emptySet(),
     val theme: String = "dark",
     val uiFontSize: Int = 16,
     val codeFontSize: Int = 12,
@@ -45,6 +46,7 @@ class AppPreferencesRepository(
             autoAcceptPermissions = settings.autoAcceptPermissions,
             favoriteModelKeys = settings.favoriteModelKeys,
             recentModelKeys = settings.recentModelKeys,
+            hiddenModelKeys = settings.hiddenModelKeys,
             theme = settings.theme,
             uiFontSize = settings.uiFontSize,
             codeFontSize = settings.codeFontSize,
@@ -66,7 +68,7 @@ class AppPreferencesRepository(
         mutableState.update { it.copy(providerId = providerId, modelId = modelId) }
         if (providerId != null && modelId != null) {
             val key = "$providerId/$modelId"
-            val updated = (listOf(key) + settings.recentModelKeys.filterNot { it == key }).take(5)
+            val updated = (listOf(key) + settings.recentModelKeys.filterNot { it == key }).take(3)
             settings.recentModelKeys = updated
             mutableState.update { it.copy(recentModelKeys = updated) }
         }
@@ -129,6 +131,14 @@ class AppPreferencesRepository(
         val updated = if (key in current) current - key else current + key
         settings.favoriteModelKeys = updated
         mutableState.update { it.copy(favoriteModelKeys = updated) }
+    }
+
+    fun toggleModelVisibility(providerId: String, modelId: String) {
+        val key = "$providerId/$modelId"
+        val current = mutableState.value.hiddenModelKeys
+        val updated = if (key in current) current - key else current + key
+        settings.hiddenModelKeys = updated
+        mutableState.update { it.copy(hiddenModelKeys = updated) }
     }
 
     fun setTheme(theme: String) {
