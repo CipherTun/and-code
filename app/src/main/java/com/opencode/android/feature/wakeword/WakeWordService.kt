@@ -111,7 +111,7 @@ class WakeWordService : Service() {
 
         val pm = getSystemService(PowerManager::class.java)
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG).apply {
-            acquire()
+            acquire(WAKELOCK_TIMEOUT)
         }
 
         listenJob = scope.launch {

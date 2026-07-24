@@ -72,7 +72,7 @@ fun CodeViewerScreen(
     var wrap by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var currentMatch by remember { mutableIntStateOf(0) }
+    var currentMatch by remember { mutableIntStateOf(-1) }
 
     val codeListState = rememberLazyListState()
     val numbersListState = rememberLazyListState()
@@ -93,7 +93,7 @@ fun CodeViewerScreen(
             }
     }
 
-    LaunchedEffect(searchQuery) { currentMatch = 0 }
+    LaunchedEffect(searchQuery) { currentMatch = -1 }
 
     Scaffold(
         topBar = {
@@ -137,9 +137,9 @@ fun CodeViewerScreen(
                     IconButton(
                         onClick = {
                             if (matchLines.isNotEmpty()) {
-                                val target = matchLines[currentMatch % matchLines.size]
-                                scope.launch { codeListState.animateScrollToItem(target) }
                                 currentMatch = (currentMatch + 1) % matchLines.size
+                                val target = matchLines[currentMatch]
+                                scope.launch { codeListState.animateScrollToItem(target) }
                             }
                         }
                     ) {

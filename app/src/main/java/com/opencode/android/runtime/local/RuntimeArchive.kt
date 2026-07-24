@@ -46,8 +46,7 @@ object RuntimeArchive {
                             target.delete()
                             val linkTarget = File(target.parentFile, entry.linkName).canonicalFile
                             if (linkTarget.path.startsWith(canonicalRoot.path + File.separator) ||
-                                linkTarget.path == canonicalRoot.path ||
-                                !entry.linkName.startsWith("/")
+                                linkTarget.path == canonicalRoot.path
                             ) {
                                 Os.symlink(entry.linkName, target.absolutePath)
                             }

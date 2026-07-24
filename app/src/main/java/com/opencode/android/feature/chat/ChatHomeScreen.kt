@@ -229,6 +229,12 @@ fun ChatHomeScreen(
         }
     }
 
+    LaunchedEffect(state.attachments) {
+        if (state.attachments.isEmpty()) {
+            attachedImages.clear()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -377,7 +383,6 @@ fun ChatHomeScreen(
                         if (input.isNotBlank() || state.attachments.isNotEmpty()) {
                             onSendMessage(input)
                             input = ""
-                            attachedImages.clear()
                             showSlashCommands = false
                         }
                     },

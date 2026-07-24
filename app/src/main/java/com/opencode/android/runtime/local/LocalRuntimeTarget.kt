@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -208,8 +209,19 @@ class LocalRuntimeTarget(
         backend.commands()
     override suspend fun skills(): List<com.opencode.android.core.api.OpenCodeSkill> =
         backend.skills()
+    override suspend fun summarizeSession(sessionId: String, providerId: String, modelId: String): Boolean =
+        backend.summarizeSession(sessionId, providerId, modelId)
+    override suspend fun answerQuestion(
+        sessionId: String,
+        requestId: String,
+        answers: List<List<String>>
+    ): Boolean = backend.answerQuestion(sessionId, requestId, answers)
     override suspend fun initAgentsMd(sessionId: String): Boolean = backend.initAgentsMd(sessionId)
     override fun events(): Flow<OpenCodeEvent> = backend.events()
+
+    fun destroy() {
+        scope.cancel()
+    }
 
     private fun mapStatus(status: LocalRuntimeStatus): RuntimeState = when (status) {
         LocalRuntimeStatus.NotInstalled -> RuntimeState.Unavailable("ローカルランタイムは未インストールです")
