@@ -6,10 +6,28 @@ Thank you for your interest in contributing!
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/your-feature`
-3. Make your changes
-4. Run checks: `./gradlew testDebugUnitTest lintDebug assembleDebug`
-5. Commit with a clear message following [Conventional Commits](https://www.conventionalcommits.org/)
-6. Push and open a Pull Request against `main`
+3. Install the commit-msg hook: `ln -sf ../../scripts/commit-msg-hook.sh .git/hooks/commit-msg`
+4. Make your changes
+5. Run checks: `./gradlew testDebugUnitTest lintDebug assembleDebug`
+6. Commit with a clear message following [Conventional Commits](https://www.conventionalcommits.org/)
+7. Push and open a Pull Request against `main`
+
+## Commit Message Convention
+
+All commits must follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <description>
+```
+
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+Examples:
+- `feat: add voice input support`
+- `fix(chat): resolve SSE reconnection loop`
+- `chore: bump dependencies`
+
+CI validates commit messages on all PRs.
 
 ## Development Setup
 
