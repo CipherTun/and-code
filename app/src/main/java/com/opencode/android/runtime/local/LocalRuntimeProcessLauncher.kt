@@ -156,6 +156,8 @@ class LocalRuntimeProcessLauncher(
             Thread.sleep(250)
         }
         process.destroyForcibly()
+        process.waitFor(2, TimeUnit.SECONDS)
+        runCatching { process.outputStream.close() }
         error("Local OpenCode did not become ready on port $port: ${tail(logFile)}")
     }
 

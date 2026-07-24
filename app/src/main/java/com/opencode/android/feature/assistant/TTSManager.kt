@@ -122,6 +122,7 @@ class TTSManager(context: Context) {
         }
 
         continuation.invokeOnCancellation {
+            pendingSpeak = null
             stop()
         }
     }

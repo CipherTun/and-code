@@ -245,11 +245,7 @@ class LocalRuntimeService : Service() {
 
         fun send(context: Context, action: String) {
             val intent = Intent(context, LocalRuntimeService::class.java).setAction(action)
-            if (action == ACTION_STOP) {
-                context.startService(intent)
-            } else {
-                ContextCompat.startForegroundService(context, intent)
-            }
+            ContextCompat.startForegroundService(context, intent)
         }
     }
 }

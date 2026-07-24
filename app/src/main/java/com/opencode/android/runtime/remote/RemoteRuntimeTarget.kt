@@ -181,6 +181,13 @@ class RemoteRuntimeTarget(
         backend.commands()
     override suspend fun skills(): List<com.opencode.android.core.api.OpenCodeSkill> =
         backend.skills()
+    override suspend fun summarizeSession(sessionId: String, providerId: String, modelId: String): Boolean =
+        backend.summarizeSession(sessionId, providerId, modelId)
+    override suspend fun answerQuestion(
+        sessionId: String,
+        requestId: String,
+        answers: List<List<String>>
+    ): Boolean = backend.answerQuestion(sessionId, requestId, answers)
     override suspend fun initAgentsMd(sessionId: String): Boolean = backend.initAgentsMd(sessionId)
 
     override fun events(): Flow<OpenCodeEvent> = backend.events()

@@ -90,6 +90,7 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
     private var sessionId: String? = null
     private val responseParts = linkedMapOf<String, String>()
     private val textPartIds = mutableSetOf<String>()
+    private var responseHandled = false
 
     private val assistantState = mutableStateOf(VoiceState.IDLE)
     private val userText = mutableStateOf("")
@@ -130,8 +131,12 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        }
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        }
 
         val preferredRuntimeId = settings.assistantRuntimeId
         val target = app.runtimeRegistry.targets.value
@@ -231,6 +236,7 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
         partialText.value = ""
         errorText.value = null
         permissionRequest.value = null
+        responseHandled = false
         assistantState.value = VoiceState.LISTENING
 
         listeningJob = scope.launch {
@@ -277,6 +283,8 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
     }
 
     private fun onResponseComplete() {
+        if (responseHandled) return
+        responseHandled = true
         val answer = responseText.value.trim()
         if (answer.isEmpty()) {
             showError(context.getString(R.string.voice_no_answer_text))

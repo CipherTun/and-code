@@ -31,26 +31,6 @@ class LanDiscovery(private val nsdManager: NsdManager) {
         serviceType: String,
         nameFilter: (String) -> Boolean
     ): Flow<DiscoveredServer> = callbackFlow {
-        val resolveListener = object : NsdManager.ResolveListener {
-            override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) = Unit
-
-            @Suppress("DEPRECATION")
-            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                val host = serviceInfo.host?.hostAddress ?: return
-                val rawName = serviceInfo.serviceName.orEmpty()
-                val displayName = rawName
-                    .removePrefix(OPENCODE_NAME_PREFIX)
-                    .ifBlank { host }
-                trySend(
-                    DiscoveredServer(
-                        name = displayName,
-                        host = host,
-                        port = serviceInfo.port
-                    )
-                )
-            }
-        }
-
         val discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
                 close()
@@ -64,6 +44,25 @@ class LanDiscovery(private val nsdManager: NsdManager) {
 
             override fun onServiceFound(serviceInfo: NsdServiceInfo) {
                 if (!nameFilter(serviceInfo.serviceName.orEmpty())) return
+                val resolveListener = object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(info: NsdServiceInfo, errorCode: Int) = Unit
+
+                    @Suppress("DEPRECATION")
+                    override fun onServiceResolved(info: NsdServiceInfo) {
+                        val host = info.host?.hostAddress ?: return
+                        val rawName = info.serviceName.orEmpty()
+                        val displayName = rawName
+                            .removePrefix(OPENCODE_NAME_PREFIX)
+                            .ifBlank { host }
+                        trySend(
+                            DiscoveredServer(
+                                name = displayName,
+                                host = host,
+                                port = info.port
+                            )
+                        )
+                    }
+                }
                 runCatching {
                     @Suppress("DEPRECATION")
                     nsdManager.resolveService(serviceInfo, resolveListener)

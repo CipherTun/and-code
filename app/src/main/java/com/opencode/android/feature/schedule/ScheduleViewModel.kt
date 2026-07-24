@@ -1,6 +1,7 @@
 package com.opencode.android.feature.schedule
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -9,9 +10,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.util.UUID
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 
 data class ScheduleItem(
     val id: String = UUID.randomUUID().toString(),
@@ -25,7 +23,6 @@ data class ScheduleItem(
 )
 
 class ScheduleViewModel : ViewModel() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private val mutableSchedules = MutableStateFlow(
         listOf(
@@ -64,7 +61,7 @@ class ScheduleViewModel : ViewModel() {
         )
     )
 
-    private val mutableActiveOnly = MutableStateFlow(false)
+    private val mutableActiveOnly = MutableStateFlow(true)
 
     val schedules: StateFlow<List<ScheduleItem>> = mutableSchedules.asStateFlow()
     val activeOnly: StateFlow<Boolean> = mutableActiveOnly.asStateFlow()
@@ -73,8 +70,8 @@ class ScheduleViewModel : ViewModel() {
         mutableSchedules,
         mutableActiveOnly
     ) { items, onlyActive ->
-        if (onlyActive) items.filter { it.isActive } else items.filter { !it.isActive }
-    }.stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyList())
+        if (onlyActive) items.filter { it.isActive } else items
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setActiveOnly(activeOnly: Boolean) {
         mutableActiveOnly.update { activeOnly }
