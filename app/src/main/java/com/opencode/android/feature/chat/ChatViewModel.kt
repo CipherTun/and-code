@@ -182,7 +182,7 @@ data class ChatUiState(
     val contextTokensUsed: Long = 0L,
     val selectedVariant: String? = null,
     val attachments: List<PromptAttachment> = emptyList(),
-    val imagePreviews: List<Bitmap?> = emptyList(),
+    val imagePreviews: List<Bitmap> = emptyList(),
     val selectedProviderId: String? = null,
     val selectedModelId: String? = null,
     val selectedAgentId: String? = null,
@@ -225,7 +225,7 @@ class ChatViewModel(
         if (backend != null) {
             eventJob = viewModelScope.launch {
                 (eventFlow ?: backend.events())
-                    .catch { error -> reportError(error.safeMessage()) }
+                    .catch { error -> reportError(error) }
                     .collect(::handleEvent)
             }
             viewModelScope.launch {
@@ -297,12 +297,7 @@ class ChatViewModel(
     }
 
     fun addAttachment(attachment: PromptAttachment) {
-        _uiState.update {
-            it.copy(
-                attachments = it.attachments + attachment,
-                imagePreviews = it.imagePreviews + null
-            )
-        }
+        _uiState.update { it.copy(attachments = it.attachments + attachment) }
     }
 
     fun addImageAttachment(attachment: PromptAttachment, preview: Bitmap) {
@@ -397,7 +392,6 @@ class ChatViewModel(
                 isListening = false,
                 isSpeechProcessing = false,
                 partialText = "",
-                attachments = emptyList(),
                 imagePreviews = emptyList(),
                 error = null
             )
@@ -409,7 +403,7 @@ class ChatViewModel(
         val pendingAttachments = _uiState.value.attachments
         val messageIdsBeforeSend = _uiState.value.messages.map { it.id }.toSet()
         val pendingPreviewsByFilename = pendingAttachments.mapIndexedNotNull { index, attachment ->
-            _uiState.value.imagePreviews.getOrNull(index)?.let { preview -> attachment.filename to preview }
+            _uiState.value.imagePreviews.getOrNull(index)?.let { attachment.filename to it }
         }.toMap()
         if (normalized.isEmpty() && pendingAttachments.isEmpty()) return
         val currentBackend = backend
@@ -445,7 +439,7 @@ class ChatViewModel(
                 listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = it))
             }.orEmpty(),
             attachments = pendingAttachments,
-            imagePreviews = _uiState.value.imagePreviews.filterNotNull()
+            imagePreviews = _uiState.value.imagePreviews
         )
         _uiState.update {
             it.copy(
@@ -571,7 +565,7 @@ class ChatViewModel(
                         )
                     }
                 }
-                reportError(error.safeMessage())
+                reportError(error)
             }
         }
     }
@@ -863,15 +857,8 @@ class ChatViewModel(
             }
 
             val incomingText = parts.filterIsInstance<ChatPart.Text>().joinToString("") { it.text }
-            val hasNonTextParts = parts.any { it !is ChatPart.Text }
-            val userEchoIndex = if (!hasNonTextParts) {
-                state.messages.indexOfLast { it.isUser && it.text == incomingText }
-            } else {
-                -1
-            }
-            if (incomingText.isNotBlank() && userEchoIndex >= 0 &&
-                userEchoIndex == state.messages.lastIndex
-            ) {
+            val userEchoIndex = state.messages.indexOfLast { it.isUser && it.text == incomingText }
+            if (incomingText.isNotBlank() && userEchoIndex >= 0) {
                 val updated = state.messages.toMutableList().apply {
                     this[userEchoIndex] = this[userEchoIndex].copy(id = messageId)
                 }
@@ -980,10 +967,7 @@ class ChatViewModel(
         val queued = messageQueue.value
         if (queued.isEmpty()) return
         messageQueue.value = emptyList()
-        queued.firstOrNull()?.let { sendMessage(it) }
-        if (queued.size > 1) {
-            messageQueue.update { it + queued.drop(1) }
-        }
+        queued.forEach { sendMessage(it) }
     }
 
     private fun drainOfflineQueue() {
@@ -997,13 +981,19 @@ class ChatViewModel(
     override fun onCleared() {
         eventJob?.cancel()
         tts?.stop()
-        tts?.shutdown()
         tts = null
         super.onCleared()
     }
 
     private fun Throwable.safeMessage(): String =
         message?.takeIf { it.isNotBlank() } ?: "OpenCode operation failed"
+
+    private fun reportError(throwable: Throwable) {
+        _uiState.update { it.copy(error = throwable.safeMessage()) }
+        if (classifyChatError(throwable) == ChatErrorKind.TRANSIENT_CONNECTION) {
+            scheduleTransientRecovery()
+        }
+    }
 
     private fun reportError(message: String?) {
         _uiState.update { it.copy(error = message) }

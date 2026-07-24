@@ -1,0 +1,44 @@
+name: i18n Check
+
+on:
+  pull_request:
+    paths:
+      - "app/src/main/res/values*/strings.xml"
+
+jobs:
+  check-translations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check translation keys
+        run: |
+          SOURCE="app/src/main/res/values/strings.xml"
+          MISSING_FOUND=0
+
+          source_keys=$(grep -oP 'name="\K[^"]+' "$SOURCE" | sort)
+
+          for file in app/src/main/res/values-*/strings.xml; do
+            lang=$(echo "$file" | grep -oP 'values-\K[^/]+')
+            file_keys=$(grep -oP 'name="\K[^"]+' "$file" | sort)
+
+            missing=$(comm -23 <(echo "$source_keys") <(echo "$file_keys"))
+
+            if [ -n "$missing" ]; then
+              count=$(echo "$missing" | wc -l | tr -d ' ')
+              echo "::warning file=$file::[$lang] Missing $count translation(s): $(echo $missing | tr '\n' ' ')"
+              MISSING_FOUND=1
+            fi
+
+            extra=$(comm -13 <(echo "$source_keys") <(echo "$file_keys"))
+            if [ -n "$extra" ]; then
+              echo "::warning file=$file::[$lang] Extra key(s) not in source: $(echo $extra | tr '\n' ' ')"
+            fi
+          done
+
+          if [ "$MISSING_FOUND" -eq 1 ]; then
+            echo ""
+            echo "Some translations are incomplete. See warnings above."
+          else
+            echo "All translations are complete."
+          fi

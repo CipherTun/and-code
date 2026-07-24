@@ -25,8 +25,10 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.CertificatePinner
 import okhttp3.Credentials
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -36,7 +38,7 @@ import java.util.concurrent.TimeUnit
 
 class OpenCodeApiClient(
     private val profile: ConnectionProfile,
-    private val httpClient: OkHttpClient = defaultHttpClient(),
+    private val httpClient: OkHttpClient = defaultHttpClient(profile),
     private val json: Json = defaultJson,
     private val eventParser: OpenCodeEventParser = OpenCodeEventParser(json)
 ) {
@@ -592,10 +594,22 @@ class OpenCodeApiClient(
             encodeDefaults = true
         }
 
-        fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
+        fun defaultHttpClient(profile: ConnectionProfile? = null): OkHttpClient {
+            val builder = OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .writeTimeout(30, TimeUnit.SECONDS)
+            val pin = profile?.pinSha256
+            if (!pin.isNullOrBlank() && profile.baseUrl.startsWith("https://", ignoreCase = true)) {
+                val host = profile.baseUrl.toHttpUrlOrNull()?.host
+                    ?: profile.baseUrl.removePrefix("https://").substringBefore("/")
+                builder.certificatePinner(
+                    CertificatePinner.Builder()
+                        .add(host, "sha256/$pin")
+                        .build()
+                )
+            }
+            return builder.build()
+        }
     }
 }

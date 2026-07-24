@@ -114,5 +114,18 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:windowSoftInputMode="adjustResize" />
 
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="com.opencode.android.startup.RuntimeAutoStartInitializer"
+                tools:node="remove" />
+            <meta-data
+                android:name="com.opencode.android.startup.CatalogReconcileInitializer"
+                tools:node="remove" />
+        </provider>
+
     </application>
 </manifest>

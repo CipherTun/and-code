@@ -13,10 +13,11 @@ data class ConnectionProfile(
     @SerialName("baseUrl") val baseUrl: String,
     @SerialName("username") val username: String = "opencode",
     @SerialName("password") val password: String? = null,
-    @SerialName("allowInsecureLan") val allowInsecureLan: Boolean = false
+    @SerialName("allowInsecureLan") val allowInsecureLan: Boolean = false,
+    @SerialName("pinSha256") val pinSha256: String? = null
 ) {
     override fun toString(): String =
-        "ConnectionProfile(id=$id, name=$name, baseUrl=$baseUrl, username=$username, password=<redacted>, allowInsecureLan=$allowInsecureLan)"
+        "ConnectionProfile(id=$id, name=$name, baseUrl=$baseUrl, username=$username, password=<redacted>, allowInsecureLan=$allowInsecureLan, pinSha256=<redacted>)"
 }
 
 object ConnectionProfileCodec {
