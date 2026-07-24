@@ -55,6 +55,9 @@ jobs:
           assert all(item['packages'] for item in lock['architectures'].values())
           PY
 
+      - name: Static analysis (detekt + spotless)
+        run: ./gradlew detekt spotlessCheck
+
       - name: Test, lint and build APKs
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 
