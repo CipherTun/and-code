@@ -177,6 +177,7 @@ fun ChatHomeScreen(
     val isAtBottom = remember { mutableStateOf(true) }
     var showActionSheet by remember { mutableStateOf<Pair<String, String>?>(null) }
     var activityGroupId by remember { mutableStateOf<String?>(null) }
+    val timelineEntries = remember(state.messages) { groupConversationTimeline(state.messages) }
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     var showSlashCommands by remember { mutableStateOf(false) }
@@ -222,8 +223,8 @@ fun ChatHomeScreen(
         }.collect { atBottom -> isAtBottom.value = atBottom }
     }
 
-    LaunchedEffect(state.messages.size, state.permissions.size, state.pendingQuestions.size) {
-        val totalItems = state.messages.size + state.permissions.size + state.pendingQuestions.size
+    LaunchedEffect(timelineEntries.size, state.permissions.size, state.pendingQuestions.size) {
+        val totalItems = timelineEntries.size + state.permissions.size + state.pendingQuestions.size
         if (totalItems > 0 && isAtBottom.value) listState.animateScrollToItem(totalItems - 1)
     }
 
@@ -304,30 +305,40 @@ fun ChatHomeScreen(
                             onOpenRemoteSetup = onOpenRemoteSetup,
                         )
                     else -> {
-                        val lastAssistantId = state.messages.lastOrNull { !it.isUser }?.id
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            items(state.messages, key = { it.id }) { message ->
+                            items(timelineEntries, key = { it.id }) { entry ->
+                                val copyable =
+                                    when (entry) {
+                                        is TimelineEntry.UserMessage -> entry.message.id to entry.message.text
+                                        is TimelineEntry.Body -> entry.messageId to entry.part.text
+                                        is TimelineEntry.Activity -> null
+                                    }
                                 Box(
                                     modifier =
-                                        Modifier.combinedClickable(
-                                            onClick = {},
-                                            onLongClick = { showActionSheet = message.id to message.text },
-                                        ),
+                                        if (copyable == null) {
+                                            Modifier
+                                        } else {
+                                            Modifier.combinedClickable(
+                                                onClick = {},
+                                                onLongClick = { showActionSheet = copyable },
+                                            )
+                                        },
                                 ) {
-                                    if (message.isUser) {
-                                        MessageBubble(message)
-                                    } else {
-                                        AssistantTimeline(
-                                            message,
-                                            showProcessing = state.isRunning && message.id == lastAssistantId,
-                                            onOpenActivity = { activityGroupId = it },
-                                        )
-                                    }
+                                    TimelineEntryRow(entry, onOpenActivity = { activityGroupId = it })
+                                }
+                            }
+                            if (state.isRunning && timelineEntries.isNotEmpty()) {
+                                item(key = "processing") {
+                                    Text(
+                                        text = stringResource(R.string.processing),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             }
                             items(state.permissions, key = { "permission-${it.id}" }) { permission ->
@@ -364,7 +375,7 @@ fun ChatHomeScreen(
                         onClick = {
                             isAtBottom.value = true
                             coroutineScope.launch {
-                                val totalItems = state.messages.size + state.permissions.size + state.pendingQuestions.size
+                                val totalItems = timelineEntries.size + state.permissions.size + state.pendingQuestions.size
                                 if (totalItems > 0) listState.animateScrollToItem(totalItems - 1)
                             }
                         },

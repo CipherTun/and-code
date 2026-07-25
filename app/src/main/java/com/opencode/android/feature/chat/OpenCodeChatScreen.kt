@@ -63,7 +63,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -124,6 +123,7 @@ fun OpenCodeChatScreen(
     val listState = rememberLazyListState()
     val isAtBottom = remember { mutableStateOf(true) }
     var activityGroupId by remember { mutableStateOf<String?>(null) }
+    val timelineEntries = remember(state.messages) { groupConversationTimeline(state.messages) }
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -134,8 +134,8 @@ fun OpenCodeChatScreen(
         }.collect { atBottom -> isAtBottom.value = atBottom }
     }
 
-    LaunchedEffect(state.messages.size, state.permissions.size) {
-        val totalItems = state.messages.size + state.permissions.size
+    LaunchedEffect(timelineEntries.size, state.permissions.size) {
+        val totalItems = timelineEntries.size + state.permissions.size
         if (totalItems > 0 && isAtBottom.value) listState.animateScrollToItem(totalItems - 1)
     }
 
@@ -194,12 +194,8 @@ fun OpenCodeChatScreen(
                 }
             }
 
-            items(state.messages, key = { it.id }) { message ->
-                if (message.isUser) {
-                    MessageBubble(message)
-                } else {
-                    AssistantTimeline(message, onOpenActivity = { activityGroupId = it })
-                }
+            items(timelineEntries, key = { it.id }) { entry ->
+                TimelineEntryRow(entry, onOpenActivity = { activityGroupId = it })
             }
 
             items(state.permissions, key = { "permission-${it.id}" }) { permission ->
@@ -639,37 +635,24 @@ fun MessageBubble(message: ChatMessage) {
     }
 }
 
-// Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
+/**
+ * Renders one row produced by [groupConversationTimeline].
+ *
+ * Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
+ */
 @Composable
-fun AssistantTimeline(
-    message: ChatMessage,
-    showProcessing: Boolean = false,
+fun TimelineEntryRow(
+    entry: TimelineEntry,
     onOpenActivity: (String) -> Unit = {},
 ) {
-    val entries = remember(message.parts) { groupAssistantTimeline(message.parts) }
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        entries.forEach { entry ->
-            key(entry.id) {
-                when (entry) {
-                    is TimelineEntry.Body -> MarkdownText(entry.part.text)
-                    is TimelineEntry.Activity ->
-                        AssistantActivityRow(
-                            parts = entry.parts,
-                            onClick = { onOpenActivity(entry.id) },
-                        )
-                }
-            }
-        }
-        if (showProcessing) {
-            Text(
-                text = stringResource(R.string.processing),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    when (entry) {
+        is TimelineEntry.UserMessage -> MessageBubble(entry.message)
+        is TimelineEntry.Body -> MarkdownText(entry.part.text)
+        is TimelineEntry.Activity ->
+            AssistantActivityRow(
+                parts = entry.parts,
+                onClick = { onOpenActivity(entry.id) },
             )
-        }
     }
 }
 

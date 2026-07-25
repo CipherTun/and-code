@@ -13,14 +13,22 @@ class AssistantActivityGroupTest {
         title: String? = null,
     ) = ChatPart.Tool(id = id, name = name, status = status, title = title)
 
+    private fun assistant(
+        id: String,
+        vararg parts: ChatPart,
+    ) = ChatMessage(id = id, isUser = false, parts = parts.toList())
+
     @Test
     fun `collapses a consecutive run of tools into one activity entry`() {
         val entries =
-            groupAssistantTimeline(
+            groupConversationTimeline(
                 listOf(
-                    tool("t1", "bash"),
-                    ChatPart.Reasoning("r1", "thinking"),
-                    tool("t2", "read"),
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        ChatPart.Reasoning("r1", "thinking"),
+                        tool("t2", "read"),
+                    ),
                 ),
             )
 
@@ -30,15 +38,51 @@ class AssistantActivityGroupTest {
     }
 
     @Test
+    fun `collapses a run that spans several assistant messages`() {
+        // OpenCode opens a new assistant message per model step, so a turn that reads two files
+        // and then thinks arrives as two messages. It is still one uninterrupted run on screen.
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    ChatMessage(id = "m0", isUser = true, parts = listOf(ChatPart.Text("u1", "explain this repo"))),
+                    assistant("m1", tool("t1", "read"), tool("t2", "read")),
+                    assistant("m2", ChatPart.Reasoning("r1", "thinking"), ChatPart.Text("x1", "This repo is…")),
+                ),
+            )
+
+        assertEquals(3, entries.size)
+        assertTrue(entries[0] is TimelineEntry.UserMessage)
+        assertEquals(listOf("t1", "t2", "r1"), (entries[1] as TimelineEntry.Activity).parts.map { it.id })
+        assertEquals("This repo is…", (entries[2] as TimelineEntry.Body).part.text)
+    }
+
+    @Test
+    fun `a user message ends the preceding run`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant("m1", tool("t1", "read")),
+                    ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "next"))),
+                    assistant("m3", tool("t2", "read")),
+                ),
+            )
+
+        assertEquals(listOf("activity:t1", "user:m2", "activity:t2"), entries.map { it.id })
+    }
+
+    @Test
     fun `body text splits activity into separate groups`() {
         val entries =
-            groupAssistantTimeline(
+            groupConversationTimeline(
                 listOf(
-                    tool("t1", "bash"),
-                    ChatPart.Text("x1", "Exploring the codebase."),
-                    tool("t2", "edit"),
-                    tool("t3", "write"),
-                    ChatPart.Text("x2", "Done."),
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        ChatPart.Text("x1", "Exploring the codebase."),
+                        tool("t2", "edit"),
+                        tool("t3", "write"),
+                        ChatPart.Text("x2", "Done."),
+                    ),
                 ),
             )
 
@@ -52,13 +96,19 @@ class AssistantActivityGroupTest {
     @Test
     fun `blank text parts do not split a run`() {
         val entries =
-            groupAssistantTimeline(
+            groupConversationTimeline(
                 listOf(
-                    tool("t1", "bash"),
-                    ChatPart.Text("x1", ""),
-                    tool("t2", "bash"),
-                    ChatPart.Text("x2", "   "),
-                    tool("t3", "bash"),
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        ChatPart.Text("x1", ""),
+                        tool("t2", "bash"),
+                    ),
+                    assistant(
+                        "m2",
+                        ChatPart.Text("x2", "   "),
+                        tool("t3", "bash"),
+                    ),
                 ),
             )
 
@@ -70,9 +120,15 @@ class AssistantActivityGroupTest {
     fun `activity id is the id of its first part so compose keys stay stable`() {
         val parts = listOf(tool("first", "bash"), tool("second", "read"))
 
-        assertEquals("first", groupAssistantTimeline(parts).single().id)
-        // Appending to a growing run must not change the group identity.
-        assertEquals("first", groupAssistantTimeline(parts + tool("third", "read")).single().id)
+        assertEquals("activity:first", groupConversationTimeline(listOf(assistant("m1", *parts.toTypedArray()))).single().id)
+        // Appending to a growing run must not change the group identity — not even when the new
+        // step lands in the next assistant message.
+        assertEquals(
+            "activity:first",
+            groupConversationTimeline(
+                listOf(assistant("m1", *parts.toTypedArray()), assistant("m2", tool("third", "read"))),
+            ).single().id,
+        )
     }
 
     @Test
@@ -142,9 +198,9 @@ class AssistantActivityGroupTest {
                 ),
             )
 
-        assertEquals(listOf("b1", "b2"), findActivityParts(messages, "b1").map { it.id })
-        assertEquals(listOf("a1"), findActivityParts(messages, "a1").map { it.id })
-        assertTrue(findActivityParts(messages, "nope").isEmpty())
+        assertEquals(listOf("b1", "b2"), findActivityParts(messages, "activity:b1").map { it.id })
+        assertEquals(listOf("a1"), findActivityParts(messages, "activity:a1").map { it.id })
+        assertTrue(findActivityParts(messages, "activity:nope").isEmpty())
     }
 
     @Test
@@ -152,7 +208,7 @@ class AssistantActivityGroupTest {
         val growing =
             ChatMessage(id = "m1", isUser = false, parts = listOf(tool("a1", "bash"), tool("a2", "read")))
 
-        assertEquals(listOf("a1", "a2"), findActivityParts(listOf(growing), "a1").map { it.id })
+        assertEquals(listOf("a1", "a2"), findActivityParts(listOf(growing), "activity:a1").map { it.id })
     }
 
     @Test
