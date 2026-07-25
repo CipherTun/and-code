@@ -74,22 +74,21 @@ import com.opencode.android.feature.onboarding.OnboardingChoiceScreen
 import com.opencode.android.feature.schedule.ScheduleScreen
 import com.opencode.android.feature.schedule.ScheduleViewModel
 import com.opencode.android.feature.settings.DiagnosticsSheet
-import com.opencode.android.feature.settings.ProviderSettingsScreen
 import com.opencode.android.feature.settings.GitHubRepo
-import com.opencode.android.feature.settings.SettingsScreenV2
 import com.opencode.android.feature.settings.SettingsViewModel
-import com.opencode.android.feature.settings.VoiceSettingsScreen
 import com.opencode.android.feature.search.CommandPaletteSheet
-import com.opencode.android.feature.workspace.CodeViewerScreen
-import com.opencode.android.feature.workspace.TerminalScreen
-import com.opencode.android.feature.workspace.TerminalViewModel
-import com.opencode.android.feature.workspace.LocalRuntimeManagementScreen
-import com.opencode.android.feature.workspace.LocalRuntimeManagementViewModel
-import com.opencode.android.feature.workspace.RemoteConnectionScreen
-import com.opencode.android.feature.workspace.WorkspaceExplorerScreen
-import com.opencode.android.feature.workspace.WorkspaceExplorerViewModel
 import com.opencode.android.feature.workspace.WorkspaceViewModel
-import com.opencode.android.feature.workspace.WorkspacesScreen
+import com.opencode.android.ui.navigation.DRAWER_ROOT_ROUTES
+import com.opencode.android.ui.navigation.LOCAL_RUNTIME_MANAGEMENT_ROUTE
+import com.opencode.android.ui.navigation.ROUTE_ACTIVITY
+import com.opencode.android.ui.navigation.ROUTE_ANDROID_SETUP
+import com.opencode.android.ui.navigation.ROUTE_CHAT
+import com.opencode.android.ui.navigation.ROUTE_ONBOARDING
+import com.opencode.android.ui.navigation.ROUTE_REMOTE_CONNECTION
+import com.opencode.android.ui.navigation.ROUTE_SCHEDULE
+import com.opencode.android.ui.navigation.SESSION_DETAIL_ROUTE
+import com.opencode.android.ui.navigation.settingsNavGraph
+import com.opencode.android.ui.navigation.workspaceNavGraph
 import com.opencode.android.ui.theme.AppTheme
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 import com.opencode.android.ui.components.SessionStatus
@@ -99,27 +98,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-private const val ROUTE_ONBOARDING = "onboarding"
-private const val ROUTE_ANDROID_SETUP = "android-setup"
-private const val ROUTE_REMOTE_CONNECTION = "remote-connection"
-private const val ROUTE_CHAT = "chat"
-private const val ROUTE_SCHEDULE = "schedule"
-private const val ROUTE_SETTINGS = "settings"
-private const val ROUTE_SETTINGS_VOICE = "settings-voice"
-private const val ROUTE_SETTINGS_PROVIDERS = "settings-providers"
-private const val ROUTE_SETTINGS_MCP = "settings-mcp"
-private const val ROUTE_SETTINGS_SERVER_INFO = "settings-server-info"
-private const val ROUTE_WORKSPACES = "workspaces"
-private const val ROUTE_ACTIVITY = "activity"
-private const val WORKSPACE_DETAIL_ROUTE = "workspace-detail"
-private const val SESSION_DETAIL_ROUTE = "session-detail"
-private const val LOCAL_RUNTIME_MANAGEMENT_ROUTE = "local-runtime-management"
-private const val ROUTE_CODE_VIEWER = "code-viewer"
-private const val ROUTE_TERMINAL = "terminal"
-
-/** Routes whose top bar exposes the hamburger menu / drawer swipe gesture. */
-private val DRAWER_ROOT_ROUTES = setOf(ROUTE_CHAT, ROUTE_SETTINGS, ROUTE_SCHEDULE)
 
 private fun speechLocaleTag(context: android.content.Context): String {
     val locale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
@@ -131,7 +109,6 @@ private fun speechLocaleTag(context: android.content.Context): String {
     return locale?.toLanguageTag()?.takeIf { it.isNotBlank() } ?: "en-US"
 }
 
-/** Relative-time label ("3時間前" / "3 hours ago") for the drawer's recent-chats list. */
 private fun relativeTimeLabel(context: android.content.Context, epochMillis: Long): String {
     val diffMillis = (System.currentTimeMillis() - epochMillis).coerceAtLeast(0L)
     val minutes = diffMillis / 60_000L
@@ -418,7 +395,6 @@ fun OpenCodeApp(
         app.runtimeRegistry.select(targetRuntimeId)
     }
 
-    // First-run gate: onboarding is the start destination until completed or skipped.
     val startDestination = remember { if (app.settings.onboardingCompleted) ROUTE_CHAT else ROUTE_ONBOARDING }
     val completeOnboardingAndGoToChat: () -> Unit = {
         app.settings.onboardingCompleted = true
@@ -602,15 +578,6 @@ fun OpenCodeApp(
                 )
             }
 
-            composable(ROUTE_REMOTE_CONNECTION) {
-                RemoteConnectionScreen(
-                    onTestConnection = workspaceViewModel::testConnection,
-                    onSaveConnection = workspaceViewModel::saveConnection,
-                    onBack = { navController.popBackStack() },
-                    onConnected = completeOnboardingAndGoToChat
-                )
-            }
-
             composable(ROUTE_CHAT) {
                 LaunchedEffect(pendingSession) {
                     pendingSession?.let { (id, title) ->
@@ -688,8 +655,6 @@ fun OpenCodeApp(
                     },
                     onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
                     onOpenDrawer = {
-                        // Refresh sessions when the drawer is opened so a chat
-                        // created during this run is visible immediately.
                         app.catalogRepository.refreshSessionsOnly()
                         drawerScope.launch { drawerState.open() }
                     },
@@ -721,234 +686,44 @@ fun OpenCodeApp(
                 )
             }
 
-            composable(ROUTE_SETTINGS) {
-                SettingsScreenV2(
-                    assistantConfigured = settingsState.assistantRuntimeId != null,
-                    notificationsEnabled = notificationsEnabled,
-                    onToggleNotifications = { enabled ->
-                        // Local UI toggle only — Android has no API to programmatically revoke
-                        // notification access, so turning this off is visual until the user
-                        // also disables notifications from system settings. TODO: reflect the
-                        // real system permission state instead of local-only UI state.
-                        notificationsEnabled = enabled
-                        if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        }
-                    },
-                    appVersion = appVersion,
-                    onOpenDrawer = { drawerScope.launch { drawerState.open() } },
-                    onOpenAssistantSettings = onOpenAssistantSettings,
-                    onOpenVoiceSettings = { navController.navigate(ROUTE_SETTINGS_VOICE) },
-                    onOpenProviderSettings = { navController.navigate(ROUTE_SETTINGS_PROVIDERS) },
-                    onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
-                    onOpenRemoteConnection = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
-                    onOpenWorkspaces = { navController.navigate(ROUTE_WORKSPACES) },
-                    onOpenDiagnostics = { showDiagnostics = true },
-                    onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
-                    onOpenServerInfo = { navController.navigate(ROUTE_SETTINGS_SERVER_INFO) },
-
-                    currentTheme = preferences.theme,
-                    onThemeChange = { app.preferences.setTheme(it) },
-                    uiFontSize = preferences.uiFontSize,
-                    onUiFontSizeChange = { app.preferences.setUiFontSize(it) },
-                    codeFontSize = preferences.codeFontSize,
-                    onCodeFontSizeChange = { app.preferences.setCodeFontSize(it) },
-                    syntaxTheme = preferences.syntaxTheme,
-                    onSyntaxThemeChange = { app.preferences.setSyntaxTheme(it) },
-                    toolCallDetailLevel = preferences.toolCallDetailLevel,
-                    onToolCallDetailLevelChange = { app.preferences.setToolCallDetailLevel(it) },
-                    autoExpandReasoning = preferences.autoExpandReasoning,
-                    onAutoExpandReasoningChange = { app.preferences.setAutoExpandReasoning(it) },
-                    sendBehavior = preferences.sendBehavior,
-                    onSendBehaviorChange = { app.preferences.setSendBehavior(it) }
-                )
-            }
-
-            composable(ROUTE_SETTINGS_VOICE) {
-                VoiceSettingsScreen(
-                    ttsEnabled = settingsState.ttsEnabled,
-                    continuousConversation = settingsState.continuousConversation,
-                    wakeWordEnabled = settingsState.wakeWordEnabled,
-                    onTtsChange = settingsViewModel::setTtsEnabled,
-                    onContinuousChange = settingsViewModel::setContinuousConversation,
-                    onWakeWordChange = { enabled ->
-                        settingsViewModel.setWakeWordEnabled(enabled)
-                        if (enabled) {
-                            if (hasMicrophonePermission()) {
-                                com.opencode.android.feature.wakeword.WakeWordService.start(context)
-                            } else {
-                                startWakeWordAfterPermission = true
-                                microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        } else {
-                            com.opencode.android.feature.wakeword.WakeWordService.stop(context)
-                        }
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(ROUTE_SETTINGS_PROVIDERS) {
-                ProviderSettingsScreen(
-                    state = settingsState,
-                    onOpenProviderAuth = settingsViewModel::openProviderAuth,
-                    onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,
-                    onProviderAuthInput = settingsViewModel::updateProviderAuthInput,
-                    onProviderApiKey = settingsViewModel::updateProviderApiKey,
-                    onSubmitProviderAuth = settingsViewModel::submitProviderAuth,
-                    onCompleteProviderOAuth = settingsViewModel::completeProviderOAuth,
-                    onDisconnectProvider = settingsViewModel::disconnectProvider,
-                    onLaunchOAuthBrowser = { url ->
-                        runCatching {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                            )
-                        }.onFailure { error ->
-                            settingsViewModel.reportOAuthError(error.message.orEmpty())
-                        }
-                    },
-                    onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
-                    onConnectGitHub = { settingsViewModel.beginGitHubDeviceFlow() },
-                    onDisconnectGitHub = settingsViewModel::disconnectGitHub,
-                    onOpenGitHubVerification = { url ->
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                        }.onFailure { error -> settingsViewModel.reportOAuthError(error.message.orEmpty()) }
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(ROUTE_SETTINGS_MCP) {
-                com.opencode.android.feature.settings.McpScreen(
-                    registry = app.runtimeRegistry,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(ROUTE_SETTINGS_SERVER_INFO) {
-                com.opencode.android.feature.settings.ServerInfoScreen(
-                    registry = app.runtimeRegistry,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(ROUTE_WORKSPACES) {
-                WorkspacesScreen(
-                    state = workspaceState,
-                    onSelectRuntime = workspaceViewModel::selectRuntime,
-                    onSaveConnection = workspaceViewModel::saveConnection,
-                    onDeleteConnection = workspaceViewModel::deleteConnection,
-                    onTestConnection = workspaceViewModel::testConnection,
-                    onRefresh = workspaceViewModel::refresh,
-                    onOpenWorkspace = { workspace ->
-                        selectedWorkspace = workspace
-                        navController.navigate(WORKSPACE_DETAIL_ROUTE)
-                    },
-                    onSetupLocal = workspaceViewModel::setupLocalRuntime,
-                    onStartLocal = workspaceViewModel::startLocalRuntime,
-                    onStopLocal = workspaceViewModel::stopLocalRuntime,
-                    onReinstallLocal = workspaceViewModel::reinstallLocalRuntime,
-                    onOpenLocalManagement = {
-                        navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE)
-                    },
-                    onImportFolder = { workspaceImportLauncher.launch(null) },
-                    onCloneGithub = { showCloneDialog = true },
-                    onRemoveProject = workspaceViewModel::removeProject,
-                    onDeleteProjectFiles = workspaceViewModel::deleteProjectFiles,
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(LOCAL_RUNTIME_MANAGEMENT_ROUTE) {
-                val managementViewModel: LocalRuntimeManagementViewModel = viewModel(
-                    key = "local-runtime-management",
-                    factory = ViewModelFactory {
-                        LocalRuntimeManagementViewModel(
-                            runtimeState = app.localRuntimeManager.state,
-                            lastOperationState = app.localRuntimeManager.lastOperation,
-                            diagnosticsProvider = {
-                                withContext(Dispatchers.IO) {
-                                    app.localRuntimeDiagnosticsCollector.collect()
-                                }
-                            },
-                            updateCheckProvider = app.localRuntimeManager::checkForUpdate,
-                            rollbackVersionProvider = app.localRuntimeManager::rollbackVersion,
-                            repairAction = app.localRuntimeController::reinstall,
-                            updateAction = app.localRuntimeController::update,
-                            rollbackAction = app.localRuntimeController::rollback,
-                            deleteAction = app.localRuntimeController::delete
-                        )
+            settingsNavGraph(
+                navController = navController,
+                settingsViewModel = settingsViewModel,
+                settingsState = settingsState,
+                notificationsEnabled = notificationsEnabled,
+                onToggleNotifications = { enabled ->
+                    notificationsEnabled = enabled
+                    if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
-                )
-                val managementState by managementViewModel.state.collectAsState()
-                LaunchedEffect(managementState.deleteCompleted) {
-                    if (managementState.deleteCompleted) {
-                        managementViewModel.consumeDeleteCompleted()
-                        workspaceViewModel.refresh()
-                        navController.popBackStack()
-                    }
+                },
+                appVersion = appVersion,
+                onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                onOpenAssistantSettings = onOpenAssistantSettings,
+                onShowDiagnostics = { showDiagnostics = true },
+                preferences = preferences,
+                appPreferences = app.preferences,
+                runtimeRegistry = app.runtimeRegistry,
+                context = context,
+                hasMicrophonePermission = { hasMicrophonePermission() },
+                onRequestWakeWordPermission = {
+                    startWakeWordAfterPermission = true
+                    microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 }
-                LocalRuntimeManagementScreen(
-                    state = managementState,
-                    onBack = { navController.popBackStack() },
-                    onRefresh = managementViewModel::refresh,
-                    onCheckForUpdate = managementViewModel::checkForUpdate,
-                    onRepair = managementViewModel::repair,
-                    onRequestUpdate = managementViewModel::requestUpdate,
-                    onDismissUpdate = managementViewModel::dismissUpdate,
-                    onConfirmUpdate = managementViewModel::confirmUpdate,
-                    onRequestRollback = managementViewModel::requestRollback,
-                    onDismissRollback = managementViewModel::dismissRollback,
-                    onConfirmRollback = managementViewModel::confirmRollback,
-                    onRequestDelete = managementViewModel::requestDelete,
-                    onDismissDelete = managementViewModel::dismissDelete,
-                    onConfirmDelete = managementViewModel::confirmDelete
-                )
-            }
+            )
 
-            composable(WORKSPACE_DETAIL_ROUTE) {
-                val workspace = selectedWorkspace
-                val runtime = selectedRuntime
-                if (workspace == null || runtime == null) {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
-                } else {
-                    val explorerViewModel: WorkspaceExplorerViewModel = viewModel(
-                        key = "workspace-explorer-${runtime.id}-${workspace.id}",
-                        factory = ViewModelFactory {
-                            WorkspaceExplorerViewModel(runtime, workspace)
-                        }
-                    )
-                    val explorerState by explorerViewModel.state.collectAsState()
-                    WorkspaceExplorerScreen(
-                        state = explorerState,
-                        onBack = { navController.popBackStack() },
-                        onRefresh = explorerViewModel::refresh,
-                        onOpenNode = explorerViewModel::open,
-                        onCloseFile = explorerViewModel::closeFile,
-                        onNavigateUp = explorerViewModel::navigateUp,
-                        onSearch = explorerViewModel::search,
-                        onRefreshChanges = explorerViewModel::refreshChanges,
-                        onOpenTerminal = { navController.navigate(ROUTE_TERMINAL) }
-                    )
-                }
-            }
-
-            composable(ROUTE_TERMINAL) {
-                val terminalViewModel: TerminalViewModel = viewModel(
-                    key = "terminal",
-                    factory = ViewModelFactory {
-                        TerminalViewModel(app.commandRunner)
-                    }
-                )
-                val terminalState by terminalViewModel.state.collectAsState()
-                TerminalScreen(
-                    state = terminalState,
-                    onCommand = terminalViewModel::executeCommand,
-                    onInputChange = terminalViewModel::updateInput,
-                    onClear = terminalViewModel::clear
-                )
-            }
+            workspaceNavGraph(
+                navController = navController,
+                workspaceViewModel = workspaceViewModel,
+                workspaceState = workspaceState,
+                selectedWorkspace = selectedWorkspace,
+                onSelectWorkspace = { selectedWorkspace = it },
+                selectedRuntime = selectedRuntime,
+                app = app,
+                onImportFolder = { workspaceImportLauncher.launch(null) },
+                onShowCloneDialog = { showCloneDialog = true },
+                completeOnboardingAndGoToChat = completeOnboardingAndGoToChat
+            )
 
             composable(ROUTE_ACTIVITY) {
                 ActivityScreen(
@@ -993,17 +768,6 @@ fun OpenCodeApp(
                     )
                 }
             }
-
-            composable("$ROUTE_CODE_VIEWER?filePath={filePath}") { backStack ->
-                val filePath = backStack.arguments?.getString("filePath").orEmpty()
-                CodeViewerScreen(
-                    fileName = filePath.substringAfterLast('/'),
-                    content = "",
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-
         }
     }
 

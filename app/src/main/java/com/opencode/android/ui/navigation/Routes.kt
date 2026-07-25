@@ -1,0 +1,21 @@
+package com.opencode.android.ui.navigation
+
+const val ROUTE_ONBOARDING = "onboarding"
+const val ROUTE_ANDROID_SETUP = "android-setup"
+const val ROUTE_REMOTE_CONNECTION = "remote-connection"
+const val ROUTE_CHAT = "chat"
+const val ROUTE_SCHEDULE = "schedule"
+const val ROUTE_SETTINGS = "settings"
+const val ROUTE_SETTINGS_VOICE = "settings-voice"
+const val ROUTE_SETTINGS_PROVIDERS = "settings-providers"
+const val ROUTE_SETTINGS_MCP = "settings-mcp"
+const val ROUTE_SETTINGS_SERVER_INFO = "settings-server-info"
+const val ROUTE_WORKSPACES = "workspaces"
+const val ROUTE_ACTIVITY = "activity"
+const val WORKSPACE_DETAIL_ROUTE = "workspace-detail"
+const val SESSION_DETAIL_ROUTE = "session-detail"
+const val LOCAL_RUNTIME_MANAGEMENT_ROUTE = "local-runtime-management"
+const val ROUTE_CODE_VIEWER = "code-viewer"
+const val ROUTE_TERMINAL = "terminal"
+
+val DRAWER_ROOT_ROUTES = setOf(ROUTE_CHAT, ROUTE_SETTINGS, ROUTE_SCHEDULE)

@@ -61,6 +61,16 @@ jobs:
       - name: Test, lint and build APKs
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 
+      - name: Generate coverage report
+        run: ./gradlew jacocoTestReport
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: app/build/reports/jacoco/
+          if-no-files-found: error
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

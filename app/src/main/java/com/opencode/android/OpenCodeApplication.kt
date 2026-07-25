@@ -26,6 +26,8 @@ import com.opencode.android.runtime.local.LocalProviderCredentialStore
 import com.opencode.android.runtime.local.GitCredentialHelper
 import com.opencode.android.runtime.local.GitCloneRepository
 import com.opencode.android.runtime.local.VerifiedRuntimeDownloader
+import com.opencode.android.di.appModule
+import com.opencode.android.di.viewModelModule
 import com.opencode.android.startup.CatalogReconcileInitializer
 import com.opencode.android.startup.RuntimeAutoStartInitializer
 import java.io.File
@@ -33,6 +35,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import okhttp3.OkHttpClient
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
 
 class OpenCodeApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -75,6 +79,10 @@ class OpenCodeApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        startKoin {
+            androidContext(this@OpenCodeApplication)
+            modules(appModule, viewModelModule)
+        }
         settings = SecureSettingsRepository(this)
         preferences = AppPreferencesRepository(settings)
         notifications = RuntimeNotificationHelper(this)

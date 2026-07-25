@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.speech.tts.TextToSpeech
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.opencode.android.core.api.ConnectionQuality
+import com.opencode.android.core.api.ConnectionQualityMonitor
 import com.opencode.android.core.api.OpenCodeEvent
 import com.opencode.android.core.api.OpenCodeMessage
 import com.opencode.android.core.api.OpenCodePart
@@ -189,6 +191,7 @@ data class ChatUiState(
     val selectedWorkspacePath: String? = null,
     val offlineQueue: List<String> = emptyList(),
     val isOfflineQueued: Boolean = false,
+    val connectionQuality: ConnectionQuality? = null,
     val error: String? = null
 )
 
@@ -220,6 +223,7 @@ class ChatViewModel(
     private var tts: TextToSpeech? = null
     private var contextLimit: Long = 0L
     private val streamedParts = mutableMapOf<String, LinkedHashMap<String, ChatPart>>()
+    private val connectionMonitor = ConnectionQualityMonitor(viewModelScope)
 
     init {
         if (backend != null) {
@@ -246,6 +250,12 @@ class ChatViewModel(
                     kotlinx.coroutines.delay(HEALTH_CHECK_DELAY_MS)
                 }
                 reportError(lastError)
+            }
+            connectionMonitor.startMonitoring { backend.health() }
+            viewModelScope.launch {
+                connectionMonitor.quality.collect { quality ->
+                    _uiState.update { it.copy(connectionQuality = quality) }
+                }
             }
         }
     }
@@ -750,6 +760,7 @@ class ChatViewModel(
             }
             is OpenCodeEvent.MessagePartDelta -> {
                 if (event.sessionId != activeSession || event.field != "text") return
+                connectionMonitor.recordStreamToken()
                 val messageParts = streamedParts.getOrPut(event.messageId) { linkedMapOf() }
                 val updatedPart = when (val existing = messageParts[event.partId]) {
                     is ChatPart.Text -> existing.copy(text = existing.text + event.delta)

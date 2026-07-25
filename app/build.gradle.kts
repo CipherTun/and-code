@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.devtools.ksp")
+    id("androidx.baselineprofile")
+    id("jacoco")
 }
 
 val repoRoot = rootProject.projectDir
@@ -154,6 +157,7 @@ dependencies {
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.startup:startup-runtime:1.2.0")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     
     // Compose
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
@@ -185,6 +189,18 @@ dependencies {
     // TensorFlow Lite (wake word detection)
     implementation("org.tensorflow:tensorflow-lite:2.16.1")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+
+    // DI
+    implementation("io.insert-koin:koin-android:4.0.1")
+    implementation("io.insert-koin:koin-androidx-compose:4.0.1")
+
+    // Room
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
+    // Baseline Profiles
+    baselineProfile(project(":benchmark"))
     
     // Testing
     testImplementation("junit:junit:4.13.2")
