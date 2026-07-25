@@ -42,6 +42,8 @@ import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
 
+private const val MAX_RECENT_MODELS = 3
+
 /**
  * Bottom sheet opened from the chat screen's model chip. Lets the user pick both
  * the execution target (this Android device or a registered remote runtime) and
@@ -137,7 +139,7 @@ fun ModelAndRuntimePickerSheet(
                 val favoriteEntries =
                     providers.flatMap { provider ->
                         provider.models.values
-                            .filter { "$provider.id/${it.id}" in favoriteModelKeys }
+                            .filter { "${provider.id}/${it.id}" in favoriteModelKeys }
                             .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
                             .map { FavoriteEntry(provider, it) }
                     }.sortedBy { it.model.name.lowercase() }
@@ -151,6 +153,7 @@ fun ModelAndRuntimePickerSheet(
                         FavoriteEntry(provider, model)
                     }.filter { entry -> "${entry.provider.id}/${entry.model.id}" !in favoriteModelKeys }
                         .filter { query.isBlank() || it.model.name.contains(query, true) || it.model.id.contains(query, true) }
+                        .take(MAX_RECENT_MODELS)
 
                 if (favoriteEntries.isNotEmpty()) {
                     item {
