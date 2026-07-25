@@ -95,6 +95,7 @@ import com.opencode.android.ui.theme.AppTheme
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -240,7 +241,7 @@ fun OpenCodeApp(
     settingsViewModel.onLocalRuntimeRestartNeeded = {
         voiceScope.launch {
             workspaceViewModel.stopLocalRuntime()
-            kotlinx.coroutines.delay(2000)
+            delay(2000)
             workspaceViewModel.startLocalRuntime()
         }
     }

@@ -582,4 +582,12 @@
     <string name="model_visibility_row">Modelos visíveis</string>
     <string name="model_visibility_title">Modelos visíveis</string>
     <string name="model_visibility_caption">Desmarque os modelos para ocultá-los do seletor de modelos.</string>
+
+    <string name="runtime_diagnostics_failed">Failed to diagnose the local runtime</string>
+    <string name="runtime_update_check_failed">Failed to check for OpenCode updates</string>
+    <string name="runtime_repair_start_failed">Cannot start local runtime repair</string>
+    <string name="runtime_update_start_failed">Cannot start OpenCode update</string>
+    <string name="runtime_rollback_start_failed">Cannot start OpenCode rollback</string>
+    <string name="runtime_delete_failed">Cannot delete the local runtime</string>
+    <string name="runtime_delete_timeout">Runtime deletion timed out</string>
 </resources>

@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import com.opencode.android.OpenCodeApplication
 import com.opencode.android.core.api.PromptRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -228,7 +229,7 @@ class QuickInputActivity : ComponentActivity() {
 
     private fun finishAfterDelay(delayMs: Long = 1200L) {
         lifecycleScope.launch {
-            kotlinx.coroutines.delay(delayMs)
+            delay(delayMs)
             finish()
         }
     }

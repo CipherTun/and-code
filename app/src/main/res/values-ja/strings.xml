@@ -596,4 +596,12 @@
     <string name="usage_row">使用量</string>
     <string name="font_size_dialog_title">フォントサイズ</string>
     <string name="widget_quick_input_hint">OpenCodeにメッセージを送る…</string>
+
+    <string name="runtime_diagnostics_failed">ローカルランタイムの診断に失敗しました</string>
+    <string name="runtime_update_check_failed">OpenCodeの更新確認に失敗しました</string>
+    <string name="runtime_repair_start_failed">ローカルランタイムの修復を開始できません</string>
+    <string name="runtime_update_start_failed">OpenCodeの更新を開始できません</string>
+    <string name="runtime_rollback_start_failed">OpenCodeのロールバックを開始できません</string>
+    <string name="runtime_delete_failed">ローカルランタイムを削除できません</string>
+    <string name="runtime_delete_timeout">ランタイムの削除がタイムアウトしました</string>
 </resources>

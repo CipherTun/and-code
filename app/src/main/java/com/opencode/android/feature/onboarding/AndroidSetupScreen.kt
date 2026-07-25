@@ -61,6 +61,7 @@ import com.opencode.android.feature.settings.ProviderAuthDialog
 import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
+import kotlinx.coroutines.delay
 
 private const val TOTAL_STEPS = 3
 
@@ -98,7 +99,7 @@ fun AndroidSetupScreen(
     LaunchedEffect(runtimeReady, settingsState.availableProviders, settingsState.providerAuthMethods) {
         if (!runtimeReady) return@LaunchedEffect
         if (settingsState.availableProviders.isNotEmpty() && settingsState.providerAuthMethods.isNotEmpty()) return@LaunchedEffect
-        kotlinx.coroutines.delay(2000)
+        delay(2000)
         onRefreshCatalog()
         onRefreshProviderAuth()
     }

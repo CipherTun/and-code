@@ -208,7 +208,8 @@ fun ChatHomeScreen(
                         attachedImages.add(bitmap)
                         onImageAttachment(bitmap)
                     }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    android.util.Log.w("ChatHomeScreen", "Failed to load image", e)
                 }
             }
         }
