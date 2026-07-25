@@ -1,6 +1,16 @@
 name: Emulator UI Screenshots
 
 on:
+  # Also on main, not because the screenshots are needed there but because
+  # gradle/actions/setup-gradle only writes its cache from the default branch, and its cache
+  # key is per job. Without a run on main this job has never had a warm Gradle cache and has
+  # recompiled the whole app from scratch on every pull request.
+  push:
+    branches: [main]
+    paths:
+      - 'app/src/main/**'
+      - 'app/src/androidTest/**'
+      - '.github/workflows/ui-screenshots.yml'
   pull_request:
     paths:
       - 'app/src/main/**'
@@ -18,7 +28,10 @@ permissions:
 
 jobs:
   capture:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-22.04
     timeout-minutes: 60
 
