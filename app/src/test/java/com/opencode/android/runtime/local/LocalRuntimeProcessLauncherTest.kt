@@ -33,6 +33,7 @@ class LocalRuntimeProcessLauncherTest {
         assertEquals("/root/.config", environment["XDG_CONFIG_HOME"])
         assertEquals("/android/proot-tmp", environment["PROOT_TMP_DIR"])
         assertEquals("/native/lib", environment["LD_LIBRARY_PATH"])
+        assertTrue(environment["OPENCODE_CONFIG_CONTENT"]?.contains("qwen3.8-max-preview") == true)
         assertTrue(environment["OPENCODE_DISABLE_AUTOUPDATE"] == "true")
     }
 

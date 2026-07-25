@@ -252,25 +252,29 @@ internal fun processId(process: Process): Long? {
 internal fun localRuntimeEnvironment(
     suiteEnvironment: Map<String, String>,
     prootTmp: File,
-    githubToken: String? = null,
-): Map<String, String> =
-    buildMap {
-        putAll(suiteEnvironment)
-        put("PROOT_TMP_DIR", prootTmp.absolutePath)
-        put("HOME", "/root")
-        put("USER", "root")
-        put("LOGNAME", "root")
-        put("SHELL", "/bin/bash")
-        put("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
-        put("TMPDIR", "/tmp")
-        put("XDG_CONFIG_HOME", "/root/.config")
-        put("XDG_CACHE_HOME", "/root/.cache")
-        put("XDG_DATA_HOME", "/root/.local/share")
-        put("XDG_STATE_HOME", "/root/.local/state")
-        put("OPENCODE_CONFIG_DIR", "/root/.config/opencode")
-        put("OPENCODE_DISABLE_AUTOUPDATE", "true")
-        githubToken?.takeIf(String::isNotBlank)?.let {
-            put("OPENCODE_GITHUB_TOKEN", it)
-            put("GH_TOKEN", it)
-        }
+    githubToken: String? = null
+): Map<String, String> = buildMap {
+    putAll(suiteEnvironment)
+    put("PROOT_TMP_DIR", prootTmp.absolutePath)
+    put("HOME", "/root")
+    put("USER", "root")
+    put("LOGNAME", "root")
+    put("SHELL", "/bin/bash")
+    put("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+    put("TMPDIR", "/tmp")
+    put("XDG_CONFIG_HOME", "/root/.config")
+    put("XDG_CACHE_HOME", "/root/.cache")
+    put("XDG_DATA_HOME", "/root/.local/share")
+    put("XDG_STATE_HOME", "/root/.local/state")
+    put("OPENCODE_CONFIG_DIR", "/root/.config/opencode")
+    // Keep the Android-local provider catalog current without replacing user config.
+    put("OPENCODE_CONFIG_CONTENT", ANDROID_MODEL_CONFIG)
+    put("OPENCODE_DISABLE_AUTOUPDATE", "true")
+    githubToken?.takeIf(String::isNotBlank)?.let {
+        put("OPENCODE_GITHUB_TOKEN", it)
+        put("GH_TOKEN", it)
     }
+}
+
+private const val ANDROID_MODEL_CONFIG =
+    """{"provider":{"alibaba-token-plan":{"models":{"qwen3.8-max-preview":{"name":"Qwen3.8 Max Preview","reasoning":true,"limit":{"context":983616,"output":131072},"options":{"thinking":{"type":"enabled","budgetTokens":99072},"temperature":0.6}}}}}}"""
