@@ -54,6 +54,16 @@
     <string name="tool_input_label">入力</string>
     <string name="tool_output_label">出力</string>
     <string name="tool_output_truncated">…出力を省略しました</string>
+    <string name="activity_summary_commands">%1$d件のコマンドを実行しました</string>
+    <string name="activity_summary_reads">%1$d件のファイルを読み取りました</string>
+    <string name="activity_summary_edits">%1$d件のファイルを編集しました</string>
+    <string name="activity_summary_subagents">%1$d件のサブエージェントを実行しました</string>
+    <string name="activity_summary_tools">%1$d件のツールを使用しました</string>
+    <string name="activity_summary_reasoning">%1$d件の思考</string>
+    <string name="activity_summary_separator">、</string>
+    <string name="activity_details_title">実行内容</string>
+    <string name="activity_details_open">実行内容の詳細を表示</string>
+    <string name="activity_details_close">閉じる</string>
     <string name="file_changes_title">ファイル変更</string>
     <string name="file_changes_generic">ファイルが変更されました</string>
     <string name="workspace_folder_label">作業フォルダ</string>

@@ -54,6 +54,16 @@
     <string name="tool_input_label">输入</string>
     <string name="tool_output_label">输出</string>
     <string name="tool_output_truncated">…输出已截断</string>
+    <string name="activity_summary_commands">执行了 %1$d 条命令</string>
+    <string name="activity_summary_reads">读取了 %1$d 个文件</string>
+    <string name="activity_summary_edits">编辑了 %1$d 个文件</string>
+    <string name="activity_summary_subagents">运行了 %1$d 个子代理</string>
+    <string name="activity_summary_tools">使用了 %1$d 个工具</string>
+    <string name="activity_summary_reasoning">思考 %1$d 次</string>
+    <string name="activity_summary_separator">、</string>
+    <string name="activity_details_title">执行内容</string>
+    <string name="activity_details_open">显示执行详情</string>
+    <string name="activity_details_close">关闭</string>
     <string name="file_changes_title">文件更改</string>
     <string name="file_changes_generic">文件已更改</string>
     <string name="workspace_folder_label">工作文件夹</string>
