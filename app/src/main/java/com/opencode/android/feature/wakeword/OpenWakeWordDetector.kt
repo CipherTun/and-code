@@ -83,7 +83,7 @@ class OpenWakeWordDetector(private val context: Context) {
 
         val score = runWakewordModel()
         return if (score >= DETECTION_THRESHOLD) {
-            WakeWordResult("hey_mycroft", score, System.currentTimeMillis())
+            WakeWordResult("hey_opencode", score, System.currentTimeMillis())
         } else {
             null
         }

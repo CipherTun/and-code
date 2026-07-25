@@ -171,6 +171,9 @@ android {
             useLegacyPackaging = true
         }
     }
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 tasks.named("preBuild").configure {
