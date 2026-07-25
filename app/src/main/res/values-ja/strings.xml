@@ -457,4 +457,11 @@
     <string name="privacy_stub_body">この機能は準備中です。</string>
     <string name="diagnostics_row">診断・ログ</string>
     <string name="app_info_row">アプリ情報</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_open_session">サブエージェントのセッションを開く</string>
+    <string name="subagent_session_label">サブエージェントのセッション</string>
+    <string name="subagent_return_to_parent">メインエージェントに戻る: %1$s</string>
+    <string name="subagent_parent_untitled">メインのセッション</string>
+    <string name="subagent_badge">サブエージェント</string>
 </resources>

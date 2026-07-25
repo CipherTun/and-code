@@ -38,7 +38,9 @@ import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 data class DrawerRecentSession(
     val id: String,
     val title: String,
-    val relativeTime: String
+    val relativeTime: String,
+    /** Session OpenCode created for a subagent run rather than a chat the user started. */
+    val isSubagent: Boolean = false
 )
 
 /** Drawer focused on real chat history and the two stable destinations. */
@@ -73,6 +75,7 @@ fun AppDrawerContent(
                     recentSessions.forEach { session ->
                         DrawerChatRow(
                             title = session.title.ifBlank { session.id },
+                            isSubagent = session.isSubagent,
                             onClick = { onOpenSession(session.id, session.title) }
                         )
                     }
@@ -164,18 +167,39 @@ private fun DrawerSectionHeader(text: String) {
 @Composable
 private fun DrawerChatRow(
     title: String,
+    isSubagent: Boolean,
     onClick: () -> Unit
 ) {
-    Text(
-        text = title,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        style = MaterialTheme.typography.bodyMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f, fill = false),
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (isSubagent) {
+            Surface(
+                shape = RoundedCornerShape(100.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Text(
+                    text = stringResource(R.string.subagent_badge),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -210,7 +234,7 @@ private fun AppDrawerContentPreview() {
             recentSessions = listOf(
                 DrawerRecentSession("1", "認証バグの調査", "3時間前"),
                 DrawerRecentSession("2", "READMEの更新", "昨日"),
-                DrawerRecentSession("3", "テスト失敗を修正", "2日前"),
+                DrawerRecentSession("3", "テスト失敗を修正", "2日前", isSubagent = true),
                 DrawerRecentSession("4", "APIレスポンスを整理", "4日前"),
                 DrawerRecentSession("5", "依存関係を更新", "1週間前")
             ),

@@ -1,5 +1,6 @@
 package com.opencode.android.feature.chat
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -99,7 +101,9 @@ fun ChatHomeScreen(
     onOpenHistory: () -> Unit,
     onOpenLocalSetup: () -> Unit,
     onOpenRemoteSetup: () -> Unit,
-    onOpenDrawer: () -> Unit
+    onOpenDrawer: () -> Unit,
+    onOpenSubagentSession: (String, String) -> Unit = { _, _ -> },
+    onReturnToParentSession: () -> Unit = {}
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -112,6 +116,10 @@ fun ChatHomeScreen(
         val totalItems = state.messages.size + state.permissions.size
         if (totalItems > 0) listState.animateScrollToItem(totalItems - 1)
     }
+
+    // In a subagent session the system back gesture returns to the main agent instead of
+    // leaving the chat, matching the in-chat return button.
+    BackHandler(enabled = state.parentSession != null) { onReturnToParentSession() }
 
     Column(
         modifier = Modifier
@@ -146,6 +154,13 @@ fun ChatHomeScreen(
             )
         )
 
+        state.parentSession?.let { parent ->
+            SubagentSessionBanner(
+                parentTitle = parent.title,
+                onReturn = onReturnToParentSession
+            )
+        }
+
         Box(modifier = Modifier.weight(1f)) {
             when {
                 state.isLoadingHistory -> LoadingState()
@@ -164,7 +179,11 @@ fun ChatHomeScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(state.messages, key = { it.id }) { message ->
-                            if (message.isUser) MessageBubble(message) else AssistantTimeline(message)
+                            if (message.isUser) {
+                                MessageBubble(message)
+                            } else {
+                                AssistantTimeline(message, onOpenSubagentSession)
+                            }
                         }
                         items(state.permissions, key = { "permission-${it.id}" }) { permission ->
                             PermissionCard(permission, onPermission)
@@ -225,6 +244,55 @@ fun ChatHomeScreen(
             onSelectModel = onSelectModel,
             onDismiss = { showModelPicker = false }
         )
+    }
+}
+
+/**
+ * Shown while a subagent session is open: the chat is a child conversation, so it needs an
+ * explicit way back to the main agent that spawned it.
+ */
+@Composable
+private fun SubagentSessionBanner(
+    parentTitle: String,
+    onReturn: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 2.dp)
+            .clickable(onClick = onReturn),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.subagent_session_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = stringResource(
+                        R.string.subagent_return_to_parent,
+                        parentTitle.ifBlank { stringResource(R.string.subagent_parent_untitled) }
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
 

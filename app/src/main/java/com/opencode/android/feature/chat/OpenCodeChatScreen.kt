@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Build
@@ -560,7 +562,10 @@ fun MessageBubble(message: ChatMessage) {
 
 // Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
 @Composable
-fun AssistantTimeline(message: ChatMessage) {
+fun AssistantTimeline(
+    message: ChatMessage,
+    onOpenSubagentSession: (String, String) -> Unit = { _, _ -> }
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -570,7 +575,7 @@ fun AssistantTimeline(message: ChatMessage) {
                 when (part) {
                     is ChatPart.Text -> MarkdownText(part.text)
                     is ChatPart.Reasoning -> ReasoningCard(part)
-                    is ChatPart.Tool -> ToolCard(part)
+                    is ChatPart.Tool -> ToolCard(part, onOpenSubagentSession)
                     is ChatPart.Patch -> PatchCard(part)
                 }
             }
@@ -686,7 +691,10 @@ private fun ReasoningCard(part: ChatPart.Reasoning) {
 }
 
 @Composable
-private fun ToolCard(part: ChatPart.Tool) {
+private fun ToolCard(
+    part: ChatPart.Tool,
+    onOpenSubagentSession: (String, String) -> Unit = { _, _ -> }
+) {
     var expanded by remember { mutableStateOf(part.status == ToolStatus.RUNNING) }
     Card(
         modifier = Modifier
@@ -714,6 +722,23 @@ private fun ToolCard(part: ChatPart.Tool) {
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null
                 )
+            }
+            part.childSessionId?.let { childSessionId ->
+                FilledTonalButton(
+                    onClick = { onOpenSubagentSession(childSessionId, part.title.orEmpty()) },
+                    modifier = Modifier.padding(top = 6.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.padding(horizontal = 3.dp))
+                    Text(
+                        text = stringResource(R.string.subagent_open_session),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
             }
             if (expanded) {
                 part.input?.let { input ->

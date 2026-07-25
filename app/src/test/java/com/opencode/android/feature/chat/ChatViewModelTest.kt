@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -368,6 +369,127 @@ class ChatViewModelTest {
     }
 
     @Test
+    fun `task tool part exposes the subagent session it created`() = runTest(dispatcher) {
+        val backend = FakeBackend()
+        val viewModel = ChatViewModel(backend)
+        viewModel.sendMessage("Delegate this")
+        advanceUntilIdle()
+
+        backend.events.emit(
+            OpenCodeEvent.MessagePartUpdated(
+                OpenCodePart(
+                    id = "tool-task",
+                    sessionId = "s1",
+                    messageId = "m-assistant",
+                    type = "tool",
+                    tool = "task",
+                    state = mapOf(
+                        "status" to "running",
+                        "title" to "Investigate the bug",
+                        "metadata" to mapOf("parentSessionId" to "s1", "sessionId" to "child-1")
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        val toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
+        assertEquals("child-1", toolPart.childSessionId)
+    }
+
+    @Test
+    fun `tool metadata pointing at its own session is not treated as a subagent session`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            viewModel.sendMessage("Run a command")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "tool-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "tool",
+                        tool = "bash",
+                        state = mapOf(
+                            "status" to "running",
+                            "metadata" to mapOf("sessionId" to "s1")
+                        )
+                    )
+                )
+            )
+            advanceUntilIdle()
+
+            val toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
+            assertNull(toolPart.childSessionId)
+        }
+
+    @Test
+    fun `opening a subagent session remembers the session to return to`() = runTest(dispatcher) {
+        val backend = FakeBackend()
+        val viewModel = ChatViewModel(backend)
+        viewModel.sendMessage("Delegate this")
+        advanceUntilIdle()
+
+        viewModel.openSubagentSession("child-1", "Investigate the bug")
+        advanceUntilIdle()
+
+        assertEquals("child-1", viewModel.uiState.value.sessionId)
+        assertEquals(ParentSessionRef("s1", "Delegate this"), viewModel.uiState.value.parentSession)
+
+        viewModel.openParentSession()
+        advanceUntilIdle()
+
+        assertEquals("s1", viewModel.uiState.value.sessionId)
+        assertEquals("Delegate this", viewModel.uiState.value.sessionTitle)
+        assertNull(viewModel.uiState.value.parentSession)
+    }
+
+    @Test
+    fun `session opened from history resolves its parent session`() = runTest(dispatcher) {
+        val backend = FakeBackend()
+        backend.sessions = listOf(
+            OpenCodeSession(id = "main", title = "Main chat"),
+            OpenCodeSession(id = "child-1", title = "Investigate the bug", parentId = "main")
+        )
+        val viewModel = ChatViewModel(backend)
+
+        viewModel.openSession("child-1", "Investigate the bug")
+        advanceUntilIdle()
+
+        assertEquals(ParentSessionRef("main", "Main chat"), viewModel.uiState.value.parentSession)
+    }
+
+    @Test
+    fun `main session opened from history has no return target`() = runTest(dispatcher) {
+        val backend = FakeBackend()
+        backend.sessions = listOf(OpenCodeSession(id = "main", title = "Main chat"))
+        val viewModel = ChatViewModel(backend)
+
+        viewModel.openSession("main", "Main chat")
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.parentSession)
+    }
+
+    @Test
+    fun `starting a new chat clears the subagent return target`() = runTest(dispatcher) {
+        val backend = FakeBackend()
+        val viewModel = ChatViewModel(backend)
+        viewModel.sendMessage("Delegate this")
+        advanceUntilIdle()
+        viewModel.openSubagentSession("child-1", "Investigate the bug")
+        advanceUntilIdle()
+
+        viewModel.newSession()
+
+        assertNull(viewModel.uiState.value.parentSession)
+        assertNull(viewModel.uiState.value.sessionId)
+    }
+
+    @Test
     fun `abort stops current session and clears running state`() = runTest(dispatcher) {
         val backend = FakeBackend()
         val viewModel = ChatViewModel(backend)
@@ -394,8 +516,10 @@ class ChatViewModelTest {
         val permissionResponses = mutableListOf<PermissionRecord>()
         val abortedSessions = mutableListOf<String>()
 
+        var sessions: List<OpenCodeSession> = emptyList()
+
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
-        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
+        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = sessions
         override suspend fun createSession(title: String?, directory: String?): OpenCodeSession {
             createSessionCalls++
             lastCreateDirectory = directory

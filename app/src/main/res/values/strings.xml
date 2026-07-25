@@ -457,4 +457,11 @@
     <string name="privacy_stub_body">This feature is coming soon.</string>
     <string name="diagnostics_row">Diagnostics &amp; logs</string>
     <string name="app_info_row">App info</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_open_session">Open the subagent session</string>
+    <string name="subagent_session_label">Subagent session</string>
+    <string name="subagent_return_to_parent">Back to the main agent: %1$s</string>
+    <string name="subagent_parent_untitled">Main session</string>
+    <string name="subagent_badge">Subagent</string>
 </resources>

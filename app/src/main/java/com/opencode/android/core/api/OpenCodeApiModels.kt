@@ -18,6 +18,8 @@ data class OpenCodeSession(
     val id: String,
     val slug: String? = null,
     @SerializedName("projectID") val projectId: String? = null,
+    /** Set when OpenCode created this session for a subagent (task tool) run. */
+    @SerializedName("parentID") val parentId: String? = null,
     val directory: String? = null,
     val path: String? = null,
     val title: String = "",

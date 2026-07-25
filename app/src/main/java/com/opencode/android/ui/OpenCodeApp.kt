@@ -321,7 +321,8 @@ fun OpenCodeApp(
             DrawerRecentSession(
                 id = session.id,
                 title = session.title.ifBlank { session.slug ?: session.id },
-                relativeTime = relativeTimeLabel(context, session.time.updated ?: session.time.created)
+                relativeTime = relativeTimeLabel(context, session.time.updated ?: session.time.created),
+                isSubagent = session.parentId != null
             )
         }
     }
@@ -445,7 +446,15 @@ fun OpenCodeApp(
                     onOpenRemoteSetup = {
                         navController.navigate(ROUTE_REMOTE_CONNECTION) { launchSingleTop = true }
                     },
-                    onOpenDrawer = { drawerScope.launch { drawerState.open() } }
+                    onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                    onOpenSubagentSession = { sessionId, title ->
+                        pendingSession = null
+                        chatViewModel.openSubagentSession(sessionId, title)
+                    },
+                    onReturnToParentSession = {
+                        pendingSession = null
+                        chatViewModel.openParentSession()
+                    }
                 )
             }
 
