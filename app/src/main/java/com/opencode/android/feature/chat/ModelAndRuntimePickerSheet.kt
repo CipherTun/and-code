@@ -204,7 +204,8 @@ fun ModelAndRuntimePickerSheet(
                 providers.forEach { provider ->
                     val models =
                         provider.models.values
-                            .filter { it.status == null || it.status == "active" }
+                            // Keep preview and beta models selectable; hide only deprecated entries.
+                            .filter { it.status != "deprecated" }
                             .filter { "${provider.id}/${it.id}" !in hiddenModelKeys }
                             .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
                             .sortedBy { it.name.lowercase() }
