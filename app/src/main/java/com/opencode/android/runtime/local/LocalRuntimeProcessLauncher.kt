@@ -268,14 +268,9 @@ internal fun localRuntimeEnvironment(
         put("XDG_DATA_HOME", "/root/.local/share")
         put("XDG_STATE_HOME", "/root/.local/state")
         put("OPENCODE_CONFIG_DIR", "/root/.config/opencode")
-        // Keep the Android-local provider catalog current without replacing user config.
-        put("OPENCODE_CONFIG_CONTENT", ANDROID_MODEL_CONFIG)
         put("OPENCODE_DISABLE_AUTOUPDATE", "true")
         githubToken?.takeIf(String::isNotBlank)?.let {
             put("OPENCODE_GITHUB_TOKEN", it)
             put("GH_TOKEN", it)
         }
-    }
-
-private const val ANDROID_MODEL_CONFIG =
-    """{"provider":{"alibaba-token-plan":{"models":{"qwen3.8-max-preview":{"name":"Qwen3.8 Max Preview","reasoning":true,"limit":{"context":983616,"output":131072},"options":{"thinking":{"type":"enabled","budgetTokens":99072},"temperature":0.6}}}}}}"""
+}
