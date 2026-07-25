@@ -1,13 +1,21 @@
 package com.opencode.android.feature.chat
 
 /**
- * A single row of the assistant timeline: either body text, or a collapsed run of
+ * A single row of the chat timeline: a user bubble, assistant body text, or a collapsed run of
  * reasoning/tool/patch parts that the user can expand to inspect.
+ *
+ * Ids are namespaced by kind so they stay unique as `LazyColumn` keys across the whole transcript.
  */
 sealed interface TimelineEntry {
     val id: String
 
-    data class Body(override val id: String, val part: ChatPart.Text) : TimelineEntry
+    data class UserMessage(val message: ChatMessage) : TimelineEntry {
+        override val id: String get() = "user:${message.id}"
+    }
+
+    data class Body(val messageId: String, val part: ChatPart.Text) : TimelineEntry {
+        override val id: String get() = "body:${part.id}"
+    }
 
     data class Activity(override val id: String, val parts: List<ChatPart>) : TimelineEntry
 }
@@ -32,28 +40,44 @@ data class ActivitySummary(
 }
 
 /**
- * Collapses consecutive reasoning/tool/patch parts into a single [TimelineEntry.Activity], keeping
- * body text as its own entry so the narrative order of the answer is preserved.
+ * Flattens the transcript into rows, collapsing consecutive reasoning/tool/patch parts into a
+ * single [TimelineEntry.Activity] and keeping body text as its own entry so the narrative order of
+ * the answer is preserved.
+ *
+ * Grouping spans messages on purpose. OpenCode opens a new assistant message per model step, so a
+ * turn that calls tools arrives as several messages — `[read, read]`, then `[reasoning, text]`.
+ * Grouping inside a single message would leave those as two separate rows even though nothing
+ * separates them on screen, which is exactly what a collapsed run is meant to avoid. Only a user
+ * message or non-blank body text ends a run.
  *
  * Blank text parts do not split a run: the stream emits an empty text part before the assistant
  * starts writing, and treating it as a separator would break every run into single-step groups.
  */
-fun groupAssistantTimeline(parts: List<ChatPart>): List<TimelineEntry> {
+fun groupConversationTimeline(messages: List<ChatMessage>): List<TimelineEntry> {
     val entries = mutableListOf<TimelineEntry>()
     val pending = mutableListOf<ChatPart>()
 
     fun flush() {
         if (pending.isEmpty()) return
-        entries += TimelineEntry.Activity(pending.first().id, pending.toList())
+        entries += TimelineEntry.Activity("activity:${pending.first().id}", pending.toList())
         pending.clear()
     }
 
-    parts.forEach { part ->
-        if (part is ChatPart.Text && part.text.isNotBlank()) {
+    messages.forEach { message ->
+        if (message.isUser) {
             flush()
-            entries += TimelineEntry.Body(part.id, part)
-        } else if (part !is ChatPart.Text) {
-            pending += part
+            entries += TimelineEntry.UserMessage(message)
+            return@forEach
+        }
+        message.parts.forEach { part ->
+            when {
+                part !is ChatPart.Text -> pending += part
+                part.text.isNotBlank() -> {
+                    flush()
+                    entries += TimelineEntry.Body(message.id, part)
+                }
+                else -> Unit
+            }
         }
     }
     flush()
@@ -64,17 +88,14 @@ fun groupAssistantTimeline(parts: List<ChatPart>): List<TimelineEntry> {
  * Re-resolves an activity group by id against the current messages.
  *
  * The detail sheet holds only the group id rather than a captured list, so a run that is still
- * executing keeps streaming new steps into the open sheet. Group ids are stable as a run grows —
- * see [groupAssistantTimeline].
+ * executing keeps streaming new steps into the open sheet. Group ids are the id of the run's first
+ * part, so they stay stable as the run grows — see [groupConversationTimeline].
  */
 fun findActivityParts(
     messages: List<ChatMessage>,
     groupId: String,
 ): List<ChatPart> =
-    messages
-        .asSequence()
-        .filterNot { it.isUser }
-        .flatMap { groupAssistantTimeline(it.parts).asSequence() }
+    groupConversationTimeline(messages)
         .filterIsInstance<TimelineEntry.Activity>()
         .firstOrNull { it.id == groupId }
         ?.parts
