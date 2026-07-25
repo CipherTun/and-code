@@ -26,7 +26,7 @@ jobs:
 
             if [ -n "$missing" ]; then
               count=$(echo "$missing" | wc -l | tr -d ' ')
-              echo "::warning file=$file::[$lang] Missing $count translation(s): $(echo $missing | tr '\n' ' ')"
+              echo "::error file=$file::[$lang] Missing $count translation(s): $(echo $missing | tr '\n' ' ')"
               MISSING_FOUND=1
             fi
 
@@ -38,7 +38,9 @@ jobs:
 
           if [ "$MISSING_FOUND" -eq 1 ]; then
             echo ""
-            echo "Some translations are incomplete. See warnings above."
-          else
-            echo "All translations are complete."
+            echo "Some translations are incomplete. See the errors above."
+            echo "Add the missing keys to every values-*/strings.xml, or remove them from the source."
+            exit 1
           fi
+
+          echo "All translations are complete."
