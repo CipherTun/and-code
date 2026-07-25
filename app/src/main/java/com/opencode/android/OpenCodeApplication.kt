@@ -2,13 +2,21 @@ package com.opencode.android
 
 import android.app.Application
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import androidx.startup.AppInitializer
 import com.opencode.android.core.notification.RuntimeNotificationHelper
 import com.opencode.android.data.connection.SecureSettingsRepository
 import com.opencode.android.data.repository.RuntimeActivityRepository
 import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.data.settings.AppPreferencesRepository
+import com.opencode.android.di.appModule
+import com.opencode.android.di.viewModelModule
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.local.DefaultLocalRuntimeUpdateEngine
+import com.opencode.android.runtime.local.GitCloneRepository
+import com.opencode.android.runtime.local.GitCredentialHelper
+import com.opencode.android.runtime.local.LocalProviderCredentialStore
 import com.opencode.android.runtime.local.LocalRuntimeAccessCoordinator
 import com.opencode.android.runtime.local.LocalRuntimeCommandRunner
 import com.opencode.android.runtime.local.LocalRuntimeDiagnosticsCollector
@@ -19,15 +27,16 @@ import com.opencode.android.runtime.local.LocalRuntimeReleaseClient
 import com.opencode.android.runtime.local.LocalRuntimeServiceController
 import com.opencode.android.runtime.local.LocalRuntimeTarget
 import com.opencode.android.runtime.local.LocalRuntimeUpdater
-import com.opencode.android.runtime.local.LocalProviderCredentialStore
 import com.opencode.android.runtime.local.VerifiedRuntimeDownloader
-import java.io.File
+import com.opencode.android.startup.CatalogReconcileInitializer
+import com.opencode.android.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.startKoin
+import java.io.File
 
 class OpenCodeApplication : Application() {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -62,8 +71,18 @@ class OpenCodeApplication : Application() {
     lateinit var providerCredentials: LocalProviderCredentialStore
         private set
 
+    lateinit var gitCloneRepository: GitCloneRepository
+        private set
+
+    lateinit var commandRunner: LocalRuntimeCommandRunner
+        private set
+
     override fun onCreate() {
         super.onCreate()
+        startKoin {
+            androidContext(this@OpenCodeApplication)
+            modules(appModule, viewModelModule)
+        }
         settings = SecureSettingsRepository(this)
         preferences = AppPreferencesRepository(settings)
         notifications = RuntimeNotificationHelper(this)
@@ -71,96 +90,116 @@ class OpenCodeApplication : Application() {
         val runtimeDirectory = File(filesDir, "runtime")
         val abi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
         val accessCoordinator = LocalRuntimeAccessCoordinator()
-        val installer = LocalRuntimeInstaller(
-            context = this,
-            runtimeDirectory = runtimeDirectory,
-            abi = abi,
-            accessCoordinator = accessCoordinator
-        )
-        val launcher = LocalRuntimeProcessLauncher(
-            runtimeDirectory = runtimeDirectory,
-            portProbe = LocalRuntimeManager::defaultPortProbe,
-            beforeStart = { installed ->
-                runCatching { providerCredentials.syncToRuntime(installed.rootfs) }
-            }
-        )
-        val commandRunner = LocalRuntimeCommandRunner(
-            runtimeDirectory = runtimeDirectory,
-            installedRuntimeProvider = installer::installedRuntime,
-            accessCoordinator = accessCoordinator
-        )
+        val installer =
+            LocalRuntimeInstaller(
+                context = this,
+                runtimeDirectory = runtimeDirectory,
+                abi = abi,
+                accessCoordinator = accessCoordinator,
+            )
+        val launcher =
+            LocalRuntimeProcessLauncher(
+                runtimeDirectory = runtimeDirectory,
+                portProbe = LocalRuntimeManager::defaultPortProbe,
+                githubToken = { settings.githubToken },
+                beforeStart = { installed ->
+                    runCatching { providerCredentials.syncToRuntime(installed.rootfs) }
+                    runCatching {
+                        GitCredentialHelper(installed.rootfs) { settings.githubToken }.let { helper ->
+                            if (settings.githubToken.isNullOrBlank()) helper.remove() else helper.install()
+                        }
+                    }
+                },
+            )
+        commandRunner =
+            LocalRuntimeCommandRunner(
+                runtimeDirectory = runtimeDirectory,
+                installedRuntimeProvider = installer::installedRuntime,
+                accessCoordinator = accessCoordinator,
+            )
+        gitCloneRepository =
+            GitCloneRepository(
+                runtimeDirectory = runtimeDirectory,
+                installedRuntimeProvider = installer::installedRuntime,
+                accessCoordinator = accessCoordinator,
+                githubToken = { settings.githubToken },
+            )
         val httpClient = OkHttpClient()
         val verifiedDownloader = VerifiedRuntimeDownloader(httpClient)
-        val updater = LocalRuntimeUpdater(
-            runtimeDirectory = runtimeDirectory,
-            abi = abi,
-            downloadAsset = { asset, destination, progress ->
-                verifiedDownloader.download(
-                    url = asset.url,
-                    destination = destination,
-                    expectedSha256 = asset.sha256,
-                    expectedSizeBytes = asset.sizeBytes,
-                    onProgress = progress
-                )
-            },
-            candidateVersionProvider = { candidate ->
-                val result = commandRunner.runShell(
-                    commandText = "/usr/local/bin/${candidate.name} --version",
-                    timeoutSeconds = 30L
-                )
-                require(result.exitCode == 0) {
-                    "OpenCode update candidate validation failed: ${result.output}"
-                }
-                result.output.lineSequence().firstOrNull(String::isNotBlank)
-                    ?: error("OpenCode update candidate returned no version")
-            },
-            accessCoordinator = accessCoordinator
-        )
-        val updateEngine = DefaultLocalRuntimeUpdateEngine(
-            releaseClient = LocalRuntimeReleaseClient(httpClient),
-            updater = updater
-        )
-        localRuntimeManager = LocalRuntimeManager(
-            runtimeDirectory = runtimeDirectory,
-            abi = abi,
-            installer = installer,
-            processLauncher = launcher,
-            updateEngine = updateEngine
-        )
-        localRuntimeDiagnosticsCollector = LocalRuntimeDiagnosticsCollector(
-            runtimeDirectory = runtimeDirectory,
-            abi = abi,
-            statusProvider = localRuntimeManager::status,
-            processMetricsProvider = launcher::metrics,
-            commandExecutor = commandRunner::run
-        )
+        val updater =
+            LocalRuntimeUpdater(
+                runtimeDirectory = runtimeDirectory,
+                abi = abi,
+                downloadAsset = { asset, destination, progress ->
+                    verifiedDownloader.download(
+                        url = asset.url,
+                        destination = destination,
+                        expectedSha256 = asset.sha256,
+                        expectedSizeBytes = asset.sizeBytes,
+                        onProgress = progress,
+                    )
+                },
+                candidateVersionProvider = { candidate ->
+                    val result =
+                        commandRunner.runShell(
+                            commandText = "/usr/local/bin/${candidate.name} --version",
+                            timeoutSeconds = 30L,
+                        )
+                    require(result.exitCode == 0) {
+                        "OpenCode update candidate validation failed: ${result.output}"
+                    }
+                    result.output.lineSequence().firstOrNull(String::isNotBlank)
+                        ?: error("OpenCode update candidate returned no version")
+                },
+                accessCoordinator = accessCoordinator,
+            )
+        val updateEngine =
+            DefaultLocalRuntimeUpdateEngine(
+                releaseClient = LocalRuntimeReleaseClient(httpClient),
+                updater = updater,
+            )
+        localRuntimeManager =
+            LocalRuntimeManager(
+                runtimeDirectory = runtimeDirectory,
+                abi = abi,
+                installer = installer,
+                processLauncher = launcher,
+                updateEngine = updateEngine,
+            )
+        localRuntimeDiagnosticsCollector =
+            LocalRuntimeDiagnosticsCollector(
+                runtimeDirectory = runtimeDirectory,
+                abi = abi,
+                statusProvider = localRuntimeManager::status,
+                processMetricsProvider = launcher::metrics,
+                commandExecutor = commandRunner::run,
+            )
         localRuntimeController = LocalRuntimeServiceController(this)
-        runtimeRegistry = RuntimeRegistry(
-            store = settings,
-            localTarget = LocalRuntimeTarget(localRuntimeManager)
-        )
-        val setupConfigured = hasUsableRuntimeSetup(
-            localRuntimeStatus = localRuntimeManager.status(),
-            hasLocalProviderCredential = providerCredentials.credentials().isNotEmpty(),
-            hasRemoteConnection = settings.connections().isNotEmpty()
-        )
-        if (settings.onboardingCompleted != setupConfigured) {
-            settings.onboardingCompleted = setupConfigured
-        }
+        runtimeRegistry =
+            RuntimeRegistry(
+                store = settings,
+                localTarget = LocalRuntimeTarget(localRuntimeManager),
+            )
         catalogRepository = RuntimeCatalogRepository(runtimeRegistry, applicationScope)
-        activityRepository = RuntimeActivityRepository(
-            registry = runtimeRegistry,
-            scope = applicationScope,
-            onPermissionAsked = notifications::notifyPermission,
-            onSessionIdle = notifications::notifySessionComplete,
-            onSessionError = notifications::notifySessionError
-        )
-        applicationScope.launch {
-            catalogRepository.state.collectLatest { catalog ->
-                if (catalog.health != null) {
-                    preferences.reconcile(catalog.providers, catalog.agents)
-                }
-            }
+        activityRepository =
+            RuntimeActivityRepository(
+                registry = runtimeRegistry,
+                scope = applicationScope,
+                onPermissionAsked = notifications::notifyPermission,
+                onPermissionResolved = notifications::cancelPermission,
+                onSessionIdle = notifications::notifySessionComplete,
+                onSessionError = notifications::notifySessionError,
+                unreadStore = settings,
+            )
+        scheduleDeferredInitialization()
+    }
+
+    private fun scheduleDeferredInitialization() {
+        Handler(Looper.getMainLooper()).post {
+            AppInitializer.getInstance(this)
+                .initializeComponent(CatalogReconcileInitializer::class.java)
+            AppInitializer.getInstance(this)
+                .initializeComponent(RuntimeAutoStartInitializer::class.java)
         }
     }
 }

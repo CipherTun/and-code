@@ -1,9 +1,10 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -13,7 +14,7 @@ data class LocalRuntimeReleaseAsset(
     val name: String,
     val url: String,
     val sha256: String,
-    val sizeBytes: Long
+    val sizeBytes: Long,
 ) {
     val requiredFreeBytes: Long
         get() = sizeBytes * SPACE_MULTIPLIER + UPDATE_SAFETY_BYTES
@@ -27,7 +28,7 @@ data class LocalRuntimeReleaseAsset(
 data class LocalRuntimeRelease(
     val version: String,
     val releaseNotes: String,
-    val asset: LocalRuntimeReleaseAsset
+    val asset: LocalRuntimeReleaseAsset,
 )
 
 sealed interface LocalRuntimeUpdateCheck {
@@ -35,20 +36,24 @@ sealed interface LocalRuntimeUpdateCheck {
 
     data class UpToDate(
         override val currentVersion: String,
-        val latestVersion: String
+        val latestVersion: String,
     ) : LocalRuntimeUpdateCheck
 
     data class Available(
         override val currentVersion: String,
-        val release: LocalRuntimeRelease
+        val release: LocalRuntimeRelease,
     ) : LocalRuntimeUpdateCheck
 }
 
 class LocalRuntimeReleaseClient(
     private val httpClient: OkHttpClient = OkHttpClient(),
     private val endpoint: HttpUrl = OFFICIAL_RELEASE_ENDPOINT.toHttpUrl(),
-    private val gson: Gson = Gson(),
-    private val maxReleaseNotesCharacters: Int = 12_000
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        },
+    private val maxReleaseNotesCharacters: Int = 12_000,
 ) {
     init {
         require(endpoint.isHttps || endpoint.host in LOOPBACK_HOSTS) {
@@ -57,31 +62,39 @@ class LocalRuntimeReleaseClient(
         require(maxReleaseNotesCharacters >= 0) { "Release note limit must not be negative" }
     }
 
-    suspend fun check(currentVersion: String, abi: String): LocalRuntimeUpdateCheck =
+    suspend fun check(
+        currentVersion: String,
+        abi: String,
+    ): LocalRuntimeUpdateCheck =
         withContext(Dispatchers.IO) {
-            val assetName = requireNotNull(ASSET_NAME_BY_ABI[abi]) {
-                "Unsupported Android ABI for OpenCode updates: $abi"
-            }
+            val assetName =
+                requireNotNull(ASSET_NAME_BY_ABI[abi]) {
+                    "Unsupported Android ABI for OpenCode updates: $abi"
+                }
             val normalizedCurrent = normalizeOpenCodeVersion(currentVersion)
-            val request = Request.Builder()
-                .url(endpoint)
-                .header("Accept", GITHUB_ACCEPT)
-                .header("User-Agent", USER_AGENT)
-                .get()
-                .build()
-            val releaseDto = httpClient.newCall(request).execute().use { response ->
-                require(response.isSuccessful) {
-                    "OpenCode release check failed with HTTP ${response.code}"
+            val request =
+                Request.Builder()
+                    .url(endpoint)
+                    .header("Accept", GITHUB_ACCEPT)
+                    .header("User-Agent", USER_AGENT)
+                    .get()
+                    .build()
+            val releaseDto =
+                httpClient.newCall(request).execute().use { response ->
+                    require(response.isSuccessful) {
+                        "OpenCode release check failed with HTTP ${response.code}"
+                    }
+                    val body =
+                        requireNotNull(response.body) {
+                            "OpenCode release response had no body"
+                        }
+                    json.decodeFromString<GitHubReleaseDto>(body.string())
                 }
-                val body = requireNotNull(response.body) {
-                    "OpenCode release response had no body"
-                }
-                gson.fromJson(body.charStream(), GitHubReleaseDto::class.java)
-            }
             val latestVersion = normalizeOpenCodeVersion(releaseDto.tagName)
-            val assetDto = requireNotNull(releaseDto.assets.firstOrNull { it.name == assetName }) {
-                "OpenCode release $latestVersion does not contain $assetName"
-            }
+            val assetDto =
+                requireNotNull(releaseDto.assets.firstOrNull { it.name == assetName }) {
+                    "OpenCode release $latestVersion does not contain $assetName"
+                }
             val digest = assetDto.digest
             require(digest != null && SHA256_DIGEST.matches(digest)) {
                 "OpenCode release asset is missing a valid SHA-256 digest"
@@ -90,16 +103,18 @@ class LocalRuntimeReleaseClient(
             require(assetUrl.isHttps) { "OpenCode release asset URL must use HTTPS" }
             require(assetDto.size > 0L) { "OpenCode release asset size must be positive" }
 
-            val release = LocalRuntimeRelease(
-                version = latestVersion,
-                releaseNotes = releaseDto.body.orEmpty().take(maxReleaseNotesCharacters),
-                asset = LocalRuntimeReleaseAsset(
-                    name = assetDto.name,
-                    url = assetUrl.toString(),
-                    sha256 = digest.removePrefix(SHA256_PREFIX),
-                    sizeBytes = assetDto.size
+            val release =
+                LocalRuntimeRelease(
+                    version = latestVersion,
+                    releaseNotes = releaseDto.body.orEmpty().take(maxReleaseNotesCharacters),
+                    asset =
+                        LocalRuntimeReleaseAsset(
+                            name = assetDto.name,
+                            url = assetUrl.toString(),
+                            sha256 = digest.removePrefix(SHA256_PREFIX),
+                            sizeBytes = assetDto.size,
+                        ),
                 )
-            )
             if (compareOpenCodeVersions(latestVersion, normalizedCurrent) > 0) {
                 LocalRuntimeUpdateCheck.Available(normalizedCurrent, release)
             } else {
@@ -107,17 +122,19 @@ class LocalRuntimeReleaseClient(
             }
         }
 
+    @Serializable
     private data class GitHubReleaseDto(
-        @SerializedName("tag_name") val tagName: String,
-        @SerializedName("body") val body: String?,
-        @SerializedName("assets") val assets: List<GitHubReleaseAssetDto> = emptyList()
+        @SerialName("tag_name") val tagName: String,
+        @SerialName("body") val body: String?,
+        @SerialName("assets") val assets: List<GitHubReleaseAssetDto> = emptyList(),
     )
 
+    @Serializable
     private data class GitHubReleaseAssetDto(
-        @SerializedName("name") val name: String,
-        @SerializedName("size") val size: Long,
-        @SerializedName("browser_download_url") val downloadUrl: String,
-        @SerializedName("digest") val digest: String?
+        @SerialName("name") val name: String,
+        @SerialName("size") val size: Long,
+        @SerialName("browser_download_url") val downloadUrl: String,
+        @SerialName("digest") val digest: String?,
     )
 
     companion object {
@@ -128,32 +145,37 @@ class LocalRuntimeReleaseClient(
         private const val SHA256_PREFIX = "sha256:"
         private val SHA256_DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val LOOPBACK_HOSTS = setOf("127.0.0.1", "localhost", "::1")
-        private val ASSET_NAME_BY_ABI = mapOf(
-            "arm64-v8a" to "opencode-linux-arm64-musl.tar.gz",
-            "x86_64" to "opencode-linux-x64-musl.tar.gz"
-        )
+        private val ASSET_NAME_BY_ABI =
+            mapOf(
+                "arm64-v8a" to "opencode-linux-arm64-musl.tar.gz",
+                "x86_64" to "opencode-linux-x64-musl.tar.gz",
+            )
     }
 }
 
-internal fun compareOpenCodeVersions(left: String, right: String): Int {
+internal fun compareOpenCodeVersions(
+    left: String,
+    right: String,
+): Int {
     val leftParts = parseOpenCodeVersion(left)
     val rightParts = parseOpenCodeVersion(right)
     repeat(maxOf(leftParts.size, rightParts.size)) { index ->
-        val comparison = (leftParts.getOrElse(index) { 0 })
-            .compareTo(rightParts.getOrElse(index) { 0 })
+        val comparison =
+            (leftParts.getOrElse(index) { 0 })
+                .compareTo(rightParts.getOrElse(index) { 0 })
         if (comparison != 0) return comparison
     }
     return 0
 }
 
-internal fun normalizeOpenCodeVersion(version: String): String =
-    parseOpenCodeVersion(version).joinToString(".")
+internal fun normalizeOpenCodeVersion(version: String): String = parseOpenCodeVersion(version).joinToString(".")
 
 private fun parseOpenCodeVersion(version: String): List<Int> {
-    val normalized = version.trim()
-        .removePrefix("v")
-        .substringBefore('-')
-        .substringBefore('+')
+    val normalized =
+        version.trim()
+            .removePrefix("v")
+            .substringBefore('-')
+            .substringBefore('+')
     require(VERSION.matches(normalized)) { "Invalid OpenCode version: $version" }
     return normalized.split('.').map { component -> component.toInt() }
 }

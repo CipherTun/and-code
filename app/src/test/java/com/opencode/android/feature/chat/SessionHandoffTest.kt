@@ -6,23 +6,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SessionHandoffTest {
+    private fun userMessage(text: String) =
+        ChatMessage(
+            isUser = true,
+            parts = listOf(ChatPart.Text(id = "u-${text.hashCode()}", text = text)),
+        )
 
-    private fun userMessage(text: String) = ChatMessage(
-        isUser = true,
-        parts = listOf(ChatPart.Text(id = "u-${text.hashCode()}", text = text))
-    )
-
-    private fun assistantMessage(text: String) = ChatMessage(
-        isUser = false,
-        parts = listOf(ChatPart.Text(id = "a-${text.hashCode()}", text = text))
-    )
+    private fun assistantMessage(text: String) =
+        ChatMessage(
+            isUser = false,
+            parts = listOf(ChatPart.Text(id = "a-${text.hashCode()}", text = text)),
+        )
 
     @Test
     fun `includes header and formats roles`() {
-        val messages = listOf(
-            userMessage("Hello there"),
-            assistantMessage("Hi, how can I help?")
-        )
+        val messages =
+            listOf(
+                userMessage("Hello there"),
+                assistantMessage("Hi, how can I help?"),
+            )
 
         val prompt = buildHandoffPrompt(messages)
 
@@ -33,16 +35,18 @@ class SessionHandoffTest {
 
     @Test
     fun `skips messages with no text parts`() {
-        val messages = listOf(
-            userMessage("Real question"),
-            ChatMessage(
-                isUser = false,
-                parts = listOf(
-                    ChatPart.Tool(id = "t1", name = "bash", status = ToolStatus.COMPLETED)
-                )
-            ),
-            assistantMessage("Answer")
-        )
+        val messages =
+            listOf(
+                userMessage("Real question"),
+                ChatMessage(
+                    isUser = false,
+                    parts =
+                        listOf(
+                            ChatPart.Tool(id = "t1", name = "bash", status = ToolStatus.COMPLETED),
+                        ),
+                ),
+                assistantMessage("Answer"),
+            )
 
         val prompt = buildHandoffPrompt(messages)
 
@@ -53,10 +57,11 @@ class SessionHandoffTest {
 
     @Test
     fun `skips blank text messages`() {
-        val messages = listOf(
-            userMessage("   "),
-            assistantMessage("Kept")
-        )
+        val messages =
+            listOf(
+                userMessage("   "),
+                assistantMessage("Kept"),
+            )
 
         val prompt = buildHandoffPrompt(messages)
 
@@ -66,10 +71,14 @@ class SessionHandoffTest {
 
     @Test
     fun `truncates from the oldest side and keeps most recent messages`() {
-        val messages = (1..20).map { index ->
-            if (index % 2 == 1) userMessage("user message number $index with some padding text")
-            else assistantMessage("assistant message number $index with some padding text")
-        }
+        val messages =
+            (1..20).map { index ->
+                if (index % 2 == 1) {
+                    userMessage("user message number $index with some padding text")
+                } else {
+                    assistantMessage("assistant message number $index with some padding text")
+                }
+            }
 
         val prompt = buildHandoffPrompt(messages, maxChars = 300)
 
@@ -81,10 +90,11 @@ class SessionHandoffTest {
     @Test
     fun `always keeps at least the most recent message even if it alone exceeds maxChars`() {
         val longText = "x".repeat(500)
-        val messages = listOf(
-            userMessage("short earlier message"),
-            assistantMessage(longText)
-        )
+        val messages =
+            listOf(
+                userMessage("short earlier message"),
+                assistantMessage(longText),
+            )
 
         val prompt = buildHandoffPrompt(messages, maxChars = 50)
 

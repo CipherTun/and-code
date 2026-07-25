@@ -1,0 +1,19 @@
+[weblate]
+url = https://hosted.weblate.org/api/
+
+[project]
+name = OpenCode Android
+slug = opencode-android
+
+[component]
+name = Android Strings
+slug = android-strings
+file_format = aresource
+source_language = en
+filemask = app/src/main/res/values-*/strings.xml
+template = app/src/main/res/values/strings.xml
+repo = https://github.com/anomalyco/opencode-android.git
+branch = main
+push = 
+merge_style = merge
+vcs = git

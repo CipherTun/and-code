@@ -3,7 +3,7 @@ package com.opencode.android.runtime.local
 import com.opencode.android.runtime.LocalRuntimeStatus
 
 internal class LocalRuntimeWatchdog(
-    private val failureThreshold: Int = 3
+    private val failureThreshold: Int = 3,
 ) {
     private var consecutiveFailures = 0
 

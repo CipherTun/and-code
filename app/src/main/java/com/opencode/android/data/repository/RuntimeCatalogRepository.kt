@@ -27,12 +27,12 @@ data class RuntimeCatalogState(
     val agents: List<OpenCodeAgent> = emptyList(),
     val workspaces: List<WorkspaceRef> = emptyList(),
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )
 
 class RuntimeCatalogRepository(
     private val registry: RuntimeRegistry,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
 ) {
     private val mutableState = MutableStateFlow(RuntimeCatalogState(runtime = registry.selected.value))
     val state: StateFlow<RuntimeCatalogState> = mutableState.asStateFlow()
@@ -52,6 +52,31 @@ class RuntimeCatalogRepository(
         scope.launch { load(target) }
     }
 
+    /** Refresh only the session list for surfaces that show recent chats. */
+    fun refreshSessionsOnly() {
+        val target = registry.selected.value ?: return
+        scope.launch {
+            runCatching { target.listSessions() }
+                .onSuccess { sessions ->
+                    if (registry.selected.value?.id == target.id) {
+                        mutableState.update { it.copy(sessions = sessions) }
+                    }
+                }
+        }
+    }
+
+    fun refreshProvidersOnly() {
+        val target = registry.selected.value ?: return
+        scope.launch {
+            runCatching { target.listProviders() }
+                .onSuccess { providers ->
+                    if (registry.selected.value?.id == target.id) {
+                        mutableState.update { it.copy(providers = providers) }
+                    }
+                }
+        }
+    }
+
     private suspend fun load(target: RuntimeTarget) {
         refreshMutex.withLock {
             if (registry.selected.value?.id != target.id) return
@@ -61,39 +86,42 @@ class RuntimeCatalogRepository(
 
             val connection = target.connect()
             if (connection.isFailure) {
-                mutableState.value = RuntimeCatalogState(
-                    runtime = target,
-                    isRefreshing = false,
-                    error = connection.exceptionOrNull().safeMessage()
-                )
+                mutableState.value =
+                    RuntimeCatalogState(
+                        runtime = target,
+                        isRefreshing = false,
+                        error = connection.exceptionOrNull().safeMessage(),
+                    )
                 return
             }
 
-            val catalog = supervisorScope {
-                val sessions = async { runCatching { target.listSessions() } }
-                val providers = async { runCatching { target.listProviders() } }
-                val agents = async { runCatching { target.listAgents() } }
-                val workspaces = async { runCatching { target.listWorkspaces() } }
-                LoadedCatalog(
-                    sessions = sessions.await(),
-                    providers = providers.await(),
-                    agents = agents.await(),
-                    workspaces = workspaces.await()
-                )
-            }
+            val catalog =
+                supervisorScope {
+                    val sessions = async { runCatching { target.listSessions() } }
+                    val providers = async { runCatching { target.listProviders() } }
+                    val agents = async { runCatching { target.listAgents() } }
+                    val workspaces = async { runCatching { target.listWorkspaces() } }
+                    LoadedCatalog(
+                        sessions = sessions.await(),
+                        providers = providers.await(),
+                        agents = agents.await(),
+                        workspaces = workspaces.await(),
+                    )
+                }
 
             if (registry.selected.value?.id != target.id) return
             val errors = catalog.failures()
-            mutableState.value = RuntimeCatalogState(
-                runtime = target,
-                health = connection.getOrNull(),
-                sessions = catalog.sessions.getOrDefault(emptyList()),
-                providers = catalog.providers.getOrDefault(ProviderCatalog()),
-                agents = catalog.agents.getOrDefault(emptyList()),
-                workspaces = catalog.workspaces.getOrDefault(emptyList()),
-                isRefreshing = false,
-                error = errors.takeIf { it.isNotEmpty() }?.joinToString("\n")
-            )
+            mutableState.value =
+                RuntimeCatalogState(
+                    runtime = target,
+                    health = connection.getOrNull(),
+                    sessions = catalog.sessions.getOrDefault(emptyList()),
+                    providers = catalog.providers.getOrDefault(ProviderCatalog()),
+                    agents = catalog.agents.getOrDefault(emptyList()),
+                    workspaces = catalog.workspaces.getOrDefault(emptyList()),
+                    isRefreshing = false,
+                    error = errors.takeIf { it.isNotEmpty() }?.joinToString("\n"),
+                )
         }
     }
 
@@ -101,16 +129,16 @@ class RuntimeCatalogRepository(
         val sessions: Result<List<OpenCodeSession>>,
         val providers: Result<ProviderCatalog>,
         val agents: Result<List<OpenCodeAgent>>,
-        val workspaces: Result<List<WorkspaceRef>>
+        val workspaces: Result<List<WorkspaceRef>>,
     ) {
-        fun failures(): List<String> = listOfNotNull(
-            sessions.exceptionOrNull()?.let { "セッション: ${it.safeMessage()}" },
-            providers.exceptionOrNull()?.let { "AIサービス: ${it.safeMessage()}" },
-            agents.exceptionOrNull()?.let { "エージェント: ${it.safeMessage()}" },
-            workspaces.exceptionOrNull()?.let { "作業フォルダ: ${it.safeMessage()}" }
-        )
+        fun failures(): List<String> =
+            listOfNotNull(
+                sessions.exceptionOrNull()?.let { "セッション: ${it.safeMessage()}" },
+                providers.exceptionOrNull()?.let { "AIサービス: ${it.safeMessage()}" },
+                agents.exceptionOrNull()?.let { "エージェント: ${it.safeMessage()}" },
+                workspaces.exceptionOrNull()?.let { "作業フォルダ: ${it.safeMessage()}" },
+            )
     }
 }
 
-private fun Throwable?.safeMessage(): String =
-    this?.message?.takeIf { it.isNotBlank() } ?: "OpenCodeへ接続できませんでした"
+private fun Throwable?.safeMessage(): String = this?.message?.takeIf { it.isNotBlank() } ?: "OpenCodeへ接続できませんでした"

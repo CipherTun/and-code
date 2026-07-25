@@ -12,13 +12,39 @@
 -dontwarn com.google.errorprone.annotations.Immutable
 -dontwarn com.google.errorprone.annotations.RestrictedApi
 
-# Gson reflective models returned by the OpenCode API.
--keep class com.google.gson.** { *; }
--keep class com.opencode.android.core.api.** { *; }
+# kotlinx.serialization.
+#
+# Replaces the Gson rules left behind by the migration (Gson is no longer a dependency). R8 cannot
+# see the reflective link from a @Serializable class to its Companion and generated $serializer, so
+# lookups that are not resolved statically at the call site — generic and polymorphic types in
+# particular — need these keeps to survive minification. Rules are the ones published with the
+# library.
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+-dontnote kotlinx.serialization.**
 
-# Persisted JSON must retain stable field names across release builds and updates.
--keep class com.opencode.android.data.connection.ConnectionProfile { *; }
--keep class com.opencode.android.runtime.local.LocalRuntimeMetadata { *; }
--keepclassmembers,allowobfuscation class * {
-    @com.google.gson.annotations.SerializedName <fields>;
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
 }
+
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepclassmembers class <2>$<3> {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+-if @kotlinx.serialization.Serializable class ** {
+    public static ** INSTANCE;
+}
+-keepclassmembers class <1> {
+    public static <1> INSTANCE;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# OpenCode REST payloads are matched by @SerialName, and persisted JSON must keep stable field names
+# across app updates, so these must not be renamed.
+-keep class com.opencode.android.core.api.** { *; }
+-keep class com.opencode.android.data.connection.ConnectionProfile { *; }
+-keep class com.opencode.android.data.settings.Draft { *; }
+-keep class com.opencode.android.runtime.local.LocalRuntimeMetadata { *; }

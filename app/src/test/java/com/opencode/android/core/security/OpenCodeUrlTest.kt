@@ -40,6 +40,12 @@ class OpenCodeUrlTest {
     }
 
     @Test
+    fun `does not mistake hostnames that merely embed a private address for the address itself`() {
+        assertTrue(OpenCodeUrl.normalize("http://192.168.1.10.attacker.example:4096").isFailure)
+        assertTrue(OpenCodeUrl.normalize("http://10.0.0.1.example.com").isFailure)
+    }
+
+    @Test
     fun `does not mistake public hostnames beginning with fc or fd for ipv6 ula`() {
         assertTrue(OpenCodeUrl.normalize("http://fcbarcelona.com:4096").isFailure)
         assertTrue(OpenCodeUrl.normalize("http://fdupdates.example.com:4096").isFailure)

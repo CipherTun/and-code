@@ -7,8 +7,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <queries>
@@ -36,6 +38,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.OpenCodeAndroid">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -80,6 +83,11 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".feature.wakeword.WakeWordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
         <receiver
             android:name=".core.notification.PermissionActionReceiver"
             android:exported="false">
@@ -87,6 +95,37 @@
                 <action android:name="com.opencode.android.PERMISSION_RESPONSE" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".feature.widget.QuickInputWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_input_widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".feature.widget.QuickInputActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:windowSoftInputMode="adjustResize" />
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="com.opencode.android.startup.RuntimeAutoStartInitializer"
+                tools:node="remove" />
+            <meta-data
+                android:name="com.opencode.android.startup.CatalogReconcileInitializer"
+                tools:node="remove" />
+        </provider>
 
     </application>
 </manifest>

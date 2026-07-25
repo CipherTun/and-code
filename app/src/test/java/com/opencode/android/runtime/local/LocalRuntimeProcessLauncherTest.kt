@@ -13,19 +13,21 @@ class LocalRuntimeProcessLauncherTest {
 
     @Test
     fun `guest environment exposes Alpine tools and root home`() {
-        val environment = localRuntimeEnvironment(
-            suiteEnvironment = mapOf(
-                "LD_LIBRARY_PATH" to "/native/lib",
-                "PATH" to "/system/bin",
-                "HOME" to "/android/home"
-            ),
-            prootTmp = File("/android/proot-tmp")
-        )
+        val environment =
+            localRuntimeEnvironment(
+                suiteEnvironment =
+                    mapOf(
+                        "LD_LIBRARY_PATH" to "/native/lib",
+                        "PATH" to "/system/bin",
+                        "HOME" to "/android/home",
+                    ),
+                prootTmp = File("/android/proot-tmp"),
+            )
 
         assertEquals("/root", environment["HOME"])
         assertEquals(
             "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            environment["PATH"]
+            environment["PATH"],
         )
         assertEquals("/tmp", environment["TMPDIR"])
         assertEquals("/root/.config", environment["XDG_CONFIG_HOME"])
@@ -35,17 +37,30 @@ class LocalRuntimeProcessLauncherTest {
     }
 
     @Test
+    fun `guest environment passes GitHub token only to the running local process`() {
+        val environment =
+            localRuntimeEnvironment(
+                suiteEnvironment = emptyMap(),
+                prootTmp = File("/android/proot-tmp"),
+                githubToken = "token-from-encrypted-store",
+            )
+
+        assertEquals("token-from-encrypted-store", environment["OPENCODE_GITHUB_TOKEN"])
+    }
+
+    @Test
     fun `process tree termination order is children before parent`() {
-        val children = mapOf(
-            10L to listOf(11L, 12L),
-            11L to listOf(13L),
-            12L to emptyList(),
-            13L to emptyList()
-        )
+        val children =
+            mapOf(
+                10L to listOf(11L, 12L),
+                11L to listOf(13L),
+                12L to emptyList(),
+                13L to emptyList(),
+            )
 
         assertEquals(
             listOf(13L, 11L, 12L, 10L),
-            processTreePostOrder(10L) { children[it].orEmpty() }
+            processTreePostOrder(10L) { children[it].orEmpty() },
         )
     }
 
@@ -57,7 +72,7 @@ class LocalRuntimeProcessLauncherTest {
             parentFile.mkdirs()
             writeText(
                 "${EmbeddedCommandSuite.PROOT_LIBRARY_NAME}\u0000-r\u0000" +
-                    runtimeDirectory.resolve("environment/rootfs").path
+                    runtimeDirectory.resolve("environment/rootfs").path,
             )
         }
         procRoot.resolve("101/cmdline").apply {
@@ -71,7 +86,7 @@ class LocalRuntimeProcessLauncherTest {
 
         assertEquals(
             listOf(100L),
-            findManagedRuntimeRootPids(runtimeDirectory, procRoot)
+            findManagedRuntimeRootPids(runtimeDirectory, procRoot),
         )
     }
 }

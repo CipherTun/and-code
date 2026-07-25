@@ -35,6 +35,7 @@
     <string name="send_description">メッセージを送信</string>
     <string name="stop_run">停止</string>
     <string name="thinking">考え中…</string>
+    <string name="chat_reconnecting">OpenCodeとの接続が切れました。再接続中…</string>
     <string name="processing">処理中…</string>
     <string name="no_connection_chat">チャットを始める前にPC接続先を追加して選択してください。</string>
     <string name="model">モデル</string>
@@ -53,11 +54,37 @@
     <string name="tool_input_label">入力</string>
     <string name="tool_output_label">出力</string>
     <string name="tool_output_truncated">…出力を省略しました</string>
+    <string name="activity_summary_commands">%1$d件のコマンドを実行しました</string>
+    <string name="activity_summary_reads">%1$d件のファイルを読み取りました</string>
+    <string name="activity_summary_edits">%1$d件のファイルを編集しました</string>
+    <string name="activity_summary_subagents">%1$d件のサブエージェントを実行しました</string>
+    <string name="activity_summary_tools">%1$d件のツールを使用しました</string>
+    <string name="activity_summary_reasoning">%1$d件の思考</string>
+    <string name="activity_summary_separator">、</string>
+    <string name="activity_details_title">実行内容</string>
+    <string name="activity_details_open">実行内容の詳細を表示</string>
+    <string name="activity_details_close">閉じる</string>
     <string name="file_changes_title">ファイル変更</string>
     <string name="file_changes_generic">ファイルが変更されました</string>
     <string name="workspace_folder_label">作業フォルダ</string>
     <string name="default_folder">既定のフォルダ</string>
     <string name="default_folder_description">OpenCodeサーバーの現在位置を使用</string>
+    <string name="workspace_import_folder">フォルダをインポート…</string>
+    <string name="workspace_clone_github">GitHubからClone…</string>
+    <string name="workspace_clone_title">GitHubリポジトリをClone</string>
+    <string name="workspace_clone_url_label">リポジトリURL</string>
+    <string name="workspace_clone_url_placeholder">https://github.com/owner/repo</string>
+    <string name="workspace_clone_action">Clone</string>
+    <string name="workspace_clone_running">リポジトリをClone中…</string>
+    <string name="workspace_clone_requires_auth">プライベートリポジトリをCloneするには設定でGitHubを接続してください。</string>
+    <string name="workspace_clone_my_repos">マイリポジトリ</string>
+    <string name="workspace_clone_url_tab">URL</string>
+    <string name="workspace_clone_search">リポジトリを検索</string>
+    <string name="workspace_clone_loading_repos">リポジトリを読み込み中…</string>
+    <string name="workspace_more_options">その他のオプション</string>
+    <string name="workspace_remove_from_list">一覧から削除</string>
+    <string name="workspace_delete_files">ファイルを削除</string>
+    <string name="workspace_delete_files_confirm">「%1$s」とすべてのファイルを削除しますか？元に戻せません。</string>
     <string name="chat_options_description">チャット操作</string>
     <string name="continue_on_other_runtime">別の実行先で続ける</string>
     <string name="handoff_dialog_title">実行先を選択</string>
@@ -90,6 +117,7 @@
     <string name="notification_complete_body">セッション %1$s が待機中です</string>
     <string name="notification_error_title">OpenCodeエラー</string>
     <string name="notification_error_body">セッションが失敗しました</string>
+    <string name="notification_permission_failed">承認を送信できませんでした。アプリを開いてもう一度お試しください。</string>
     <string name="provider_credentials">プロバイダー接続</string>
     <string name="provider_credentials_help">選択中のOpenCode実行先を通じて接続します。利用可能なログイン方法はOpenCodeから取得します。</string>
     <string name="provider_id_hint">プロバイダーID（例: openai）</string>
@@ -113,6 +141,9 @@
     <string name="provider_auth_in_progress">接続中…</string>
     <string name="provider_auth_failed">プロバイダー認証に失敗しました。もう一度お試しください。</string>
     <string name="continue_label">続ける</string>
+    <string name="question_free_text_label">その他（自由入力）</string>
+    <string name="question_cancel">回答せず中断</string>
+    <string name="question_dismiss">質問を閉じる</string>
     <string name="assistant_runtime">アシスト実行先</string>
     <string name="assistant_workspace">アシスト作業フォルダ</string>
     <string name="import_workspace_folder">フォルダをローカル作業領域へ取り込む</string>
@@ -344,6 +375,9 @@
     <string name="menu_description">メニュー</string>
     <string name="drawer_search_description">検索</string>
     <string name="drawer_recent_chats">最近のチャット</string>
+    <string name="drawer_project_default">デフォルト</string>
+    <string name="drawer_projects_title">プロジェクト</string>
+    <string name="drawer_add_project">プロジェクトを追加</string>
     <string name="drawer_pinned">ピン留め</string>
     <string name="drawer_pinned_sample_1">重要な会話</string>
     <string name="drawer_pinned_sample_2">プロジェクトのメモ</string>
@@ -360,6 +394,25 @@
     <string name="chat_build_headline">OpenCodeで開発を進める</string>
     <string name="chat_build_subtitle">コードの実装、修正、レビューまで、何でも聞いてください。</string>
     <string name="chat_message_placeholder">OpenCodeにメッセージを送る…</string>
+    <string name="chat_attach">ファイルを添付</string>
+    <string name="chat_remove_attachment">添付を削除</string>
+    <string name="chat_thinking_default">思考</string>
+    <string name="chat_mode_build">ビルド</string>
+    <string name="chat_mode_plan">計画</string>
+    <string name="chat_mode_auto_accept">自動承認</string>
+    <string name="chat_auto_accept_short">自動</string>
+    <string name="github_git_operations">GitHub Git 操作</string>
+    <string name="github_not_connected">未接続</string>
+    <string name="github_connect">GitHubに接続</string>
+    <string name="github_disconnect">GitHubの接続を解除</string>
+    <string name="github_verification_code">認証コード: %1$s</string>
+    <string name="github_waiting_for_authorization">認証を待機中…</string>
+    <string name="github_open_verification">GitHubを開く</string>
+    <string name="github_device_flow_instructions">GitHubを開いて、このワンタイムコードを入力すると接続されます:</string>
+    <string name="github_copy_code">コピー</string>
+    <string name="github_code_copied">コードをクリップボードにコピーしました</string>
+    <string name="setup_github_optional_description">ローカルGitで非公開リポジトリを使うにはGitHubへ接続します。スキップして後で設定から接続することもできます。</string>
+    <string name="picker_search">モデルを検索</string>
     <string name="suggestion_implement_title">関数の実装を手伝って</string>
     <string name="suggestion_implement_subtitle">コードを書いて実装する</string>
     <string name="suggestion_debug_title">バグの原因を調べて</string>
@@ -375,8 +428,15 @@
     <string name="picker_caption">使用するモデルと実行先を選びます。</string>
     <string name="section_runtime">実行先</string>
     <string name="section_model">モデル</string>
+    <string name="section_favorites">お気に入り</string>
+    <string name="section_recent">最近利用</string>
     <string name="this_android">このAndroid</string>
     <string name="picker_no_providers">接続済みのプロバイダがありません</string>
+
+    <!-- Model visibility settings -->
+    <string name="model_visibility_row">表示するモデル</string>
+    <string name="model_visibility_title">表示するモデル</string>
+    <string name="model_visibility_caption">チェックを外したモデルはモデル一覧から非表示になります。</string>
 
     <!-- Redesign: onboarding -->
     <string name="onboarding_welcome_title">OpenCodeへようこそ</string>
@@ -394,7 +454,7 @@
     <!-- Redesign: Android local setup -->
     <string name="android_setup_title">このAndroidをセットアップ</string>
     <string name="setup_step_download">ランタイムをダウンロード</string>
-    <string name="setup_step_provider">プロバイダを選択</string>
+    <string name="setup_step_provider">プロバイダを接続</string>
     <string name="setup_step_apikey">APIキーを設定</string>
     <string name="setup_step_test">接続テスト</string>
     <string name="apikey_caption">APIキーはこの端末に安全に保存されます</string>
@@ -412,13 +472,17 @@
 
     <!-- Redesign: remote connection -->
     <string name="remote_connection_title">PC・Macに接続</string>
-    <string name="remote_step1_title">PCでOpenCodeを起動</string>
-    <string name="remote_step1_desc">PCでopencode serveを起動します。</string>
-    <string name="remote_step2_title">URLを入力またはQRで読み取り</string>
-    <string name="remote_step2_desc">サーバーのアドレスを入力するか、QRコードを読み取ります。</string>
-    <string name="remote_step3_title">接続を確認</string>
-    <string name="remote_step3_desc">保存する前に接続を確認します。</string>
-    <string name="remote_hint">PCのOpenCodeで「接続を許可」が有効になっていることを確認してください。</string>
+    <string name="remote_step1_title">PCでこのコマンドを実行</string>
+    <string name="remote_step1_desc">ターミナルに貼り付けてEnterを押すだけです。</string>
+    <string name="remote_step2_title">LANで検索をタップ</string>
+    <string name="remote_step2_desc">同じWi-Fi上のサーバーが自動で見つかります。見つからない場合はURLを手動入力するかQRコードを読み取ります。</string>
+    <string name="remote_step3_title">パスワードを入れて接続</string>
+    <string name="remote_step3_desc">コマンドで設定したパスワードを入力し、接続テストして保存します。</string>
+    <string name="remote_serve_command">OPENCODE_SERVER_PASSWORD=好きなパスワード opencode serve --mdns</string>
+    <string name="remote_copy_command">コマンドをコピー</string>
+    <string name="remote_command_copied">コピーしました</string>
+    <string name="remote_hint">デスクトップアプリを使う場合は、~/.config/opencode/opencode.json に {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} を追加してアプリを再起動してください。</string>
+    <string name="remote_url_invalid">192.168.1.10:4096 のようなLANまたはTailscaleのアドレスを入力してください。ローカルネットワーク外のアドレスは https:// が必要です。</string>
     <string name="remote_test_connection_button">接続をテスト</string>
     <string name="remote_save_connection_button">この接続を保存</string>
 
@@ -436,6 +500,15 @@
     <string name="schedule_repeat_label">繰り返し</string>
     <string name="schedule_repeat_daily">毎日</string>
     <string name="schedule_repeat_weekly">毎週</string>
+    <string name="filter_active">アクティブ</string>
+    <string name="filter_ended">終了</string>
+    <string name="schedule_prompt_hint">プロンプト</string>
+    <string name="schedule_cron_hint">Cron式 (例: 0 9 * * *)</string>
+    <string name="schedule_workspace_hint">ワークスペース</string>
+    <string name="schedule_next_run">次回: %1$s</string>
+    <string name="schedule_delete_title">スケジュールを削除</string>
+    <string name="schedule_delete_message">「%1$s」を削除しますか？この操作は取り消せません。</string>
+    <string name="delete_button">削除</string>
 
     <!-- Redesign: settings V2 -->
     <string name="section_assistant_settings">アシスタント設定</string>
@@ -457,11 +530,75 @@
     <string name="privacy_stub_body">この機能は準備中です。</string>
     <string name="diagnostics_row">診断・ログ</string>
     <string name="app_info_row">アプリ情報</string>
+    <string name="section_appearance_settings">外観</string>
+    <string name="theme_row">テーマ</string>
+    <string name="theme_dialog_title">テーマを選択</string>
+    <string name="ui_font_size_row">UIフォントサイズ</string>
+    <string name="code_font_size_row">コードフォントサイズ</string>
+    <string name="section_chat_settings">チャット</string>
+    <string name="tool_call_detail_row">ツールコール詳細レベル</string>
+    <string name="tool_call_overview">概要</string>
+    <string name="tool_call_detailed">詳細</string>
+    <string name="auto_expand_reasoning_row">推論の自動展開</string>
+    <string name="send_behavior_row">送信動作</string>
+    <string name="send_behavior_interrupt">割り込み</string>
+    <string name="send_behavior_queue">キュー</string>
+
+    <!-- Drawer session actions -->
+    <string name="drawer_archive_session">アーカイブ</string>
+    <string name="drawer_selected_count">%1$d件選択中</string>
+    <string name="drawer_delete_selected_body">%1$d件のセッションが完全に削除されます。</string>
+
+    <!-- MCP -->
+    <string name="mcp_title">MCPサーバー</string>
+    <string name="mcp_add_server">サーバーを追加</string>
+    <string name="mcp_no_servers">MCPサーバーが設定されていません</string>
+    <string name="mcp_connect">接続</string>
+    <string name="mcp_disconnect">切断</string>
+    <string name="mcp_remove_auth">認証を削除</string>
+    <string name="mcp_tools_count">%1$dツール</string>
+    <string name="mcp_name_hint">サーバー名</string>
+    <string name="mcp_command_hint">コマンド（ローカルサーバー）</string>
+    <string name="mcp_url_hint">URL（リモートサーバー）</string>
+    <string name="mcp_add_help">ローカルサーバーにはコマンドを、リモートサーバーにはURLを入力してください。</string>
+    <string name="mcp_settings_row">MCPサーバー</string>
+
+    <!-- Server info -->
+    <string name="server_info_title">サーバー情報</string>
+    <string name="server_info_tab_config">設定</string>
+    <string name="server_info_tab_providers">プロバイダ</string>
+    <string name="server_info_tab_commands">コマンド</string>
+    <string name="server_info_tab_skills">スキル</string>
+    <string name="server_info_edit_config">設定を編集</string>
+    <string name="server_info_no_providers">設定済みプロバイダがありません</string>
+    <string name="server_info_no_commands">カスタムコマンドがありません</string>
+    <string name="server_info_no_skills">利用可能なスキルがありません</string>
+    <string name="server_info_settings_row">サーバー設定・ツール</string>
+
+    <!-- AGENTS.md -->
+    <string name="agents_md_generate">AGENTS.mdを生成</string>
+    <string name="agents_md_generated">AGENTS.mdを生成しました</string>
+    <string name="agents_md_failed">AGENTS.mdの生成に失敗しました</string>
+
+    <string name="tab_pr">PR</string>
+    <string name="switch_branch">ブランチを切り替え</string>
+    <string name="new_branch">新しいブランチ</string>
+    <string name="search_branches">ブランチを検索</string>
+    <string name="create_branch">作成</string>
+    <string name="branch_name_hint">ブランチ名</string>
+    <string name="commits_title">コミット</string>
+    <string name="no_pr_found">このブランチにPRが見つかりません</string>
+    <string name="unified_view">統合</string>
+    <string name="split_view">分割</string>
+    <string name="diff_stat">+%1$d / -%2$d</string>
+    <string name="syntax_theme_row">シンタックステーマ</string>
+    <string name="syntax_theme_dialog_title">シンタックステーマを選択</string>
+    <string name="usage_row">使用量</string>
+    <string name="font_size_dialog_title">フォントサイズ</string>
+    <string name="widget_quick_input_hint">OpenCodeにメッセージを送る…</string>
 
     <!-- Subagent sessions -->
-    <string name="subagent_open_session">サブエージェントのセッションを開く</string>
     <string name="subagent_session_label">サブエージェントのセッション</string>
     <string name="subagent_return_to_parent">メインエージェントに戻る: %1$s</string>
     <string name="subagent_parent_untitled">メインのセッション</string>
-    <string name="subagent_badge">サブエージェント</string>
 </resources>

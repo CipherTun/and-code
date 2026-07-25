@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "OpenCodeAndroid"
 include(":app")
+include(":benchmark")

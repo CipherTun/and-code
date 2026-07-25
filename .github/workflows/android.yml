@@ -8,10 +8,16 @@ on:
 permissions:
   contents: read
 
+# Superseded pushes to a pull request cancel their in-flight run; pushes to main always
+# finish so the branch keeps a complete history of results.
+concurrency:
+  group: android-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -55,8 +61,19 @@ jobs:
           assert all(item['packages'] for item in lock['architectures'].values())
           PY
 
-      - name: Test, lint and build APKs
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+      - name: Static analysis (detekt + spotless)
+        run: ./gradlew detekt spotlessCheck
+
+      - name: Test, lint and build debug APK
+        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+
+      # assembleRelease runs R8 with minification and resource shrinking, which is the single
+      # most expensive task in this workflow. The published artifact is built by release.yml,
+      # so pull requests only need it to prove the release build still compiles — which main
+      # covers on every merge.
+      - name: Build release APK
+        if: github.event_name == 'push'
+        run: ./gradlew :app:assembleRelease
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
@@ -66,6 +83,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload unsigned release APK
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: opencode-android-release-unsigned

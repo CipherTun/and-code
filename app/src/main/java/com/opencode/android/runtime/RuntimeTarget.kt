@@ -7,46 +7,56 @@ import kotlinx.coroutines.flow.StateFlow
 
 enum class RuntimeType {
     LOCAL,
-    REMOTE
+    REMOTE,
 }
 
 sealed interface RuntimeState {
     data object Disconnected : RuntimeState
+
     data object Connecting : RuntimeState
+
     data class Connected(val version: String) : RuntimeState
+
     data class Unavailable(val reason: String) : RuntimeState
+
     data class Failed(val message: String) : RuntimeState
 }
 
 data class WorkspaceRef(
     val id: String,
     val name: String,
-    val path: String
+    val path: String,
 )
 
 internal fun mergeWorkspaceRefs(
     currentDirectory: String?,
     sessions: List<OpenCodeSession>,
-    projects: List<OpenCodeProject>
+    projects: List<OpenCodeProject>,
 ): List<WorkspaceRef> {
     val workspaces = linkedMapOf<String, WorkspaceRef>()
 
-    fun add(path: String?, preferredName: String? = null) {
+    fun add(
+        path: String?,
+        preferredName: String? = null,
+    ) {
         val normalized = path?.trim()?.takeIf { it.isNotEmpty() && it != "/" } ?: return
-        val fallbackName = normalized
-            .trimEnd('/', '\\')
-            .substringAfterLast('/')
-            .substringAfterLast('\\')
-            .ifBlank { normalized }
+        val fallbackName =
+            normalized
+                .trimEnd('/', '\\')
+                .substringAfterLast('/')
+                .substringAfterLast('\\')
+                .ifBlank { normalized }
         val existing = workspaces[normalized]
-        val name = preferredName?.trim()?.takeIf(String::isNotEmpty)
-            ?: existing?.name
-            ?: fallbackName
-        workspaces[normalized] = WorkspaceRef(
-            id = normalized,
-            name = name,
-            path = normalized
-        )
+        val name =
+            preferredName?.trim()?.takeIf(String::isNotEmpty)
+                ?: existing?.name
+                ?: fallbackName
+        workspaces[normalized] =
+            WorkspaceRef(
+                id = normalized,
+                name = name,
+                path = normalized,
+            )
     }
 
     add(currentDirectory)
@@ -59,9 +69,7 @@ internal fun mergeWorkspaceRefs(
     return workspaces.values.toList()
 }
 
-internal fun mergeSessionLists(
-    sessionLists: List<List<OpenCodeSession>>
-): List<OpenCodeSession> {
+internal fun mergeSessionLists(sessionLists: List<List<OpenCodeSession>>): List<OpenCodeSession> {
     val byId = linkedMapOf<String, OpenCodeSession>()
     sessionLists.flatten().forEach { session ->
         val existing = byId[session.id]
@@ -79,7 +87,9 @@ interface RuntimeTarget : OpenCodeBackend {
     val state: StateFlow<RuntimeState>
 
     suspend fun connect(): Result<OpenCodeHealth>
+
     fun disconnect()
+
     suspend fun listWorkspaces(): List<WorkspaceRef>
 }
 
@@ -87,6 +97,8 @@ interface RuntimeConnectionStore {
     var selectedRuntimeId: String?
 
     fun connections(): List<com.opencode.android.data.connection.ConnectionProfile>
+
     fun upsertConnection(profile: com.opencode.android.data.connection.ConnectionProfile)
+
     fun deleteConnection(id: String)
 }

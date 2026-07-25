@@ -25,35 +25,36 @@ data class HomeUiState(
     val modelId: String? = null,
     val agentId: String? = null,
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 ) {
     val connected: Boolean get() = version != null
 }
 
 class HomeViewModel(
     private val catalog: RuntimeCatalogRepository,
-    preferences: AppPreferencesRepository
+    preferences: AppPreferencesRepository,
 ) : ViewModel() {
-    val state: StateFlow<HomeUiState> = combine(catalog.state, preferences.state) { runtime, prefs ->
-        HomeUiState(
-            runtimeId = runtime.runtime?.id,
-            runtimeName = runtime.runtime?.displayName.orEmpty(),
-            runtimeType = runtime.runtime?.type,
-            runtimeState = runtime.runtime?.state?.value ?: RuntimeState.Disconnected,
-            version = runtime.health?.version,
-            workspace = runtime.workspaces.firstOrNull(),
-            sessions = runtime.sessions.sortedByDescending { it.time.updated ?: it.time.created },
-            providerId = prefs.providerId,
-            modelId = prefs.modelId,
-            agentId = prefs.agentId,
-            isRefreshing = runtime.isRefreshing,
-            error = runtime.error
+    val state: StateFlow<HomeUiState> =
+        combine(catalog.state, preferences.state) { runtime, prefs ->
+            HomeUiState(
+                runtimeId = runtime.runtime?.id,
+                runtimeName = runtime.runtime?.displayName.orEmpty(),
+                runtimeType = runtime.runtime?.type,
+                runtimeState = runtime.runtime?.state?.value ?: RuntimeState.Disconnected,
+                version = runtime.health?.version,
+                workspace = runtime.workspaces.firstOrNull(),
+                sessions = runtime.sessions.filter { it.parentId == null }.sortedByDescending { it.time.updated ?: it.time.created },
+                providerId = prefs.providerId,
+                modelId = prefs.modelId,
+                agentId = prefs.agentId,
+                isRefreshing = runtime.isRefreshing,
+                error = runtime.error,
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            HomeUiState(),
         )
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.Eagerly,
-        HomeUiState()
-    )
 
     fun refresh() = catalog.refresh()
 }

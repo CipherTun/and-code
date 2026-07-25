@@ -59,25 +59,31 @@ fun ActivityScreen(
     onOpenSession: (String, String) -> Unit,
     onPermission: (String, PermissionResponse, Boolean) -> Unit = { _, _, _ -> },
     onRenameSession: (String, String) -> Unit = { _, _ -> },
-    onDeleteSession: (String) -> Unit = {}
+    onDeleteSession: (String) -> Unit = {},
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(
-        stringResource(R.string.tool_status_running),
-        stringResource(R.string.tab_approvals),
-        stringResource(R.string.nav_sessions),
-        stringResource(R.string.tab_logs)
-    )
+    val tabs =
+        listOf(
+            stringResource(R.string.tool_status_running),
+            stringResource(R.string.tab_approvals),
+            stringResource(R.string.nav_sessions),
+            stringResource(R.string.tab_logs),
+        )
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.activity_screen_title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.activity_screen_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Text(stringResource(R.string.activity_screen_subtitle), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
@@ -90,7 +96,7 @@ fun ActivityScreen(
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -108,9 +114,9 @@ fun ActivityScreen(
 private fun RunningTab(
     state: ActivityUiState,
     onInspectSession: (OpenCodeSession) -> Unit,
-    onOpenSession: (String, String) -> Unit
+    onOpenSession: (String, String) -> Unit,
 ) {
-    val activeSessions = state.sessions.filter { it.id in state.activeSessionIds }
+    val activeSessions = state.sessions.filter { it.parentId == null && it.id in state.activeSessionIds }
     ActivityList(emptyText = stringResource(R.string.no_running_tasks), isEmpty = activeSessions.isEmpty()) {
         items(activeSessions, key = { it.id }) { session ->
             SectionCard(modifier = Modifier.clickable { onInspectSession(session) }) {
@@ -118,14 +124,18 @@ private fun RunningTab(
                     Icon(Icons.Default.Terminal, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(session.title.ifBlank { session.id }, fontWeight = FontWeight.SemiBold)
-                        Text(session.directory.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            session.directory.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     StatusChip(stringResource(R.string.tool_status_running), active = true)
                 }
                 Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = { onOpenSession(session.id, session.title) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.open_chat_button))
                 }
@@ -137,7 +147,7 @@ private fun RunningTab(
 @Composable
 private fun ApprovalTab(
     state: ActivityUiState,
-    onPermission: (String, PermissionResponse, Boolean) -> Unit
+    onPermission: (String, PermissionResponse, Boolean) -> Unit,
 ) {
     ActivityList(emptyText = stringResource(R.string.no_pending_approvals), isEmpty = state.permissions.isEmpty()) {
         items(state.permissions, key = { it.id }) { permission ->
@@ -152,7 +162,7 @@ private fun ApprovalTab(
                                 pattern,
                                 fontFamily = FontFamily.Monospace,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -161,7 +171,7 @@ private fun ApprovalTab(
                 OutlinedButton(
                     onClick = { onPermission(permission.id, PermissionResponse.REJECT, false) },
                     enabled = !busy,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.reject))
                 }
@@ -169,7 +179,7 @@ private fun ApprovalTab(
                 FilledTonalButton(
                     onClick = { onPermission(permission.id, PermissionResponse.ONCE, false) },
                     enabled = !busy,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.allow_once))
                 }
@@ -177,7 +187,7 @@ private fun ApprovalTab(
                 Button(
                     onClick = { onPermission(permission.id, PermissionResponse.ALWAYS, true) },
                     enabled = !busy,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.always_allow))
                 }
@@ -192,21 +202,28 @@ private fun SessionsTab(
     onInspectSession: (OpenCodeSession) -> Unit,
     onOpenSession: (String, String) -> Unit,
     onRenameSession: (String, String) -> Unit,
-    onDeleteSession: (String) -> Unit
+    onDeleteSession: (String) -> Unit,
 ) {
     var renaming by remember { mutableStateOf<OpenCodeSession?>(null) }
     var deleting by remember { mutableStateOf<OpenCodeSession?>(null) }
     var menuExpandedFor by remember { mutableStateOf<String?>(null) }
 
-    ActivityList(emptyText = stringResource(R.string.no_sessions), isEmpty = state.sessions.isEmpty()) {
-        items(state.sessions, key = { it.id }) { session ->
+    val topLevelSessions = state.sessions.filter { it.parentId == null }
+
+    ActivityList(emptyText = stringResource(R.string.no_sessions), isEmpty = topLevelSessions.isEmpty()) {
+        items(topLevelSessions, key = { it.id }) { session ->
             SectionCard(modifier = Modifier.clickable { onInspectSession(session) }) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(session.title.ifBlank { session.slug ?: session.id }, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(4.dp))
-                        Text(session.directory.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Text(
+                            session.directory.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
                     }
                     Box {
                         IconButton(onClick = { menuExpandedFor = session.id }) {
@@ -214,21 +231,21 @@ private fun SessionsTab(
                         }
                         DropdownMenu(
                             expanded = menuExpandedFor == session.id,
-                            onDismissRequest = { menuExpandedFor = null }
+                            onDismissRequest = { menuExpandedFor = null },
                         ) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.rename_session)) },
                                 onClick = {
                                     menuExpandedFor = null
                                     renaming = session
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.delete_session)) },
                                 onClick = {
                                     menuExpandedFor = null
                                     deleting = session
-                                }
+                                },
                             )
                         }
                     }
@@ -236,7 +253,7 @@ private fun SessionsTab(
                 Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = { onOpenSession(session.id, session.title) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.continue_chat_button))
                 }
@@ -255,7 +272,7 @@ private fun SessionsTab(
                     onValueChange = { title = it },
                     label = { Text(stringResource(R.string.session_title_hint)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             },
             confirmButton = {
@@ -264,7 +281,7 @@ private fun SessionsTab(
                         onRenameSession(session.id, title)
                         renaming = null
                     },
-                    enabled = title.isNotBlank()
+                    enabled = title.isNotBlank(),
                 ) {
                     Text(stringResource(R.string.save))
                 }
@@ -273,7 +290,7 @@ private fun SessionsTab(
                 TextButton(onClick = { renaming = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 
@@ -287,7 +304,7 @@ private fun SessionsTab(
                     onClick = {
                         onDeleteSession(session.id)
                         deleting = null
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.delete))
                 }
@@ -296,7 +313,7 @@ private fun SessionsTab(
                 TextButton(onClick = { deleting = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -327,12 +344,12 @@ private fun LogsTab(state: ActivityUiState) {
 private fun ActivityList(
     emptyText: String,
     isEmpty: Boolean,
-    content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit
+    content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (isEmpty) {
             item {

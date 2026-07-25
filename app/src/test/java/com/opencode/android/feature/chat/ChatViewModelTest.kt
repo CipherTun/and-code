@@ -9,6 +9,7 @@ import com.opencode.android.core.api.OpenCodePart
 import com.opencode.android.core.api.OpenCodeSession
 import com.opencode.android.core.api.OpenCodeTime
 import com.opencode.android.core.api.PermissionRequest
+import com.opencode.android.core.api.PromptAttachment
 import com.opencode.android.core.api.PromptRequest
 import com.opencode.android.core.api.ProviderCatalog
 import com.opencode.android.runtime.BackendKind
@@ -21,8 +22,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -46,362 +50,223 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `sending blank input does nothing`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.sendMessage("   ")
-        advanceUntilIdle()
-
-        assertEquals(0, backend.createSessionCalls)
-        assertEquals(0, backend.sentPrompts.size)
-        assertTrue(viewModel.uiState.value.messages.isEmpty())
-    }
-
-    @Test
-    fun `sending text creates a session and shows user message immediately`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.sendMessage("Hello")
-        advanceUntilIdle()
-
-        assertEquals(1, backend.createSessionCalls)
-        assertEquals("s1", viewModel.uiState.value.sessionId)
-        assertEquals("Hello", viewModel.uiState.value.messages.single().text)
-        assertTrue(viewModel.uiState.value.messages.single().isUser)
-        assertEquals("Hello", backend.sentPrompts.single().second.text)
-    }
-
-    @Test
-    fun `selected workspace is used when creating a new session`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.selectWorkspace("/root/demo")
-        viewModel.sendMessage("Work here")
-        advanceUntilIdle()
-
-        assertEquals("/root/demo", backend.lastCreateDirectory)
-        assertEquals("/root/demo", viewModel.uiState.value.selectedWorkspacePath)
-    }
-
-    @Test
-    fun `streamed text is finalized when session becomes idle`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Hello")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "p1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "text",
-                    text = "Hi from OpenCode"
-                )
-            )
-        )
-        advanceUntilIdle()
-
-        val streaming = viewModel.uiState.value.messages.last()
-        assertFalse(streaming.isUser)
-        assertTrue(streaming.isStreaming)
-        assertEquals("Hi from OpenCode", streaming.text)
-
-        backend.events.emit(OpenCodeEvent.SessionIdle("s1"))
-        advanceUntilIdle()
-
-        assertFalse(viewModel.uiState.value.messages.last().isStreaming)
-        assertFalse(viewModel.uiState.value.isRunning)
-    }
-
-    @Test
-    fun `multiple streamed text parts are combined into one assistant message`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Hello")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "part-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "text",
-                    text = "First paragraph."
-                )
-            )
-        )
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "part-2",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "text",
-                    text = "\nSecond paragraph."
-                )
-            )
-        )
-        advanceUntilIdle()
-
-        val assistantMessages = viewModel.uiState.value.messages.filterNot { it.isUser }
-        assertEquals(1, assistantMessages.size)
-        assertEquals("First paragraph.\nSecond paragraph.", assistantMessages.single().text)
-    }
-
-    @Test
-    fun `tool part transitions from pending to running to completed`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Run a command")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "tool-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "tool",
-                    tool = "bash",
-                    state = mapOf("status" to "pending", "input" to mapOf("command" to "ls -la"))
-                )
-            )
-        )
-        advanceUntilIdle()
-        var toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
-        assertEquals(ToolStatus.PENDING, toolPart.status)
-        assertEquals("ls -la", toolPart.input)
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "tool-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "tool",
-                    tool = "bash",
-                    state = mapOf("status" to "running", "input" to mapOf("command" to "ls -la"))
-                )
-            )
-        )
-        advanceUntilIdle()
-        toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
-        assertEquals(ToolStatus.RUNNING, toolPart.status)
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "tool-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "tool",
-                    tool = "bash",
-                    state = mapOf(
-                        "status" to "completed",
-                        "input" to mapOf("command" to "ls -la"),
-                        "output" to "file1\nfile2"
-                    )
-                )
-            )
-        )
-        advanceUntilIdle()
-        toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
-        assertEquals(ToolStatus.COMPLETED, toolPart.status)
-        assertEquals("file1\nfile2", toolPart.output)
-    }
-
-    @Test
-    fun `reasoning delta appends to existing reasoning part`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Think about it")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "reason-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "reasoning",
-                    text = "Thinking"
-                )
-            )
-        )
-        backend.events.emit(
-            OpenCodeEvent.MessagePartDelta(
-                sessionId = "s1",
-                messageId = "m-assistant",
-                partId = "reason-1",
-                field = "text",
-                delta = " more."
-            )
-        )
-        advanceUntilIdle()
-
-        val reasoning = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Reasoning
-        assertEquals("Thinking more.", reasoning.text)
-    }
-
-    @Test
-    fun `mixed order parts are preserved in arrival order`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Do work")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "reason-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "reasoning",
-                    text = "Planning"
-                )
-            )
-        )
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "tool-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "tool",
-                    tool = "bash",
-                    state = mapOf("status" to "running")
-                )
-            )
-        )
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "text-1",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "text",
-                    text = "Done."
-                )
-            )
-        )
-        advanceUntilIdle()
-
-        val parts = viewModel.uiState.value.messages.last().parts
-        assertEquals(3, parts.size)
-        assertTrue(parts[0] is ChatPart.Reasoning)
-        assertTrue(parts[1] is ChatPart.Tool)
-        assertTrue(parts[2] is ChatPart.Text)
-    }
-
-    @Test
-    fun `permission event becomes approval card and successful response removes it`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Check git")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.PermissionAsked(
-                PermissionRequest(
-                    id = "perm1",
-                    sessionId = "s1",
-                    permission = "bash",
-                    patterns = listOf("git status")
-                )
-            )
-        )
-        advanceUntilIdle()
-        assertEquals("perm1", viewModel.uiState.value.permissions.single().id)
-
-        viewModel.respondToPermission("perm1", PermissionResponse.ONCE, remember = false)
-        advanceUntilIdle()
-
-        assertTrue(viewModel.uiState.value.permissions.isEmpty())
-        assertEquals(PermissionResponse.ONCE, backend.permissionResponses.single().third)
-    }
-
-    @Test
-    fun `history load maps tool parts alongside text parts`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        backend.historyMessages = listOf(
-            OpenCodeMessage(
-                info = OpenCodeMessageInfo(
-                    id = "hist-1",
-                    sessionId = "s1",
-                    role = "assistant",
-                    time = OpenCodeTime(created = 1)
-                ),
-                parts = listOf(
-                    OpenCodePart(
-                        id = "p-tool",
-                        sessionId = "s1",
-                        messageId = "hist-1",
-                        type = "tool",
-                        tool = "bash",
-                        state = mapOf("status" to "completed", "output" to "ok")
-                    ),
-                    OpenCodePart(
-                        id = "p-text",
-                        sessionId = "s1",
-                        messageId = "hist-1",
-                        type = "text",
-                        text = "Here is the result."
-                    )
-                )
-            )
-        )
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.openSession("s1")
-        advanceUntilIdle()
-
-        val message = viewModel.uiState.value.messages.single()
-        assertEquals(2, message.parts.size)
-        assertTrue(message.parts[0] is ChatPart.Tool)
-        assertTrue(message.parts[1] is ChatPart.Text)
-        assertEquals("Here is the result.", message.text)
-    }
-
-    @Test
-    fun `task tool part exposes the subagent session it created`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Delegate this")
-        advanceUntilIdle()
-
-        backend.events.emit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart(
-                    id = "tool-task",
-                    sessionId = "s1",
-                    messageId = "m-assistant",
-                    type = "tool",
-                    tool = "task",
-                    state = mapOf(
-                        "status" to "running",
-                        "title" to "Investigate the bug",
-                        "metadata" to mapOf("parentSessionId" to "s1", "sessionId" to "child-1")
-                    )
-                )
-            )
-        )
-        advanceUntilIdle()
-
-        val toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
-        assertEquals("child-1", toolPart.childSessionId)
-    }
-
-    @Test
-    fun `tool metadata pointing at its own session is not treated as a subagent session`() =
+    fun `sending blank input does nothing`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
             val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("   ")
+            advanceUntilIdle()
+
+            assertEquals(0, backend.createSessionCalls)
+            assertEquals(0, backend.sentPrompts.size)
+            assertTrue(viewModel.uiState.value.messages.isEmpty())
+        }
+
+    @Test
+    fun `sending text creates a session and shows user message immediately`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("Hello")
+            advanceUntilIdle()
+
+            assertEquals(1, backend.createSessionCalls)
+            assertEquals("s1", viewModel.uiState.value.sessionId)
+            assertEquals("Hello", viewModel.uiState.value.messages.single().text)
+            assertTrue(viewModel.uiState.value.messages.single().isUser)
+            assertEquals("Hello", backend.sentPrompts.single().second.text)
+        }
+
+    @Test
+    fun `sending attachments without text creates a prompt`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.addAttachment(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg"))
+
+            viewModel.sendMessage("")
+            advanceUntilIdle()
+
+            assertEquals(1, backend.sentPrompts.size)
+            assertEquals("photo.jpg", backend.sentPrompts.single().second.attachments.single().filename)
+        }
+
+    @Test
+    fun `creating a session refreshes the shell catalog`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            var refreshes = 0
+            val viewModel = ChatViewModel(backend, onSessionCreated = { refreshes++ })
+            advanceUntilIdle()
+
+            viewModel.sendMessage("Hello")
+            advanceUntilIdle()
+
+            assertEquals(1, refreshes)
+        }
+
+    @Test
+    fun `selected workspace is used when creating a new session`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.selectWorkspace("/root/demo")
+            viewModel.sendMessage("Work here")
+            advanceUntilIdle()
+
+            assertEquals("/root/demo", backend.lastCreateDirectory)
+            assertEquals("/root/demo", viewModel.uiState.value.selectedWorkspacePath)
+        }
+
+    @Test
+    fun `auto accept approves permissions without showing card`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.setAutoAcceptPermissions(true)
+            viewModel.sendMessage("Check git")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.PermissionAsked(
+                    PermissionRequest(
+                        id = "perm1",
+                        sessionId = "s1",
+                        permission = "bash",
+                        patterns = listOf("git status"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.permissions.isEmpty())
+            assertEquals(PermissionResponse.ONCE, backend.permissionResponses.single().third)
+        }
+
+    @Test
+    fun `streamed text is finalized when session becomes idle`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Hello")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "p1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "text",
+                        text = "Hi from OpenCode",
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            val streaming = viewModel.uiState.value.messages.last()
+            assertFalse(streaming.isUser)
+            assertTrue(streaming.isStreaming)
+            assertEquals("Hi from OpenCode", streaming.text)
+
+            backend.events.emit(OpenCodeEvent.SessionIdle("s1"))
+            advanceUntilIdle()
+
+            assertFalse(viewModel.uiState.value.messages.last().isStreaming)
+            assertFalse(viewModel.uiState.value.isRunning)
+        }
+
+    @Test
+    fun `polling refreshes changed messages while events are unavailable`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Hello")
+            advanceUntilIdle()
+
+            backend.historyMessages =
+                listOf(
+                    OpenCodeMessage(
+                        info =
+                            OpenCodeMessageInfo(
+                                id = "m-assistant",
+                                sessionId = "s1",
+                                role = "assistant",
+                                time = OpenCodeTime(created = 2),
+                            ),
+                        parts =
+                            listOf(
+                                OpenCodePart(
+                                    id = "p1",
+                                    sessionId = "s1",
+                                    messageId = "m-assistant",
+                                    type = "tool",
+                                    tool = "bash",
+                                    state = mapOf("status" to JsonPrimitive("running")),
+                                ),
+                            ),
+                    ),
+                )
+            viewModel.sendMessage("Next")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.messages.any { it.parts.any { part -> part is ChatPart.Tool } })
+        }
+
+    @Test
+    fun `multiple streamed text parts are combined into one assistant message`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Hello")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "part-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "text",
+                        text = "First paragraph.",
+                    ),
+                ),
+            )
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "part-2",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "text",
+                        text = "\nSecond paragraph.",
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            val assistantMessages = viewModel.uiState.value.messages.filterNot { it.isUser }
+            assertEquals(1, assistantMessages.size)
+            assertEquals("First paragraph.\nSecond paragraph.", assistantMessages.single().text)
+        }
+
+    @Test
+    fun `tool part transitions from pending to running to completed`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
             viewModel.sendMessage("Run a command")
             advanceUntilIdle()
 
@@ -413,96 +278,462 @@ class ChatViewModelTest {
                         messageId = "m-assistant",
                         type = "tool",
                         tool = "bash",
-                        state = mapOf(
-                            "status" to "running",
-                            "metadata" to mapOf("sessionId" to "s1")
-                        )
-                    )
-                )
+                        state =
+                            mapOf(
+                                "status" to JsonPrimitive("pending"),
+                                "input" to buildJsonObject { put("command", JsonPrimitive("ls -la")) },
+                            ),
+                    ),
+                ),
             )
             advanceUntilIdle()
+            var toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
+            assertEquals(ToolStatus.PENDING, toolPart.status)
+            assertEquals("ls -la", toolPart.input)
 
-            val toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
-            assertNull(toolPart.childSessionId)
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "tool-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "tool",
+                        tool = "bash",
+                        state =
+                            mapOf(
+                                "status" to JsonPrimitive("running"),
+                                "input" to buildJsonObject { put("command", JsonPrimitive("ls -la")) },
+                            ),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+            toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
+            assertEquals(ToolStatus.RUNNING, toolPart.status)
+
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "tool-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "tool",
+                        tool = "bash",
+                        state =
+                            mapOf(
+                                "status" to JsonPrimitive("completed"),
+                                "input" to buildJsonObject { put("command", JsonPrimitive("ls -la")) },
+                                "output" to JsonPrimitive("file1\nfile2"),
+                            ),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+            toolPart = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Tool
+            assertEquals(ToolStatus.COMPLETED, toolPart.status)
+            assertEquals("file1\nfile2", toolPart.output)
         }
 
     @Test
-    fun `opening a subagent session remembers the session to return to`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Delegate this")
-        advanceUntilIdle()
+    fun `reasoning delta appends to existing reasoning part`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Think about it")
+            advanceUntilIdle()
 
-        viewModel.openSubagentSession("child-1", "Investigate the bug")
-        advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "reason-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "reasoning",
+                        text = "Thinking",
+                    ),
+                ),
+            )
+            backend.events.emit(
+                OpenCodeEvent.MessagePartDelta(
+                    sessionId = "s1",
+                    messageId = "m-assistant",
+                    partId = "reason-1",
+                    field = "text",
+                    delta = " more.",
+                ),
+            )
+            advanceUntilIdle()
 
-        assertEquals("child-1", viewModel.uiState.value.sessionId)
-        assertEquals(ParentSessionRef("s1", "Delegate this"), viewModel.uiState.value.parentSession)
-
-        viewModel.openParentSession()
-        advanceUntilIdle()
-
-        assertEquals("s1", viewModel.uiState.value.sessionId)
-        assertEquals("Delegate this", viewModel.uiState.value.sessionTitle)
-        assertNull(viewModel.uiState.value.parentSession)
-    }
-
-    @Test
-    fun `session opened from history resolves its parent session`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        backend.sessions = listOf(
-            OpenCodeSession(id = "main", title = "Main chat"),
-            OpenCodeSession(id = "child-1", title = "Investigate the bug", parentId = "main")
-        )
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.openSession("child-1", "Investigate the bug")
-        advanceUntilIdle()
-
-        assertEquals(ParentSessionRef("main", "Main chat"), viewModel.uiState.value.parentSession)
-    }
-
-    @Test
-    fun `main session opened from history has no return target`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        backend.sessions = listOf(OpenCodeSession(id = "main", title = "Main chat"))
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.openSession("main", "Main chat")
-        advanceUntilIdle()
-
-        assertNull(viewModel.uiState.value.parentSession)
-    }
+            val reasoning = viewModel.uiState.value.messages.last().parts.single() as ChatPart.Reasoning
+            assertEquals("Thinking more.", reasoning.text)
+        }
 
     @Test
-    fun `starting a new chat clears the subagent return target`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Delegate this")
-        advanceUntilIdle()
-        viewModel.openSubagentSession("child-1", "Investigate the bug")
-        advanceUntilIdle()
+    fun `mixed order parts are preserved in arrival order`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Do work")
+            advanceUntilIdle()
 
-        viewModel.newSession()
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "reason-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "reasoning",
+                        text = "Planning",
+                    ),
+                ),
+            )
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "tool-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "tool",
+                        tool = "bash",
+                        state = mapOf("status" to JsonPrimitive("running")),
+                    ),
+                ),
+            )
+            backend.events.emit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(
+                        id = "text-1",
+                        sessionId = "s1",
+                        messageId = "m-assistant",
+                        type = "text",
+                        text = "Done.",
+                    ),
+                ),
+            )
+            advanceUntilIdle()
 
-        assertNull(viewModel.uiState.value.parentSession)
-        assertNull(viewModel.uiState.value.sessionId)
-    }
+            val parts = viewModel.uiState.value.messages.last().parts
+            assertEquals(3, parts.size)
+            assertTrue(parts[0] is ChatPart.Reasoning)
+            assertTrue(parts[1] is ChatPart.Tool)
+            assertTrue(parts[2] is ChatPart.Text)
+        }
 
     @Test
-    fun `abort stops current session and clears running state`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-        viewModel.sendMessage("Long task")
-        advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.isRunning)
+    fun `permission event becomes approval card and successful response removes it`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Check git")
+            advanceUntilIdle()
 
-        viewModel.abort()
-        advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.PermissionAsked(
+                    PermissionRequest(
+                        id = "perm1",
+                        sessionId = "s1",
+                        permission = "bash",
+                        patterns = listOf("git status"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+            assertEquals("perm1", viewModel.uiState.value.permissions.single().id)
 
-        assertEquals(listOf("s1"), backend.abortedSessions)
-        assertFalse(viewModel.uiState.value.isRunning)
-    }
+            viewModel.respondToPermission("perm1", PermissionResponse.ONCE, remember = false)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.permissions.isEmpty())
+            assertEquals(PermissionResponse.ONCE, backend.permissionResponses.single().third)
+        }
+
+    @Test
+    fun `permission answered from the notification removes the chat card`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val resolved = MutableSharedFlow<String>(extraBufferCapacity = 8)
+            val viewModel = ChatViewModel(backend, resolvedPermissionFlow = resolved)
+            advanceUntilIdle()
+            viewModel.sendMessage("Check git")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.PermissionAsked(
+                    PermissionRequest(
+                        id = "perm1",
+                        sessionId = "s1",
+                        permission = "bash",
+                        patterns = listOf("git status"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+            assertEquals("perm1", viewModel.uiState.value.permissions.single().id)
+
+            // OpenCode emits no "permission.replied" event, so the notification receiver
+            // announces the resolution through this flow instead.
+            resolved.emit("perm1")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.permissions.isEmpty())
+            assertTrue(backend.permissionResponses.isEmpty())
+        }
+
+    @Test
+    fun `history load maps tool parts alongside text parts`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            backend.historyMessages =
+                listOf(
+                    OpenCodeMessage(
+                        info =
+                            OpenCodeMessageInfo(
+                                id = "hist-1",
+                                sessionId = "s1",
+                                role = "assistant",
+                                time = OpenCodeTime(created = 1),
+                            ),
+                        parts =
+                            listOf(
+                                OpenCodePart(
+                                    id = "p-tool",
+                                    sessionId = "s1",
+                                    messageId = "hist-1",
+                                    type = "tool",
+                                    tool = "bash",
+                                    state = mapOf("status" to JsonPrimitive("completed"), "output" to JsonPrimitive("ok")),
+                                ),
+                                OpenCodePart(
+                                    id = "p-text",
+                                    sessionId = "s1",
+                                    messageId = "hist-1",
+                                    type = "text",
+                                    text = "Here is the result.",
+                                ),
+                            ),
+                    ),
+                )
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.openSession("s1")
+            advanceUntilIdle()
+
+            val message = viewModel.uiState.value.messages.single()
+            assertEquals(2, message.parts.size)
+            assertTrue(message.parts[0] is ChatPart.Tool)
+            assertTrue(message.parts[1] is ChatPart.Text)
+            assertEquals("Here is the result.", message.text)
+        }
+
+    @Test
+    fun `opening a session restores the model used by its messages`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            backend.historyMessages =
+                listOf(
+                    OpenCodeMessage(
+                        info =
+                            OpenCodeMessageInfo(
+                                id = "hist-model",
+                                sessionId = "s1",
+                                role = "assistant",
+                                model =
+                                    com.opencode.android.core.api.OpenCodeModelReference(
+                                        providerId = "provider-from-history",
+                                        modelId = "model-from-history",
+                                    ),
+                                time = OpenCodeTime(created = 1),
+                            ),
+                        parts =
+                            listOf(
+                                OpenCodePart(
+                                    id = "p1",
+                                    sessionId = "s1",
+                                    messageId = "hist-model",
+                                    type = "text",
+                                    text = "Done",
+                                ),
+                            ),
+                    ),
+                )
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.openSession("s1")
+            advanceUntilIdle()
+
+            assertEquals("provider-from-history", viewModel.uiState.value.selectedProviderId)
+            assertEquals("model-from-history", viewModel.uiState.value.selectedModelId)
+        }
+
+    @Test
+    fun `abort stops current session and clears running state`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Long task")
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isRunning)
+
+            viewModel.abort()
+            advanceUntilIdle()
+
+            assertEquals(listOf("s1"), backend.abortedSessions)
+            assertFalse(viewModel.uiState.value.isRunning)
+        }
+
+    @Test
+    fun `switching sessions mid-poll does not corrupt the newly opened session`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("Hello")
+            // Advance only up to the poll loop's first delay() — session s1's background poll is
+            // now parked mid-flight, about to fetch s1's messages once time moves forward.
+            runCurrent()
+
+            backend.historyMessagesBySession =
+                mapOf(
+                    "s1" to listOf(sessionAssistantMessage("s1", "m-s1", "Stale reply for the old chat")),
+                    "s2" to listOf(sessionAssistantMessage("s2", "m-s2", "Reply for the other chat")),
+                )
+            viewModel.openSession("s2", "Other chat")
+            runCurrent()
+
+            // Let s1's stale poll loop run its course; its updates must all be no-ops now that the
+            // screen has moved on to s2.
+            advanceUntilIdle()
+
+            assertEquals("s2", viewModel.uiState.value.sessionId)
+            assertEquals(
+                listOf("Reply for the other chat"),
+                viewModel.uiState.value.messages.map { it.text },
+            )
+        }
+
+    @Test
+    fun `opening a different session while the previous one is running clears the stop button`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("Long task")
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isRunning)
+
+            viewModel.openSession("s2", "Another chat")
+
+            assertFalse(viewModel.uiState.value.isRunning)
+        }
+
+    @Test
+    fun `opening a subagent session remembers the session to return to`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Delegate this")
+            advanceUntilIdle()
+
+            viewModel.openSubagentSession("child-1", "Investigate the bug")
+            advanceUntilIdle()
+
+            assertEquals("child-1", viewModel.uiState.value.sessionId)
+            assertEquals(ParentSessionRef("s1", "Delegate this"), viewModel.uiState.value.parentSession)
+
+            viewModel.openParentSession()
+            advanceUntilIdle()
+
+            assertEquals("s1", viewModel.uiState.value.sessionId)
+            assertEquals("Delegate this", viewModel.uiState.value.sessionTitle)
+            assertNull(viewModel.uiState.value.parentSession)
+        }
+
+    @Test
+    fun `session opened without a known parent resolves it from the backend`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            backend.sessionsById =
+                mapOf(
+                    "main" to OpenCodeSession(id = "main", title = "Main chat"),
+                    "child-1" to
+                        OpenCodeSession(
+                            id = "child-1",
+                            title = "Investigate the bug",
+                            parentId = "main",
+                        ),
+                )
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.openSession("child-1", "Investigate the bug")
+            advanceUntilIdle()
+
+            assertEquals(ParentSessionRef("main", "Main chat"), viewModel.uiState.value.parentSession)
+        }
+
+    @Test
+    fun `main session opened from history has no return target`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            backend.sessionsById = mapOf("main" to OpenCodeSession(id = "main", title = "Main chat"))
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.openSession("main", "Main chat")
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.parentSession)
+        }
+
+    @Test
+    fun `starting a new chat clears the subagent return target`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Delegate this")
+            advanceUntilIdle()
+            viewModel.openSubagentSession("child-1", "Investigate the bug")
+            advanceUntilIdle()
+
+            viewModel.newSession()
+
+            assertNull(viewModel.uiState.value.sessionId)
+            assertNull(viewModel.uiState.value.parentSession)
+        }
+
+    private fun sessionAssistantMessage(
+        sessionId: String,
+        messageId: String,
+        text: String,
+    ) = OpenCodeMessage(
+        info =
+            OpenCodeMessageInfo(
+                id = messageId,
+                sessionId = sessionId,
+                role = "assistant",
+                time = OpenCodeTime(created = 1),
+            ),
+        parts =
+            listOf(
+                OpenCodePart(
+                    id = "$messageId-p",
+                    sessionId = sessionId,
+                    messageId = messageId,
+                    type = "text",
+                    text = text,
+                ),
+            ),
+    )
 
     private class FakeBackend : OpenCodeBackend {
         override val id: String = "fake"
@@ -512,43 +743,61 @@ class ChatViewModelTest {
         var createSessionCalls = 0
         var lastCreateDirectory: String? = null
         var historyMessages: List<OpenCodeMessage> = emptyList()
+        var historyMessagesBySession: Map<String, List<OpenCodeMessage>> = emptyMap()
+        var sessionsById: Map<String, OpenCodeSession> = emptyMap()
         val sentPrompts = mutableListOf<Pair<String, PromptRequest>>()
         val permissionResponses = mutableListOf<PermissionRecord>()
         val abortedSessions = mutableListOf<String>()
 
-        var sessions: List<OpenCodeSession> = emptyList()
-
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
-        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = sessions
-        override suspend fun createSession(title: String?, directory: String?): OpenCodeSession {
+
+        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = sessionsById.values.toList()
+
+        override suspend fun session(sessionId: String): OpenCodeSession =
+            sessionsById[sessionId] ?: throw IllegalArgumentException("no session $sessionId")
+
+        override suspend fun createSession(
+            title: String?,
+            directory: String?,
+        ): OpenCodeSession {
             createSessionCalls++
             lastCreateDirectory = directory
             return OpenCodeSession(
                 id = "s1",
                 title = title ?: "",
                 directory = directory,
-                time = OpenCodeTime(created = 1)
+                time = OpenCodeTime(created = 1),
             )
         }
-        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = historyMessages
+
+        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = historyMessagesBySession[sessionId] ?: historyMessages
+
         override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
+
         override suspend fun listAgents(): List<OpenCodeAgent> = emptyList()
-        override suspend fun sendMessage(sessionId: String, request: PromptRequest) {
+
+        override suspend fun sendMessage(
+            sessionId: String,
+            request: PromptRequest,
+        ) {
             sentPrompts += sessionId to request
         }
+
         override suspend fun abortSession(sessionId: String): Boolean {
             abortedSessions += sessionId
             return true
         }
+
         override suspend fun respondToPermission(
             sessionId: String,
             permissionId: String,
             response: PermissionResponse,
-            remember: Boolean
+            remember: Boolean,
         ): Boolean {
             permissionResponses += PermissionRecord(sessionId, permissionId, response, remember)
             return true
         }
+
         override fun events(): Flow<OpenCodeEvent> = events
     }
 
@@ -556,6 +805,6 @@ class ChatViewModelTest {
         val sessionId: String,
         val permissionId: String,
         val third: PermissionResponse,
-        val remember: Boolean
+        val remember: Boolean,
     )
 }

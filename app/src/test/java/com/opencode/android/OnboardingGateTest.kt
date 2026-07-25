@@ -11,9 +11,8 @@ class OnboardingGateTest {
         assertFalse(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.NotInstalled,
-                hasLocalProviderCredential = false,
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
         )
     }
 
@@ -22,31 +21,28 @@ class OnboardingGateTest {
         assertTrue(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.NotInstalled,
-                hasLocalProviderCredential = false,
-                hasRemoteConnection = true
-            )
+                hasRemoteConnection = true,
+            ),
         )
     }
 
     @Test
-    fun installedLocalRuntimeStillRequiresProviderCredential() {
-        assertFalse(
-            hasUsableRuntimeSetup(
-                localRuntimeStatus = LocalRuntimeStatus.Stopped("1.0.0", 4097),
-                hasLocalProviderCredential = false,
-                hasRemoteConnection = false
-            )
-        )
-    }
-
-    @Test
-    fun installedLocalRuntimeWithCredentialIsUsable() {
+    fun installedLocalRuntimeIsUsableWithoutProviderCredential() {
         assertTrue(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.Stopped("1.0.0", 4097),
-                hasLocalProviderCredential = true,
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
+        )
+    }
+
+    @Test
+    fun readyLocalRuntimeIsUsable() {
+        assertTrue(
+            hasUsableRuntimeSetup(
+                localRuntimeStatus = LocalRuntimeStatus.Ready("1.0.0", 4097),
+                hasRemoteConnection = false,
+            ),
         )
     }
 
@@ -55,9 +51,8 @@ class OnboardingGateTest {
         assertFalse(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.Broken("metadata missing"),
-                hasLocalProviderCredential = true,
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
         )
     }
 }

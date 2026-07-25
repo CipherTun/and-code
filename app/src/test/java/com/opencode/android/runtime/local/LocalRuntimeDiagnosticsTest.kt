@@ -25,27 +25,29 @@ class LocalRuntimeDiagnosticsTest {
             parentFile.mkdirs()
             writeText("first\nsecond\nsecret-free-last\n")
         }
-        val outputs = mapOf(
-            "opencode" to LocalRuntimeCommandResult(0, "1.18.3"),
-            "git" to LocalRuntimeCommandResult(0, "git version 2.54.0"),
-            "bash" to LocalRuntimeCommandResult(0, "GNU bash, version 5.3.9"),
-            "curl" to LocalRuntimeCommandResult(0, "curl 8.17.0"),
-            "ssh" to LocalRuntimeCommandResult(127, "ssh: not found"),
-            "rg" to LocalRuntimeCommandResult(0, "ripgrep 15.1.0"),
-            "ca-certificates" to LocalRuntimeCommandResult(0, "installed")
-        )
-        val collector = LocalRuntimeDiagnosticsCollector(
-            runtimeDirectory = runtime,
-            abi = "arm64-v8a",
-            statusProvider = { LocalRuntimeStatus.Ready("1.18.3", 4097) },
-            freeBytesProvider = { 500L },
-            processMetricsProvider = {
-                LocalRuntimeProcessMetrics(pid = 42L, rssBytes = 123L, uptimeMillis = 4_000L)
-            },
-            commandExecutor = { check -> outputs.getValue(check.id) },
-            nowMillis = { 10_000L },
-            maxLogCharacters = 18
-        )
+        val outputs =
+            mapOf(
+                "opencode" to LocalRuntimeCommandResult(0, "1.18.3"),
+                "git" to LocalRuntimeCommandResult(0, "git version 2.54.0"),
+                "bash" to LocalRuntimeCommandResult(0, "GNU bash, version 5.3.9"),
+                "curl" to LocalRuntimeCommandResult(0, "curl 8.17.0"),
+                "ssh" to LocalRuntimeCommandResult(127, "ssh: not found"),
+                "rg" to LocalRuntimeCommandResult(0, "ripgrep 15.1.0"),
+                "ca-certificates" to LocalRuntimeCommandResult(0, "installed"),
+            )
+        val collector =
+            LocalRuntimeDiagnosticsCollector(
+                runtimeDirectory = runtime,
+                abi = "arm64-v8a",
+                statusProvider = { LocalRuntimeStatus.Ready("1.18.3", 4097) },
+                freeBytesProvider = { 500L },
+                processMetricsProvider = {
+                    LocalRuntimeProcessMetrics(pid = 42L, rssBytes = 123L, uptimeMillis = 4_000L)
+                },
+                commandExecutor = { check -> outputs.getValue(check.id) },
+                nowMillis = { 10_000L },
+                maxLogCharacters = 18,
+            )
 
         val result = collector.collect()
 
@@ -69,17 +71,18 @@ class LocalRuntimeDiagnosticsTest {
     fun `not installed skips guest commands and returns empty runtime metrics`() {
         val runtime = temporaryFolder.newFolder("not-installed")
         var commandCalls = 0
-        val collector = LocalRuntimeDiagnosticsCollector(
-            runtimeDirectory = runtime,
-            abi = "x86_64",
-            statusProvider = { LocalRuntimeStatus.NotInstalled },
-            freeBytesProvider = { 900L },
-            processMetricsProvider = { null },
-            commandExecutor = {
-                commandCalls++
-                LocalRuntimeCommandResult(0, "unexpected")
-            }
-        )
+        val collector =
+            LocalRuntimeDiagnosticsCollector(
+                runtimeDirectory = runtime,
+                abi = "x86_64",
+                statusProvider = { LocalRuntimeStatus.NotInstalled },
+                freeBytesProvider = { 900L },
+                processMetricsProvider = { null },
+                commandExecutor = {
+                    commandCalls++
+                    LocalRuntimeCommandResult(0, "unexpected")
+                },
+            )
 
         val result = collector.collect()
 
@@ -92,22 +95,25 @@ class LocalRuntimeDiagnosticsTest {
 
     @Test
     fun `sums resident memory for the full runtime process tree`() {
-        val statuses = mapOf(
-            10L to "VmRSS:\t100 kB\n",
-            11L to "VmRSS:\t400000 kB\n",
-            12L to "VmRSS:\t5000 kB\n"
-        )
-        val children = mapOf(
-            10L to listOf(11L),
-            11L to listOf(12L),
-            12L to emptyList()
-        )
+        val statuses =
+            mapOf(
+                10L to "VmRSS:\t100 kB\n",
+                11L to "VmRSS:\t400000 kB\n",
+                12L to "VmRSS:\t5000 kB\n",
+            )
+        val children =
+            mapOf(
+                10L to listOf(11L),
+                11L to listOf(12L),
+                12L to emptyList(),
+            )
 
-        val result = totalResidentSetBytes(
-            rootPid = 10L,
-            statusReader = { statuses[it] },
-            childrenReader = { children[it].orEmpty() }
-        )
+        val result =
+            totalResidentSetBytes(
+                rootPid = 10L,
+                statusReader = { statuses[it] },
+                childrenReader = { children[it].orEmpty() },
+            )
 
         assertEquals((100L + 400_000L + 5_000L) * 1024L, result)
     }
@@ -135,7 +141,7 @@ class LocalRuntimeDiagnosticsTest {
     fun `parses resident memory from proc status`() {
         assertEquals(
             12_345L * 1024L,
-            parseResidentSetBytes("Name:\topencode\nVmRSS:\t   12345 kB\nThreads:\t10\n")
+            parseResidentSetBytes("Name:\topencode\nVmRSS:\t   12345 kB\nThreads:\t10\n"),
         )
         assertEquals(null, parseResidentSetBytes("Name:\topencode\n"))
     }

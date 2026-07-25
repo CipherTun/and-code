@@ -68,7 +68,7 @@ fun LocalRuntimeManagementScreen(
     onConfirmRollback: () -> Unit,
     onRequestDelete: () -> Unit,
     onDismissDelete: () -> Unit,
-    onConfirmDelete: () -> Unit
+    onConfirmDelete: () -> Unit,
 ) {
     val busy = state.runtimeStatus.isBusy() || state.isDeleting
     Scaffold(
@@ -83,21 +83,22 @@ fun LocalRuntimeManagementScreen(
                 actions = {
                     IconButton(
                         onClick = onRefresh,
-                        enabled = !state.isLoading && !state.isCheckingUpdate && !busy
+                        enabled = !state.isLoading && !state.isCheckingUpdate && !busy,
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh_diagnostics_description))
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (state.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -119,7 +120,7 @@ fun LocalRuntimeManagementScreen(
                     busy = busy,
                     onCheckForUpdate = onCheckForUpdate,
                     onRequestUpdate = onRequestUpdate,
-                    onRequestRollback = onRequestRollback
+                    onRequestRollback = onRequestRollback,
                 )
                 RuntimeToolsCard(diagnostics)
                 RuntimeLogsCard(diagnostics.logTail)
@@ -129,7 +130,7 @@ fun LocalRuntimeManagementScreen(
                         busy = busy,
                         isDeleting = state.isDeleting,
                         onRepair = onRepair,
-                        onRequestDelete = onRequestDelete
+                        onRequestDelete = onRequestDelete,
                     )
                 }
             }
@@ -151,7 +152,7 @@ fun LocalRuntimeManagementScreen(
                     Text(stringResource(R.string.update_confirm_body2, available.currentVersion))
                     Text(
                         stringResource(R.string.required_free_space, formatBytes(available.release.asset.requiredFreeBytes)),
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             },
@@ -160,7 +161,7 @@ fun LocalRuntimeManagementScreen(
             },
             dismissButton = {
                 TextButton(onClick = onDismissUpdate) { Text(stringResource(R.string.cancel)) }
-            }
+            },
         )
     }
 
@@ -176,7 +177,7 @@ fun LocalRuntimeManagementScreen(
             },
             dismissButton = {
                 TextButton(onClick = onDismissRollback) { Text(stringResource(R.string.cancel)) }
-            }
+            },
         )
     }
 
@@ -194,7 +195,7 @@ fun LocalRuntimeManagementScreen(
             },
             dismissButton = {
                 TextButton(onClick = onDismissDelete) { Text(stringResource(R.string.cancel)) }
-            }
+            },
         )
     }
 }
@@ -205,14 +206,14 @@ private fun RuntimeUpdateProgressCard(status: LocalRuntimeStatus.Updating) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(Icons.Default.SystemUpdate, contentDescription = null)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.runtime_version_transition, status.currentVersion, status.targetVersion),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(status.step, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -223,13 +224,13 @@ private fun RuntimeUpdateProgressCard(status: LocalRuntimeStatus.Updating) {
         } else {
             LinearProgressIndicator(
                 progress = { status.progress.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
             Text(
                 "${(status.progress.coerceIn(0f, 1f) * 100).toInt()}%",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.End,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
@@ -237,56 +238,68 @@ private fun RuntimeUpdateProgressCard(status: LocalRuntimeStatus.Updating) {
 
 @Composable
 private fun RuntimeOperationResultCard(result: LocalRuntimeOperationResult) {
-    val (icon, title, detail, isError) = when (result) {
-        is LocalRuntimeOperationResult.UpdateSkipped -> OperationPresentation(
-            Icons.Default.CheckCircle,
-            stringResource(R.string.update_skipped_title),
-            stringResource(R.string.current_version_label, result.version),
-            false
-        )
-        is LocalRuntimeOperationResult.Updated -> OperationPresentation(
-            Icons.Default.CheckCircle,
-            stringResource(R.string.update_success_title),
-            stringResource(R.string.version_transition, result.fromVersion, result.toVersion),
-            false
-        )
-        is LocalRuntimeOperationResult.AutomaticRollback -> OperationPresentation(
-            Icons.Default.Warning,
-            stringResource(R.string.auto_rollback_title),
-            stringResource(R.string.auto_rollback_detail, result.failedVersion, result.restoredVersion, result.reason),
-            false
-        )
-        is LocalRuntimeOperationResult.RolledBack -> OperationPresentation(
-            Icons.Default.History,
-            stringResource(R.string.rollback_success_title),
-            stringResource(R.string.version_transition, result.fromVersion, result.toVersion),
-            false
-        )
-        is LocalRuntimeOperationResult.RollbackFailedRestored -> OperationPresentation(
-            Icons.Default.Warning,
-            stringResource(R.string.rollback_failed_restored_title),
-            stringResource(R.string.rollback_failed_restored_detail, result.attemptedVersion, result.restoredVersion, result.reason),
-            false
-        )
-        is LocalRuntimeOperationResult.Failed -> OperationPresentation(
-            Icons.Default.Error,
-            stringResource(R.string.operation_failed_generic, result.operation),
-            result.message,
-            true
-        )
-    }
+    val (icon, title, detail, isError) =
+        when (result) {
+            is LocalRuntimeOperationResult.UpdateSkipped ->
+                OperationPresentation(
+                    Icons.Default.CheckCircle,
+                    stringResource(R.string.update_skipped_title),
+                    stringResource(R.string.current_version_label, result.version),
+                    false,
+                )
+            is LocalRuntimeOperationResult.Updated ->
+                OperationPresentation(
+                    Icons.Default.CheckCircle,
+                    stringResource(R.string.update_success_title),
+                    stringResource(R.string.version_transition, result.fromVersion, result.toVersion),
+                    false,
+                )
+            is LocalRuntimeOperationResult.AutomaticRollback ->
+                OperationPresentation(
+                    Icons.Default.Warning,
+                    stringResource(R.string.auto_rollback_title),
+                    stringResource(R.string.auto_rollback_detail, result.failedVersion, result.restoredVersion, result.reason),
+                    false,
+                )
+            is LocalRuntimeOperationResult.RolledBack ->
+                OperationPresentation(
+                    Icons.Default.History,
+                    stringResource(R.string.rollback_success_title),
+                    stringResource(R.string.version_transition, result.fromVersion, result.toVersion),
+                    false,
+                )
+            is LocalRuntimeOperationResult.RollbackFailedRestored ->
+                OperationPresentation(
+                    Icons.Default.Warning,
+                    stringResource(R.string.rollback_failed_restored_title),
+                    stringResource(
+                        R.string.rollback_failed_restored_detail,
+                        result.attemptedVersion,
+                        result.restoredVersion,
+                        result.reason,
+                    ),
+                    false,
+                )
+            is LocalRuntimeOperationResult.Failed ->
+                OperationPresentation(
+                    Icons.Default.Error,
+                    stringResource(R.string.operation_failed_generic, result.operation),
+                    result.message,
+                    true,
+                )
+        }
     SectionCard {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     title,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -300,12 +313,16 @@ private fun RuntimeSummaryCard(diagnostics: LocalRuntimeDiagnostics) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(stringResource(R.string.runtime_status_label), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.runtime_status_label),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             StatusChip(
                 text = diagnostics.status.displayName(),
-                active = diagnostics.status is LocalRuntimeStatus.Ready
+                active = diagnostics.status is LocalRuntimeStatus.Ready,
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -314,7 +331,10 @@ private fun RuntimeSummaryCard(diagnostics: LocalRuntimeDiagnostics) {
         MetricRow(stringResource(R.string.port_label), diagnostics.port?.toString() ?: "—")
         diagnostics.process?.let { process ->
             MetricRow("PID", process.pid?.toString() ?: stringResource(R.string.unavailable_value))
-            MetricRow(stringResource(R.string.memory_label), process.rssBytes?.let(::formatBytes) ?: stringResource(R.string.unavailable_value))
+            MetricRow(
+                stringResource(R.string.memory_label),
+                process.rssBytes?.let(::formatBytes) ?: stringResource(R.string.unavailable_value),
+            )
             MetricRow(stringResource(R.string.uptime_label), formatDuration(process.uptimeMillis))
         }
     }
@@ -337,15 +357,19 @@ private fun RuntimeUpdateCard(
     busy: Boolean,
     onCheckForUpdate: () -> Unit,
     onRequestUpdate: () -> Unit,
-    onRequestRollback: () -> Unit
+    onRequestRollback: () -> Unit,
 ) {
     SectionCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(stringResource(R.string.opencode_update_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.opencode_update_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             if (state.isCheckingUpdate) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             }
@@ -359,7 +383,7 @@ private fun RuntimeUpdateCard(
                 OutlinedButton(
                     onClick = onCheckForUpdate,
                     enabled = !state.isCheckingUpdate && !busy,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(Modifier.padding(horizontal = 4.dp))
@@ -375,7 +399,7 @@ private fun RuntimeUpdateCard(
                 OutlinedButton(
                     onClick = onCheckForUpdate,
                     enabled = !state.isCheckingUpdate && !busy,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.recheck_button))
                 }
@@ -386,7 +410,7 @@ private fun RuntimeUpdateCard(
                 Text(
                     stringResource(R.string.update_available_label, check.release.version),
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(6.dp))
                 MetricRow(stringResource(R.string.current_version_metric), check.currentVersion)
@@ -396,7 +420,7 @@ private fun RuntimeUpdateCard(
                     Text(
                         stringResource(R.string.insufficient_space, formatBytes(freeBytes)),
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
                 if (check.release.releaseNotes.isNotBlank()) {
@@ -405,14 +429,14 @@ private fun RuntimeUpdateCard(
                     Text(
                         check.release.releaseNotes,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
                 Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = onRequestUpdate,
                     enabled = !busy && !state.isCheckingUpdate && enoughSpace,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.SystemUpdate, contentDescription = null)
                     Spacer(Modifier.padding(horizontal = 4.dp))
@@ -433,13 +457,13 @@ private fun RuntimeUpdateCard(
             Text(stringResource(R.string.previous_version_label), fontWeight = FontWeight.Medium)
             Text(
                 stringResource(R.string.revert_available_note, rollbackVersion),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onRequestRollback,
                 enabled = !busy,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Default.History, contentDescription = null)
                 Spacer(Modifier.padding(horizontal = 4.dp))
@@ -456,16 +480,17 @@ private fun RuntimeToolsCard(diagnostics: LocalRuntimeDiagnostics) {
         Spacer(Modifier.height(8.dp))
         diagnostics.tools.forEach { tool ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp),
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(
                     imageVector = if (tool.available) Icons.Default.CheckCircle else Icons.Default.Error,
                     contentDescription = null,
-                    tint = if (tool.available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    tint = if (tool.available) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(tool.label, fontWeight = FontWeight.Medium)
@@ -473,7 +498,7 @@ private fun RuntimeToolsCard(diagnostics: LocalRuntimeDiagnostics) {
                         tool.detail,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3
+                        maxLines = 3,
                     )
                 }
             }
@@ -490,18 +515,20 @@ private fun RuntimeLogsCard(logTail: String) {
             Text(stringResource(R.string.no_logs), color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(240.dp),
             ) {
                 Text(
                     text = logTail,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .horizontalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .horizontalScroll(rememberScrollState()),
                     fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
@@ -513,7 +540,7 @@ private fun RuntimeManagementCard(
     busy: Boolean,
     isDeleting: Boolean,
     onRepair: () -> Unit,
-    onRequestDelete: () -> Unit
+    onRequestDelete: () -> Unit,
 ) {
     SectionCard {
         Text(stringResource(R.string.management_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -521,7 +548,7 @@ private fun RuntimeManagementCard(
         Button(
             onClick = onRepair,
             enabled = !busy,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.Build, contentDescription = null)
             Spacer(Modifier.padding(horizontal = 4.dp))
@@ -531,7 +558,7 @@ private fun RuntimeManagementCard(
         OutlinedButton(
             onClick = onRequestDelete,
             enabled = !busy,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             if (isDeleting) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -539,25 +566,28 @@ private fun RuntimeManagementCard(
                 Icon(
                     Icons.Default.DeleteForever,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.error,
                 )
             }
             Spacer(Modifier.padding(horizontal = 4.dp))
             Text(
                 if (isDeleting) stringResource(R.string.deleting_label) else stringResource(R.string.delete_runtime_completely_button),
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
         Text(
             stringResource(R.string.delete_runtime_note),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 @Composable
-private fun ErrorCard(title: String, detail: String) {
+private fun ErrorCard(
+    title: String,
+    detail: String,
+) {
     SectionCard {
         Text(title, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
         Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -565,24 +595,28 @@ private fun ErrorCard(title: String, detail: String) {
 }
 
 @Composable
-private fun MetricRow(label: String, value: String) {
+private fun MetricRow(
+    label: String,
+    value: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.Top,
     ) {
         Text(
             label,
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             value,
             modifier = Modifier.weight(1f),
             fontWeight = FontWeight.Medium,
-            textAlign = TextAlign.End
+            textAlign = TextAlign.End,
         )
     }
 }
@@ -591,20 +625,21 @@ private data class OperationPresentation(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val title: String,
     val detail: String,
-    val isError: Boolean
+    val isError: Boolean,
 )
 
 @Composable
-private fun LocalRuntimeStatus.displayName(): String = when (this) {
-    LocalRuntimeStatus.NotInstalled -> stringResource(R.string.runtime_status_not_installed)
-    is LocalRuntimeStatus.Installing -> stringResource(R.string.runtime_status_setting_up)
-    is LocalRuntimeStatus.Starting -> stringResource(R.string.runtime_status_starting)
-    is LocalRuntimeStatus.Updating -> stringResource(R.string.runtime_status_updating)
-    is LocalRuntimeStatus.Stopped -> stringResource(R.string.runtime_status_stopped)
-    is LocalRuntimeStatus.Ready -> stringResource(R.string.runtime_status_ready_running)
-    is LocalRuntimeStatus.Broken -> stringResource(R.string.runtime_status_problem)
-    is LocalRuntimeStatus.UnsupportedAbi -> stringResource(R.string.runtime_status_unsupported)
-}
+private fun LocalRuntimeStatus.displayName(): String =
+    when (this) {
+        LocalRuntimeStatus.NotInstalled -> stringResource(R.string.runtime_status_not_installed)
+        is LocalRuntimeStatus.Installing -> stringResource(R.string.runtime_status_setting_up)
+        is LocalRuntimeStatus.Starting -> stringResource(R.string.runtime_status_starting)
+        is LocalRuntimeStatus.Updating -> stringResource(R.string.runtime_status_updating)
+        is LocalRuntimeStatus.Stopped -> stringResource(R.string.runtime_status_stopped)
+        is LocalRuntimeStatus.Ready -> stringResource(R.string.runtime_status_ready_running)
+        is LocalRuntimeStatus.Broken -> stringResource(R.string.runtime_status_problem)
+        is LocalRuntimeStatus.UnsupportedAbi -> stringResource(R.string.runtime_status_unsupported)
+    }
 
 private fun LocalRuntimeStatus.isInstalled(): Boolean =
     this !is LocalRuntimeStatus.NotInstalled && this !is LocalRuntimeStatus.UnsupportedAbi

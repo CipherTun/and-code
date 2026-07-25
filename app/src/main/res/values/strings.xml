@@ -35,6 +35,7 @@
     <string name="send_description">Send message</string>
     <string name="stop_run">Stop</string>
     <string name="thinking">Thinking…</string>
+    <string name="chat_reconnecting">Connection to OpenCode was interrupted. Reconnecting…</string>
     <string name="processing">Processing…</string>
     <string name="no_connection_chat">Add and select a PC connection before starting a chat.</string>
     <string name="model">Model</string>
@@ -53,11 +54,37 @@
     <string name="tool_input_label">Input</string>
     <string name="tool_output_label">Output</string>
     <string name="tool_output_truncated">…output truncated</string>
+    <string name="activity_summary_commands">Ran %1$d command(s)</string>
+    <string name="activity_summary_reads">Read %1$d file(s)</string>
+    <string name="activity_summary_edits">Edited %1$d file(s)</string>
+    <string name="activity_summary_subagents">Ran %1$d subagent(s)</string>
+    <string name="activity_summary_tools">Used %1$d tool(s)</string>
+    <string name="activity_summary_reasoning">Thought %1$d time(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Activity</string>
+    <string name="activity_details_open">Show activity details</string>
+    <string name="activity_details_close">Close</string>
     <string name="file_changes_title">File changes</string>
     <string name="file_changes_generic">Files were changed</string>
     <string name="workspace_folder_label">Working folder</string>
     <string name="default_folder">Default folder</string>
     <string name="default_folder_description">Use the OpenCode server\'s current location</string>
+    <string name="workspace_import_folder">Import folder…</string>
+    <string name="workspace_clone_github">Clone from GitHub…</string>
+    <string name="workspace_clone_title">Clone a GitHub repository</string>
+    <string name="workspace_clone_url_label">Repository URL</string>
+    <string name="workspace_clone_url_placeholder">https://github.com/owner/repo</string>
+    <string name="workspace_clone_action">Clone</string>
+    <string name="workspace_clone_running">Cloning repository…</string>
+    <string name="workspace_clone_requires_auth">Connect GitHub in Settings to clone private repositories.</string>
+    <string name="workspace_clone_my_repos">My repos</string>
+    <string name="workspace_clone_url_tab">URL</string>
+    <string name="workspace_clone_search">Search repositories</string>
+    <string name="workspace_clone_loading_repos">Loading repositories…</string>
+    <string name="workspace_more_options">More options</string>
+    <string name="workspace_remove_from_list">Remove from list</string>
+    <string name="workspace_delete_files">Delete files</string>
+    <string name="workspace_delete_files_confirm">Delete \"%1$s\" and all its files? This cannot be undone.</string>
     <string name="chat_options_description">Chat options</string>
     <string name="continue_on_other_runtime">Continue on another runtime</string>
     <string name="handoff_dialog_title">Choose a runtime</string>
@@ -90,6 +117,7 @@
     <string name="notification_complete_body">Session %1$s is idle</string>
     <string name="notification_error_title">OpenCode error</string>
     <string name="notification_error_body">A session failed</string>
+    <string name="notification_permission_failed">Could not send the approval. Open the app and try again.</string>
     <string name="provider_credentials">Provider connections</string>
     <string name="provider_credentials_help">Connect providers through the selected OpenCode runtime. Available sign-in methods are supplied by OpenCode.</string>
     <string name="provider_id_hint">Provider id (e.g. openai)</string>
@@ -113,6 +141,9 @@
     <string name="provider_auth_in_progress">Connecting…</string>
     <string name="provider_auth_failed">Provider authentication failed. Try again.</string>
     <string name="continue_label">Continue</string>
+    <string name="question_free_text_label">Other (type your own answer)</string>
+    <string name="question_cancel">Answer later (stop)</string>
+    <string name="question_dismiss">Dismiss question</string>
     <string name="assistant_runtime">Assistant runtime</string>
     <string name="assistant_workspace">Assistant workspace path</string>
     <string name="import_workspace_folder">Import folder into local workspace</string>
@@ -344,6 +375,9 @@
     <string name="menu_description">Menu</string>
     <string name="drawer_search_description">Search</string>
     <string name="drawer_recent_chats">Recent chats</string>
+    <string name="drawer_project_default">Default</string>
+    <string name="drawer_projects_title">Projects</string>
+    <string name="drawer_add_project">Add project</string>
     <string name="drawer_pinned">Pinned</string>
     <string name="drawer_pinned_sample_1">Important conversation</string>
     <string name="drawer_pinned_sample_2">Project notes</string>
@@ -360,6 +394,25 @@
     <string name="chat_build_headline">Build with OpenCode</string>
     <string name="chat_build_subtitle">Ask anything — implement, fix, and review code together.</string>
     <string name="chat_message_placeholder">Message OpenCode…</string>
+    <string name="chat_attach">Attach file</string>
+    <string name="chat_remove_attachment">Remove attachment</string>
+    <string name="chat_thinking_default">Thinking</string>
+    <string name="chat_mode_build">Build</string>
+    <string name="chat_mode_plan">Plan</string>
+    <string name="chat_mode_auto_accept">Auto accept</string>
+    <string name="chat_auto_accept_short">Auto</string>
+    <string name="github_git_operations">GitHub Git operations</string>
+    <string name="github_not_connected">Not connected</string>
+    <string name="github_connect">Connect GitHub</string>
+    <string name="github_disconnect">Disconnect GitHub</string>
+    <string name="github_verification_code">Enter code: %1$s</string>
+    <string name="github_waiting_for_authorization">Waiting for authorization…</string>
+    <string name="github_open_verification">Open GitHub</string>
+    <string name="github_device_flow_instructions">Open GitHub and enter this one-time code to connect:</string>
+    <string name="github_copy_code">Copy</string>
+    <string name="github_code_copied">Code copied to clipboard</string>
+    <string name="setup_github_optional_description">Connect GitHub now to use private repositories with local Git. You can skip this and connect later in Settings.</string>
+    <string name="picker_search">Search models</string>
     <string name="suggestion_implement_title">Help me implement a function</string>
     <string name="suggestion_implement_subtitle">Write and implement code</string>
     <string name="suggestion_debug_title">Find the cause of a bug</string>
@@ -375,8 +428,15 @@
     <string name="picker_caption">Choose where to run and which model to use.</string>
     <string name="section_runtime">Runtime</string>
     <string name="section_model">Model</string>
+    <string name="section_favorites">Favorites</string>
+    <string name="section_recent">Recent</string>
     <string name="this_android">This Android</string>
     <string name="picker_no_providers">No connected providers yet</string>
+
+    <!-- Model visibility settings -->
+    <string name="model_visibility_row">Visible models</string>
+    <string name="model_visibility_title">Visible models</string>
+    <string name="model_visibility_caption">Uncheck models to hide them from the model picker.</string>
 
     <!-- Redesign: onboarding -->
     <string name="onboarding_welcome_title">Welcome to OpenCode</string>
@@ -394,7 +454,7 @@
     <!-- Redesign: Android local setup -->
     <string name="android_setup_title">Set up this Android</string>
     <string name="setup_step_download">Download runtime</string>
-    <string name="setup_step_provider">Choose a provider</string>
+    <string name="setup_step_provider">Connect a provider</string>
     <string name="setup_step_apikey">Set API key</string>
     <string name="setup_step_test">Test connection</string>
     <string name="apikey_caption">Your API key is stored securely on this device</string>
@@ -412,13 +472,17 @@
 
     <!-- Redesign: remote connection -->
     <string name="remote_connection_title">Connect to PC/Mac</string>
-    <string name="remote_step1_title">Start OpenCode on your PC</string>
-    <string name="remote_step1_desc">Launch opencode serve on your computer.</string>
-    <string name="remote_step2_title">Enter URL or scan QR</string>
-    <string name="remote_step2_desc">Type in the server address, or scan its QR code.</string>
-    <string name="remote_step3_title">Verify connection</string>
-    <string name="remote_step3_desc">Run a quick health check before saving.</string>
-    <string name="remote_hint">Make sure \"Allow connections\" is enabled in OpenCode on your PC.</string>
+    <string name="remote_step1_title">Run this command on your PC</string>
+    <string name="remote_step1_desc">Just paste it into a terminal and press Enter.</string>
+    <string name="remote_step2_title">Tap Discover on LAN</string>
+    <string name="remote_step2_desc">Servers on the same Wi-Fi are found automatically. If not found, enter the URL manually or scan a QR code.</string>
+    <string name="remote_step3_title">Enter password and connect</string>
+    <string name="remote_step3_desc">Type the password you set in the command, test the connection, then save.</string>
+    <string name="remote_serve_command">OPENCODE_SERVER_PASSWORD=your-password opencode serve --mdns</string>
+    <string name="remote_copy_command">Copy command</string>
+    <string name="remote_command_copied">Copied</string>
+    <string name="remote_hint">For the desktop app, add {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} to ~/.config/opencode/opencode.json and restart the app.</string>
+    <string name="remote_url_invalid">Enter a LAN or Tailscale address such as 192.168.1.10:4096. Addresses outside your local network must use https://.</string>
     <string name="remote_test_connection_button">Test connection</string>
     <string name="remote_save_connection_button">Save this connection</string>
 
@@ -436,6 +500,15 @@
     <string name="schedule_repeat_label">Repeat</string>
     <string name="schedule_repeat_daily">Daily</string>
     <string name="schedule_repeat_weekly">Weekly</string>
+    <string name="filter_active">Active</string>
+    <string name="filter_ended">Ended</string>
+    <string name="schedule_prompt_hint">Prompt</string>
+    <string name="schedule_cron_hint">Cron expression (e.g. 0 9 * * *)</string>
+    <string name="schedule_workspace_hint">Workspace</string>
+    <string name="schedule_next_run">Next: %1$s</string>
+    <string name="schedule_delete_title">Delete schedule</string>
+    <string name="schedule_delete_message">Delete \"%1$s\"? This cannot be undone.</string>
+    <string name="delete_button">Delete</string>
 
     <!-- Redesign: settings V2 -->
     <string name="section_assistant_settings">Assistant settings</string>
@@ -457,11 +530,75 @@
     <string name="privacy_stub_body">This feature is coming soon.</string>
     <string name="diagnostics_row">Diagnostics &amp; logs</string>
     <string name="app_info_row">App info</string>
+    <string name="section_appearance_settings">Appearance</string>
+    <string name="theme_row">Theme</string>
+    <string name="theme_dialog_title">Select theme</string>
+    <string name="ui_font_size_row">UI font size</string>
+    <string name="code_font_size_row">Code font size</string>
+    <string name="syntax_theme_row">Syntax theme</string>
+    <string name="syntax_theme_dialog_title">Select syntax theme</string>
+    <string name="usage_row">Usage</string>
+    <string name="font_size_dialog_title">Font size</string>
+    <string name="section_chat_settings">Chat</string>
+    <string name="tool_call_detail_row">Tool call detail level</string>
+    <string name="tool_call_overview">Overview</string>
+    <string name="tool_call_detailed">Detailed</string>
+    <string name="auto_expand_reasoning_row">Auto-expand reasoning</string>
+    <string name="send_behavior_row">Send behavior</string>
+    <string name="send_behavior_interrupt">Interrupt</string>
+    <string name="send_behavior_queue">Queue</string>
+
+    <!-- Drawer session actions -->
+    <string name="drawer_archive_session">Archive</string>
+    <string name="drawer_selected_count">%1$d selected</string>
+    <string name="drawer_delete_selected_body">%1$d sessions will be permanently deleted.</string>
+
+    <!-- MCP -->
+    <string name="mcp_title">MCP Servers</string>
+    <string name="mcp_add_server">Add server</string>
+    <string name="mcp_no_servers">No MCP servers configured</string>
+    <string name="mcp_connect">Connect</string>
+    <string name="mcp_disconnect">Disconnect</string>
+    <string name="mcp_remove_auth">Remove auth</string>
+    <string name="mcp_tools_count">%1$d tools</string>
+    <string name="mcp_name_hint">Server name</string>
+    <string name="mcp_command_hint">Command (local server)</string>
+    <string name="mcp_url_hint">URL (remote server)</string>
+    <string name="mcp_add_help">Enter a command for a local server or a URL for a remote server.</string>
+    <string name="mcp_settings_row">MCP servers</string>
+
+    <!-- Server info -->
+    <string name="server_info_title">Server info</string>
+    <string name="server_info_tab_config">Config</string>
+    <string name="server_info_tab_providers">Providers</string>
+    <string name="server_info_tab_commands">Commands</string>
+    <string name="server_info_tab_skills">Skills</string>
+    <string name="server_info_edit_config">Edit config</string>
+    <string name="server_info_no_providers">No configured providers</string>
+    <string name="server_info_no_commands">No custom commands</string>
+    <string name="server_info_no_skills">No skills available</string>
+    <string name="server_info_settings_row">Server config &amp; tools</string>
+
+    <!-- AGENTS.md -->
+    <string name="agents_md_generate">Generate AGENTS.md</string>
+    <string name="agents_md_generated">AGENTS.md generated</string>
+    <string name="agents_md_failed">Failed to generate AGENTS.md</string>
+
+    <string name="tab_pr">PR</string>
+    <string name="switch_branch">Switch branch</string>
+    <string name="new_branch">New branch</string>
+    <string name="search_branches">Search branches</string>
+    <string name="create_branch">Create</string>
+    <string name="branch_name_hint">Branch name</string>
+    <string name="commits_title">Commits</string>
+    <string name="no_pr_found">No PR found for this branch</string>
+    <string name="unified_view">Unified</string>
+    <string name="split_view">Split</string>
+    <string name="diff_stat">+%1$d / -%2$d</string>
+    <string name="widget_quick_input_hint">Message OpenCode…</string>
 
     <!-- Subagent sessions -->
-    <string name="subagent_open_session">Open the subagent session</string>
     <string name="subagent_session_label">Subagent session</string>
     <string name="subagent_return_to_parent">Back to the main agent: %1$s</string>
     <string name="subagent_parent_untitled">Main session</string>
-    <string name="subagent_badge">Subagent</string>
 </resources>

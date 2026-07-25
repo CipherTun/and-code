@@ -33,9 +33,9 @@ class LocalRuntimeWatchdogTest {
                     currentVersion = "1.18.3",
                     targetVersion = "1.19.0",
                     progress = 0.5f,
-                    step = "更新中"
-                )
-            )
+                    step = "更新中",
+                ),
+            ),
         )
         assertFalse(watchdog.observe(stopped))
     }

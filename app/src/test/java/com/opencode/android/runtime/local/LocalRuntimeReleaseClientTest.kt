@@ -32,163 +32,177 @@ class LocalRuntimeReleaseClientTest {
     }
 
     @Test
-    fun `selects exact arm64 musl asset and returns available release`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                releaseJson(
-                    tag = "v1.19.0",
-                    notes = "release notes",
-                    assets = listOf(
-                        asset("opencode-linux-arm64.tar.gz", "a".repeat(64)),
-                        asset("opencode-linux-arm64-musl.tar.gz", "b".repeat(64), size = 57_000_000)
-                    )
-                )
+    fun `selects exact arm64 musl asset and returns available release`() =
+        runTest {
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    releaseJson(
+                        tag = "v1.19.0",
+                        notes = "release notes",
+                        assets =
+                            listOf(
+                                asset("opencode-linux-arm64.tar.gz", "a".repeat(64)),
+                                asset("opencode-linux-arm64-musl.tar.gz", "b".repeat(64), size = 57_000_000),
+                            ),
+                    ),
+                ),
             )
-        )
-        val client = client()
+            val client = client()
 
-        val result = client.check("1.18.3", "arm64-v8a")
+            val result = client.check("1.18.3", "arm64-v8a")
 
-        val available = result as LocalRuntimeUpdateCheck.Available
-        assertEquals("1.18.3", available.currentVersion)
-        assertEquals("1.19.0", available.release.version)
-        assertEquals("release notes", available.release.releaseNotes)
-        assertEquals("opencode-linux-arm64-musl.tar.gz", available.release.asset.name)
-        assertEquals("b".repeat(64), available.release.asset.sha256)
-        assertEquals(57_000_000, available.release.asset.sizeBytes)
-        val request = server.takeRequest()
-        assertEquals("application/vnd.github+json", request.getHeader("Accept"))
-        assertEquals("OpenCode-Android", request.getHeader("User-Agent"))
-    }
+            val available = result as LocalRuntimeUpdateCheck.Available
+            assertEquals("1.18.3", available.currentVersion)
+            assertEquals("1.19.0", available.release.version)
+            assertEquals("release notes", available.release.releaseNotes)
+            assertEquals("opencode-linux-arm64-musl.tar.gz", available.release.asset.name)
+            assertEquals("b".repeat(64), available.release.asset.sha256)
+            assertEquals(57_000_000, available.release.asset.sizeBytes)
+            val request = server.takeRequest()
+            assertEquals("application/vnd.github+json", request.getHeader("Accept"))
+            assertEquals("OpenCode-Android", request.getHeader("User-Agent"))
+        }
 
     @Test
-    fun `returns up to date when latest is not newer`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                releaseJson(
-                    tag = "v1.18.3",
-                    notes = "same",
-                    assets = listOf(asset("opencode-linux-x64-musl.tar.gz", "c".repeat(64)))
-                )
+    fun `returns up to date when latest is not newer`() =
+        runTest {
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    releaseJson(
+                        tag = "v1.18.3",
+                        notes = "same",
+                        assets = listOf(asset("opencode-linux-x64-musl.tar.gz", "c".repeat(64))),
+                    ),
+                ),
             )
-        )
 
-        val result = client().check("v1.18.3", "x86_64")
+            val result = client().check("v1.18.3", "x86_64")
 
-        assertEquals(
-            LocalRuntimeUpdateCheck.UpToDate(currentVersion = "1.18.3", latestVersion = "1.18.3"),
-            result
-        )
-    }
+            assertEquals(
+                LocalRuntimeUpdateCheck.UpToDate(currentVersion = "1.18.3", latestVersion = "1.18.3"),
+                result,
+            )
+        }
 
     @Test
-    fun `truncates release notes`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                releaseJson(
-                    tag = "v1.19.0",
-                    notes = "x".repeat(40),
-                    assets = listOf(asset("opencode-linux-arm64-musl.tar.gz", "d".repeat(64)))
-                )
+    fun `truncates release notes`() =
+        runTest {
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    releaseJson(
+                        tag = "v1.19.0",
+                        notes = "x".repeat(40),
+                        assets = listOf(asset("opencode-linux-arm64-musl.tar.gz", "d".repeat(64))),
+                    ),
+                ),
             )
-        )
 
-        val result = client(maxReleaseNotesCharacters = 12)
-            .check("1.18.3", "arm64-v8a") as LocalRuntimeUpdateCheck.Available
+            val result =
+                client(maxReleaseNotesCharacters = 12)
+                    .check("1.18.3", "arm64-v8a") as LocalRuntimeUpdateCheck.Available
 
-        assertEquals("x".repeat(12), result.release.releaseNotes)
-    }
+            assertEquals("x".repeat(12), result.release.releaseNotes)
+        }
 
     @Test
-    fun `rejects missing GitHub digest`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                releaseJson(
-                    tag = "v1.19.0",
-                    assets = listOf(
-                        """{"name":"opencode-linux-arm64-musl.tar.gz","size":100,"browser_download_url":"https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64-musl.tar.gz","digest":null}"""
-                    )
-                )
+    fun `rejects missing GitHub digest`() =
+        runTest {
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    releaseJson(
+                        tag = "v1.19.0",
+                        assets =
+                            listOf(
+                                """{"name":"opencode-linux-arm64-musl.tar.gz","size":100,"browser_download_url":"https://github.com/anomalyco/opencode/releases/download/v1.19.0/opencode-linux-arm64-musl.tar.gz","digest":null}""",
+                            ),
+                    ),
+                ),
             )
-        )
 
-        val error = runCatching { client().check("1.18.3", "arm64-v8a") }.exceptionOrNull()
+            val error = runCatching { client().check("1.18.3", "arm64-v8a") }.exceptionOrNull()
 
-        assertTrue(error?.message.orEmpty().contains("digest", ignoreCase = true))
-    }
+            assertTrue(error?.message.orEmpty().contains("digest", ignoreCase = true))
+        }
 
     @Test
-    fun `rejects non https asset URL`() = runTest {
-        server.enqueue(
-            MockResponse().setResponseCode(200).setBody(
-                releaseJson(
-                    tag = "v1.19.0",
-                    assets = listOf(
-                        asset(
-                            name = "opencode-linux-arm64-musl.tar.gz",
-                            digest = "e".repeat(64),
-                            url = "http://example.com/opencode.tar.gz"
-                        )
-                    )
-                )
+    fun `rejects non https asset URL`() =
+        runTest {
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    releaseJson(
+                        tag = "v1.19.0",
+                        assets =
+                            listOf(
+                                asset(
+                                    name = "opencode-linux-arm64-musl.tar.gz",
+                                    digest = "e".repeat(64),
+                                    url = "http://example.com/opencode.tar.gz",
+                                ),
+                            ),
+                    ),
+                ),
             )
-        )
 
-        val error = runCatching { client().check("1.18.3", "arm64-v8a") }.exceptionOrNull()
+            val error = runCatching { client().check("1.18.3", "arm64-v8a") }.exceptionOrNull()
 
-        assertTrue(error?.message.orEmpty().contains("HTTPS", ignoreCase = true))
-    }
+            assertTrue(error?.message.orEmpty().contains("HTTPS", ignoreCase = true))
+        }
 
     @Test
-    fun `rejects unsupported ABI before network request`() = runTest {
-        val error = runCatching { client().check("1.18.3", "armeabi-v7a") }.exceptionOrNull()
+    fun `rejects unsupported ABI before network request`() =
+        runTest {
+            val error = runCatching { client().check("1.18.3", "armeabi-v7a") }.exceptionOrNull()
 
-        assertTrue(error?.message.orEmpty().contains("ABI"))
-        assertEquals(0, server.requestCount)
-    }
+            assertTrue(error?.message.orEmpty().contains("ABI"))
+            assertEquals(0, server.requestCount)
+        }
 
-    private fun client(maxReleaseNotesCharacters: Int = 12_000) = LocalRuntimeReleaseClient(
-        httpClient = OkHttpClient(),
-        endpoint = server.url("/repos/anomalyco/opencode/releases/latest"),
-        maxReleaseNotesCharacters = maxReleaseNotesCharacters
-    )
+    private fun client(maxReleaseNotesCharacters: Int = 12_000) =
+        LocalRuntimeReleaseClient(
+            httpClient = OkHttpClient(),
+            endpoint = server.url("/repos/anomalyco/opencode/releases/latest"),
+            maxReleaseNotesCharacters = maxReleaseNotesCharacters,
+        )
 
     private fun releaseJson(
         tag: String,
         notes: String = "notes",
-        assets: List<String>
-    ): String = """
+        assets: List<String>,
+    ): String =
+        """
         {
           "tag_name": "$tag",
           "body": ${jsonString(notes)},
           "assets": [${assets.joinToString(",")}]
         }
-    """.trimIndent()
+        """.trimIndent()
 
     private fun asset(
         name: String,
         digest: String,
         size: Long = 100,
-        url: String = "https://github.com/anomalyco/opencode/releases/download/v1.19.0/$name"
-    ): String = """
+        url: String = "https://github.com/anomalyco/opencode/releases/download/v1.19.0/$name",
+    ): String =
+        """
         {
           "name": "$name",
           "size": $size,
           "browser_download_url": "$url",
           "digest": "sha256:$digest"
         }
-    """.trimIndent()
+        """.trimIndent()
 
-    private fun jsonString(value: String): String = buildString {
-        append('"')
-        value.forEach { character ->
-            when (character) {
-                '\\' -> append("\\\\")
-                '"' -> append("\\\"")
-                '\n' -> append("\\n")
-                else -> append(character)
+    private fun jsonString(value: String): String =
+        buildString {
+            append('"')
+            value.forEach { character ->
+                when (character) {
+                    '\\' -> append("\\\\")
+                    '"' -> append("\\\"")
+                    '\n' -> append("\\n")
+                    else -> append(character)
+                }
             }
+            append('"')
         }
-        append('"')
-    }
 }

@@ -38,43 +38,46 @@ import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 fun VoiceSettingsScreen(
     ttsEnabled: Boolean,
     continuousConversation: Boolean,
+    wakeWordEnabled: Boolean,
     onTtsChange: (Boolean) -> Unit,
     onContinuousChange: (Boolean) -> Unit,
-    onBack: () -> Unit
+    onWakeWordChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         CenterAlignedTopAppBar(
             title = {
                 Text(
                     stringResource(R.string.voice_settings_row),
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.nav_back)
+                        contentDescription = stringResource(R.string.nav_back),
                     )
                 }
             },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.onBackground,
-                navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-            )
+            colors =
+                TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                ),
         )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item {
                 Text(
                     text = stringResource(R.string.voice_settings_intro),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -85,7 +88,7 @@ fun VoiceSettingsScreen(
                         title = stringResource(R.string.voice_response),
                         description = stringResource(R.string.voice_response_description),
                         checked = ttsEnabled,
-                        onCheckedChange = onTtsChange
+                        onCheckedChange = onTtsChange,
                     )
                     VoiceDivider()
                     VoiceToggleRow(
@@ -93,7 +96,7 @@ fun VoiceSettingsScreen(
                         title = stringResource(R.string.continuous_conversation),
                         description = stringResource(R.string.auto_start_mic),
                         checked = continuousConversation,
-                        onCheckedChange = onContinuousChange
+                        onCheckedChange = onContinuousChange,
                     )
                 }
             }
@@ -103,10 +106,9 @@ fun VoiceSettingsScreen(
                     VoiceToggleRow(
                         icon = Icons.Default.VoiceChat,
                         title = stringResource(R.string.settings_wake_word_row),
-                        description = stringResource(R.string.wake_word_pack_required),
-                        checked = false,
-                        enabled = false,
-                        onCheckedChange = {}
+                        description = stringResource(R.string.wake_word_description),
+                        checked = wakeWordEnabled,
+                        onCheckedChange = onWakeWordChange,
                     )
                 }
             }
@@ -117,7 +119,7 @@ fun VoiceSettingsScreen(
 @Composable
 private fun SettingsGroup(
     title: String,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Column {
         Text(
@@ -125,7 +127,7 @@ private fun SettingsGroup(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
         )
         Column { content() }
     }
@@ -138,41 +140,43 @@ private fun VoiceToggleRow(
     description: String,
     checked: Boolean,
     enabled: Boolean = true,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 11.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
             icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 title,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                color =
+                    if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
             Text(
                 description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            enabled = enabled
+            enabled = enabled,
         )
     }
 }
@@ -181,7 +185,7 @@ private fun VoiceToggleRow(
 private fun VoiceDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 36.dp),
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
     )
 }
 
@@ -192,9 +196,11 @@ private fun VoiceSettingsScreenPreview() {
         VoiceSettingsScreen(
             ttsEnabled = true,
             continuousConversation = false,
+            wakeWordEnabled = false,
             onTtsChange = {},
             onContinuousChange = {},
-            onBack = {}
+            onWakeWordChange = {},
+            onBack = {},
         )
     }
 }

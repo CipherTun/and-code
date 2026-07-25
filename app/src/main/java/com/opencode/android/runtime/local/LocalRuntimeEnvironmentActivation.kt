@@ -8,7 +8,7 @@ internal fun activateRuntimeEnvironment(
     staging: File,
     rollback: File,
     moveDirectory: (File, File) -> Unit = ::moveRuntimeDirectory,
-    finalizeActivation: (File) -> Unit
+    finalizeActivation: (File) -> Unit,
 ) {
     require(staging.isDirectory) { "Runtime staging environment is missing" }
     requireSameParent(active, staging, rollback)
@@ -44,7 +44,7 @@ internal fun recoverInterruptedRuntimeEnvironment(
     active: File,
     rollback: File,
     topLevelMetadata: File,
-    moveDirectory: (File, File) -> Unit = ::moveRuntimeDirectory
+    moveDirectory: (File, File) -> Unit = ::moveRuntimeDirectory,
 ): Boolean {
     if (!rollback.isDirectory) return false
     requireSameParent(active, rollback)
@@ -73,7 +73,10 @@ internal fun recoverInterruptedRuntimeEnvironment(
     }
 }
 
-internal fun replaceFileAtomically(source: File, destination: File) {
+internal fun replaceFileAtomically(
+    source: File,
+    destination: File,
+) {
     require(source.isFile) { "Replacement source is missing: ${source.name}" }
     destination.parentFile?.mkdirs()
     val staged = File(destination.parentFile, destination.name + ".staged")
@@ -119,7 +122,10 @@ internal fun replaceFileAtomically(source: File, destination: File) {
     }
 }
 
-private fun moveRuntimeDirectory(source: File, destination: File) {
+private fun moveRuntimeDirectory(
+    source: File,
+    destination: File,
+) {
     require(source.parentFile?.canonicalFile == destination.parentFile?.canonicalFile) {
         "Atomic runtime directory move requires the same parent"
     }

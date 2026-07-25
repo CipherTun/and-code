@@ -9,7 +9,7 @@ data class ConnectionQrPayload(
     val url: String? = null,
     val username: String? = null,
     val password: String? = null,
-    val insecure: Boolean = false
+    val insecure: Boolean = false,
 ) {
     companion object {
         private const val SCHEME_PREFIX = "opencode://connect"
@@ -49,30 +49,30 @@ data class ConnectionQrPayload(
                 url = params["url"]?.takeIf { it.isNotBlank() },
                 username = params["username"]?.takeIf { it.isNotBlank() },
                 password = params["password"]?.takeIf { it.isNotBlank() },
-                insecure = params["insecure"]?.equals("true", ignoreCase = true) ?: false
+                insecure = params["insecure"]?.equals("true", ignoreCase = true) ?: false,
             )
         }
 
         private fun decode(value: String): String =
             runCatching { URLDecoder.decode(value, StandardCharsets.UTF_8.name()) }.getOrDefault(value)
 
-        private fun encode(value: String): String =
-            URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+        private fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name())
 
         fun format(
             name: String?,
             url: String?,
             username: String?,
             password: String?,
-            insecure: Boolean = false
+            insecure: Boolean = false,
         ): String {
-            val params = buildList {
-                name?.takeIf { it.isNotBlank() }?.let { add("name" to it) }
-                url?.takeIf { it.isNotBlank() }?.let { add("url" to it) }
-                username?.takeIf { it.isNotBlank() }?.let { add("username" to it) }
-                password?.takeIf { it.isNotBlank() }?.let { add("password" to it) }
-                add("insecure" to insecure.toString())
-            }
+            val params =
+                buildList {
+                    name?.takeIf { it.isNotBlank() }?.let { add("name" to it) }
+                    url?.takeIf { it.isNotBlank() }?.let { add("url" to it) }
+                    username?.takeIf { it.isNotBlank() }?.let { add("username" to it) }
+                    password?.takeIf { it.isNotBlank() }?.let { add("password" to it) }
+                    add("insecure" to insecure.toString())
+                }
             val query = params.joinToString("&") { (key, value) -> "$key=${encode(value)}" }
             return "$SCHEME_PREFIX?$query"
         }

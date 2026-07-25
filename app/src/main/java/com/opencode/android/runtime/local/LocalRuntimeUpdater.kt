@@ -1,35 +1,39 @@
 package com.opencode.android.runtime.local
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 data class PreparedRuntimeUpdate(
     val release: LocalRuntimeRelease,
     val candidateBinary: File,
     val candidateMetadata: LocalRuntimeMetadata,
-    val baseVersion: String
+    val baseVersion: String,
 )
 
+@Serializable
 private data class LocalRuntimeRollbackJournal(
-    @SerializedName("currentVersion") val currentVersion: String,
-    @SerializedName("targetVersion") val targetVersion: String
+    @SerialName("currentVersion") val currentVersion: String,
+    @SerialName("targetVersion") val targetVersion: String,
 )
 
+@Serializable
 private data class LocalRuntimeUpdateJournal(
-    @SerializedName("oldVersion") val oldVersion: String,
-    @SerializedName("newVersion") val newVersion: String,
-    @SerializedName("candidateFileName") val candidateFileName: String,
-    @SerializedName("candidateMetadataFileName") val candidateMetadataFileName: String,
-    @SerializedName("hadRollback") val hadRollback: Boolean
+    @SerialName("oldVersion") val oldVersion: String,
+    @SerialName("newVersion") val newVersion: String,
+    @SerialName("candidateFileName") val candidateFileName: String,
+    @SerialName("candidateMetadataFileName") val candidateMetadataFileName: String,
+    @SerialName("hadRollback") val hadRollback: Boolean,
 )
 
 class LocalRuntimeUpdater(
@@ -41,7 +45,7 @@ class LocalRuntimeUpdater(
     private val downloadAsset: suspend (
         asset: LocalRuntimeReleaseAsset,
         destination: File,
-        progress: (Float?) -> Unit
+        progress: (Float?) -> Unit,
     ) -> Unit,
     private val extractArchive: (archive: File, destination: File) -> Unit = { archive, destination ->
         archive.inputStream().use { RuntimeArchive.extractTarGz(it, destination) }
@@ -55,18 +59,24 @@ class LocalRuntimeUpdater(
     },
     private val accessCoordinator: LocalRuntimeAccessCoordinator,
     private val nowMillis: () -> Long = System::currentTimeMillis,
-    private val gson: Gson = Gson()
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            encodeDefaults = true
+        },
 ) {
     private val operationMutex = Mutex()
 
     suspend fun prepare(
         release: LocalRuntimeRelease,
-        onProgress: (Float?, String) -> Unit = { _, _ -> }
-    ): PreparedRuntimeUpdate = operationMutex.withLock {
-        withContext(Dispatchers.IO) {
-            prepareLocked(release, onProgress)
+        onProgress: (Float?, String) -> Unit = { _, _ -> },
+    ): PreparedRuntimeUpdate =
+        operationMutex.withLock {
+            withContext(Dispatchers.IO) {
+                prepareLocked(release, onProgress)
+            }
         }
-    }
 
     suspend fun activate(prepared: PreparedRuntimeUpdate): LocalRuntimeMetadata =
         operationMutex.withLock {
@@ -75,11 +85,12 @@ class LocalRuntimeUpdater(
             }
         }
 
-    suspend fun commitActivation() = operationMutex.withLock {
-        withContext(Dispatchers.IO) {
-            accessCoordinator.write { commitActivationLocked() }
+    suspend fun commitActivation() =
+        operationMutex.withLock {
+            withContext(Dispatchers.IO) {
+                accessCoordinator.write { commitActivationLocked() }
+            }
         }
-    }
 
     suspend fun recoverInterruptedActivation(): LocalRuntimeMetadata? =
         operationMutex.withLock {
@@ -88,32 +99,36 @@ class LocalRuntimeUpdater(
             }
         }
 
-    suspend fun rollback(): LocalRuntimeMetadata = operationMutex.withLock {
-        withContext(Dispatchers.IO) {
-            accessCoordinator.write { rollbackLocked() }
+    suspend fun rollback(): LocalRuntimeMetadata =
+        operationMutex.withLock {
+            withContext(Dispatchers.IO) {
+                accessCoordinator.write { rollbackLocked() }
+            }
         }
-    }
 
-    suspend fun rollbackVersion(): String? = operationMutex.withLock {
-        withContext(Dispatchers.IO) {
-            accessCoordinator.read { readMetadata(ROLLBACK_METADATA_FILE)?.version }
+    suspend fun rollbackVersion(): String? =
+        operationMutex.withLock {
+            withContext(Dispatchers.IO) {
+                accessCoordinator.read { readMetadata(ROLLBACK_METADATA_FILE)?.version }
+            }
         }
-    }
 
     private suspend fun prepareLocked(
         release: LocalRuntimeRelease,
-        onProgress: (Float?, String) -> Unit
+        onProgress: (Float?, String) -> Unit,
     ): PreparedRuntimeUpdate {
         accessCoordinator.write { recoverInterruptedActivationLocked() }
         require(release.asset.name == expectedAssetName(abi)) {
             "Unexpected OpenCode update asset for ABI $abi: ${release.asset.name}"
         }
-        val snapshot = accessCoordinator.read {
-            val metadata = readMetadata(METADATA_FILE)
-                ?: error("Local runtime metadata is missing")
-            require(activeBinary().isFile) { "Active OpenCode binary is missing" }
-            RuntimePreparationSnapshot(metadata, freeBytesProvider())
-        }
+        val snapshot =
+            accessCoordinator.read {
+                val metadata =
+                    readMetadata(METADATA_FILE)
+                        ?: error("Local runtime metadata is missing")
+                require(activeBinary().isFile) { "Active OpenCode binary is missing" }
+                RuntimePreparationSnapshot(metadata, freeBytesProvider())
+            }
         val currentMetadata = snapshot.metadata
         val freeBytes = snapshot.freeBytes
         require(freeBytes >= release.asset.requiredFreeBytes) {
@@ -132,15 +147,16 @@ class LocalRuntimeUpdater(
             downloadAsset(release.asset, cacheArchive) { fraction ->
                 onProgress(
                     fraction?.let { 0.05f + it.coerceIn(0f, 1f) * 0.65f },
-                    "OpenCode ${normalizedVersion}をダウンロードしています"
+                    "OpenCode ${normalizedVersion}をダウンロードしています",
                 )
             }
             extractionDirectory.mkdirs()
             onProgress(0.75f, "更新ファイルを展開しています")
             extractArchive(cacheArchive, extractionDirectory)
-            val extractedBinary = extractionDirectory.walkTopDown()
-                .firstOrNull { it.isFile && it.name == "opencode" }
-                ?: error("OpenCode update archive did not contain the opencode binary")
+            val extractedBinary =
+                extractionDirectory.walkTopDown()
+                    .firstOrNull { it.isFile && it.name == "opencode" }
+                    ?: error("OpenCode update archive did not contain the opencode binary")
             candidate.parentFile?.mkdirs()
             extractedBinary.copyTo(candidate, overwrite = true)
             require(candidate.setExecutable(true, false) || candidate.canExecute()) {
@@ -151,17 +167,18 @@ class LocalRuntimeUpdater(
             require(reportedVersion == normalizedVersion) {
                 "OpenCode candidate version mismatch: expected $normalizedVersion, got $reportedVersion"
             }
-            val candidateMetadata = currentMetadata.copy(
-                version = normalizedVersion,
-                installedAt = nowMillis(),
-                abi = abi
-            )
+            val candidateMetadata =
+                currentMetadata.copy(
+                    version = normalizedVersion,
+                    installedAt = nowMillis(),
+                    abi = abi,
+                )
             onProgress(1f, "更新候補の準備が完了しました")
             return PreparedRuntimeUpdate(
                 release = release.copy(version = normalizedVersion),
                 candidateBinary = candidate,
                 candidateMetadata = candidateMetadata,
-                baseVersion = normalizeOpenCodeVersion(currentMetadata.version)
+                baseVersion = normalizeOpenCodeVersion(currentMetadata.version),
             )
         } catch (error: Throwable) {
             candidate.delete()
@@ -192,8 +209,9 @@ class LocalRuntimeUpdater(
         require(active.isFile && candidate.isFile && metadata.isFile) {
             "Local runtime update files are incomplete"
         }
-        val previousMetadata = readMetadata(METADATA_FILE)
-            ?: error("Local runtime metadata is invalid")
+        val previousMetadata =
+            readMetadata(METADATA_FILE)
+                ?: error("Local runtime metadata is invalid")
         require(normalizeOpenCodeVersion(previousMetadata.version) == prepared.baseVersion) {
             "Local runtime changed after the update candidate was prepared"
         }
@@ -204,13 +222,14 @@ class LocalRuntimeUpdater(
         cleanup(binarySwap, metadataSwap, rollbackPrevious, rollbackMetadataPrevious, candidateMetadata)
         val hadRollback = rollback.isFile && rollbackMetadata.isFile
         if (!hadRollback) cleanup(rollback, rollbackMetadata)
-        val journal = LocalRuntimeUpdateJournal(
-            oldVersion = normalizeOpenCodeVersion(previousMetadata.version),
-            newVersion = normalizeOpenCodeVersion(prepared.candidateMetadata.version),
-            candidateFileName = candidate.name,
-            candidateMetadataFileName = candidateMetadata.name,
-            hadRollback = hadRollback
-        )
+        val journal =
+            LocalRuntimeUpdateJournal(
+                oldVersion = normalizeOpenCodeVersion(previousMetadata.version),
+                newVersion = normalizeOpenCodeVersion(prepared.candidateMetadata.version),
+                candidateFileName = candidate.name,
+                candidateMetadataFileName = candidateMetadata.name,
+                hadRollback = hadRollback,
+            )
         writeJsonAtomically(journalFile(), journal)
         writeJsonAtomically(candidateMetadata, prepared.candidateMetadata)
 
@@ -251,7 +270,7 @@ class LocalRuntimeUpdater(
             binaryFile(ROLLBACK_PREVIOUS_BINARY),
             metadataFile(ROLLBACK_PREVIOUS_METADATA_FILE),
             binaryFile(journal.candidateFileName),
-            metadataFile(journal.candidateMetadataFileName)
+            metadataFile(journal.candidateMetadataFileName),
         )
     }
 
@@ -270,19 +289,21 @@ class LocalRuntimeUpdater(
         val rollbackMetadata = metadataFile(ROLLBACK_METADATA_FILE)
         val rollbackMetadataPrevious = metadataFile(ROLLBACK_PREVIOUS_METADATA_FILE)
 
-        val oldBinary = listOf(active, binarySwap, candidate, rollback, rollbackPrevious)
-            .distinctBy { it.absolutePath }
-            .firstOrNull { file -> file.isFile && runCatching { binaryVersion(file) }.getOrNull() == journal.oldVersion }
-            ?: error("Unable to locate previous OpenCode ${journal.oldVersion} binary")
-        val oldMetadataFile = listOf(
-            metadata,
-            metadataSwap,
-            candidateMetadata,
-            rollbackMetadata,
-            rollbackMetadataPrevious
-        ).distinctBy { it.absolutePath }
-            .firstOrNull { file -> readMetadataFile(file)?.version?.let(::normalizeOpenCodeVersion) == journal.oldVersion }
-            ?: error("Unable to locate previous OpenCode ${journal.oldVersion} metadata")
+        val oldBinary =
+            listOf(active, binarySwap, candidate, rollback, rollbackPrevious)
+                .distinctBy { it.absolutePath }
+                .firstOrNull { file -> file.isFile && runCatching { binaryVersion(file) }.getOrNull() == journal.oldVersion }
+                ?: error("Unable to locate previous OpenCode ${journal.oldVersion} binary")
+        val oldMetadataFile =
+            listOf(
+                metadata,
+                metadataSwap,
+                candidateMetadata,
+                rollbackMetadata,
+                rollbackMetadataPrevious,
+            ).distinctBy { it.absolutePath }
+                .firstOrNull { file -> readMetadataFile(file)?.version?.let(::normalizeOpenCodeVersion) == journal.oldVersion }
+                ?: error("Unable to locate previous OpenCode ${journal.oldVersion} metadata")
         val oldMetadata = requireNotNull(readMetadataFile(oldMetadataFile))
 
         val failedBinary = binaryFile("opencode.failed.${journal.newVersion}")
@@ -319,7 +340,7 @@ class LocalRuntimeUpdater(
             binarySwap,
             metadataSwap,
             failedBinary,
-            failedMetadata
+            failedMetadata,
         )
         require(active.setExecutable(true, false) || active.canExecute()) {
             "Recovered OpenCode binary is not executable"
@@ -335,20 +356,22 @@ class LocalRuntimeUpdater(
         val recoveryCurrentMetadata = metadataFile(ROLLBACK_RECOVERY_CURRENT_METADATA)
         val recoveryTargetMetadata = metadataFile(ROLLBACK_RECOVERY_TARGET_METADATA)
 
-        val binaryCandidates = listOf(
-            recoveryCurrentBinary,
-            recoveryTargetBinary,
-            activeBinary(),
-            rollbackBinary(),
-            binaryFile(SWAP_BINARY)
-        ).distinctBy { it.absolutePath }
-        val metadataCandidates = listOf(
-            recoveryCurrentMetadata,
-            recoveryTargetMetadata,
-            metadataFile(METADATA_FILE),
-            metadataFile(ROLLBACK_METADATA_FILE),
-            metadataFile(SWAP_METADATA_FILE)
-        ).distinctBy { it.absolutePath }
+        val binaryCandidates =
+            listOf(
+                recoveryCurrentBinary,
+                recoveryTargetBinary,
+                activeBinary(),
+                rollbackBinary(),
+                binaryFile(SWAP_BINARY),
+            ).distinctBy { it.absolutePath }
+        val metadataCandidates =
+            listOf(
+                recoveryCurrentMetadata,
+                recoveryTargetMetadata,
+                metadataFile(METADATA_FILE),
+                metadataFile(ROLLBACK_METADATA_FILE),
+                metadataFile(SWAP_METADATA_FILE),
+            ).distinctBy { it.absolutePath }
 
         val currentBinary = findBinaryVersion(binaryCandidates, journal.currentVersion)
         val targetBinary = findBinaryVersion(binaryCandidates, journal.targetVersion)
@@ -367,7 +390,7 @@ class LocalRuntimeUpdater(
             binaryFile(SWAP_BINARY),
             metadataFile(METADATA_FILE),
             metadataFile(ROLLBACK_METADATA_FILE),
-            metadataFile(SWAP_METADATA_FILE)
+            metadataFile(SWAP_METADATA_FILE),
         )
         move(recoveryCurrentBinary, activeBinary())
         move(recoveryTargetBinary, rollbackBinary())
@@ -398,10 +421,12 @@ class LocalRuntimeUpdater(
             "Rollback version is unavailable"
         }
         require(rollback.canExecute()) { "Rollback OpenCode binary is not executable" }
-        val currentMetadata = readMetadata(METADATA_FILE)
-            ?: error("Current runtime metadata is invalid")
-        val targetMetadata = readMetadata(ROLLBACK_METADATA_FILE)
-            ?: error("Rollback runtime metadata is invalid")
+        val currentMetadata =
+            readMetadata(METADATA_FILE)
+                ?: error("Current runtime metadata is invalid")
+        val targetMetadata =
+            readMetadata(ROLLBACK_METADATA_FILE)
+                ?: error("Rollback runtime metadata is invalid")
         require(normalizeOpenCodeVersion(currentMetadata.version) != normalizeOpenCodeVersion(targetMetadata.version)) {
             "Current and rollback OpenCode versions are identical"
         }
@@ -409,8 +434,8 @@ class LocalRuntimeUpdater(
             rollbackJournalFile(),
             LocalRuntimeRollbackJournal(
                 currentVersion = normalizeOpenCodeVersion(currentMetadata.version),
-                targetVersion = normalizeOpenCodeVersion(targetMetadata.version)
-            )
+                targetVersion = normalizeOpenCodeVersion(targetMetadata.version),
+            ),
         )
 
         swapPair(active, rollback, binarySwap)
@@ -428,7 +453,11 @@ class LocalRuntimeUpdater(
         return readMetadata(METADATA_FILE) ?: error("Restored runtime metadata is invalid")
     }
 
-    private fun swapPair(first: File, second: File, temporary: File) {
+    private fun swapPair(
+        first: File,
+        second: File,
+        temporary: File,
+    ) {
         require(first.exists() && second.exists()) {
             "Unable to swap missing runtime files: ${first.name}, ${second.name}"
         }
@@ -452,17 +481,26 @@ class LocalRuntimeUpdater(
         }
     }
 
-    private fun findBinaryVersion(candidates: List<File>, version: String): File =
+    private fun findBinaryVersion(
+        candidates: List<File>,
+        version: String,
+    ): File =
         candidates.firstOrNull { file ->
             file.isFile && runCatching { binaryVersion(file) }.getOrNull() == version
         } ?: error("Unable to locate OpenCode $version binary during rollback recovery")
 
-    private fun findMetadataVersion(candidates: List<File>, version: String): File =
+    private fun findMetadataVersion(
+        candidates: List<File>,
+        version: String,
+    ): File =
         candidates.firstOrNull { file ->
             readMetadataFile(file)?.version?.let(::normalizeOpenCodeVersion) == version
         } ?: error("Unable to locate OpenCode $version metadata during rollback recovery")
 
-    private fun stageRecoveryFile(source: File, destination: File) {
+    private fun stageRecoveryFile(
+        source: File,
+        destination: File,
+    ) {
         if (source.canonicalFile == destination.canonicalFile) return
         destination.delete()
         move(source, destination)
@@ -475,11 +513,14 @@ class LocalRuntimeUpdater(
             binaryFile(ROLLBACK_RECOVERY_CURRENT_BINARY),
             binaryFile(ROLLBACK_RECOVERY_TARGET_BINARY),
             metadataFile(ROLLBACK_RECOVERY_CURRENT_METADATA),
-            metadataFile(ROLLBACK_RECOVERY_TARGET_METADATA)
+            metadataFile(ROLLBACK_RECOVERY_TARGET_METADATA),
         )
     }
 
-    private fun move(source: File, destination: File) {
+    private fun move(
+        source: File,
+        destination: File,
+    ) {
         require(source.parentFile?.canonicalFile == destination.parentFile?.canonicalFile) {
             "Atomic runtime move requires the same parent directory"
         }
@@ -487,55 +528,61 @@ class LocalRuntimeUpdater(
         moveFile(source, destination)
     }
 
-    private fun binaryVersion(file: File): String =
-        normalizeOpenCodeVersion(candidateVersionProvider(file))
+    private fun binaryVersion(file: File): String = normalizeOpenCodeVersion(candidateVersionProvider(file))
 
-    private fun readJournal(): LocalRuntimeUpdateJournal? =
-        readJson(journalFile(), LocalRuntimeUpdateJournal::class.java)
+    private fun readJournal(): LocalRuntimeUpdateJournal? = readJson<LocalRuntimeUpdateJournal>(journalFile())
 
-    private fun readRollbackJournal(): LocalRuntimeRollbackJournal? =
-        readJson(rollbackJournalFile(), LocalRuntimeRollbackJournal::class.java)
+    private fun readRollbackJournal(): LocalRuntimeRollbackJournal? = readJson<LocalRuntimeRollbackJournal>(rollbackJournalFile())
 
-    private fun readMetadata(name: String): LocalRuntimeMetadata? =
-        readMetadataFile(metadataFile(name))
+    private fun readMetadata(name: String): LocalRuntimeMetadata? = readMetadataFile(metadataFile(name))
 
-    private fun readMetadataFile(file: File): LocalRuntimeMetadata? =
-        readJson(file, LocalRuntimeMetadata::class.java)
+    private fun readMetadataFile(file: File): LocalRuntimeMetadata? = readJson<LocalRuntimeMetadata>(file)
 
-    private fun <T> readJson(file: File, type: Class<T>): T? {
+    private inline fun <reified T> readJson(file: File): T? {
         if (!file.isFile) return null
-        return runCatching { gson.fromJson(file.readText(), type) }.getOrNull()
+        return runCatching { json.decodeFromString<T>(file.readText()) }.getOrNull()
     }
 
-    private fun writeJsonAtomically(destination: File, value: Any) {
+    private inline fun <reified T> writeJsonAtomically(
+        destination: File,
+        value: T,
+    ) {
         destination.parentFile?.mkdirs()
         val temporary = File(destination.parentFile, destination.name + ".write")
         temporary.delete()
         FileOutputStream(temporary).use { output ->
-            output.write(gson.toJson(value).toByteArray())
+            output.write(json.encodeToString(value).toByteArray())
             output.fd.sync()
         }
         Files.move(
             temporary.toPath(),
             destination.toPath(),
             ATOMIC_MOVE,
-            REPLACE_EXISTING
+            REPLACE_EXISTING,
         )
     }
 
     private fun activeBinary() = binaryFile("opencode")
+
     private fun candidateBinary(version: String) = binaryFile("opencode.candidate.$version")
+
     private fun rollbackBinary() = binaryFile("opencode.rollback")
+
     private fun binaryFile(name: String) = File(runtimeDirectory, "environment/rootfs/usr/local/bin/$name")
+
     private fun metadataFile(name: String) = File(runtimeDirectory, name)
+
     private fun journalFile() = metadataFile(TRANSACTION_FILE)
+
     private fun rollbackJournalFile() = metadataFile(ROLLBACK_TRANSACTION_FILE)
+
     private fun cleanup(vararg files: File) = files.forEach(File::delete)
+
     private fun candidateMetadataName(version: String) = "metadata.candidate.$version.json"
 
     private data class RuntimePreparationSnapshot(
         val metadata: LocalRuntimeMetadata,
-        val freeBytes: Long
+        val freeBytes: Long,
     )
 
     companion object {
@@ -552,10 +599,11 @@ class LocalRuntimeUpdater(
         private const val ROLLBACK_RECOVERY_CURRENT_METADATA = "metadata.rollback-recovery.current.json"
         private const val ROLLBACK_RECOVERY_TARGET_METADATA = "metadata.rollback-recovery.target.json"
 
-        private fun expectedAssetName(abi: String): String = when (abi) {
-            "arm64-v8a" -> "opencode-linux-arm64-musl.tar.gz"
-            "x86_64" -> "opencode-linux-x64-musl.tar.gz"
-            else -> error("Unsupported Android ABI for OpenCode updates: $abi")
-        }
+        private fun expectedAssetName(abi: String): String =
+            when (abi) {
+                "arm64-v8a" -> "opencode-linux-arm64-musl.tar.gz"
+                "x86_64" -> "opencode-linux-x64-musl.tar.gz"
+                else -> error("Unsupported Android ABI for OpenCode updates: $abi")
+            }
     }
 }

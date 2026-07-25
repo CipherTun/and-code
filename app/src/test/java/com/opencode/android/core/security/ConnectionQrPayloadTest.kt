@@ -9,13 +9,14 @@ import org.junit.Test
 class ConnectionQrPayloadTest {
     @Test
     fun `parses full connect uri`() {
-        val uri = ConnectionQrPayload.format(
-            name = "Mac mini",
-            url = "http://192.168.1.10:4096",
-            username = "opencode",
-            password = "s3cret!",
-            insecure = true
-        )
+        val uri =
+            ConnectionQrPayload.format(
+                name = "Mac mini",
+                url = "http://192.168.1.10:4096",
+                username = "opencode",
+                password = "s3cret!",
+                insecure = true,
+            )
 
         val parsed = ConnectionQrPayload.parse(uri)
 
@@ -28,13 +29,14 @@ class ConnectionQrPayloadTest {
 
     @Test
     fun `format and parse round trip preserves special characters`() {
-        val uri = ConnectionQrPayload.format(
-            name = "Mac mini #1",
-            url = "http://192.168.1.10:4096",
-            username = "opencode",
-            password = "p@ss w/ord&stuff=",
-            insecure = false
-        )
+        val uri =
+            ConnectionQrPayload.format(
+                name = "Mac mini #1",
+                url = "http://192.168.1.10:4096",
+                username = "opencode",
+                password = "p@ss w/ord&stuff=",
+                insecure = false,
+            )
 
         val parsed = ConnectionQrPayload.parse(uri)
 

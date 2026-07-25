@@ -32,25 +32,27 @@ internal enum class LocalRuntimeServiceCommand {
     Delete,
     Stop,
     Restore,
-    Ignore
+    Ignore,
 }
 
-internal fun localRuntimeServiceCommand(action: String?): LocalRuntimeServiceCommand = when (action) {
-    LocalRuntimeService.ACTION_INSTALL_AND_START -> LocalRuntimeServiceCommand.InstallAndStart
-    LocalRuntimeService.ACTION_START -> LocalRuntimeServiceCommand.Start
-    LocalRuntimeService.ACTION_REINSTALL -> LocalRuntimeServiceCommand.Reinstall
-    LocalRuntimeService.ACTION_UPDATE -> LocalRuntimeServiceCommand.Update
-    LocalRuntimeService.ACTION_ROLLBACK -> LocalRuntimeServiceCommand.Rollback
-    LocalRuntimeService.ACTION_DELETE -> LocalRuntimeServiceCommand.Delete
-    LocalRuntimeService.ACTION_STOP -> LocalRuntimeServiceCommand.Stop
-    null -> LocalRuntimeServiceCommand.Restore
-    else -> LocalRuntimeServiceCommand.Ignore
-}
+internal fun localRuntimeServiceCommand(action: String?): LocalRuntimeServiceCommand =
+    when (action) {
+        LocalRuntimeService.ACTION_INSTALL_AND_START -> LocalRuntimeServiceCommand.InstallAndStart
+        LocalRuntimeService.ACTION_START -> LocalRuntimeServiceCommand.Start
+        LocalRuntimeService.ACTION_REINSTALL -> LocalRuntimeServiceCommand.Reinstall
+        LocalRuntimeService.ACTION_UPDATE -> LocalRuntimeServiceCommand.Update
+        LocalRuntimeService.ACTION_ROLLBACK -> LocalRuntimeServiceCommand.Rollback
+        LocalRuntimeService.ACTION_DELETE -> LocalRuntimeServiceCommand.Delete
+        LocalRuntimeService.ACTION_STOP -> LocalRuntimeServiceCommand.Stop
+        null -> LocalRuntimeServiceCommand.Restore
+        else -> LocalRuntimeServiceCommand.Ignore
+    }
 
 class LocalRuntimeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var operation: Job? = null
     private var watchdogJob: Job? = null
+
     @Volatile private var autoRestartEnabled = false
     private lateinit var manager: LocalRuntimeManager
 
@@ -68,7 +70,11 @@ class LocalRuntimeService : Service() {
         startWatchdog()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         when (localRuntimeServiceCommand(intent?.action)) {
             LocalRuntimeServiceCommand.InstallAndStart -> {
                 autoRestartEnabled = true
@@ -134,68 +140,79 @@ class LocalRuntimeService : Service() {
 
     private fun startWatchdog() {
         watchdogJob?.cancel()
-        watchdogJob = scope.launch(Dispatchers.IO) {
-            val watchdog = LocalRuntimeWatchdog()
-            while (isActive) {
-                delay(WATCHDOG_INTERVAL_MILLIS)
-                if (!autoRestartEnabled) continue
-                val status = manager.status()
-                if (watchdog.observe(status)) {
-                    manager.ensureRunning()
+        watchdogJob =
+            scope.launch(Dispatchers.IO) {
+                val watchdog = LocalRuntimeWatchdog()
+                while (isActive) {
+                    delay(WATCHDOG_INTERVAL_MILLIS)
+                    if (!autoRestartEnabled) continue
+                    val status = manager.status()
+                    if (watchdog.observe(status)) {
+                        manager.ensureRunning()
+                    }
                 }
             }
-        }
     }
 
     private fun notification(status: LocalRuntimeStatus): android.app.Notification {
-        val openIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val stopIntent = PendingIntent.getService(
-            this,
-            1,
-            Intent(this, LocalRuntimeService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val (title, text, indeterminate, progress) = when (status) {
-            LocalRuntimeStatus.NotInstalled -> NotificationState(
-                getString(R.string.app_name),
-                getString(R.string.notification_runtime_not_installed)
+        val openIntent =
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            is LocalRuntimeStatus.Installing -> NotificationState(
-                getString(R.string.notification_runtime_setting_up),
-                status.step,
-                status.progress == null,
-                ((status.progress ?: 0f) * 100).toInt()
+        val stopIntent =
+            PendingIntent.getService(
+                this,
+                1,
+                Intent(this, LocalRuntimeService::class.java).setAction(ACTION_STOP),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            is LocalRuntimeStatus.Starting -> NotificationState(
-                getString(R.string.notification_runtime_starting),
-                getString(R.string.capability_version, status.version),
-                true
-            )
-            is LocalRuntimeStatus.Updating -> NotificationState(
-                getString(R.string.notification_runtime_updating),
-                status.step,
-                status.progress == null,
-                ((status.progress ?: 0f) * 100).toInt()
-            )
-            is LocalRuntimeStatus.Stopped -> NotificationState(
-                getString(R.string.notification_runtime_stopped),
-                getString(R.string.capability_version, status.version)
-            )
-            is LocalRuntimeStatus.Ready -> NotificationState(
-                getString(R.string.notification_runtime_ready),
-                getString(R.string.notification_runtime_ready_detail, status.version, status.port)
-            )
-            is LocalRuntimeStatus.Broken -> NotificationState(getString(R.string.notification_runtime_broken), status.reason)
-            is LocalRuntimeStatus.UnsupportedAbi -> NotificationState(
-                getString(R.string.notification_runtime_unsupported_device),
-                getString(R.string.unsupported_abi, status.abi)
-            )
-        }
+        val (title, text, indeterminate, progress) =
+            when (status) {
+                LocalRuntimeStatus.NotInstalled ->
+                    NotificationState(
+                        getString(R.string.app_name),
+                        getString(R.string.notification_runtime_not_installed),
+                    )
+                is LocalRuntimeStatus.Installing ->
+                    NotificationState(
+                        getString(R.string.notification_runtime_setting_up),
+                        status.step,
+                        status.progress == null,
+                        ((status.progress ?: 0f) * 100).toInt(),
+                    )
+                is LocalRuntimeStatus.Starting ->
+                    NotificationState(
+                        getString(R.string.notification_runtime_starting),
+                        getString(R.string.capability_version, status.version),
+                        true,
+                    )
+                is LocalRuntimeStatus.Updating ->
+                    NotificationState(
+                        getString(R.string.notification_runtime_updating),
+                        status.step,
+                        status.progress == null,
+                        ((status.progress ?: 0f) * 100).toInt(),
+                    )
+                is LocalRuntimeStatus.Stopped ->
+                    NotificationState(
+                        getString(R.string.notification_runtime_stopped),
+                        getString(R.string.capability_version, status.version),
+                    )
+                is LocalRuntimeStatus.Ready ->
+                    NotificationState(
+                        getString(R.string.notification_runtime_ready),
+                        getString(R.string.notification_runtime_ready_detail, status.version, status.port),
+                    )
+                is LocalRuntimeStatus.Broken -> NotificationState(getString(R.string.notification_runtime_broken), status.reason)
+                is LocalRuntimeStatus.UnsupportedAbi ->
+                    NotificationState(
+                        getString(R.string.notification_runtime_unsupported_device),
+                        getString(R.string.unsupported_abi, status.abi),
+                    )
+            }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
@@ -205,7 +222,7 @@ class LocalRuntimeService : Service() {
                 status is LocalRuntimeStatus.Ready ||
                     status is LocalRuntimeStatus.Installing ||
                     status is LocalRuntimeStatus.Starting ||
-                    status is LocalRuntimeStatus.Updating
+                    status is LocalRuntimeStatus.Updating,
             )
             .setOnlyAlertOnce(true)
             .setProgress(if (indeterminate || progress > 0) 100 else 0, progress, indeterminate)
@@ -214,13 +231,14 @@ class LocalRuntimeService : Service() {
     }
 
     private fun createChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.local_runtime_screen_title),
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = getString(R.string.notification_channel_local_runtime_description)
-        }
+        val channel =
+            NotificationChannel(
+                CHANNEL_ID,
+                getString(R.string.local_runtime_screen_title),
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply {
+                description = getString(R.string.notification_channel_local_runtime_description)
+            }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -228,7 +246,7 @@ class LocalRuntimeService : Service() {
         val title: String,
         val text: String,
         val indeterminate: Boolean = false,
-        val progress: Int = 0
+        val progress: Int = 0,
     )
 
     companion object {
@@ -243,23 +261,28 @@ class LocalRuntimeService : Service() {
         const val ACTION_ROLLBACK = "com.opencode.android.local.ROLLBACK"
         const val ACTION_DELETE = "com.opencode.android.local.DELETE"
 
-        fun send(context: Context, action: String) {
+        fun send(
+            context: Context,
+            action: String,
+        ) {
             val intent = Intent(context, LocalRuntimeService::class.java).setAction(action)
-            if (action == ACTION_STOP) {
-                context.startService(intent)
-            } else {
-                ContextCompat.startForegroundService(context, intent)
-            }
+            ContextCompat.startForegroundService(context, intent)
         }
     }
 }
 
 class LocalRuntimeServiceController(private val context: Context) {
     fun installAndStart() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_INSTALL_AND_START)
+
     fun start() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_START)
+
     fun stop() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_STOP)
+
     fun reinstall() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_REINSTALL)
+
     fun update() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_UPDATE)
+
     fun rollback() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_ROLLBACK)
+
     fun delete() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_DELETE)
 }

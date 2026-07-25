@@ -1,30 +1,37 @@
 package com.opencode.android.data.connection
 
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.util.UUID
 
+@Serializable
 data class ConnectionProfile(
-    @SerializedName("id") val id: String = UUID.randomUUID().toString(),
-    @SerializedName("name") val name: String,
-    @SerializedName("baseUrl") val baseUrl: String,
-    @SerializedName("username") val username: String = "opencode",
-    @SerializedName("password") val password: String? = null,
-    @SerializedName("allowInsecureLan") val allowInsecureLan: Boolean = false
+    @SerialName("id") val id: String = UUID.randomUUID().toString(),
+    @SerialName("name") val name: String,
+    @SerialName("baseUrl") val baseUrl: String,
+    @SerialName("username") val username: String = "opencode",
+    @SerialName("password") val password: String? = null,
+    @SerialName("allowInsecureLan") val allowInsecureLan: Boolean = false,
+    @SerialName("pinSha256") val pinSha256: String? = null,
 ) {
     override fun toString(): String =
-        "ConnectionProfile(id=$id, name=$name, baseUrl=$baseUrl, username=$username, password=<redacted>, allowInsecureLan=$allowInsecureLan)"
+        "ConnectionProfile(id=$id, name=$name, baseUrl=$baseUrl, username=$username, password=<redacted>, allowInsecureLan=$allowInsecureLan, pinSha256=<redacted>)"
 }
 
 object ConnectionProfileCodec {
-    private val gson = Gson()
-    private val listType = object : TypeToken<List<ConnectionProfile>>() {}.type
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            encodeDefaults = true
+        }
 
-    fun encode(profiles: List<ConnectionProfile>): String = gson.toJson(profiles, listType)
+    fun encode(profiles: List<ConnectionProfile>): String = json.encodeToString(profiles)
 
-    fun decode(json: String): List<ConnectionProfile> {
-        if (json.isBlank()) return emptyList()
-        return gson.fromJson<List<ConnectionProfile>>(json, listType).orEmpty()
+    fun decode(jsonString: String): List<ConnectionProfile> {
+        if (jsonString.isBlank()) return emptyList()
+        return json.decodeFromString<List<ConnectionProfile>>(jsonString)
     }
 }

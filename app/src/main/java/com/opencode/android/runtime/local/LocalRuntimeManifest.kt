@@ -1,16 +1,18 @@
 package com.opencode.android.runtime.local
 
 import android.content.Context
-import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
+@Serializable
 data class LocalRuntimeManifest(
-    @SerializedName("schemaVersion") val schemaVersion: Int,
-    @SerializedName("runtimeVersion") val runtimeVersion: String,
-    @SerializedName("openCodeVersion") val openCodeVersion: String,
-    @SerializedName("alpineVersion") val alpineVersion: String,
-    @SerializedName("port") val port: Int,
-    @SerializedName("architectures") val architectures: Map<String, LocalRuntimeArchitecture>
+    @SerialName("schemaVersion") val schemaVersion: Int,
+    @SerialName("runtimeVersion") val runtimeVersion: String,
+    @SerialName("openCodeVersion") val openCodeVersion: String,
+    @SerialName("alpineVersion") val alpineVersion: String,
+    @SerialName("port") val port: Int,
+    @SerialName("architectures") val architectures: Map<String, LocalRuntimeArchitecture>,
 ) {
     fun architecture(abi: String): LocalRuntimeArchitecture =
         requireNotNull(architectures[abi]) { "Local runtime does not support ABI $abi" }
@@ -25,11 +27,12 @@ data class LocalRuntimeManifest(
     }
 }
 
+@Serializable
 data class LocalRuntimeArchitecture(
-    @SerializedName("alpineUrl") val alpineUrl: String,
-    @SerializedName("alpineSha256") val alpineSha256: String,
-    @SerializedName("openCodeUrl") val openCodeUrl: String,
-    @SerializedName("openCodeSha256") val openCodeSha256: String
+    @SerialName("alpineUrl") val alpineUrl: String,
+    @SerialName("alpineSha256") val alpineSha256: String,
+    @SerialName("openCodeUrl") val openCodeUrl: String,
+    @SerialName("openCodeSha256") val openCodeSha256: String,
 ) {
     fun validate(abi: String) {
         require(alpineUrl.startsWith("https://")) { "Alpine URL for $abi must use HTTPS" }
@@ -45,11 +48,15 @@ data class LocalRuntimeArchitecture(
 
 class LocalRuntimeManifestReader(
     private val context: Context,
-    private val gson: Gson = Gson()
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        },
 ) {
     fun read(): LocalRuntimeManifest {
         val payload = context.assets.open(ASSET_NAME).bufferedReader().use { it.readText() }
-        return gson.fromJson(payload, LocalRuntimeManifest::class.java).also { it.validate() }
+        return json.decodeFromString<LocalRuntimeManifest>(payload).also { it.validate() }
     }
 
     companion object {
