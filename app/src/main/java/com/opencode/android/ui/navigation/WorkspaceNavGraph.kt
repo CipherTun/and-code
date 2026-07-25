@@ -40,7 +40,9 @@ fun NavGraphBuilder.workspaceNavGraph(
     composable(ROUTE_REMOTE_CONNECTION) {
         RemoteConnectionScreen(
             onTestConnection = workspaceViewModel::testConnection,
-            onSaveConnection = workspaceViewModel::saveConnection,
+            // Saving here is the user pressing "connect", so the PC becomes the active runtime even
+            // when an Android-local runtime is already set up and selected.
+            onSaveConnection = { form -> workspaceViewModel.saveConnection(form, activate = true) },
             onBack = { navController.popBackStack() },
             onConnected = completeOnboardingAndGoToChat,
         )
@@ -50,7 +52,9 @@ fun NavGraphBuilder.workspaceNavGraph(
         WorkspacesScreen(
             state = workspaceState,
             onSelectRuntime = workspaceViewModel::selectRuntime,
-            onSaveConnection = workspaceViewModel::saveConnection,
+            // This screen edits the connection list and has its own per-target "select" action, so
+            // saving must not move the running target under the user.
+            onSaveConnection = { form -> workspaceViewModel.saveConnection(form, activate = false) },
             onDeleteConnection = workspaceViewModel::deleteConnection,
             onTestConnection = workspaceViewModel::testConnection,
             onRefresh = workspaceViewModel::refresh,

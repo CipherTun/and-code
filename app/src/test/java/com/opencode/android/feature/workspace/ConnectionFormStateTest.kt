@@ -1,5 +1,6 @@
 package com.opencode.android.feature.workspace
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -27,6 +28,27 @@ class ConnectionFormStateTest {
                 baseUrl = "https://opencode.example.com",
             ).canSave,
         )
+    }
+
+    @Test
+    fun `plain LAN endpoint is saveable without a separate cleartext opt-in`() {
+        val form = ConnectionFormState(name = "Mac mini", baseUrl = "192.168.1.10:4096")
+
+        assertTrue(form.canSave)
+        val profile = form.toProfile()
+        assertEquals("http://192.168.1.10:4096/", profile.baseUrl)
+        assertTrue(profile.allowInsecureLan)
+    }
+
+    @Test
+    fun `https endpoint is not marked as allowing cleartext`() {
+        val profile =
+            ConnectionFormState(
+                name = "Server",
+                baseUrl = "https://opencode.example.com",
+            ).toProfile()
+
+        assertFalse(profile.allowInsecureLan)
     }
 
     @Test

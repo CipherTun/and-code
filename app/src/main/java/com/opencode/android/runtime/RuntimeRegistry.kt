@@ -13,6 +13,15 @@ class RuntimeRegistry(
         RemoteRuntimeTarget(profile)
     },
 ) {
+    /**
+     * Ids of stored connections whose runtime target could not be built (unusable endpoint).
+     *
+     * Declared before the target list because buildTargets() writes to it while constructing that
+     * list.
+     */
+    private val mutableUnusableProfileIds = MutableStateFlow<Set<String>>(emptySet())
+    val unusableProfileIds: StateFlow<Set<String>> = mutableUnusableProfileIds.asStateFlow()
+
     private val mutableTargets = MutableStateFlow(buildTargets())
     val targets: StateFlow<List<RuntimeTarget>> = mutableTargets.asStateFlow()
 
@@ -21,22 +30,58 @@ class RuntimeRegistry(
 
     fun remoteProfiles(): List<ConnectionProfile> = store.connections()
 
-    fun select(id: String?) {
+    /**
+     * Selects [id] as the active runtime.
+     *
+     * Selection is driven from UI callbacks, background collectors and persisted state that can all
+     * race with a connection being deleted, so an unknown id is reported rather than thrown: taking
+     * the process down because a stale id survived somewhere is never the right answer.
+     *
+     * @return true when [id] was applied.
+     */
+    fun select(id: String?): Boolean {
         val target = id?.let { targetId -> mutableTargets.value.firstOrNull { it.id == targetId } }
-        require(id == null || target != null) { "Unknown runtime target: $id" }
+        if (id != null && target == null) return false
         store.selectedRuntimeId = id
         mutableSelected.value = target
+        return true
     }
 
-    fun upsertRemote(profile: ConnectionProfile) {
+    /**
+     * Selects [id] only when nothing is selected yet, so background collectors (the local runtime
+     * becoming ready, auto-start) can establish a default without ever overriding the runtime the
+     * user picked themselves.
+     *
+     * @return true when this call established the selection.
+     */
+    fun selectIfUnset(id: String): Boolean {
+        if (mutableSelected.value != null) return false
+        return select(id)
+    }
+
+    /**
+     * Stores [profile] and rebuilds the target list.
+     *
+     * @param select when true the saved connection also becomes the active runtime. The remote
+     *   connection screen passes true: the user pressed "connect", so leaving the previously
+     *   selected runtime (typically the Android-local one) in place would silently ignore them.
+     */
+    fun upsertRemote(
+        profile: ConnectionProfile,
+        select: Boolean = false,
+    ): Boolean {
         val selectedBefore = store.selectedRuntimeId
         store.upsertConnection(profile)
         rebuildTargets()
 
-        when {
+        return when {
+            select -> select(profile.id)
             selectedBefore == profile.id -> select(profile.id)
             selectedBefore == null -> select(profile.id)
-            else -> mutableSelected.value = resolveSelected(mutableTargets.value)
+            else -> {
+                mutableSelected.value = resolveSelected(mutableTargets.value)
+                false
+            }
         }
     }
 
@@ -58,16 +103,30 @@ class RuntimeRegistry(
         mutableSelected.value = resolveSelected(mutableTargets.value)
     }
 
-    private fun buildTargets(): List<RuntimeTarget> =
-        buildList {
-            add(localTarget)
-            addAll(store.connections().map(remoteFactory))
-        }
+    private fun buildTargets(): List<RuntimeTarget> {
+        val unusable = mutableSetOf<String>()
+        val targets =
+            buildList {
+                add(localTarget)
+                store.connections().forEach { profile ->
+                    // A stored endpoint can stop being usable across app versions (tightened URL
+                    // rules) or arrive broken from a QR payload. Building the target must not throw
+                    // here: this runs on the main thread from app start, refresh and save.
+                    val target = runCatching { remoteFactory(profile) }.getOrNull()
+                    if (target == null) unusable += profile.id else add(target)
+                }
+            }
+        mutableUnusableProfileIds.value = unusable
+        return targets
+    }
 
     private fun rebuildTargets() {
         mutableTargets.value = buildTargets()
     }
 
+    // A stored id that resolves to nothing (connection deleted elsewhere, or an endpoint that no
+    // longer builds) yields no selection rather than a substitute: the local runtime may not even
+    // be installed. The stored id is left untouched so the selection returns if the target does.
     private fun resolveSelected(targets: List<RuntimeTarget>): RuntimeTarget? =
         store.selectedRuntimeId?.let { selectedId -> targets.firstOrNull { it.id == selectedId } }
 }

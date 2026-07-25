@@ -16,10 +16,8 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -84,6 +82,12 @@ internal fun ConnectionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = form.baseUrl.isNotBlank() && form.normalizedUrl == null,
+                    supportingText =
+                        if (form.baseUrl.isNotBlank() && form.normalizedUrl == null) {
+                            { Text(stringResource(R.string.remote_url_invalid)) }
+                        } else {
+                            null
+                        },
                 )
                 OutlinedTextField(
                     value = form.username,
@@ -101,20 +105,10 @@ internal fun ConnectionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = form.allowInsecureLan,
-                        onCheckedChange = { form = form.copy(allowInsecureLan = it) },
-                    )
-                    Text(
-                        text = stringResource(R.string.allow_lan_http),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                // No cleartext opt-in here: OpenCodeUrl.normalize already limits plain HTTP to
+                // loopback, RFC1918, link-local, Tailscale CGNAT and .local hosts, and anything
+                // beyond that has to be https. A checkbox would only add a step in front of the
+                // ordinary `opencode serve` on the LAN.
                 OutlinedButton(
                     onClick = {
                         scope.launch {

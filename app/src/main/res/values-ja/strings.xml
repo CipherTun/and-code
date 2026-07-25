@@ -468,6 +468,7 @@
     <string name="remote_copy_command">コマンドをコピー</string>
     <string name="remote_command_copied">コピーしました</string>
     <string name="remote_hint">デスクトップアプリを使う場合は、~/.config/opencode/opencode.json に {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} を追加してアプリを再起動してください。</string>
+    <string name="remote_url_invalid">192.168.1.10:4096 のようなLANまたはTailscaleのアドレスを入力してください。ローカルネットワーク外のアドレスは https:// が必要です。</string>
     <string name="remote_test_connection_button">接続をテスト</string>
     <string name="remote_save_connection_button">この接続を保存</string>
 

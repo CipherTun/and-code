@@ -457,6 +457,7 @@
     <string name="remote_copy_command">نسخ الأمر</string>
     <string name="remote_command_copied">تم النسخ</string>
     <string name="remote_hint">لتطبيق سطح المكتب، أضف {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} إلى ~/.config/opencode/opencode.json وأعد تشغيل التطبيق.</string>
+    <string name="remote_url_invalid">أدخل عنوان LAN أو Tailscale مثل 192.168.1.10:4096. يجب أن تستخدم العناوين خارج شبكتك المحلية https://.</string>
     <string name="remote_test_connection_button">اختبار الاتصال</string>
     <string name="remote_save_connection_button">حفظ هذا الاتصال</string>
 

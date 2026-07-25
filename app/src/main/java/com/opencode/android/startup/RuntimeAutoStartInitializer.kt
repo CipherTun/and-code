@@ -41,9 +41,11 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
         scope.launch {
             app.localRuntimeManager.state.collect { status ->
                 if (status is LocalRuntimeStatus.Ready) {
-                    if (app.runtimeRegistry.selected.value?.id != LOCAL_RUNTIME_ID) {
-                        app.runtimeRegistry.select(LOCAL_RUNTIME_ID)
-                    }
+                    // Never override an explicit selection. The user can switch to a PC connection
+                    // while the local runtime is still coming up, and Ready is re-emitted on every
+                    // watchdog tick — selecting on each one would pull them back to the phone.
+                    app.runtimeRegistry.selectIfUnset(LOCAL_RUNTIME_ID)
+                    if (app.runtimeRegistry.selected.value?.id != LOCAL_RUNTIME_ID) return@collect
                     warmupJob?.cancel()
                     warmupJob =
                         scope.launch {

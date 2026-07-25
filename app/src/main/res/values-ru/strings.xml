@@ -457,6 +457,7 @@
     <string name="remote_copy_command">Копировать команду</string>
     <string name="remote_command_copied">Скопировано</string>
     <string name="remote_hint">Для настольного приложения добавьте {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} в ~/.config/opencode/opencode.json и перезапустите приложение.</string>
+    <string name="remote_url_invalid">Введите адрес в локальной сети или Tailscale, например 192.168.1.10:4096. Адреса вне локальной сети должны использовать https://.</string>
     <string name="remote_test_connection_button">Проверить подключение</string>
     <string name="remote_save_connection_button">Сохранить это подключение</string>
 

@@ -457,6 +457,7 @@
     <string name="remote_copy_command">复制命令</string>
     <string name="remote_command_copied">已复制</string>
     <string name="remote_hint">对于桌面应用，将 {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} 添加到 ~/.config/opencode/opencode.json 并重新启动应用。</string>
+    <string name="remote_url_invalid">请输入局域网或 Tailscale 地址，例如 192.168.1.10:4096。本地网络以外的地址必须使用 https://。</string>
     <string name="remote_test_connection_button">测试连接</string>
     <string name="remote_save_connection_button">保存此连接</string>
 

@@ -113,12 +113,21 @@ fun RemoteConnectionScreen(
     fun startLanDiscovery() {
         discoveryDialogOpen = true
         discoveredServers = emptyList()
+        // mDNS browsing is best-effort: the service may be unavailable and the platform throws from
+        // several of its callbacks. A failure has to leave the dialog showing "nothing found" so the
+        // user can still type the address, never take the app down mid-setup.
+        val nsdManager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager
+        if (nsdManager == null) {
+            isDiscovering = false
+            return
+        }
         isDiscovering = true
         scope.launch {
-            val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-            withTimeoutOrNull(10_000) {
-                LanDiscovery(nsdManager).discover().collect { server ->
-                    discoveredServers = (discoveredServers + server).distinctBy { it.host to it.port }
+            runCatching {
+                withTimeoutOrNull(DISCOVERY_TIMEOUT_MILLIS) {
+                    LanDiscovery(nsdManager).discover().collect { server ->
+                        discoveredServers = (discoveredServers + server).distinctBy { it.host to it.port }
+                    }
                 }
             }
             isDiscovering = false
@@ -267,17 +276,25 @@ fun RemoteConnectionScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp),
                 )
+                val urlInvalid = form.baseUrl.isNotBlank() && form.normalizedUrl == null
                 OutlinedTextField(
                     value = form.baseUrl,
                     onValueChange = {
                         form = form.copy(baseUrl = it, testSucceeded = false, testMessage = null)
                     },
                     label = { Text(stringResource(R.string.server_url)) },
+                    placeholder = { Text("192.168.1.10:4096") },
                     leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    isError = form.baseUrl.isNotBlank() && form.normalizedUrl == null,
+                    isError = urlInvalid,
+                    supportingText =
+                        if (urlInvalid) {
+                            { Text(stringResource(R.string.remote_url_invalid)) }
+                        } else {
+                            null
+                        },
                     shape = RoundedCornerShape(14.dp),
                 )
                 OutlinedTextField(
@@ -458,6 +475,8 @@ fun RemoteConnectionScreen(
         )
     }
 }
+
+private const val DISCOVERY_TIMEOUT_MILLIS = 10_000L
 
 @Composable
 private fun CompactStepRow(

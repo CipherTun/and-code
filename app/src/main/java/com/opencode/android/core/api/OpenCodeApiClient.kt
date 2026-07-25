@@ -39,7 +39,11 @@ class OpenCodeApiClient(
     private val json: Json = defaultJson,
     private val eventParser: OpenCodeEventParser = OpenCodeEventParser(json),
 ) {
-    private val baseUrl: HttpUrl = OpenCodeUrl.normalize(profile.baseUrl).getOrThrow()
+    // Resolved lazily: constructing a client must never throw. Clients are built while assembling
+    // the runtime target list, which happens on the main thread at app start and whenever a
+    // connection is saved, so an endpoint the current rules reject has to surface as a failed
+    // request rather than as an exception escaping into a UI callback.
+    private val baseUrl: HttpUrl by lazy { OpenCodeUrl.normalize(profile.baseUrl).getOrThrow() }
     private val providerAuthHttpClient: OkHttpClient =
         httpClient.newBuilder()
             .readTimeout(PROVIDER_AUTH_TIMEOUT_MINUTES, TimeUnit.MINUTES)

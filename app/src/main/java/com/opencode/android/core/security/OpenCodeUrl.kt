@@ -47,8 +47,17 @@ object OpenCodeUrl {
             return true
         }
 
-        val octets = normalized.split('.').mapNotNull { it.toIntOrNull() }
-        if (octets.size != 4 || octets.any { it !in 0..255 }) return false
+        // Every label must itself be a decimal octet. Matching on `mapNotNull` alone would accept
+        // hostnames such as `10.0.0.1.attacker.example` as private addresses.
+        val labels = normalized.split('.')
+        if (labels.size != 4) return false
+        val octets =
+            labels.map { label ->
+                label.takeIf { it.isNotEmpty() && it.length <= 3 && it.all(Char::isDigit) }
+                    ?.toIntOrNull()
+                    ?: return false
+            }
+        if (octets.any { it !in 0..255 }) return false
 
         return when {
             octets[0] == 10 -> true

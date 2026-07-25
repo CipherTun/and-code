@@ -457,6 +457,7 @@
     <string name="remote_copy_command">Copier la commande</string>
     <string name="remote_command_copied">Copié</string>
     <string name="remote_hint">Pour l\'application de bureau, ajoutez {\"server\":{\"hostname\":\"0.0.0.0\",\"mdns\":true}} à ~/.config/opencode/opencode.json et redémarrez l\'application.</string>
+    <string name="remote_url_invalid">Saisissez une adresse LAN ou Tailscale telle que 192.168.1.10:4096. Les adresses hors de votre réseau local doivent utiliser https://.</string>
     <string name="remote_test_connection_button">Tester la connexion</string>
     <string name="remote_save_connection_button">Enregistrer cette connexion</string>
 

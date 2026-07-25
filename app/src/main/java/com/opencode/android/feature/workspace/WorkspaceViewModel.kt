@@ -10,6 +10,7 @@ import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.RuntimeState
+import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.runtime.local.LocalRuntimeManager
@@ -34,6 +35,8 @@ data class RuntimeSummary(
 data class WorkspaceUiState(
     val targets: List<RuntimeSummary> = emptyList(),
     val connections: List<ConnectionProfile> = emptyList(),
+    /** Saved connections whose endpoint can no longer be used, so they have no runtime target. */
+    val unusableConnections: List<ConnectionProfile> = emptyList(),
     val selectedRuntimeId: String? = null,
     val workspaces: List<WorkspaceRef> = emptyList(),
     val localStatus: LocalRuntimeStatus = LocalRuntimeStatus.NotInstalled,
@@ -59,6 +62,10 @@ class WorkspaceViewModel(
             localRuntimeManager.state,
             registeredTick,
         ) { targets, selected, runtime, localStatus, _ ->
+            val profiles = registry.remoteProfiles()
+            // Read imperatively: the registry recomputes this set while building the target list, so
+            // it is already up to date by the time `targets` emits.
+            val unusableIds = registry.unusableProfileIds.value
             WorkspaceUiState(
                 targets =
                     targets.map { target ->
@@ -70,9 +77,10 @@ class WorkspaceViewModel(
                             selected = target.id == selected?.id,
                         )
                     },
-                connections = registry.remoteProfiles(),
+                connections = profiles,
+                unusableConnections = profiles.filter { it.id in unusableIds },
                 selectedRuntimeId = selected?.id,
-                workspaces = mergeWorkspaces(runtime.workspaces, registeredProjects()),
+                workspaces = mergeWorkspaces(runtime.workspaces, registeredProjects(selected)),
                 localStatus = localStatus,
                 isRefreshing = runtime.isRefreshing,
                 error = runtime.error,
@@ -83,17 +91,26 @@ class WorkspaceViewModel(
         viewModelScope.launch {
             localRuntimeManager.state.collect { status ->
                 if (status is LocalRuntimeStatus.Ready) {
-                    registry.select("local-android")
-                    catalog.refresh()
+                    // Only fill an empty selection. The local runtime reports Ready again on every
+                    // watchdog tick, and selecting it unconditionally used to drag the app back off
+                    // a PC connection the user had just picked.
+                    if (registry.selectIfUnset(LOCAL_RUNTIME_ID)) catalog.refresh()
                 }
             }
         }
     }
 
-    private fun registeredProjects(): List<WorkspaceRef> =
-        settings.projectPaths.map { path ->
+    /**
+     * Folders registered on this device. They are paths inside the Android runtime's filesystem, so
+     * they are only meaningful while the Android-local runtime is selected — listing them for a PC
+     * connection would offer working folders that do not exist on that machine.
+     */
+    private fun registeredProjects(selected: RuntimeTarget?): List<WorkspaceRef> {
+        if (selected != null && selected.type != RuntimeType.LOCAL) return emptyList()
+        return settings.projectPaths.map { path ->
             WorkspaceRef(id = path, name = displayName(path), path = path)
         }
+    }
 
     private fun mergeWorkspaces(
         server: List<WorkspaceRef>,
@@ -122,6 +139,14 @@ class WorkspaceViewModel(
     }
 
     fun deleteProjectFiles(serverPath: String) {
+        // Only folders this device registered live under the Android runtime. A folder listed by a
+        // PC connection just happens to share a basename with one of ours, and deleting on that
+        // resemblance would wipe unrelated local files.
+        if (serverPath !in settings.projectPaths) {
+            removeProject(serverPath)
+            refresh()
+            return
+        }
         val hostDir = File(workspaceHostDir, displayName(serverPath))
         if (hostDir.exists()) hostDir.deleteRecursively()
         removeProject(serverPath)
@@ -132,9 +157,17 @@ class WorkspaceViewModel(
         registry.select(id)
     }
 
-    fun saveConnection(form: ConnectionFormState) {
+    /**
+     * Saves a PC connection. [activate] makes it the running target, which is what the connection
+     * screen wants: the user pressed "connect", so the app has to move to that machine even when a
+     * local runtime is already set up and selected.
+     */
+    fun saveConnection(
+        form: ConnectionFormState,
+        activate: Boolean = true,
+    ) {
         if (!form.canSave) return
-        registry.upsertRemote(form.toProfile())
+        registry.upsertRemote(form.toProfile(), select = activate)
     }
 
     fun deleteConnection(id: String) {
@@ -159,5 +192,9 @@ class WorkspaceViewModel(
     fun refresh() {
         registry.refresh()
         catalog.refresh()
+    }
+
+    private companion object {
+        const val LOCAL_RUNTIME_ID = "local-android"
     }
 }

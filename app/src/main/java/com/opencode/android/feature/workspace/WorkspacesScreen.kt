@@ -75,6 +75,8 @@ import com.opencode.android.ui.components.StatusChip
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
+private const val DISCOVERY_TIMEOUT_MILLIS = 10_000L
+
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun WorkspacesScreen(
@@ -96,6 +98,11 @@ fun WorkspacesScreen(
     onDeleteProjectFiles: (String) -> Unit = {},
     onBack: () -> Unit = {},
 ) {
+    val localRuntimeActive =
+        state.targets
+            .firstOrNull { it.selected }
+            ?.let { it.type == RuntimeType.LOCAL } ?: true
+
     var editing by remember { mutableStateOf<ConnectionFormState?>(null) }
     var discoveryDialogOpen by remember { mutableStateOf(false) }
     var isDiscovering by remember { mutableStateOf(false) }
@@ -122,14 +129,22 @@ fun WorkspacesScreen(
     fun startLanDiscovery() {
         discoveryDialogOpen = true
         discoveredServers = emptyList()
+        // Best-effort: see RemoteConnectionScreen. A browse failure shows an empty result instead of
+        // crashing, leaving manual entry available.
+        val nsdManager = context.getSystemService(Context.NSD_SERVICE) as? NsdManager
+        if (nsdManager == null) {
+            isDiscovering = false
+            return
+        }
         isDiscovering = true
         coroutineScope.launch {
-            val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-            withTimeoutOrNull(10_000) {
-                LanDiscovery(nsdManager).discover().collect { server ->
-                    discoveredServers =
-                        (discoveredServers + server)
-                            .distinctBy { it.host to it.port }
+            runCatching {
+                withTimeoutOrNull(DISCOVERY_TIMEOUT_MILLIS) {
+                    LanDiscovery(nsdManager).discover().collect { server ->
+                        discoveredServers =
+                            (discoveredServers + server)
+                                .distinctBy { it.host to it.port }
+                    }
                 }
             }
             isDiscovering = false
@@ -342,6 +357,37 @@ fun WorkspacesScreen(
                 }
             }
 
+            // Connections whose endpoint no longer builds a runtime have no target row above, so
+            // list them here instead of letting them disappear with no way to fix or remove them.
+            items(state.unusableConnections, key = { "unusable-${it.id}" }) { profile ->
+                SectionCard(
+                    modifier = Modifier.clickable { editing = ConnectionFormState.from(profile) },
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Computer,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(profile.name, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = stringResource(R.string.remote_url_invalid),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        IconButton(onClick = { editing = ConnectionFormState.from(profile) }) {
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit_description))
+                        }
+                    }
+                }
+            }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -355,26 +401,32 @@ fun WorkspacesScreen(
                     )
                     Text(stringResource(R.string.item_count, state.workspaces.size), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = onImportFolder,
-                        modifier = Modifier.weight(1f),
+                // Importing a folder and cloning a repository both write into the Android runtime's
+                // filesystem, so they only produce a usable working folder while that runtime is the
+                // active one. Offering them for a PC connection would register a path that does not
+                // exist on that machine.
+                if (localRuntimeActive) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(Icons.Default.DriveFolderUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.workspace_import_folder))
-                    }
-                    OutlinedButton(
-                        onClick = onCloneGithub,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.workspace_clone_github))
+                        OutlinedButton(
+                            onClick = onImportFolder,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.DriveFolderUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.workspace_import_folder))
+                        }
+                        OutlinedButton(
+                            onClick = onCloneGithub,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.workspace_clone_github))
+                        }
                     }
                 }
             }

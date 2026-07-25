@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RuntimeRegistryTest {
@@ -101,6 +103,73 @@ class RuntimeRegistryTest {
 
         assertNull(registry.selected.value)
         assertNull(store.selectedId)
+    }
+
+    @Test
+    fun `saving a connection with select activates it over an already selected local runtime`() {
+        val store = FakeStore(selectedId = "local-android")
+        val registry = registry(store)
+
+        val activated = registry.upsertRemote(profile("mac"), select = true)
+
+        assertTrue(activated)
+        assertEquals("mac", registry.selected.value?.id)
+        assertEquals("mac", store.selectedId)
+    }
+
+    @Test
+    fun `saving a connection without select leaves the running target alone`() {
+        val store = FakeStore(selectedId = "local-android")
+        val registry = registry(store)
+
+        registry.upsertRemote(profile("mac"), select = false)
+
+        assertEquals("local-android", registry.selected.value?.id)
+    }
+
+    @Test
+    fun `selecting an unknown target is reported instead of throwing`() {
+        val store = FakeStore(profiles = mutableListOf(profile("mac")), selectedId = "mac")
+        val registry = registry(store)
+
+        assertFalse(registry.select("deleted-elsewhere"))
+        assertEquals("mac", registry.selected.value?.id)
+        assertEquals("mac", store.selectedId)
+    }
+
+    @Test
+    fun `selectIfUnset fills an empty selection but never overrides the user's choice`() {
+        val store = FakeStore(profiles = mutableListOf(profile("mac")))
+        val registry = registry(store)
+
+        assertTrue(registry.selectIfUnset("local-android"))
+        assertEquals("local-android", registry.selected.value?.id)
+
+        registry.select("mac")
+        assertFalse(registry.selectIfUnset("local-android"))
+        assertEquals("mac", registry.selected.value?.id)
+    }
+
+    @Test
+    fun `a connection whose target cannot be built is reported instead of failing the registry`() {
+        val store =
+            FakeStore(
+                profiles = mutableListOf(profile("mac"), profile("broken"), profile("linux")),
+                selectedId = "linux",
+            )
+        val registry =
+            RuntimeRegistry(
+                store = store,
+                localTarget = FakeTarget("local-android", RuntimeType.LOCAL),
+                remoteFactory = { profile ->
+                    require(profile.id != "broken") { "Unusable endpoint" }
+                    FakeTarget(profile.id, RuntimeType.REMOTE, profile.name)
+                },
+            )
+
+        assertEquals(listOf("local-android", "mac", "linux"), registry.targets.value.map { it.id })
+        assertEquals(setOf("broken"), registry.unusableProfileIds.value)
+        assertEquals("linux", registry.selected.value?.id)
     }
 
     private fun registry(store: FakeStore): RuntimeRegistry =
