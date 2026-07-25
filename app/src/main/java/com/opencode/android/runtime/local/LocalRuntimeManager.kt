@@ -95,6 +95,13 @@ class LocalRuntimeManager(
             val metadata =
                 readMetadata()
                     ?: return@withLock Result.failure(IllegalStateException("Local runtime is not installed"))
+            val bundledVersion = installer?.bundledOpenCodeVersion()
+            if (updateEngine != null &&
+                bundledVersion != null &&
+                compareOpenCodeVersions(metadata.version, bundledVersion) < 0
+            ) {
+                return@withLock updateToLatestLocked()
+            }
             if (portProbe(metadata.port)) {
                 return@withLock Result.success(
                     LocalRuntimeStatus.Ready(metadata.version, metadata.port).also { mutableState.value = it },

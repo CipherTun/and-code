@@ -155,6 +155,8 @@ class LocalRuntimeInstaller(
             InstalledRuntime(metadata, commandSuite, rootfs, openCode)
         }
 
+    fun bundledOpenCodeVersion(): String = manifestReader.read().openCodeVersion
+
     private suspend fun download(
         url: String,
         destination: File,
