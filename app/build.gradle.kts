@@ -138,6 +138,14 @@ android {
             }
         }
     }
+    lint {
+        // The androidx.startup Initializers are deliberately not auto-started: the manifest removes
+        // their <meta-data> entries with tools:node="remove" so they cannot run inside
+        // InitializationProvider (which fires before Application.onCreate, where the dependencies
+        // they need are built). OpenCodeApplication initializes them itself instead. Without this,
+        // lintVitalRelease fails the check and no release APK can be produced.
+        disable += "EnsureInitializerMetadata"
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
