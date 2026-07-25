@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ fun QuestionCard(
     question: PendingQuestionUi,
     onAnswerSelected: (String, Int, String) -> Unit,
     onSubmit: (String) -> Unit,
+    onCancel: (String) -> Unit = {},
 ) {
     Card(
         modifier =
@@ -98,17 +100,27 @@ fun QuestionCard(
                         }
                     }
 
-                    if (prompt.options.isEmpty() || prompt.placeholder != null) {
-                        OutlinedTextField(
-                            value = fallbackText,
-                            onValueChange = { onAnswerSelected(question.request.id, index, it) },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = {
-                                Text(prompt.placeholder ?: stringResource(R.string.message_hint))
-                            },
-                            singleLine = !question.request.multiple,
+                    // Always offered, including alongside options: the presented choices are not
+                    // always exhaustive, and there was previously no way to answer anything else.
+                    if (prompt.options.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.question_free_text_label),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    OutlinedTextField(
+                        value = fallbackText,
+                        onValueChange = { onAnswerSelected(question.request.id, index, it) },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .testTag("question-free-text-${question.request.id}-$index"),
+                        placeholder = {
+                            Text(prompt.placeholder ?: stringResource(R.string.message_hint))
+                        },
+                        singleLine = !question.request.multiple,
+                    )
                 }
             }
 
@@ -122,18 +134,28 @@ fun QuestionCard(
 
             Spacer(Modifier.height(2.dp))
 
-            Button(
-                onClick = { onSubmit(question.request.id) },
-                enabled = question.canSubmit && !question.isSubmitting,
-                modifier =
-                    Modifier
-                        .align(Alignment.End)
-                        .testTag("question-submit-${question.request.id}"),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (question.isSubmitting) {
-                    CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(stringResource(R.string.continue_label))
+                TextButton(
+                    onClick = { onCancel(question.request.id) },
+                    enabled = !question.isSubmitting,
+                    modifier = Modifier.testTag("question-cancel-${question.request.id}"),
+                ) {
+                    Text(stringResource(R.string.question_cancel))
+                }
+                Button(
+                    onClick = { onSubmit(question.request.id) },
+                    enabled = question.canSubmit && !question.isSubmitting,
+                    modifier = Modifier.testTag("question-submit-${question.request.id}"),
+                ) {
+                    if (question.isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(R.string.continue_label))
+                    }
                 }
             }
         }

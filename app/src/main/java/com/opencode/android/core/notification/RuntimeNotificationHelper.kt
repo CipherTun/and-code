@@ -33,7 +33,7 @@ class RuntimeNotificationHelper(private val context: Context) {
                 extras =
                     mapOf(
                         EXTRA_OPEN_ACTIVITY to true,
-                        EXTRA_SESSION_ID to request.sessionId,
+                        EXTRA_TARGET_SESSION_ID to request.sessionId,
                     ),
             )
         val allowOnce = permissionActionIntent(request, PermissionResponse.ONCE, remember = false)
@@ -75,7 +75,7 @@ class RuntimeNotificationHelper(private val context: Context) {
                 extras =
                     mapOf(
                         EXTRA_OPEN_CHAT to true,
-                        EXTRA_SESSION_ID to sessionId,
+                        EXTRA_TARGET_SESSION_ID to sessionId,
                     ),
             )
         val notification =
@@ -100,7 +100,7 @@ class RuntimeNotificationHelper(private val context: Context) {
                 extras =
                     mapOf(
                         EXTRA_OPEN_ACTIVITY to true,
-                        EXTRA_SESSION_ID to (sessionId.orEmpty()),
+                        EXTRA_TARGET_SESSION_ID to (sessionId.orEmpty()),
                     ),
             )
         val notification =
@@ -213,6 +213,9 @@ class RuntimeNotificationHelper(private val context: Context) {
         const val EXTRA_OPEN_ACTIVITY = "open_activity"
         const val EXTRA_OPEN_CHAT = "open_chat"
         const val EXTRA_SESSION_ID = "session_id"
+
+        /** The key [com.opencode.android.MainActivity] reads to jump straight to a session. */
+        const val EXTRA_TARGET_SESSION_ID = "target_session_id"
         const val EXTRA_PERMISSION_ID = "permission_id"
         const val EXTRA_PERMISSION_RESPONSE = "permission_response"
         const val EXTRA_PERMISSION_REMEMBER = "permission_remember"

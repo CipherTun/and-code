@@ -107,6 +107,7 @@
     <string name="notification_complete_body">会话 %1$s 处于空闲状态</string>
     <string name="notification_error_title">OpenCode 错误</string>
     <string name="notification_error_body">会话失败</string>
+    <string name="notification_permission_failed">无法发送授权。请打开应用后重试。</string>
     <string name="provider_credentials">提供商连接</string>
     <string name="provider_credentials_help">通过所选的 OpenCode 运行时连接提供商。可用的登录方式由 OpenCode 提供。</string>
     <string name="provider_id_hint">提供商 ID（例如 openai）</string>
@@ -130,6 +131,8 @@
     <string name="provider_auth_in_progress">正在连接…</string>
     <string name="provider_auth_failed">提供商身份验证失败。请重试。</string>
     <string name="continue_label">继续</string>
+    <string name="question_free_text_label">其他（自行输入答案）</string>
+    <string name="question_cancel">稍后回答（停止）</string>
     <string name="assistant_runtime">助手运行时</string>
     <string name="assistant_workspace">助手工作区路径</string>
     <string name="import_workspace_folder">将文件夹导入本地工作区</string>

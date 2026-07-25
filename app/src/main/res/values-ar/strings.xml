@@ -107,6 +107,7 @@
     <string name="notification_complete_body">الجلسة %1$s خاملة</string>
     <string name="notification_error_title">خطأ في OpenCode</string>
     <string name="notification_error_body">فشلت جلسة</string>
+    <string name="notification_permission_failed">تعذّر إرسال الموافقة. افتح التطبيق وحاول مرة أخرى.</string>
     <string name="provider_credentials">اتصالات الموفرين</string>
     <string name="provider_credentials_help">اتصل بالموفرين من خلال بيئة تشغيل OpenCode المحددة. يتم توفير طرق تسجيل الدخول المتاحة بواسطة OpenCode.</string>
     <string name="provider_id_hint">معرف الموفر (مثال: openai)</string>
@@ -130,6 +131,8 @@
     <string name="provider_auth_in_progress">جارٍ الاتصال…</string>
     <string name="provider_auth_failed">فشلت مصادقة الموفر. حاول مرة أخرى.</string>
     <string name="continue_label">متابعة</string>
+    <string name="question_free_text_label">أخرى (اكتب إجابتك)</string>
+    <string name="question_cancel">الإجابة لاحقًا (إيقاف)</string>
     <string name="assistant_runtime">بيئة تشغيل المساعد</string>
     <string name="assistant_workspace">مسار مساحة عمل المساعد</string>
     <string name="import_workspace_folder">استيراد مجلد إلى مساحة العمل المحلية</string>

@@ -142,6 +142,58 @@ class ChatViewModelQuestionTest {
             assertFalse(pending.isSubmitting)
         }
 
+    @Test
+    fun `free text answer is accepted even when the question offers options`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(
+                    request(
+                        id = "q-1",
+                        sessionId = "session-1",
+                        options = listOf("src", "docs"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "neither, use scripts/")
+            assertTrue(viewModel.uiState.value.pendingQuestions.single().canSubmit)
+
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf(listOf("neither, use scripts/")), backend.answeredQuestions.single().answers)
+            assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
+        }
+
+    @Test
+    fun `cancelling a question drops the card and stops the waiting turn`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1")),
+            )
+            advanceUntilIdle()
+            assertEquals("q-1", viewModel.uiState.value.pendingQuestions.single().request.id)
+
+            viewModel.cancelQuestion("q-1")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
+            assertEquals(listOf("session-1"), backend.abortedSessions)
+            assertTrue(backend.answeredQuestions.isEmpty())
+            assertFalse(viewModel.uiState.value.isRunning)
+        }
+
     private fun request(
         id: String,
         sessionId: String,
@@ -171,6 +223,7 @@ class ChatViewModelQuestionTest {
         override val kind: BackendKind = BackendKind.REMOTE
         val events = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 20)
         val answeredQuestions = mutableListOf<AnswerRecord>()
+        val abortedSessions = mutableListOf<String>()
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
 
@@ -198,7 +251,10 @@ class ChatViewModelQuestionTest {
             request: PromptRequest,
         ) = Unit
 
-        override suspend fun abortSession(sessionId: String): Boolean = true
+        override suspend fun abortSession(sessionId: String): Boolean {
+            abortedSessions += sessionId
+            return true
+        }
 
         override suspend fun respondToPermission(
             sessionId: String,

@@ -107,6 +107,7 @@
     <string name="notification_complete_body">La sesión %1$s está inactiva</string>
     <string name="notification_error_title">Error de OpenCode</string>
     <string name="notification_error_body">Una sesión falló</string>
+    <string name="notification_permission_failed">No se pudo enviar la aprobación. Abre la app e inténtalo de nuevo.</string>
     <string name="provider_credentials">Conexiones de proveedores</string>
     <string name="provider_credentials_help">Conecta proveedores a través del entorno de ejecución OpenCode seleccionado. Los métodos de inicio de sesión disponibles son proporcionados por OpenCode.</string>
     <string name="provider_id_hint">ID del proveedor (ej. openai)</string>
@@ -130,6 +131,8 @@
     <string name="provider_auth_in_progress">Conectando…</string>
     <string name="provider_auth_failed">La autenticación del proveedor falló. Inténtalo de nuevo.</string>
     <string name="continue_label">Continuar</string>
+    <string name="question_free_text_label">Otro (escribe tu respuesta)</string>
+    <string name="question_cancel">Responder después (detener)</string>
     <string name="assistant_runtime">Entorno de ejecución del asistente</string>
     <string name="assistant_workspace">Ruta del espacio de trabajo del asistente</string>
     <string name="import_workspace_folder">Importar carpeta al espacio de trabajo local</string>
