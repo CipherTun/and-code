@@ -261,8 +261,11 @@ class UiScreenshotInstrumentedTest {
 
         capture("09-provider-settings", {
             composeRule.onNodeWithText("プロバイダ設定").assertIsDisplayed()
-            composeRule.onNodeWithText("保存済みの認証情報").assertIsDisplayed()
-            composeRule.onNodeWithText("APIキーを追加・更新").assertIsDisplayed()
+            // The screen is now a search field over provider rows; the old
+            // "saved credentials" / "add API key" sections are gone and their string
+            // resources are orphaned.
+            composeRule.onNodeWithText("プロバイダを検索…").assertIsDisplayed()
+            composeRule.onNodeWithText("Z.ai").assertIsDisplayed()
         }) {
             ProviderSettingsScreen(
                 state =
@@ -286,7 +289,10 @@ class UiScreenshotInstrumentedTest {
         capture("10-voice-settings", {
             composeRule.onNodeWithText("音声設定").assertIsDisplayed()
             composeRule.onNodeWithText("ウェイクワード").assertIsDisplayed()
-            composeRule.onNodeWithText("ウェイクワード用の追加パックはまだ導入されていません。").assertIsDisplayed()
+            // The "extra pack not installed" notice was dropped along with its string
+            // resource; the row now carries the invocation description instead.
+            composeRule.onNodeWithText("「Hey Mycroft」でハンズフリーでアシスタントを起動します。")
+                .assertIsDisplayed()
         }) {
             VoiceSettingsScreen(
                 ttsEnabled = true,
