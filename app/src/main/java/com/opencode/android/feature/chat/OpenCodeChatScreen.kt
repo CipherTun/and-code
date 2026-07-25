@@ -589,8 +589,7 @@ private fun AgentSelector(
 private val TOOL_CALL_ECHO_REGEX =
     Regex("""Called the [A-Za-z][A-Za-z ]*? tool with the following input: \{(?:[^{}]|\{[^{}]*\})*\}""")
 
-private fun String.hideToolCallEcho(): String =
-    TOOL_CALL_ECHO_REGEX.replace(this, "").replace(Regex("[ \t]+\n"), "\n").trim()
+private fun String.hideToolCallEcho(): String = TOOL_CALL_ECHO_REGEX.replace(this, "").replace(Regex("[ \t]+\n"), "\n").trim()
 
 // Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
 @Composable
