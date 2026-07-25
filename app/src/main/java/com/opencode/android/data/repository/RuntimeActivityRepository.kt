@@ -47,6 +47,7 @@ class RuntimeActivityRepository(
     private val retryDelayMillis: Long = 2_000L,
     private val maxRetryDelayMillis: Long = 30_000L,
     private val onPermissionAsked: ((PermissionRequest) -> Unit)? = null,
+    private val onPermissionResolved: ((String) -> Unit)? = null,
     private val onSessionIdle: ((String) -> Unit)? = null,
     private val onSessionError: ((String?, String?) -> Unit)? = null,
     private val unreadStore: UnreadSessionStore? = null,
@@ -66,6 +67,14 @@ class RuntimeActivityRepository(
 
     private val mutableEvents = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 128)
     val events: SharedFlow<OpenCodeEvent> = mutableEvents.asSharedFlow()
+
+    /**
+     * Permission ids that have been answered somewhere in the app (notification action, activity
+     * screen, chat). OpenCode has no `permission.replied` event, so this is how other surfaces
+     * learn that a request they are still showing is already settled.
+     */
+    private val mutableResolvedPermissions = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val resolvedPermissions: SharedFlow<String> = mutableResolvedPermissions.asSharedFlow()
 
     init {
         scope.launch {
@@ -125,6 +134,8 @@ class RuntimeActivityRepository(
         mutableState.update { current ->
             current.copy(permissions = current.permissions.filterNot { it.id == permissionId })
         }
+        mutableResolvedPermissions.tryEmit(permissionId)
+        onPermissionResolved?.invoke(permissionId)
     }
 
     fun markSessionRead(sessionId: String) {

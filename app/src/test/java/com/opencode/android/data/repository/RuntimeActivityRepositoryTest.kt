@@ -21,9 +21,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -195,6 +197,41 @@ class RuntimeActivityRepositoryTest {
 
             repository.markSessionRead("ses_old")
             assertTrue(unread.unreadSessionIds.isEmpty())
+        }
+
+    @Test
+    fun `resolving a permission cancels its notification and tells other surfaces`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val target = FakeTarget(requireConnected = false)
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val cancelled = mutableListOf<String>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = TestScope(dispatcher),
+                    onPermissionResolved = { cancelled += it },
+                )
+            val observed = mutableListOf<String>()
+            val collector =
+                launch(dispatcher) {
+                    repository.resolvedPermissions.collect { observed += it }
+                }
+            // runCurrent, not advanceUntilIdle: the event stream retries with a backoff delay
+            // forever, so advancing virtual time here would never go idle.
+            runCurrent()
+
+            repository.resolvePermission("perm-1")
+            runCurrent()
+
+            assertEquals("notification cancel callback", listOf("perm-1"), cancelled)
+            assertEquals("resolvedPermissions subscribers", listOf("perm-1"), observed)
+            collector.cancel()
         }
 
     private class FakeUnreadStore(

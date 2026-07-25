@@ -100,7 +100,10 @@ class UiScreenshotInstrumentedTest {
         capture("01-chat-empty", {
             composeRule.onNodeWithText("チャット").assertIsDisplayed()
             composeRule.onNodeWithText("GLM-5").assertIsDisplayed()
-            composeRule.onNodeWithText("project").assertIsDisplayed()
+            // The composer button row is attach / model / thinking … mic / send since the
+            // paseo redesign (5e290b1); the workspace chip it used to carry is gone, so this
+            // asserts the composer itself rather than a chip that no longer exists.
+            composeRule.onNodeWithText("OpenCodeにメッセージを送る…").assertIsDisplayed()
         }) { PreviewChatHome() }
 
         capture("02-runtime-not-ready", {
@@ -258,8 +261,11 @@ class UiScreenshotInstrumentedTest {
 
         capture("09-provider-settings", {
             composeRule.onNodeWithText("プロバイダ設定").assertIsDisplayed()
-            composeRule.onNodeWithText("保存済みの認証情報").assertIsDisplayed()
-            composeRule.onNodeWithText("APIキーを追加・更新").assertIsDisplayed()
+            // The screen is now a search field over provider rows; the old
+            // "saved credentials" / "add API key" sections are gone and their string
+            // resources are orphaned.
+            composeRule.onNodeWithText("プロバイダを検索…").assertIsDisplayed()
+            composeRule.onNodeWithText("Z.ai").assertIsDisplayed()
         }) {
             ProviderSettingsScreen(
                 state =
@@ -283,7 +289,10 @@ class UiScreenshotInstrumentedTest {
         capture("10-voice-settings", {
             composeRule.onNodeWithText("音声設定").assertIsDisplayed()
             composeRule.onNodeWithText("ウェイクワード").assertIsDisplayed()
-            composeRule.onNodeWithText("ウェイクワード用の追加パックはまだ導入されていません。").assertIsDisplayed()
+            // The "extra pack not installed" notice was dropped along with its string
+            // resource; the row now carries the invocation description instead.
+            composeRule.onNodeWithText("「Hey Mycroft」でハンズフリーでアシスタントを起動します。")
+                .assertIsDisplayed()
         }) {
             VoiceSettingsScreen(
                 ttsEnabled = true,

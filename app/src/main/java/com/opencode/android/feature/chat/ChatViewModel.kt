@@ -222,6 +222,7 @@ class ChatViewModel(
      * test clock advances through forever, so it stays off unless the real app asks for it.
      */
     private val monitorConnectionQuality: Boolean = false,
+    private val resolvedPermissionFlow: Flow<String>? = null,
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
@@ -248,6 +249,17 @@ class ChatViewModel(
     private val connectionMonitor = ConnectionQualityMonitor(viewModelScope)
 
     init {
+        // A permission answered from the notification (or the activity screen) never comes back
+        // as an event, so without this the chat keeps showing a card for a settled request.
+        resolvedPermissionFlow?.let { flow ->
+            viewModelScope.launch {
+                flow.collect { permissionId ->
+                    _uiState.update { state ->
+                        state.copy(permissions = state.permissions.filterNot { it.id == permissionId })
+                    }
+                }
+            }
+        }
         if (backend != null) {
             viewModelScope.launch {
                 // Only real transitions are reported, so merely opening an idle chat is not
@@ -809,6 +821,43 @@ class ChatViewModel(
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Hides the question card and leaves the turn alone, so the user can ignore the question and
+     * just keep typing. The request stays open on the OpenCode side; this only affects what the
+     * chat shows.
+     */
+    fun dismissQuestion(questionId: String) {
+        _uiState.update { state ->
+            state.copy(
+                pendingQuestions = state.pendingQuestions.filterNot { it.request.id == questionId },
+            )
+        }
+    }
+
+    /**
+     * Dismisses a question and stops the turn that is waiting on the answer. OpenCode has no
+     * "declined" reply for the question tool, so this is the way to end a turn outright rather
+     * than answering it — [dismissQuestion] is the lighter option that only clears the card.
+     */
+    fun cancelQuestion(questionId: String) {
+        val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return
+        _uiState.update { state ->
+            state.copy(
+                pendingQuestions = state.pendingQuestions.filterNot { it.request.id == questionId },
+            )
+        }
+        val currentBackend = backend ?: return
+        viewModelScope.launch {
+            runCatching { currentBackend.abortSession(pendingQuestion.request.sessionId) }
+                .onSuccess {
+                    _uiState.update { it.copy(isRunning = false, isThinking = false) }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(error = error.safeMessage()) }
+                }
         }
     }
 

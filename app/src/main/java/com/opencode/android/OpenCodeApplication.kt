@@ -186,6 +186,7 @@ class OpenCodeApplication : Application() {
                 registry = runtimeRegistry,
                 scope = applicationScope,
                 onPermissionAsked = notifications::notifyPermission,
+                onPermissionResolved = notifications::cancelPermission,
                 onSessionIdle = notifications::notifySessionComplete,
                 onSessionError = notifications::notifySessionError,
                 unreadStore = settings,

@@ -107,6 +107,7 @@
     <string name="notification_complete_body">La session %1$s est inactive</string>
     <string name="notification_error_title">Erreur OpenCode</string>
     <string name="notification_error_body">Une session a échoué</string>
+    <string name="notification_permission_failed">Impossible d\'envoyer l\'approbation. Ouvrez l\'application et réessayez.</string>
     <string name="provider_credentials">Connexions des fournisseurs</string>
     <string name="provider_credentials_help">Connectez les fournisseurs via l\'environnement d\'exécution OpenCode sélectionné. Les méthodes de connexion disponibles sont fournies par OpenCode.</string>
     <string name="provider_id_hint">ID du fournisseur (ex. openai)</string>
@@ -130,6 +131,9 @@
     <string name="provider_auth_in_progress">Connexion…</string>
     <string name="provider_auth_failed">L\'authentification du fournisseur a échoué. Réessayez.</string>
     <string name="continue_label">Continuer</string>
+    <string name="question_free_text_label">Autre (saisissez votre réponse)</string>
+    <string name="question_cancel">Répondre plus tard (arrêter)</string>
+    <string name="question_dismiss">Fermer la question</string>
     <string name="assistant_runtime">Environnement d\'exécution de l\'assistant</string>
     <string name="assistant_workspace">Chemin de l\'espace de travail de l\'assistant</string>
     <string name="import_workspace_folder">Importer un dossier dans l\'espace de travail local</string>

@@ -107,6 +107,7 @@
     <string name="notification_complete_body">セッション %1$s が待機中です</string>
     <string name="notification_error_title">OpenCodeエラー</string>
     <string name="notification_error_body">セッションが失敗しました</string>
+    <string name="notification_permission_failed">承認を送信できませんでした。アプリを開いてもう一度お試しください。</string>
     <string name="provider_credentials">プロバイダー接続</string>
     <string name="provider_credentials_help">選択中のOpenCode実行先を通じて接続します。利用可能なログイン方法はOpenCodeから取得します。</string>
     <string name="provider_id_hint">プロバイダーID（例: openai）</string>
@@ -130,6 +131,9 @@
     <string name="provider_auth_in_progress">接続中…</string>
     <string name="provider_auth_failed">プロバイダー認証に失敗しました。もう一度お試しください。</string>
     <string name="continue_label">続ける</string>
+    <string name="question_free_text_label">その他（自由入力）</string>
+    <string name="question_cancel">回答せず中断</string>
+    <string name="question_dismiss">質問を閉じる</string>
     <string name="assistant_runtime">アシスト実行先</string>
     <string name="assistant_workspace">アシスト作業フォルダ</string>
     <string name="import_workspace_folder">フォルダをローカル作業領域へ取り込む</string>

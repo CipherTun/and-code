@@ -229,6 +229,7 @@ fun OpenCodeApp(
                             }
                         },
                         monitorConnectionQuality = true,
+                        resolvedPermissionFlow = app.activityRepository.resolvedPermissions,
                     )
                 },
         )
@@ -688,6 +689,8 @@ fun OpenCodeApp(
                         onToggleFavorite = settingsViewModel::toggleFavoriteModel,
                         onSelectQuestionAnswer = chatViewModel::selectQuestionAnswer,
                         onSubmitQuestion = chatViewModel::submitQuestion,
+                        onCancelQuestion = chatViewModel::cancelQuestion,
+                        onDismissQuestion = chatViewModel::dismissQuestion,
                         autoAcceptPermissions = settingsState.autoAcceptPermissions,
                         onToggleAutoAccept = settingsViewModel::setAutoAcceptPermissions,
                         onSendMessage = chatViewModel::sendMessage,

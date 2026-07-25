@@ -107,6 +107,7 @@
     <string name="notification_complete_body">Сессия %1$s бездействует</string>
     <string name="notification_error_title">Ошибка OpenCode</string>
     <string name="notification_error_body">Сессия завершилась с ошибкой</string>
+    <string name="notification_permission_failed">Не удалось отправить подтверждение. Откройте приложение и попробуйте снова.</string>
     <string name="provider_credentials">Подключения провайдеров</string>
     <string name="provider_credentials_help">Подключайте провайдеров через выбранную среду выполнения OpenCode. Доступные способы входа предоставляются OpenCode.</string>
     <string name="provider_id_hint">ID провайдера (напр. openai)</string>
@@ -130,6 +131,9 @@
     <string name="provider_auth_in_progress">Подключение…</string>
     <string name="provider_auth_failed">Аутентификация провайдера не удалась. Попробуйте снова.</string>
     <string name="continue_label">Продолжить</string>
+    <string name="question_free_text_label">Другое (введите свой ответ)</string>
+    <string name="question_cancel">Ответить позже (остановить)</string>
+    <string name="question_dismiss">Закрыть вопрос</string>
     <string name="assistant_runtime">Среда выполнения ассистента</string>
     <string name="assistant_workspace">Путь к рабочему пространству ассистента</string>
     <string name="import_workspace_folder">Импортировать папку в локальное рабочее пространство</string>

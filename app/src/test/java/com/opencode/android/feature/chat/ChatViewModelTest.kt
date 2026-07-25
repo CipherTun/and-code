@@ -450,6 +450,38 @@ class ChatViewModelTest {
         }
 
     @Test
+    fun `permission answered from the notification removes the chat card`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val resolved = MutableSharedFlow<String>(extraBufferCapacity = 8)
+            val viewModel = ChatViewModel(backend, resolvedPermissionFlow = resolved)
+            advanceUntilIdle()
+            viewModel.sendMessage("Check git")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.PermissionAsked(
+                    PermissionRequest(
+                        id = "perm1",
+                        sessionId = "s1",
+                        permission = "bash",
+                        patterns = listOf("git status"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+            assertEquals("perm1", viewModel.uiState.value.permissions.single().id)
+
+            // OpenCode emits no "permission.replied" event, so the notification receiver
+            // announces the resolution through this flow instead.
+            resolved.emit("perm1")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.permissions.isEmpty())
+            assertTrue(backend.permissionResponses.isEmpty())
+        }
+
+    @Test
     fun `history load maps tool parts alongside text parts`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
