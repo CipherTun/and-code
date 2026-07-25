@@ -133,6 +133,7 @@
     <string name="continue_label">متابعة</string>
     <string name="question_free_text_label">أخرى (اكتب إجابتك)</string>
     <string name="question_cancel">الإجابة لاحقًا (إيقاف)</string>
+    <string name="question_dismiss">إغلاق السؤال</string>
     <string name="assistant_runtime">بيئة تشغيل المساعد</string>
     <string name="assistant_workspace">مسار مساحة عمل المساعد</string>
     <string name="import_workspace_folder">استيراد مجلد إلى مساحة العمل المحلية</string>

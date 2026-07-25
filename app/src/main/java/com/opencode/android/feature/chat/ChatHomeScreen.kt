@@ -148,6 +148,7 @@ fun ChatHomeScreen(
     onSelectQuestionAnswer: (String, Int, String) -> Unit,
     onSubmitQuestion: (String) -> Unit,
     onCancelQuestion: (String) -> Unit = {},
+    onDismissQuestion: (String) -> Unit = {},
     autoAcceptPermissions: Boolean = false,
     onToggleAutoAccept: (Boolean) -> Unit = {},
     sendBehavior: String = "interrupt",
@@ -336,6 +337,7 @@ fun ChatHomeScreen(
                                     onAnswerSelected = onSelectQuestionAnswer,
                                     onSubmit = onSubmitQuestion,
                                     onCancel = onCancelQuestion,
+                                    onDismiss = onDismissQuestion,
                                 )
                             }
                             if (state.isThinking) {

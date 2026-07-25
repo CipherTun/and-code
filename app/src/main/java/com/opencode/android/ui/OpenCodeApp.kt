@@ -690,6 +690,7 @@ fun OpenCodeApp(
                         onSelectQuestionAnswer = chatViewModel::selectQuestionAnswer,
                         onSubmitQuestion = chatViewModel::submitQuestion,
                         onCancelQuestion = chatViewModel::cancelQuestion,
+                        onDismissQuestion = chatViewModel::dismissQuestion,
                         autoAcceptPermissions = settingsState.autoAcceptPermissions,
                         onToggleAutoAccept = settingsViewModel::setAutoAcceptPermissions,
                         onSendMessage = chatViewModel::sendMessage,

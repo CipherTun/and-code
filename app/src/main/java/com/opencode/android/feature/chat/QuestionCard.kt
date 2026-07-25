@@ -8,11 +8,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -33,6 +38,7 @@ fun QuestionCard(
     onAnswerSelected: (String, Int, String) -> Unit,
     onSubmit: (String) -> Unit,
     onCancel: (String) -> Unit = {},
+    onDismiss: (String) -> Unit = {},
 ) {
     Card(
         modifier =
@@ -45,9 +51,32 @@ fun QuestionCard(
             ),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // Closing the card leaves the turn running, so the question can simply be ignored and
+            // a normal message typed instead.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                IconButton(
+                    onClick = { onDismiss(question.request.id) },
+                    enabled = !question.isSubmitting,
+                    modifier =
+                        Modifier
+                            .size(28.dp)
+                            .testTag("question-dismiss-${question.request.id}"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.question_dismiss),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             question.request.questions.forEachIndexed { index, prompt ->
                 val selectedAnswers = question.selectedAnswers.getOrElse(index) { emptyList() }
                 val optionLabels = prompt.options.map { it.label }.toSet()

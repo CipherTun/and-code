@@ -133,6 +133,7 @@
     <string name="continue_label">続ける</string>
     <string name="question_free_text_label">その他（自由入力）</string>
     <string name="question_cancel">回答せず中断</string>
+    <string name="question_dismiss">質問を閉じる</string>
     <string name="assistant_runtime">アシスト実行先</string>
     <string name="assistant_workspace">アシスト作業フォルダ</string>
     <string name="import_workspace_folder">フォルダをローカル作業領域へ取り込む</string>

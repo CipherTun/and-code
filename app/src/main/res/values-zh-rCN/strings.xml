@@ -133,6 +133,7 @@
     <string name="continue_label">继续</string>
     <string name="question_free_text_label">其他（自行输入答案）</string>
     <string name="question_cancel">稍后回答（停止）</string>
+    <string name="question_dismiss">关闭问题</string>
     <string name="assistant_runtime">助手运行时</string>
     <string name="assistant_workspace">助手工作区路径</string>
     <string name="import_workspace_folder">将文件夹导入本地工作区</string>

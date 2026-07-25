@@ -825,9 +825,22 @@ class ChatViewModel(
     }
 
     /**
-     * Dismisses a question without answering it. OpenCode has no "declined" reply for the question
-     * tool, so the only honest way out is to stop the turn that is waiting on the answer — leaving
-     * the card up with no escape is what made answering feel mandatory.
+     * Hides the question card and leaves the turn alone, so the user can ignore the question and
+     * just keep typing. The request stays open on the OpenCode side; this only affects what the
+     * chat shows.
+     */
+    fun dismissQuestion(questionId: String) {
+        _uiState.update { state ->
+            state.copy(
+                pendingQuestions = state.pendingQuestions.filterNot { it.request.id == questionId },
+            )
+        }
+    }
+
+    /**
+     * Dismisses a question and stops the turn that is waiting on the answer. OpenCode has no
+     * "declined" reply for the question tool, so this is the way to end a turn outright rather
+     * than answering it — [dismissQuestion] is the lighter option that only clears the card.
      */
     fun cancelQuestion(questionId: String) {
         val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return

@@ -133,6 +133,7 @@
     <string name="continue_label">Continue</string>
     <string name="question_free_text_label">Other (type your own answer)</string>
     <string name="question_cancel">Answer later (stop)</string>
+    <string name="question_dismiss">Dismiss question</string>
     <string name="assistant_runtime">Assistant runtime</string>
     <string name="assistant_workspace">Assistant workspace path</string>
     <string name="import_workspace_folder">Import folder into local workspace</string>

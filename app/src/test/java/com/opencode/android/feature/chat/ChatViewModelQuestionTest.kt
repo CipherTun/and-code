@@ -172,6 +172,27 @@ class ChatViewModelQuestionTest {
         }
 
     @Test
+    fun `dismissing a question only hides the card and leaves the turn running`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1")),
+            )
+            advanceUntilIdle()
+
+            viewModel.dismissQuestion("q-1")
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
+            assertTrue(backend.abortedSessions.isEmpty())
+            assertTrue(backend.answeredQuestions.isEmpty())
+        }
+
+    @Test
     fun `cancelling a question drops the card and stops the waiting turn`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
