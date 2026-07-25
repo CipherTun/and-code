@@ -4,8 +4,6 @@ import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
@@ -25,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -178,7 +177,6 @@ fun ChatHomeScreen(
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     var showSlashCommands by remember { mutableStateOf(false) }
-    var focusMode by remember { mutableStateOf(false) }
     var showSidePanel by remember { mutableStateOf(false) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val attachedImages = remember { mutableStateListOf<Bitmap>() }
@@ -265,40 +263,34 @@ fun ChatHomeScreen(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
         ) {
-            AnimatedVisibility(
-                visible = !focusMode,
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = state.sessionTitle.ifBlank { stringResource(R.string.chat_home_title) },
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onOpenDrawer) {
-                            Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_description))
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = onNewChat) {
-                            Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat))
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background,
-                            titleContentColor = MaterialTheme.colorScheme.onBackground,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                            actionIconContentColor = MaterialTheme.colorScheme.onBackground,
-                        ),
-                )
-            }
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = state.sessionTitle.ifBlank { stringResource(R.string.chat_home_title) },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_description))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNewChat) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat))
+                    }
+                },
+                colors =
+                    TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                        actionIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    ),
+            )
 
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -447,8 +439,6 @@ fun ChatHomeScreen(
                 )
             }
         }
-
-        FocusModeOverlay(isActive = focusMode, onToggle = { focusMode = !focusMode })
 
         LiveTranscriptOverlay(
             isRecording = state.isListening,
@@ -696,6 +686,7 @@ private fun ChatComposer(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .imePadding()
                 .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
