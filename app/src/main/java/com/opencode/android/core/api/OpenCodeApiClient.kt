@@ -9,6 +9,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -44,6 +46,10 @@ class OpenCodeApiClient(
     // connection is saved, so an endpoint the current rules reject has to surface as a failed
     // request rather than as an exception escaping into a UI callback.
     private val baseUrl: HttpUrl by lazy { OpenCodeUrl.normalize(profile.baseUrl).getOrThrow() }
+
+    @Volatile
+    private var eventPath: String = GLOBAL_EVENT_PATH
+
     private val providerAuthHttpClient: OkHttpClient =
         httpClient.newBuilder()
             .readTimeout(PROVIDER_AUTH_TIMEOUT_MINUTES, TimeUnit.MINUTES)
@@ -424,8 +430,25 @@ class OpenCodeApiClient(
         )
     }
 
+    /**
+     * `GET /event` is scoped to a single OpenCode instance: the one rooted at the request's
+     * `directory` query parameter, which falls back to the server's own working directory. A
+     * session created in any other workspace therefore emits nothing on that stream — no reply
+     * text, no tool output, and no permission request, so a run that needs approval waits
+     * forever on a request that never reaches the client. Subscribe to the cross-instance
+     * `/global/event` stream instead, and fall back only for servers that predate it.
+     */
     fun events(): Flow<OpenCodeEvent> =
-        singleEventStream().retryWhen { cause, attempt ->
+        flow { emitAll(singleEventStream(eventPath)) }.retryWhen { cause, attempt ->
+            if (
+                eventPath == GLOBAL_EVENT_PATH &&
+                cause is OpenCodeApiException &&
+                cause.statusCode in GLOBAL_EVENT_UNSUPPORTED_CODES
+            ) {
+                eventPath = INSTANCE_EVENT_PATH
+                return@retryWhen true
+            }
+
             val retryable = cause !is OpenCodeApiException || cause.statusCode >= 500
             if (!retryable) return@retryWhen false
 
@@ -436,14 +459,14 @@ class OpenCodeApiClient(
             true
         }
 
-    private fun singleEventStream(): Flow<OpenCodeEvent> =
+    private fun singleEventStream(path: String): Flow<OpenCodeEvent> =
         channelFlow {
             val eventClient =
                 httpClient.newBuilder()
                     .readTimeout(0, TimeUnit.MILLISECONDS)
                     .build()
             val request =
-                requestBuilder("event")
+                requestBuilder(path)
                     .header("Accept", "text/event-stream")
                     .header("Cache-Control", "no-cache")
                     .get()
@@ -658,6 +681,9 @@ class OpenCodeApiClient(
         private const val MAX_ERROR_BODY_CHARS = 240
         private const val EVENT_BUFFER_CAPACITY = 512
         private const val PROVIDER_AUTH_TIMEOUT_MINUTES = 6L
+        private const val GLOBAL_EVENT_PATH = "global/event"
+        private const val INSTANCE_EVENT_PATH = "event"
+        private val GLOBAL_EVENT_UNSUPPORTED_CODES = setOf(400, 404, 405, 501)
 
         val defaultJson: Json =
             Json {

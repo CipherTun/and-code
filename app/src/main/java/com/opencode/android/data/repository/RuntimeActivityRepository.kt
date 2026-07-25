@@ -225,6 +225,30 @@ class RuntimeActivityRepository(
                 appendLog("実行完了", null, event.sessionId)
                 onSessionIdle?.invoke(event.sessionId)
             }
+            is OpenCodeEvent.MessageUpdated -> {
+                mutableState.update { current ->
+                    current.copy(activeSessionIds = current.activeSessionIds + event.info.sessionId)
+                }
+            }
+            is OpenCodeEvent.PermissionReplied -> {
+                mutableState.update { current ->
+                    current.copy(permissions = current.permissions.filterNot { it.id == event.requestId })
+                }
+            }
+            is OpenCodeEvent.SessionStatusChanged -> {
+                // Completion notifications stay driven by session.idle so a finished run is
+                // never announced twice.
+                mutableState.update { current ->
+                    current.copy(
+                        activeSessionIds =
+                            if (event.status == "idle") {
+                                current.activeSessionIds - event.sessionId
+                            } else {
+                                current.activeSessionIds + event.sessionId
+                            },
+                    )
+                }
+            }
             is OpenCodeEvent.SessionError -> {
                 event.sessionId?.let { sessionId ->
                     mutableState.update { current ->

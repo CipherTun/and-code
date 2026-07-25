@@ -254,6 +254,9 @@ class ChatViewModel(
     private var tts: TextToSpeech? = null
     private var contextLimit: Long = 0L
     private val streamedParts = mutableMapOf<String, LinkedHashMap<String, ChatPart>>()
+
+    /** Message id to role, learned from `message.updated`, so user echoes can be skipped. */
+    private val messageRoles = mutableMapOf<String, String>()
     private val connectionMonitor = ConnectionQualityMonitor(viewModelScope)
 
     init {
@@ -441,6 +444,7 @@ class ChatViewModel(
         // because the old chat happened to be mid-turn when the user navigated away.
         val switchingSession = _uiState.value.sessionId != sessionId
         streamedParts.clear()
+        messageRoles.clear()
         _uiState.update {
             it.copy(
                 sessionId = sessionId,
@@ -520,6 +524,7 @@ class ChatViewModel(
 
     fun newSession() {
         streamedParts.clear()
+        messageRoles.clear()
         _uiState.update {
             it.copy(
                 sessionId = null,
@@ -954,10 +959,17 @@ class ChatViewModel(
                 }
                 drainOfflineQueue()
             }
+            is OpenCodeEvent.MessageUpdated -> {
+                if (event.info.sessionId != activeSession) return
+                messageRoles[event.info.id] = event.info.role
+            }
             is OpenCodeEvent.MessagePartUpdated -> {
                 val part = event.part
                 if (part.sessionId != activeSession) return
                 val messageId = part.messageId ?: part.id ?: return
+                // The server echoes the user's own prompt back as parts too; rendering those
+                // would duplicate the bubble the composer already added.
+                if (messageRoles[messageId] == "user") return
                 val partId = part.id ?: messageId
                 val chatPart = part.toChatPart() ?: return
                 val messageParts = streamedParts.getOrPut(messageId) { linkedMapOf() }
@@ -1017,23 +1029,28 @@ class ChatViewModel(
                     )
                 }
             }
+            is OpenCodeEvent.PermissionReplied -> {
+                // Answered elsewhere — another device, or the TUI. Drop the stale card.
+                if (event.sessionId != activeSession) return
+                _uiState.update { state ->
+                    state.copy(permissions = state.permissions.filterNot { it.id == event.requestId })
+                }
+            }
+            is OpenCodeEvent.SessionStatusChanged -> {
+                // session.idle is deprecated in favour of session.status; treat idle the same way,
+                // and let a busy status pick up a run that was started from another client.
+                if (event.sessionId != activeSession) return
+                when (event.status) {
+                    "idle" -> handleSessionIdle(event.sessionId)
+                    "busy", "retry" ->
+                        if (!_uiState.value.isRunning) {
+                            _uiState.update { it.copy(isRunning = true) }
+                        }
+                }
+            }
             is OpenCodeEvent.SessionIdle -> {
                 if (event.sessionId != activeSession) return
-                streamedParts.clear()
-                _uiState.update { state ->
-                    state.copy(
-                        messages =
-                            state.messages.map { message ->
-                                if (message.isStreaming) message.copy(isStreaming = false) else message
-                            },
-                        isRunning = false,
-                        isThinking = false,
-                    )
-                }
-                refreshContextUsage(event.sessionId)
-                refreshMessages(event.sessionId)
-                onSessionCreated()
-                drainQueue()
+                handleSessionIdle(event.sessionId)
             }
             is OpenCodeEvent.SessionError -> {
                 if (event.sessionId != null && event.sessionId != activeSession) return
@@ -1047,6 +1064,24 @@ class ChatViewModel(
             }
             is OpenCodeEvent.Unknown -> Unit
         }
+    }
+
+    private fun handleSessionIdle(sessionId: String) {
+        streamedParts.clear()
+        _uiState.update { state ->
+            state.copy(
+                messages =
+                    state.messages.map { message ->
+                        if (message.isStreaming) message.copy(isStreaming = false) else message
+                    },
+                isRunning = false,
+                isThinking = false,
+            )
+        }
+        refreshContextUsage(sessionId)
+        refreshMessages(sessionId)
+        onSessionCreated()
+        drainQueue()
     }
 
     private fun refreshMessages(sessionId: String) {
@@ -1107,6 +1142,7 @@ class ChatViewModel(
     }
 
     private fun toUiMessage(message: OpenCodeMessage): ChatMessage? {
+        messageRoles[message.info.id] = message.info.role
         val parts = message.parts.mapNotNull { it.toChatPart() }
         val attachments =
             message.parts.mapNotNull { part ->
