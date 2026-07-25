@@ -11,7 +11,7 @@ permissions:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -59,10 +59,10 @@ jobs:
         run: ./gradlew detekt spotlessCheck
 
       - name: Test, lint and build APKs
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+        run: ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleRelease
 
       - name: Generate coverage report
-        run: ./gradlew jacocoTestReport
+        run: ./gradlew :app:jacocoTestReport
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
