@@ -582,4 +582,9 @@
     <string name="model_visibility_row">Modelos visíveis</string>
     <string name="model_visibility_title">Modelos visíveis</string>
     <string name="model_visibility_caption">Desmarque os modelos para ocultá-los do seletor de modelos.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Sessão do subagente</string>
+    <string name="subagent_return_to_parent">Voltar ao agente principal: %1$s</string>
+    <string name="subagent_parent_untitled">Sessão principal</string>
 </resources>

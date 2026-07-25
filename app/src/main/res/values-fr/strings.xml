@@ -582,4 +582,9 @@
     <string name="model_visibility_row">Modèles visibles</string>
     <string name="model_visibility_title">Modèles visibles</string>
     <string name="model_visibility_caption">Décochez les modèles pour les masquer dans le sélecteur de modèles.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Session de sous-agent</string>
+    <string name="subagent_return_to_parent">Retour à l’agent principal : %1$s</string>
+    <string name="subagent_parent_untitled">Session principale</string>
 </resources>

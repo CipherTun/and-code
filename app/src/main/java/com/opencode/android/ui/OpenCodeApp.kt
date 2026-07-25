@@ -719,8 +719,18 @@ fun OpenCodeApp(
                         onSubagentClick = { childSessionId ->
                             val childSession = activityState.sessions.firstOrNull { it.id == childSessionId }
                             app.activityRepository.markSessionRead(childSessionId)
-                            pendingSession = childSessionId to (childSession?.title ?: childSessionId)
-                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                            // The chat this was opened from is the way back, so open the child
+                            // directly instead of routing through pendingSession, which would drop
+                            // the parent.
+                            pendingSession = null
+                            chatViewModel.openSubagentSession(
+                                childSessionId,
+                                childSession?.title ?: childSessionId,
+                            )
+                        },
+                        onReturnToParentSession = {
+                            pendingSession = null
+                            chatViewModel.openParentSession()
                         },
                     )
                 }

@@ -582,4 +582,9 @@
     <string name="model_visibility_row">Показываемые модели</string>
     <string name="model_visibility_title">Показываемые модели</string>
     <string name="model_visibility_caption">Снимите отметку с моделей, чтобы скрыть их из списка выбора.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Сессия субагента</string>
+    <string name="subagent_return_to_parent">Вернуться к основному агенту: %1$s</string>
+    <string name="subagent_parent_untitled">Основная сессия</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.opencode.android.feature.chat
 
 import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -40,6 +41,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
@@ -165,6 +167,7 @@ fun ChatHomeScreen(
     contextUsageFraction: Float = 0f,
     subagents: List<SubagentInfo> = emptyList(),
     onSubagentClick: (String) -> Unit = {},
+    onReturnToParentSession: () -> Unit = {},
     githubRefs: List<GitHubReference> = emptyList(),
     onImageAttachment: (Bitmap) -> Unit = {},
 ) {
@@ -234,6 +237,10 @@ fun ChatHomeScreen(
         }
     }
 
+    // A subagent session is a detour, not a destination: the system back gesture returns to the
+    // main agent instead of leaving the chat, matching the in-chat return banner.
+    BackHandler(enabled = state.parentSession != null) { onReturnToParentSession() }
+
     LaunchedEffect(state.attachments) {
         if (state.attachments.isEmpty()) {
             attachedImages.clear()
@@ -295,6 +302,13 @@ fun ChatHomeScreen(
                         actionIconContentColor = MaterialTheme.colorScheme.onBackground,
                     ),
             )
+
+            state.parentSession?.let { parent ->
+                SubagentSessionBanner(
+                    parentTitle = parent.title,
+                    onReturn = onReturnToParentSession,
+                )
+            }
 
             Box(modifier = Modifier.weight(1f)) {
                 when {
@@ -542,6 +556,57 @@ fun ChatHomeScreen(
                         clipboardManager.setText(AnnotatedString(content))
                         showActionSheet = null
                     },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Shown while a subagent session is open. Subagent chats are opened from the parent conversation,
+ * so they need an explicit way back to the main agent.
+ */
+@Composable
+private fun SubagentSessionBanner(
+    parentTitle: String,
+    onReturn: () -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 2.dp)
+                .clickable(onClick = onReturn),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.subagent_session_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.subagent_return_to_parent,
+                            parentTitle.ifBlank { stringResource(R.string.subagent_parent_untitled) },
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

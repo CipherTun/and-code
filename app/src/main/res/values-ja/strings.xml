@@ -596,4 +596,9 @@
     <string name="usage_row">使用量</string>
     <string name="font_size_dialog_title">フォントサイズ</string>
     <string name="widget_quick_input_hint">OpenCodeにメッセージを送る…</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">サブエージェントのセッション</string>
+    <string name="subagent_return_to_parent">メインエージェントに戻る: %1$s</string>
+    <string name="subagent_parent_untitled">メインのセッション</string>
 </resources>

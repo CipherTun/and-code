@@ -582,4 +582,9 @@
     <string name="model_visibility_row">显示的模型</string>
     <string name="model_visibility_title">显示的模型</string>
     <string name="model_visibility_caption">取消勾选的模型将不会出现在模型选择器中。</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">子代理会话</string>
+    <string name="subagent_return_to_parent">返回主代理：%1$s</string>
+    <string name="subagent_parent_untitled">主会话</string>
 </resources>

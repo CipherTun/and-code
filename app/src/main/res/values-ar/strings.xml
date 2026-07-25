@@ -582,4 +582,9 @@
     <string name="model_visibility_row">النماذج المرئية</string>
     <string name="model_visibility_title">النماذج المرئية</string>
     <string name="model_visibility_caption">أزل التحديد عن النماذج لإخفائها من قائمة اختيار النموذج.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">جلسة الوكيل الفرعي</string>
+    <string name="subagent_return_to_parent">العودة إلى الوكيل الرئيسي: %1$s</string>
+    <string name="subagent_parent_untitled">الجلسة الرئيسية</string>
 </resources>

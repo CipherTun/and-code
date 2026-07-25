@@ -176,10 +176,18 @@ private fun extractPatchFiles(state: Map<String, JsonElement>): List<String> {
     }
 }
 
+/** The session a subagent conversation was started from, used to walk back to the main agent. */
+data class ParentSessionRef(
+    val id: String,
+    val title: String = "",
+)
+
 data class ChatUiState(
     val backendName: String = "",
     val sessionId: String? = null,
     val sessionTitle: String = "",
+    /** Non-null while the open session is a subagent session spawned by [ParentSessionRef.id]. */
+    val parentSession: ParentSessionRef? = null,
     val messages: List<ChatMessage> = emptyList(),
     val permissions: List<PermissionRequest> = emptyList(),
     val pendingQuestions: List<PendingQuestionUi> = emptyList(),
@@ -417,9 +425,15 @@ class ChatViewModel(
         }
     }
 
+    /**
+     * @param parent the session this one was spawned from when the caller already knows it
+     * (subagent drill-in). When null the parent is resolved from the backend so a subagent session
+     * opened from anywhere else still offers a way back to the main agent.
+     */
     fun openSession(
         sessionId: String,
         title: String = "",
+        parent: ParentSessionRef? = null,
     ) {
         val currentBackend = backend ?: return
         // Switching away from whatever chat was previously loaded here must drop its running
@@ -431,6 +445,7 @@ class ChatViewModel(
             it.copy(
                 sessionId = sessionId,
                 sessionTitle = title,
+                parentSession = parent,
                 isLoadingHistory = true,
                 messages = emptyList(),
                 permissions = emptyList(),
@@ -440,6 +455,7 @@ class ChatViewModel(
                 error = null,
             )
         }
+        if (parent == null) resolveParentSession(sessionId)
         viewModelScope.launch {
             runCatching { currentBackend.listMessages(sessionId) }
                 .onSuccess { messages ->
@@ -464,12 +480,51 @@ class ChatViewModel(
         }
     }
 
+    /** Opens a subagent session started by the open chat, remembering the session to return to. */
+    fun openSubagentSession(
+        sessionId: String,
+        title: String = "",
+    ) {
+        val current = _uiState.value
+        val parent = current.sessionId?.let { ParentSessionRef(it, current.sessionTitle) }
+        openSession(sessionId, title, parent)
+    }
+
+    /** Returns from a subagent session to the session that spawned it. */
+    fun openParentSession() {
+        val parent = _uiState.value.parentSession ?: return
+        openSession(parent.id, parent.title)
+    }
+
+    /**
+     * Asks the backend whether the open session is a subagent session. Failures leave the return
+     * affordance hidden rather than surfacing an error the user cannot act on.
+     */
+    private fun resolveParentSession(sessionId: String) {
+        val currentBackend = backend ?: return
+        viewModelScope.launch {
+            val parentId =
+                runCatching { currentBackend.session(sessionId) }.getOrNull()?.parentId
+                    ?: return@launch
+            val parentTitle =
+                runCatching { currentBackend.session(parentId) }.getOrNull()?.title.orEmpty()
+            _uiState.update { state ->
+                if (state.sessionId != sessionId) {
+                    state
+                } else {
+                    state.copy(parentSession = ParentSessionRef(parentId, parentTitle))
+                }
+            }
+        }
+    }
+
     fun newSession() {
         streamedParts.clear()
         _uiState.update {
             it.copy(
                 sessionId = null,
                 sessionTitle = "",
+                parentSession = null,
                 messages = emptyList(),
                 permissions = emptyList(),
                 pendingQuestions = emptyList(),
