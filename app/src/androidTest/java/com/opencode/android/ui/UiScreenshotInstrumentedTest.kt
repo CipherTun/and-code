@@ -100,7 +100,10 @@ class UiScreenshotInstrumentedTest {
         capture("01-chat-empty", {
             composeRule.onNodeWithText("チャット").assertIsDisplayed()
             composeRule.onNodeWithText("GLM-5").assertIsDisplayed()
-            composeRule.onNodeWithText("project").assertIsDisplayed()
+            // The composer button row is attach / model / thinking … mic / send since the
+            // paseo redesign (5e290b1); the workspace chip it used to carry is gone, so this
+            // asserts the composer itself rather than a chip that no longer exists.
+            composeRule.onNodeWithText("OpenCodeにメッセージを送る…").assertIsDisplayed()
         }) { PreviewChatHome() }
 
         capture("02-runtime-not-ready", {
