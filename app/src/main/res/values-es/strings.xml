@@ -54,6 +54,16 @@
     <string name="tool_input_label">Entrada</string>
     <string name="tool_output_label">Salida</string>
     <string name="tool_output_truncated">…salida truncada</string>
+    <string name="activity_summary_commands">Se ejecutaron %1$d comando(s)</string>
+    <string name="activity_summary_reads">Se leyeron %1$d archivo(s)</string>
+    <string name="activity_summary_edits">Se editaron %1$d archivo(s)</string>
+    <string name="activity_summary_subagents">Se ejecutaron %1$d subagente(s)</string>
+    <string name="activity_summary_tools">Se usaron %1$d herramienta(s)</string>
+    <string name="activity_summary_reasoning">%1$d razonamiento(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Actividad</string>
+    <string name="activity_details_open">Mostrar detalles de la actividad</string>
+    <string name="activity_details_close">Cerrar</string>
     <string name="file_changes_title">Cambios en archivos</string>
     <string name="file_changes_generic">Se han modificado archivos</string>
     <string name="workspace_folder_label">Carpeta de trabajo</string>

@@ -176,6 +176,7 @@ fun ChatHomeScreen(
     val runtimeNotReady = errorKind == ChatErrorKind.RUNTIME_NOT_READY && state.messages.isEmpty()
     val isAtBottom = remember { mutableStateOf(true) }
     var showActionSheet by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var activityGroupId by remember { mutableStateOf<String?>(null) }
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     var showSlashCommands by remember { mutableStateOf(false) }
@@ -324,6 +325,7 @@ fun ChatHomeScreen(
                                         AssistantTimeline(
                                             message,
                                             showProcessing = state.isRunning && message.id == lastAssistantId,
+                                            onOpenActivity = { activityGroupId = it },
                                         )
                                     }
                                 }
@@ -504,6 +506,13 @@ fun ChatHomeScreen(
             onToggleFavorite = onToggleFavorite,
             onDismiss = { showModelPicker = false },
         )
+    }
+
+    activityGroupId?.let { groupId ->
+        val parts = findActivityParts(state.messages, groupId)
+        if (parts.isNotEmpty()) {
+            AssistantActivitySheet(parts = parts, onDismiss = { activityGroupId = null })
+        }
     }
 
     showActionSheet?.let { (_, content) ->

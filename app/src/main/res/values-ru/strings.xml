@@ -54,6 +54,16 @@
     <string name="tool_input_label">Ввод</string>
     <string name="tool_output_label">Вывод</string>
     <string name="tool_output_truncated">…вывод обрезан</string>
+    <string name="activity_summary_commands">Выполнено команд: %1$d</string>
+    <string name="activity_summary_reads">Прочитано файлов: %1$d</string>
+    <string name="activity_summary_edits">Изменено файлов: %1$d</string>
+    <string name="activity_summary_subagents">Запущено субагентов: %1$d</string>
+    <string name="activity_summary_tools">Использовано инструментов: %1$d</string>
+    <string name="activity_summary_reasoning">Размышлений: %1$d</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Действия</string>
+    <string name="activity_details_open">Показать подробности действий</string>
+    <string name="activity_details_close">Закрыть</string>
     <string name="file_changes_title">Изменения файлов</string>
     <string name="file_changes_generic">Файлы были изменены</string>
     <string name="workspace_folder_label">Рабочая папка</string>

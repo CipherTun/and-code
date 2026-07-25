@@ -31,7 +31,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Compress
@@ -124,6 +123,7 @@ fun OpenCodeChatScreen(
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val isAtBottom = remember { mutableStateOf(true) }
+    var activityGroupId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -198,7 +198,7 @@ fun OpenCodeChatScreen(
                 if (message.isUser) {
                     MessageBubble(message)
                 } else {
-                    AssistantTimeline(message)
+                    AssistantTimeline(message, onOpenActivity = { activityGroupId = it })
                 }
             }
 
@@ -276,6 +276,13 @@ fun OpenCodeChatScreen(
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.send_description))
                 }
             }
+        }
+    }
+
+    activityGroupId?.let { groupId ->
+        val parts = findActivityParts(state.messages, groupId)
+        if (parts.isNotEmpty()) {
+            AssistantActivitySheet(parts = parts, onDismiss = { activityGroupId = null })
         }
     }
 }
@@ -637,18 +644,22 @@ fun MessageBubble(message: ChatMessage) {
 fun AssistantTimeline(
     message: ChatMessage,
     showProcessing: Boolean = false,
+    onOpenActivity: (String) -> Unit = {},
 ) {
+    val entries = remember(message.parts) { groupAssistantTimeline(message.parts) }
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        message.parts.forEach { part ->
-            key(part.id) {
-                when (part) {
-                    is ChatPart.Text -> MarkdownText(part.text)
-                    is ChatPart.Reasoning -> ReasoningCard(part)
-                    is ChatPart.Tool -> ToolCard(part)
-                    is ChatPart.Patch -> PatchCard(part)
+        entries.forEach { entry ->
+            key(entry.id) {
+                when (entry) {
+                    is TimelineEntry.Body -> MarkdownText(entry.part.text)
+                    is TimelineEntry.Activity ->
+                        AssistantActivityRow(
+                            parts = entry.parts,
+                            onClick = { onOpenActivity(entry.id) },
+                        )
                 }
             }
         }
@@ -890,8 +901,9 @@ private fun renderInline(
         }
     }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the activity detail sheet.
 @Composable
-private fun ReasoningCard(
+fun ReasoningCard(
     part: ChatPart.Reasoning,
     autoExpand: Boolean = false,
 ) {
@@ -939,8 +951,9 @@ private fun ReasoningCard(
     }
 }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the activity detail sheet.
 @Composable
-private fun ToolCard(part: ChatPart.Tool) {
+fun ToolCard(part: ChatPart.Tool) {
     var expanded by remember { mutableStateOf(part.status == ToolStatus.RUNNING) }
     Card(
         modifier =
@@ -953,7 +966,7 @@ private fun ToolCard(part: ChatPart.Tool) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(
-                    Icons.Default.Build,
+                    toolCategoryIcon(part.name.toToolCategory()),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(15.dp),
@@ -1042,8 +1055,9 @@ private fun ToolCard(part: ChatPart.Tool) {
     }
 }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the collapsed activity row.
 @Composable
-private fun ToolStatusChip(status: ToolStatus) {
+fun ToolStatusChip(status: ToolStatus) {
     val (label, color) =
         when (status) {
             ToolStatus.PENDING -> stringResource(R.string.tool_status_pending) to MaterialTheme.colorScheme.onSurfaceVariant
@@ -1066,8 +1080,9 @@ private fun ToolStatusChip(status: ToolStatus) {
     }
 }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the activity detail sheet.
 @Composable
-private fun PatchCard(part: ChatPart.Patch) {
+fun PatchCard(part: ChatPart.Patch) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),

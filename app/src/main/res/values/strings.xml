@@ -54,6 +54,16 @@
     <string name="tool_input_label">Input</string>
     <string name="tool_output_label">Output</string>
     <string name="tool_output_truncated">…output truncated</string>
+    <string name="activity_summary_commands">Ran %1$d command(s)</string>
+    <string name="activity_summary_reads">Read %1$d file(s)</string>
+    <string name="activity_summary_edits">Edited %1$d file(s)</string>
+    <string name="activity_summary_subagents">Ran %1$d subagent(s)</string>
+    <string name="activity_summary_tools">Used %1$d tool(s)</string>
+    <string name="activity_summary_reasoning">Thought %1$d time(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Activity</string>
+    <string name="activity_details_open">Show activity details</string>
+    <string name="activity_details_close">Close</string>
     <string name="file_changes_title">File changes</string>
     <string name="file_changes_generic">Files were changed</string>
     <string name="workspace_folder_label">Working folder</string>
