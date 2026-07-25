@@ -35,14 +35,14 @@ fun NavGraphBuilder.workspaceNavGraph(
     app: OpenCodeApplication,
     onImportFolder: () -> Unit,
     onShowCloneDialog: () -> Unit,
-    completeOnboardingAndGoToChat: () -> Unit
+    completeOnboardingAndGoToChat: () -> Unit,
 ) {
     composable(ROUTE_REMOTE_CONNECTION) {
         RemoteConnectionScreen(
             onTestConnection = workspaceViewModel::testConnection,
             onSaveConnection = workspaceViewModel::saveConnection,
             onBack = { navController.popBackStack() },
-            onConnected = completeOnboardingAndGoToChat
+            onConnected = completeOnboardingAndGoToChat,
         )
     }
 
@@ -69,31 +69,33 @@ fun NavGraphBuilder.workspaceNavGraph(
             onCloneGithub = onShowCloneDialog,
             onRemoveProject = workspaceViewModel::removeProject,
             onDeleteProjectFiles = workspaceViewModel::deleteProjectFiles,
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 
     composable(LOCAL_RUNTIME_MANAGEMENT_ROUTE) {
-        val managementViewModel: LocalRuntimeManagementViewModel = viewModel(
-            key = "local-runtime-management",
-            factory = ViewModelFactory {
-                LocalRuntimeManagementViewModel(
-                    runtimeState = app.localRuntimeManager.state,
-                    lastOperationState = app.localRuntimeManager.lastOperation,
-                    diagnosticsProvider = {
-                        withContext(Dispatchers.IO) {
-                            app.localRuntimeDiagnosticsCollector.collect()
-                        }
+        val managementViewModel: LocalRuntimeManagementViewModel =
+            viewModel(
+                key = "local-runtime-management",
+                factory =
+                    ViewModelFactory {
+                        LocalRuntimeManagementViewModel(
+                            runtimeState = app.localRuntimeManager.state,
+                            lastOperationState = app.localRuntimeManager.lastOperation,
+                            diagnosticsProvider = {
+                                withContext(Dispatchers.IO) {
+                                    app.localRuntimeDiagnosticsCollector.collect()
+                                }
+                            },
+                            updateCheckProvider = app.localRuntimeManager::checkForUpdate,
+                            rollbackVersionProvider = app.localRuntimeManager::rollbackVersion,
+                            repairAction = app.localRuntimeController::reinstall,
+                            updateAction = app.localRuntimeController::update,
+                            rollbackAction = app.localRuntimeController::rollback,
+                            deleteAction = app.localRuntimeController::delete,
+                        )
                     },
-                    updateCheckProvider = app.localRuntimeManager::checkForUpdate,
-                    rollbackVersionProvider = app.localRuntimeManager::rollbackVersion,
-                    repairAction = app.localRuntimeController::reinstall,
-                    updateAction = app.localRuntimeController::update,
-                    rollbackAction = app.localRuntimeController::rollback,
-                    deleteAction = app.localRuntimeController::delete
-                )
-            }
-        )
+            )
         val managementState by managementViewModel.state.collectAsState()
         LaunchedEffect(managementState.deleteCompleted) {
             if (managementState.deleteCompleted) {
@@ -116,7 +118,7 @@ fun NavGraphBuilder.workspaceNavGraph(
             onConfirmRollback = managementViewModel::confirmRollback,
             onRequestDelete = managementViewModel::requestDelete,
             onDismissDelete = managementViewModel::dismissDelete,
-            onConfirmDelete = managementViewModel::confirmDelete
+            onConfirmDelete = managementViewModel::confirmDelete,
         )
     }
 
@@ -126,12 +128,14 @@ fun NavGraphBuilder.workspaceNavGraph(
         if (workspace == null || runtime == null) {
             LaunchedEffect(Unit) { navController.popBackStack() }
         } else {
-            val explorerViewModel: WorkspaceExplorerViewModel = viewModel(
-                key = "workspace-explorer-${runtime.id}-${workspace.id}",
-                factory = ViewModelFactory {
-                    WorkspaceExplorerViewModel(runtime, workspace)
-                }
-            )
+            val explorerViewModel: WorkspaceExplorerViewModel =
+                viewModel(
+                    key = "workspace-explorer-${runtime.id}-${workspace.id}",
+                    factory =
+                        ViewModelFactory {
+                            WorkspaceExplorerViewModel(runtime, workspace)
+                        },
+                )
             val explorerState by explorerViewModel.state.collectAsState()
             WorkspaceExplorerScreen(
                 state = explorerState,
@@ -142,24 +146,26 @@ fun NavGraphBuilder.workspaceNavGraph(
                 onNavigateUp = explorerViewModel::navigateUp,
                 onSearch = explorerViewModel::search,
                 onRefreshChanges = explorerViewModel::refreshChanges,
-                onOpenTerminal = { navController.navigate(ROUTE_TERMINAL) }
+                onOpenTerminal = { navController.navigate(ROUTE_TERMINAL) },
             )
         }
     }
 
     composable(ROUTE_TERMINAL) {
-        val terminalViewModel: TerminalViewModel = viewModel(
-            key = "terminal",
-            factory = ViewModelFactory {
-                TerminalViewModel(app.commandRunner)
-            }
-        )
+        val terminalViewModel: TerminalViewModel =
+            viewModel(
+                key = "terminal",
+                factory =
+                    ViewModelFactory {
+                        TerminalViewModel(app.commandRunner)
+                    },
+            )
         val terminalState by terminalViewModel.state.collectAsState()
         TerminalScreen(
             state = terminalState,
             onCommand = terminalViewModel::executeCommand,
             onInputChange = terminalViewModel::updateInput,
-            onClear = terminalViewModel::clear
+            onClear = terminalViewModel::clear,
         )
     }
 
@@ -168,7 +174,7 @@ fun NavGraphBuilder.workspaceNavGraph(
         CodeViewerScreen(
             fileName = filePath.substringAfterLast('/'),
             content = "",
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 }

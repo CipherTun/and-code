@@ -19,74 +19,81 @@ data class ScheduleItem(
     val workspaceId: String,
     val isActive: Boolean = true,
     val lastRunAt: Long? = null,
-    val nextRunAt: Long? = null
+    val nextRunAt: Long? = null,
 )
 
 class ScheduleViewModel : ViewModel() {
-
-    private val mutableSchedules = MutableStateFlow(
-        listOf(
-            ScheduleItem(
-                name = "デイリー同期",
-                prompt = "Sync all remote repositories",
-                cronExpression = "0 9 * * *",
-                workspaceId = "default",
-                isActive = true,
-                nextRunAt = System.currentTimeMillis() + 3_600_000
+    private val mutableSchedules =
+        MutableStateFlow(
+            listOf(
+                ScheduleItem(
+                    name = "デイリー同期",
+                    prompt = "Sync all remote repositories",
+                    cronExpression = "0 9 * * *",
+                    workspaceId = "default",
+                    isActive = true,
+                    nextRunAt = System.currentTimeMillis() + 3_600_000,
+                ),
+                ScheduleItem(
+                    name = "コード整形",
+                    prompt = "Run formatter on changed files",
+                    cronExpression = "0 12 * * *",
+                    workspaceId = "default",
+                    isActive = true,
+                    nextRunAt = System.currentTimeMillis() + 7_200_000,
+                ),
+                ScheduleItem(
+                    name = "レポート生成",
+                    prompt = "Generate weekly summary report",
+                    cronExpression = "0 8 * * 1",
+                    workspaceId = "reports",
+                    isActive = false,
+                    lastRunAt = System.currentTimeMillis() - 86_400_000,
+                ),
+                ScheduleItem(
+                    name = "バックアップ",
+                    prompt = "Backup workspace to cloud storage",
+                    cronExpression = "0 23 * * *",
+                    workspaceId = "default",
+                    isActive = true,
+                    nextRunAt = System.currentTimeMillis() + 14_400_000,
+                ),
             ),
-            ScheduleItem(
-                name = "コード整形",
-                prompt = "Run formatter on changed files",
-                cronExpression = "0 12 * * *",
-                workspaceId = "default",
-                isActive = true,
-                nextRunAt = System.currentTimeMillis() + 7_200_000
-            ),
-            ScheduleItem(
-                name = "レポート生成",
-                prompt = "Generate weekly summary report",
-                cronExpression = "0 8 * * 1",
-                workspaceId = "reports",
-                isActive = false,
-                lastRunAt = System.currentTimeMillis() - 86_400_000
-            ),
-            ScheduleItem(
-                name = "バックアップ",
-                prompt = "Backup workspace to cloud storage",
-                cronExpression = "0 23 * * *",
-                workspaceId = "default",
-                isActive = true,
-                nextRunAt = System.currentTimeMillis() + 14_400_000
-            )
         )
-    )
 
     private val mutableActiveOnly = MutableStateFlow(true)
 
     val schedules: StateFlow<List<ScheduleItem>> = mutableSchedules.asStateFlow()
     val activeOnly: StateFlow<Boolean> = mutableActiveOnly.asStateFlow()
 
-    val filteredSchedules: StateFlow<List<ScheduleItem>> = combine(
-        mutableSchedules,
-        mutableActiveOnly
-    ) { items, onlyActive ->
-        if (onlyActive) items.filter { it.isActive } else items
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val filteredSchedules: StateFlow<List<ScheduleItem>> =
+        combine(
+            mutableSchedules,
+            mutableActiveOnly,
+        ) { items, onlyActive ->
+            if (onlyActive) items.filter { it.isActive } else items
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setActiveOnly(activeOnly: Boolean) {
         mutableActiveOnly.update { activeOnly }
     }
 
-    fun addSchedule(name: String, prompt: String, cronExpression: String, workspaceId: String) {
+    fun addSchedule(
+        name: String,
+        prompt: String,
+        cronExpression: String,
+        workspaceId: String,
+    ) {
         if (name.isBlank() || prompt.isBlank() || cronExpression.isBlank()) return
         mutableSchedules.update {
-            it + ScheduleItem(
-                name = name.trim(),
-                prompt = prompt.trim(),
-                cronExpression = cronExpression.trim(),
-                workspaceId = workspaceId.trim().ifBlank { "default" },
-                isActive = true
-            )
+            it +
+                ScheduleItem(
+                    name = name.trim(),
+                    prompt = prompt.trim(),
+                    cronExpression = cronExpression.trim(),
+                    workspaceId = workspaceId.trim().ifBlank { "default" },
+                    isActive = true,
+                )
         }
     }
 

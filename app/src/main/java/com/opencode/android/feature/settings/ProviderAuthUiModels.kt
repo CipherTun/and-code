@@ -13,7 +13,7 @@ data class ProviderAuthDialogState(
     val authorization: ProviderAuthAuthorization? = null,
     val isSubmitting: Boolean = false,
     val failed: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 ) {
     val selectedMethod: ProviderAuthMethod?
         get() = methodIndex?.let(methods::getOrNull)
@@ -22,15 +22,16 @@ data class ProviderAuthDialogState(
         get() = selectedMethod?.prompts.orEmpty().filter { it.isVisible(inputs) }
 
     val promptsComplete: Boolean
-        get() = visiblePrompts.all { prompt ->
-            when (prompt.type) {
-                "text", "select" -> !inputs[prompt.key].isNullOrBlank()
-                else -> true
+        get() =
+            visiblePrompts.all { prompt ->
+                when (prompt.type) {
+                    "text", "select" -> !inputs[prompt.key].isNullOrBlank()
+                    else -> true
+                }
             }
-        }
 }
 
 enum class ProviderAuthNotice {
     CONNECTED,
-    DISCONNECTED
+    DISCONNECTED,
 }

@@ -12,15 +12,15 @@ import androidx.room.PrimaryKey
             entity = SessionEntity::class,
             parentColumns = ["id"],
             childColumns = ["sessionId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["sessionId"])]
+    indices = [Index(value = ["sessionId"])],
 )
 data class MessageEntity(
     @PrimaryKey val id: String,
     val sessionId: String,
     val role: String,
     val text: String,
-    val createdAt: Long
+    val createdAt: Long,
 )

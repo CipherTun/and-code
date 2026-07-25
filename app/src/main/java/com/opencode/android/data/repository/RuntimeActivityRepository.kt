@@ -26,7 +26,7 @@ data class RuntimeEventLog(
     val timestamp: Long = System.currentTimeMillis(),
     val title: String,
     val detail: String? = null,
-    val sessionId: String? = null
+    val sessionId: String? = null,
 )
 
 data class RuntimeActivityState(
@@ -34,7 +34,7 @@ data class RuntimeActivityState(
     val completedSessionIds: Set<String> = emptySet(),
     val permissions: List<PermissionRequest> = emptyList(),
     val logs: List<RuntimeEventLog> = emptyList(),
-    val streamError: String? = null
+    val streamError: String? = null,
 )
 
 class RuntimeActivityRepository(
@@ -44,7 +44,7 @@ class RuntimeActivityRepository(
     private val maxRetryDelayMillis: Long = 30_000L,
     private val onPermissionAsked: ((PermissionRequest) -> Unit)? = null,
     private val onSessionIdle: ((String) -> Unit)? = null,
-    private val onSessionError: ((String?, String?) -> Unit)? = null
+    private val onSessionError: ((String?, String?) -> Unit)? = null,
 ) {
     init {
         require(retryDelayMillis >= 0L)
@@ -59,7 +59,7 @@ class RuntimeActivityRepository(
 
     init {
         scope.launch {
-            registry.selected.collectLatest selected@ { target ->
+            registry.selected.collectLatest selected@{ target ->
                 mutableState.value = RuntimeActivityState()
                 if (target == null) return@selected
 
@@ -83,7 +83,7 @@ class RuntimeActivityRepository(
                                     it.copy(
                                         activeSessionIds = emptySet(),
                                         completedSessionIds = emptySet(),
-                                        permissions = emptyList()
+                                        permissions = emptyList(),
                                     )
                                 }
                             }
@@ -99,12 +99,13 @@ class RuntimeActivityRepository(
             .retryWhen { error, attempt ->
                 mutableState.update {
                     it.copy(
-                        streamError = error.message ?: "OpenCodeイベント接続に失敗しました"
+                        streamError = error.message ?: "OpenCodeイベント接続に失敗しました",
                     )
                 }
                 if (retryDelayMillis > 0L) {
-                    val backoff = (retryDelayMillis * (1L shl attempt.toInt().coerceAtMost(4)))
-                        .coerceAtMost(maxRetryDelayMillis)
+                    val backoff =
+                        (retryDelayMillis * (1L shl attempt.toInt().coerceAtMost(4)))
+                            .coerceAtMost(maxRetryDelayMillis)
                     delay(backoff)
                 }
                 true
@@ -150,7 +151,7 @@ class RuntimeActivityRepository(
                 mutableState.update { current ->
                     current.copy(
                         permissions = current.permissions.filterNot { it.id == event.request.id } + event.request,
-                        activeSessionIds = current.activeSessionIds + event.request.sessionId
+                        activeSessionIds = current.activeSessionIds + event.request.sessionId,
                     )
                 }
                 appendLog("承認待ち", event.request.permission, event.request.sessionId)
@@ -160,7 +161,7 @@ class RuntimeActivityRepository(
                 mutableState.update { current ->
                     current.copy(
                         activeSessionIds = current.activeSessionIds - event.sessionId,
-                        completedSessionIds = current.completedSessionIds + event.sessionId
+                        completedSessionIds = current.completedSessionIds + event.sessionId,
                     )
                 }
                 appendLog("実行完了", null, event.sessionId)
@@ -185,11 +186,16 @@ class RuntimeActivityRepository(
         }
     }
 
-    private fun appendLog(title: String, detail: String? = null, sessionId: String? = null) {
+    private fun appendLog(
+        title: String,
+        detail: String? = null,
+        sessionId: String? = null,
+    ) {
         mutableState.update { current ->
             current.copy(
-                logs = (listOf(RuntimeEventLog(title = title, detail = detail, sessionId = sessionId)) + current.logs)
-                    .take(MAX_LOGS)
+                logs =
+                    (listOf(RuntimeEventLog(title = title, detail = detail, sessionId = sessionId)) + current.logs)
+                        .take(MAX_LOGS),
             )
         }
     }

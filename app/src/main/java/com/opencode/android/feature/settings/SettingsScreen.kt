@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -58,25 +57,25 @@ fun SettingsScreen(
     onAssistantRuntime: (String?) -> Unit = {},
     onAssistantWorkspace: (String?) -> Unit = {},
     onImportWorkspace: () -> Unit = {},
-    onRequestNotifications: () -> Unit = {}
+    onRequestNotifications: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             Text(
                 text = stringResource(R.string.nav_settings),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             state.openCodeVersion?.let { version ->
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.capability_version, version),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -85,7 +84,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.home_assistant),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -94,7 +93,7 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Icon(Icons.Default.Home, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
@@ -102,7 +101,7 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.notifications_permission_rationale),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -118,22 +117,24 @@ fun SettingsScreen(
                 var runtimeExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
                     expanded = runtimeExpanded,
-                    onExpandedChange = { runtimeExpanded = it }
+                    onExpandedChange = { runtimeExpanded = it },
                 ) {
                     OutlinedTextField(
-                        value = state.runtimeOptions.firstOrNull { it.first == state.assistantRuntimeId }?.second
-                            ?: state.assistantRuntimeId.orEmpty(),
+                        value =
+                            state.runtimeOptions.firstOrNull { it.first == state.assistantRuntimeId }?.second
+                                ?: state.assistantRuntimeId.orEmpty(),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.assistant_runtime)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = runtimeExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
+                        modifier =
+                            Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
                     )
                     ExposedDropdownMenu(
                         expanded = runtimeExpanded,
-                        onDismissRequest = { runtimeExpanded = false }
+                        onDismissRequest = { runtimeExpanded = false },
                     ) {
                         state.runtimeOptions.forEach { (id, name) ->
                             DropdownMenuItem(
@@ -141,7 +142,7 @@ fun SettingsScreen(
                                 onClick = {
                                     onAssistantRuntime(id)
                                     runtimeExpanded = false
-                                }
+                                },
                             )
                         }
                     }
@@ -152,7 +153,7 @@ fun SettingsScreen(
                     onValueChange = onAssistantWorkspace,
                     label = { Text(stringResource(R.string.assistant_workspace)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
             }
         }
@@ -161,7 +162,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.voice),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -172,7 +173,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.voice_response),
                     description = stringResource(R.string.auto_start_mic),
                     checked = state.ttsEnabled,
-                    onCheckedChange = onTtsChange
+                    onCheckedChange = onTtsChange,
                 )
                 Spacer(Modifier.height(16.dp))
                 SettingSwitchRow(
@@ -180,7 +181,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.continuous_conversation),
                     description = stringResource(R.string.auto_start_mic),
                     checked = state.continuousConversation,
-                    onCheckedChange = onContinuousChange
+                    onCheckedChange = onContinuousChange,
                 )
             }
         }
@@ -189,7 +190,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.provider_credentials),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -198,23 +199,24 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.provider_credentials_help),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
                 state.credentialStatuses.forEach { (providerId, saved) ->
                     LabelValueRow(
                         label = providerId,
-                        value = if (saved) {
-                            stringResource(R.string.key_saved)
-                        } else {
-                            stringResource(R.string.key_missing)
-                        }
+                        value =
+                            if (saved) {
+                                stringResource(R.string.key_saved)
+                            } else {
+                                stringResource(R.string.key_missing)
+                            },
                     )
                     if (saved) {
                         Spacer(Modifier.height(4.dp))
                         OutlinedButton(
                             onClick = { onClearApiKey(providerId) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(stringResource(R.string.clear_api_key))
                         }
@@ -227,7 +229,7 @@ fun SettingsScreen(
                     label = { Text(stringResource(R.string.provider_id_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) }
+                    leadingIcon = { Icon(Icons.Default.Key, contentDescription = null) },
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
@@ -237,7 +239,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )
                 Spacer(Modifier.height(8.dp))
                 Button(onClick = onSaveApiKey, modifier = Modifier.fillMaxWidth()) {
@@ -254,7 +256,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.local_runtime),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -262,7 +264,7 @@ fun SettingsScreen(
             SectionCard {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Icon(Icons.Default.Android, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     Column(modifier = Modifier.weight(1f)) {
@@ -270,7 +272,7 @@ fun SettingsScreen(
                         Text(
                             stringResource(R.string.local_runtime_note),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -285,7 +287,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.model),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -293,12 +295,12 @@ fun SettingsScreen(
             SectionCard {
                 LabelValueRow(
                     label = stringResource(R.string.model),
-                    value = state.modelId ?: stringResource(R.string.not_set)
+                    value = state.modelId ?: stringResource(R.string.not_set),
                 )
                 Spacer(Modifier.height(12.dp))
                 LabelValueRow(
                     label = stringResource(R.string.agent),
-                    value = state.agentId ?: "build"
+                    value = state.agentId ?: "build",
                 )
             }
         }
@@ -307,7 +309,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.about),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -315,7 +317,7 @@ fun SettingsScreen(
             SectionCard {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column {
@@ -323,12 +325,12 @@ fun SettingsScreen(
                         Text(
                             stringResource(R.string.unofficial_client),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             "MIT License",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -345,12 +347,12 @@ private fun SettingSwitchRow(
     title: String,
     description: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Column(modifier = Modifier.weight(1f)) {
@@ -358,7 +360,7 @@ private fun SettingSwitchRow(
             Text(
                 description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)

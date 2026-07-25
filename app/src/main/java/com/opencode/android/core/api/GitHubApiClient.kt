@@ -11,18 +11,26 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 class GitHubApiClient(private val token: String?) {
-
     private val client: OkHttpClient = OkHttpClient()
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
-    suspend fun getPullRequests(owner: String, repo: String, branch: String): List<GitHubReference> =
+    suspend fun getPullRequests(
+        owner: String,
+        repo: String,
+        branch: String,
+    ): List<GitHubReference> =
         withContext(Dispatchers.IO) {
             try {
-                val request = buildRequest(
-                    "https://api.github.com/repos/$owner/$repo/pulls".toHttpUrl().newBuilder()
-                        .addQueryParameter("head", "$owner:$branch")
-                        .build().toString()
-                )
+                val request =
+                    buildRequest(
+                        "https://api.github.com/repos/$owner/$repo/pulls".toHttpUrl().newBuilder()
+                            .addQueryParameter("head", "$owner:$branch")
+                            .build().toString(),
+                    )
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
@@ -32,7 +40,7 @@ class GitHubApiClient(private val token: String?) {
                             type = "PR",
                             number = pull.number,
                             title = pull.title,
-                            url = pull.htmlUrl
+                            url = pull.htmlUrl,
                         )
                     }
                 }
@@ -41,14 +49,19 @@ class GitHubApiClient(private val token: String?) {
             }
         }
 
-    suspend fun searchIssues(owner: String, repo: String, query: String): List<GitHubReference> =
+    suspend fun searchIssues(
+        owner: String,
+        repo: String,
+        query: String,
+    ): List<GitHubReference> =
         withContext(Dispatchers.IO) {
             try {
-                val request = buildRequest(
-                    "https://api.github.com/search/issues".toHttpUrl().newBuilder()
-                        .addQueryParameter("q", "repo:$owner/$repo $query")
-                        .build().toString()
-                )
+                val request =
+                    buildRequest(
+                        "https://api.github.com/search/issues".toHttpUrl().newBuilder()
+                            .addQueryParameter("q", "repo:$owner/$repo $query")
+                            .build().toString(),
+                    )
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
@@ -58,7 +71,7 @@ class GitHubApiClient(private val token: String?) {
                             type = "Issue",
                             number = item.number,
                             title = item.title,
-                            url = item.htmlUrl
+                            url = item.htmlUrl,
                         )
                     }
                 }
@@ -67,32 +80,33 @@ class GitHubApiClient(private val token: String?) {
             }
         }
 
-    private fun buildRequest(url: String): Request = Request.Builder()
-        .url(url)
-        .header("Accept", "application/vnd.github+json")
-        .apply {
-            token?.takeIf { it.isNotBlank() }?.let {
-                header("Authorization", "Bearer $it")
+    private fun buildRequest(url: String): Request =
+        Request.Builder()
+            .url(url)
+            .header("Accept", "application/vnd.github+json")
+            .apply {
+                token?.takeIf { it.isNotBlank() }?.let {
+                    header("Authorization", "Bearer $it")
+                }
             }
-        }
-        .build()
+            .build()
 
     @Serializable
     private data class GitHubPull(
         val number: Int = 0,
         val title: String = "",
-        @SerialName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = "",
     )
 
     @Serializable
     private data class GitHubSearchResult(
-        val items: List<GitHubIssue> = emptyList()
+        val items: List<GitHubIssue> = emptyList(),
     )
 
     @Serializable
     private data class GitHubIssue(
         val number: Int = 0,
         val title: String = "",
-        @SerialName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = "",
     )
 }

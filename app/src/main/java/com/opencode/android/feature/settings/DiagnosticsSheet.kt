@@ -30,7 +30,7 @@ fun DiagnosticsSheet(
     onDismiss: () -> Unit,
     appVersion: String,
     connectionStatus: String,
-    runtimeStatus: String
+    runtimeStatus: String,
 ) {
     val clipboard = LocalClipboardManager.current
     val buildType = BuildConfig.BUILD_TYPE
@@ -44,38 +44,40 @@ fun DiagnosticsSheet(
     val availableBytes = statFs.availableBytes
     val totalBytes = statFs.totalBytes
 
-    val markdown = buildString {
-        appendLine("# OpenCode Android Diagnostics")
-        appendLine()
-        appendLine("## App")
-        appendLine("- Version: $appVersion")
-        appendLine("- Build type: $buildType")
-        appendLine()
-        appendLine("## Connection")
-        appendLine("- Status: $connectionStatus")
-        appendLine("- Runtime: $runtimeStatus")
-        appendLine()
-        appendLine("## Memory")
-        appendLine("- Total: ${totalMemoryMb}MB")
-        appendLine("- Free: ${freeMemoryMb}MB")
-        appendLine("- Max: ${maxMemoryMb}MB")
-        appendLine()
-        appendLine("## Storage")
-        appendLine("- Available: ${formatBytes(availableBytes)}")
-        appendLine("- Total: ${formatBytes(totalBytes)}")
-    }
+    val markdown =
+        buildString {
+            appendLine("# OpenCode Android Diagnostics")
+            appendLine()
+            appendLine("## App")
+            appendLine("- Version: $appVersion")
+            appendLine("- Build type: $buildType")
+            appendLine()
+            appendLine("## Connection")
+            appendLine("- Status: $connectionStatus")
+            appendLine("- Runtime: $runtimeStatus")
+            appendLine()
+            appendLine("## Memory")
+            appendLine("- Total: ${totalMemoryMb}MB")
+            appendLine("- Free: ${freeMemoryMb}MB")
+            appendLine("- Max: ${maxMemoryMb}MB")
+            appendLine()
+            appendLine("## Storage")
+            appendLine("- Available: ${formatBytes(availableBytes)}")
+            appendLine("- Total: ${formatBytes(totalBytes)}")
+        }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = "Diagnostics",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
 
             SectionCard {
@@ -116,7 +118,7 @@ fun DiagnosticsSheet(
                     clipboard.setText(AnnotatedString(markdown))
                     onDismiss()
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Copy Diagnostics")
             }
@@ -132,7 +134,7 @@ private fun DiagnosticsSectionHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 

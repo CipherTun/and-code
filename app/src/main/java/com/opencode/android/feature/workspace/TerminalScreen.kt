@@ -2,7 +2,6 @@ package com.opencode.android.feature.workspace
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +40,7 @@ fun TerminalScreen(
     state: TerminalUiState,
     onCommand: (String) -> Unit,
     onInputChange: (String) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -52,60 +51,65 @@ fun TerminalScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(TerminalBackground)
-            .imePadding()
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(TerminalBackground)
+                .imePadding(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.End
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.End,
         ) {
             IconButton(onClick = onClear) {
                 Icon(
                     Icons.Default.DeleteSweep,
                     contentDescription = "Clear",
-                    tint = Color.White.copy(alpha = 0.7f)
+                    tint = Color.White.copy(alpha = 0.7f),
                 )
             }
         }
 
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 8.dp),
-            state = listState
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+            state = listState,
         ) {
             items(state.lines) { line ->
                 Text(
                     text = line.text,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
-                    color = when (line.type) {
-                        TerminalLineType.INPUT -> InputColor
-                        TerminalLineType.OUTPUT -> OutputColor
-                        TerminalLineType.ERROR -> ErrorColor
-                        TerminalLineType.SYSTEM -> SystemColor
-                    },
-                    modifier = Modifier.padding(vertical = 1.dp)
+                    color =
+                        when (line.type) {
+                            TerminalLineType.INPUT -> InputColor
+                            TerminalLineType.OUTPUT -> OutputColor
+                            TerminalLineType.ERROR -> ErrorColor
+                            TerminalLineType.SYSTEM -> SystemColor
+                        },
+                    modifier = Modifier.padding(vertical = 1.dp),
                 )
             }
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = "${state.workingDirectory} $",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp,
-                color = InputColor
+                color = InputColor,
             )
             TextField(
                 value = state.currentInput,
@@ -113,25 +117,26 @@ fun TerminalScreen(
                 modifier = Modifier.weight(1f),
                 textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
                 singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = Color.White
-                ),
-                enabled = !state.isRunning
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = Color.White,
+                    ),
+                enabled = !state.isRunning,
             )
             IconButton(
                 onClick = { onCommand(state.currentInput) },
-                enabled = state.currentInput.isNotBlank() && !state.isRunning
+                enabled = state.currentInput.isNotBlank() && !state.isRunning,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send",
-                    tint = InputColor
+                    tint = InputColor,
                 )
             }
         }

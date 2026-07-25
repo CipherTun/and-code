@@ -26,37 +26,40 @@ import kotlin.math.sin
 fun VolumeMeter(
     amplitude: Float,
     modifier: Modifier = Modifier,
-    idle: Boolean = false
+    idle: Boolean = false,
 ) {
     val transition = rememberInfiniteTransition(label = "volumePulse")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "phase"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1200),
+                repeatMode = RepeatMode.Restart,
+            ),
+        label = "phase",
     )
 
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(3) { i ->
-            val barAmplitude = if (idle) {
-                0.3f + 0.2f * abs(sin(phase + i * 1.2f))
-            } else {
-                (amplitude * (if (i == 1) 1f else 0.7f)).coerceIn(0.05f, 1f)
-            }
+            val barAmplitude =
+                if (idle) {
+                    0.3f + 0.2f * abs(sin(phase + i * 1.2f))
+                } else {
+                    (amplitude * (if (i == 1) 1f else 0.7f)).coerceIn(0.05f, 1f)
+                }
             val height = 8.dp + 16.dp * barAmplitude
             Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(height)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary)
+                modifier =
+                    Modifier
+                        .width(4.dp)
+                        .height(height)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.primary),
             )
         }
     }

@@ -9,7 +9,7 @@ internal enum class ChatErrorKind {
     RATE_LIMITED,
     SERVER_ERROR,
     NOT_FOUND,
-    GENERIC
+    GENERIC,
 }
 
 internal fun classifyChatError(throwable: Throwable?): ChatErrorKind? {
@@ -26,26 +26,28 @@ internal fun classifyChatError(message: String?): ChatErrorKind? {
     val httpCode = HTTP_CODE_REGEX.find(normalized)?.groupValues?.get(1)?.toIntOrNull()
     if (httpCode != null) return classifyByStatusCode(httpCode)
 
-    val runtimeNotReadySignals = listOf(
-        "runtime is not installed",
-        "connection is not configured",
-        "runtime is not configured",
-        "no runtime configured"
-    )
-    val transientSignals = listOf(
-        "unexpected end of stream",
-        "stream was reset",
-        "connection reset",
-        "connection closed",
-        "connection aborted",
-        "failed to connect",
-        "socket closed",
-        "socket is closed",
-        "closed by peer",
-        "timeout",
-        "timed out",
-        "event stream closed"
-    )
+    val runtimeNotReadySignals =
+        listOf(
+            "runtime is not installed",
+            "connection is not configured",
+            "runtime is not configured",
+            "no runtime configured",
+        )
+    val transientSignals =
+        listOf(
+            "unexpected end of stream",
+            "stream was reset",
+            "connection reset",
+            "connection closed",
+            "connection aborted",
+            "failed to connect",
+            "socket closed",
+            "socket is closed",
+            "closed by peer",
+            "timeout",
+            "timed out",
+            "event stream closed",
+        )
     return when {
         runtimeNotReadySignals.any(normalized::contains) -> ChatErrorKind.RUNTIME_NOT_READY
         transientSignals.any(normalized::contains) -> ChatErrorKind.TRANSIENT_CONNECTION
@@ -53,13 +55,14 @@ internal fun classifyChatError(message: String?): ChatErrorKind? {
     }
 }
 
-private fun classifyByStatusCode(code: Int): ChatErrorKind = when {
-    code == 401 || code == 403 -> ChatErrorKind.AUTH_ERROR
-    code == 404 -> ChatErrorKind.NOT_FOUND
-    code == 429 -> ChatErrorKind.RATE_LIMITED
-    code in 500..599 -> ChatErrorKind.SERVER_ERROR
-    code == 0 -> ChatErrorKind.TRANSIENT_CONNECTION
-    else -> ChatErrorKind.GENERIC
-}
+private fun classifyByStatusCode(code: Int): ChatErrorKind =
+    when {
+        code == 401 || code == 403 -> ChatErrorKind.AUTH_ERROR
+        code == 404 -> ChatErrorKind.NOT_FOUND
+        code == 429 -> ChatErrorKind.RATE_LIMITED
+        code in 500..599 -> ChatErrorKind.SERVER_ERROR
+        code == 0 -> ChatErrorKind.TRANSIENT_CONNECTION
+        else -> ChatErrorKind.GENERIC
+    }
 
 private val HTTP_CODE_REGEX = Regex("""http\s+(\d{3})""")

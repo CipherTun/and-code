@@ -73,13 +73,15 @@ import com.opencode.android.feature.onboarding.AndroidSetupScreen
 import com.opencode.android.feature.onboarding.OnboardingChoiceScreen
 import com.opencode.android.feature.schedule.ScheduleScreen
 import com.opencode.android.feature.schedule.ScheduleViewModel
+import com.opencode.android.feature.search.CommandPaletteSheet
 import com.opencode.android.feature.settings.DiagnosticsSheet
 import com.opencode.android.feature.settings.GitHubRepo
 import com.opencode.android.feature.settings.SettingsViewModel
-import com.opencode.android.feature.search.CommandPaletteSheet
 import com.opencode.android.feature.workspace.WorkspaceViewModel
+import com.opencode.android.runtime.WorkspaceRef
+import com.opencode.android.runtime.local.GitCloneResult
+import com.opencode.android.ui.components.SessionStatus
 import com.opencode.android.ui.navigation.DRAWER_ROOT_ROUTES
-import com.opencode.android.ui.navigation.LOCAL_RUNTIME_MANAGEMENT_ROUTE
 import com.opencode.android.ui.navigation.ROUTE_ACTIVITY
 import com.opencode.android.ui.navigation.ROUTE_ANDROID_SETUP
 import com.opencode.android.ui.navigation.ROUTE_CHAT
@@ -91,25 +93,26 @@ import com.opencode.android.ui.navigation.settingsNavGraph
 import com.opencode.android.ui.navigation.workspaceNavGraph
 import com.opencode.android.ui.theme.AppTheme
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
-import com.opencode.android.ui.components.SessionStatus
-import com.opencode.android.runtime.WorkspaceRef
-import com.opencode.android.runtime.local.GitCloneResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private fun speechLocaleTag(context: android.content.Context): String {
-    val locale = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-        context.resources.configuration.locales[0]
-    } else {
-        @Suppress("DEPRECATION")
-        context.resources.configuration.locale
-    }
+    val locale =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            context.resources.configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            context.resources.configuration.locale
+        }
     return locale?.toLanguageTag()?.takeIf { it.isNotBlank() } ?: "en-US"
 }
 
-private fun relativeTimeLabel(context: android.content.Context, epochMillis: Long): String {
+private fun relativeTimeLabel(
+    context: android.content.Context,
+    epochMillis: Long,
+): String {
     val diffMillis = (System.currentTimeMillis() - epochMillis).coerceAtLeast(0L)
     val minutes = diffMillis / 60_000L
     val hours = minutes / 60L
@@ -128,7 +131,7 @@ fun OpenCodeApp(
     appTheme: AppTheme = AppTheme.DARK,
     uiFontSize: Int = 16,
     targetSessionId: String? = null,
-    deepLinkConnectionUrl: String? = null
+    deepLinkConnectionUrl: String? = null,
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as OpenCodeApplication
@@ -151,59 +154,67 @@ fun OpenCodeApp(
     var sidebarGrouping by remember { mutableStateOf(preferences.sidebarGrouping) }
     var collapsedSections by remember { mutableStateOf(setOf<String>()) }
 
-    val workspaceViewModel: WorkspaceViewModel = viewModel(
-        key = "workspaces",
-        factory = ViewModelFactory {
-            WorkspaceViewModel(
-                app.runtimeRegistry,
-                app.catalogRepository,
-                app.localRuntimeManager,
-                app.localRuntimeController,
-                app.settings,
-                java.io.File(context.filesDir, "runtime/workspace")
-            )
-        }
-    )
+    val workspaceViewModel: WorkspaceViewModel =
+        viewModel(
+            key = "workspaces",
+            factory =
+                ViewModelFactory {
+                    WorkspaceViewModel(
+                        app.runtimeRegistry,
+                        app.catalogRepository,
+                        app.localRuntimeManager,
+                        app.localRuntimeController,
+                        app.settings,
+                        java.io.File(context.filesDir, "runtime/workspace"),
+                    )
+                },
+        )
     val workspaceState by workspaceViewModel.state.collectAsState()
 
-    val activityViewModel: ActivityViewModel = viewModel(
-        key = "activity",
-        factory = ViewModelFactory {
-            ActivityViewModel(
-                catalog = app.catalogRepository,
-                activity = app.activityRepository,
-                registry = app.runtimeRegistry,
-                onPermissionResolved = app.notifications::cancelPermission
-            )
-        }
-    )
+    val activityViewModel: ActivityViewModel =
+        viewModel(
+            key = "activity",
+            factory =
+                ViewModelFactory {
+                    ActivityViewModel(
+                        catalog = app.catalogRepository,
+                        activity = app.activityRepository,
+                        registry = app.runtimeRegistry,
+                        onPermissionResolved = app.notifications::cancelPermission,
+                    )
+                },
+        )
     val activityState by activityViewModel.state.collectAsState()
 
-    val settingsViewModel: SettingsViewModel = viewModel(
-        key = "settings",
-        factory = ViewModelFactory {
-            SettingsViewModel(
-                catalog = app.catalogRepository,
-                preferences = app.preferences,
-                credentials = app.providerCredentials,
-                settings = app.settings,
-                registry = app.runtimeRegistry
-            )
-        }
-    )
+    val settingsViewModel: SettingsViewModel =
+        viewModel(
+            key = "settings",
+            factory =
+                ViewModelFactory {
+                    SettingsViewModel(
+                        catalog = app.catalogRepository,
+                        preferences = app.preferences,
+                        credentials = app.providerCredentials,
+                        settings = app.settings,
+                        registry = app.runtimeRegistry,
+                    )
+                },
+        )
     val settingsState by settingsViewModel.state.collectAsState()
 
-    val chatViewModel: ChatViewModel = viewModel(
-        key = "chat-${selectedRuntime?.id ?: "none"}",
-        factory = ViewModelFactory {
-            ChatViewModel(
-                backend = selectedRuntime,
-                eventFlow = app.activityRepository.events,
-                onPermissionResolved = app.activityRepository::resolvePermission,
-                onSessionCreated = app.catalogRepository::refreshSessionsOnly
-            )
-        }
-    )
+    val chatViewModel: ChatViewModel =
+        viewModel(
+            key = "chat-${selectedRuntime?.id ?: "none"}",
+            factory =
+                ViewModelFactory {
+                    ChatViewModel(
+                        backend = selectedRuntime,
+                        eventFlow = app.activityRepository.events,
+                        onPermissionResolved = app.activityRepository::resolvePermission,
+                        onSessionCreated = app.catalogRepository::refreshSessionsOnly,
+                    )
+                },
+        )
     val chatState by chatViewModel.uiState.collectAsState()
 
     val speechManager = remember { SpeechRecognizerManager(context.applicationContext) }
@@ -230,95 +241,103 @@ fun OpenCodeApp(
             return
         }
         chatViewModel.startListening()
-        voiceJob = voiceScope.launch {
-            try {
-                speechManager.startListening(speechLocaleTag(context)).collect { result ->
-                    when (result) {
-                        SpeechResult.Ready,
-                        SpeechResult.Listening -> Unit
-                        SpeechResult.Processing -> chatViewModel.showSpeechProcessing()
-                        is SpeechResult.PartialResult -> chatViewModel.updateSpeechPartial(result.text)
-                        is SpeechResult.Result -> {
-                            chatViewModel.updateSpeechPartial(result.text)
-                            chatViewModel.stopListening()
+        voiceJob =
+            voiceScope.launch {
+                try {
+                    speechManager.startListening(speechLocaleTag(context)).collect { result ->
+                        when (result) {
+                            SpeechResult.Ready,
+                            SpeechResult.Listening,
+                            -> Unit
+                            SpeechResult.Processing -> chatViewModel.showSpeechProcessing()
+                            is SpeechResult.PartialResult -> chatViewModel.updateSpeechPartial(result.text)
+                            is SpeechResult.Result -> {
+                                chatViewModel.updateSpeechPartial(result.text)
+                                chatViewModel.stopListening()
+                            }
+                            is SpeechResult.Error -> chatViewModel.reportSpeechError(result.message)
                         }
-                        is SpeechResult.Error -> chatViewModel.reportSpeechError(result.message)
                     }
+                } finally {
+                    chatViewModel.stopListening()
                 }
-            } finally {
-                chatViewModel.stopListening()
+            }
+    }
+
+    val microphonePermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted && startVoiceAfterPermission) {
+                startVoiceAfterPermission = false
+                startOrStopVoiceInput()
+            } else if (granted && startWakeWordAfterPermission) {
+                startWakeWordAfterPermission = false
+                com.opencode.android.feature.wakeword.WakeWordService.start(context)
+            } else if (!granted) {
+                startVoiceAfterPermission = false
+                startWakeWordAfterPermission = false
+                chatViewModel.reportSpeechError(context.getString(R.string.mic_permission_required))
             }
         }
-    }
 
-    val microphonePermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted && startVoiceAfterPermission) {
-            startVoiceAfterPermission = false
-            startOrStopVoiceInput()
-        } else if (granted && startWakeWordAfterPermission) {
-            startWakeWordAfterPermission = false
-            com.opencode.android.feature.wakeword.WakeWordService.start(context)
-        } else if (!granted) {
-            startVoiceAfterPermission = false
-            startWakeWordAfterPermission = false
-            chatViewModel.reportSpeechError(context.getString(R.string.mic_permission_required))
-        }
-    }
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { /* optional */ }
 
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* optional */ }
-
-    val workspaceImportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        voiceScope.launch {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-                val imported = withContext(Dispatchers.IO) {
-                    com.opencode.android.runtime.local.SafWorkspaceImporter(context).importTree(uri)
+    val workspaceImportLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.OpenDocumentTree(),
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            voiceScope.launch {
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                    val imported =
+                        withContext(Dispatchers.IO) {
+                            com.opencode.android.runtime.local.SafWorkspaceImporter(context).importTree(uri)
+                        }
+                    val existing = app.settings.safWorkspaceUris.toMutableList()
+                    if (uri.toString() !in existing) {
+                        existing += uri.toString()
+                        app.settings.safWorkspaceUris = existing
+                    }
+                    settingsViewModel.setAssistantWorkspacePath(imported.absolutePath)
+                    workspaceViewModel.addProject("/workspace/${imported.name}")
+                    workspaceViewModel.refresh()
+                    chatViewModel.selectWorkspace("/workspace/${imported.name}")
                 }
-                val existing = app.settings.safWorkspaceUris.toMutableList()
-                if (uri.toString() !in existing) {
-                    existing += uri.toString()
-                    app.settings.safWorkspaceUris = existing
-                }
-                settingsViewModel.setAssistantWorkspacePath(imported.absolutePath)
-                workspaceViewModel.addProject("/workspace/${imported.name}")
-                workspaceViewModel.refresh()
-                chatViewModel.selectWorkspace("/workspace/${imported.name}")
             }
         }
-    }
 
-    val attachmentLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        voiceScope.launch {
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    com.opencode.android.runtime.local.AttachmentImporter(context).import(uri)
+    val attachmentLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            voiceScope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        com.opencode.android.runtime.local.AttachmentImporter(context).import(uri)
+                    }
+                }.onSuccess { attachment ->
+                    chatViewModel.addAttachment(attachment)
                 }
-            }.onSuccess { attachment ->
-                chatViewModel.addAttachment(attachment)
             }
         }
-    }
 
     LaunchedEffect(Unit) {
         if (android.os.Build.VERSION.SDK_INT >= 33) {
-            val granted = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
+            val granted =
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) == PackageManager.PERMISSION_GRANTED
             if (!granted) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -359,7 +378,7 @@ fun OpenCodeApp(
             settingsState.providers
                 .firstOrNull { it.id == preferences.providerId }
                 ?.models?.get(preferences.modelId)
-                ?.limit?.context ?: 0L
+                ?.limit?.context ?: 0L,
         )
     }
 
@@ -404,52 +423,57 @@ fun OpenCodeApp(
         }
     }
 
-    val appVersion = remember {
-        runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull().orEmpty()
-    }
-
-    val recentSessions = remember(activityState.sessions, activityState.activeSessionIds, activityState.completedSessionIds) {
-        activityState.sessions
-            .filter { it.parentId == null }
-            .take(25).map { session ->
-            DrawerRecentSession(
-                id = session.id,
-                title = session.title.ifBlank { session.slug ?: session.id },
-                relativeTime = relativeTimeLabel(context, session.time.updated ?: session.time.created),
-                directory = session.directory,
-                isActive = session.id in activityState.activeSessionIds,
-                hasUnread = session.id in activityState.completedSessionIds,
-                status = when {
-                    session.id in activityState.activeSessionIds -> SessionStatus.RUNNING
-                    session.id in activityState.completedSessionIds -> SessionStatus.COMPLETED_UNREAD
-                    else -> SessionStatus.IDLE
-                }
-            )
+    val appVersion =
+        remember {
+            runCatching {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            }.getOrNull().orEmpty()
         }
-    }
+
+    val recentSessions =
+        remember(activityState.sessions, activityState.activeSessionIds, activityState.completedSessionIds) {
+            activityState.sessions
+                .filter { it.parentId == null }
+                .take(25).map { session ->
+                    DrawerRecentSession(
+                        id = session.id,
+                        title = session.title.ifBlank { session.slug ?: session.id },
+                        relativeTime = relativeTimeLabel(context, session.time.updated ?: session.time.created),
+                        directory = session.directory,
+                        isActive = session.id in activityState.activeSessionIds,
+                        hasUnread = session.id in activityState.completedSessionIds,
+                        status =
+                            when {
+                                session.id in activityState.activeSessionIds -> SessionStatus.RUNNING
+                                session.id in activityState.completedSessionIds -> SessionStatus.COMPLETED_UNREAD
+                                else -> SessionStatus.IDLE
+                            },
+                    )
+                }
+        }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val drawerScope = rememberCoroutineScope()
     val currentRoute = backStackEntry?.destination?.route
 
-    val subagentInfos = remember(activityState.sessions, chatState.sessionId, activityState.activeSessionIds) {
-        val parentId = chatState.sessionId ?: return@remember emptyList()
-        activityState.sessions
-            .filter { it.parentId == parentId }
-            .map { session ->
-                SubagentInfo(
-                    id = session.id,
-                    name = session.title.ifBlank { session.slug ?: session.id.take(8) },
-                    status = when {
-                        session.id in activityState.activeSessionIds -> "running"
-                        else -> "idle"
-                    },
-                    providerId = ""
-                )
-            }
-    }
+    val subagentInfos =
+        remember(activityState.sessions, chatState.sessionId, activityState.activeSessionIds) {
+            val parentId = chatState.sessionId ?: return@remember emptyList()
+            activityState.sessions
+                .filter { it.parentId == parentId }
+                .map { session ->
+                    SubagentInfo(
+                        id = session.id,
+                        name = session.title.ifBlank { session.slug ?: session.id.take(8) },
+                        status =
+                            when {
+                                session.id in activityState.activeSessionIds -> "running"
+                                else -> "idle"
+                            },
+                        providerId = "",
+                    )
+                }
+        }
 
     fun closeDrawer() {
         drawerScope.launch { drawerState.close() }
@@ -457,373 +481,377 @@ fun OpenCodeApp(
 
     OpenCodeAndroidTheme(
         appTheme = AppTheme.fromKey(preferences.theme),
-        uiFontSize = preferences.uiFontSize
+        uiFontSize = preferences.uiFontSize,
     ) {
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = currentRoute in DRAWER_ROOT_ROUTES,
-        drawerContent = {
-            ModalDrawerSheet {
-                AppDrawerContent(
-                    recentSessions = recentSessions,
-                    workspaces = workspaceState.workspaces,
-                    selectedWorkspacePath = chatState.selectedWorkspacePath,
-                    onNewChat = {
-                        closeDrawer()
-                        pendingSession = null
-                        chatViewModel.newSession()
-                        chatViewModel.selectWorkspace(null)
-                        navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-                    },
-                    onSelectProject = { workspace ->
-                        closeDrawer()
-                        pendingSession = null
-                        chatViewModel.newSession()
-                        chatViewModel.selectWorkspace(workspace.path)
-                        navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-                    },
-                    onOpenSession = { id, title ->
-                        closeDrawer()
-                        app.activityRepository.markSessionRead(id)
-                        pendingSession = id to title
-                        navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-                    },
-                    onNavigate = { route ->
-                        closeDrawer()
-                        if (route == "command-palette") {
-                            showCommandPalette = true
-                        } else if (route == "session-import") {
-                            showSessionImport = true
-                        } else {
-                            navController.navigate(route) { launchSingleTop = true }
-                        }
-                    },
-                    onDeleteSession = { sessionId ->
-                        voiceScope.launch {
-                            runCatching { selectedRuntime?.deleteSession(sessionId) }
-                            app.catalogRepository.refreshSessionsOnly()
-                        }
-                    },
-                    onArchiveSession = { sessionId ->
-                        voiceScope.launch {
-                            runCatching { selectedRuntime?.archiveSession(sessionId) }
-                            app.catalogRepository.refreshSessionsOnly()
-                        }
-                    },
-                    onBatchDelete = { sessionIds ->
-                        voiceScope.launch {
-                            sessionIds.forEach { id ->
-                                runCatching { selectedRuntime?.deleteSession(id) }
-                            }
-                            app.catalogRepository.refreshSessionsOnly()
-                        }
-                    },
-                    onBatchArchive = { sessionIds ->
-                        voiceScope.launch {
-                            sessionIds.forEach { id ->
-                                runCatching { selectedRuntime?.archiveSession(id) }
-                            }
-                            app.catalogRepository.refreshSessionsOnly()
-                        }
-                    },
-                    sidebarGrouping = sidebarGrouping,
-                    onGroupingChange = { sidebarGrouping = it },
-                    collapsedSections = collapsedSections,
-                    onToggleSection = { section ->
-                        collapsedSections = if (section in collapsedSections) {
-                            collapsedSections - section
-                        } else {
-                            collapsedSections + section
-                        }
-                    }
-                )
-            }
-        }
-    ) {
-        NavHost(
-            navController = navController,
-            startDestination = startDestination
-        ) {
-            composable(ROUTE_ONBOARDING) {
-                OnboardingChoiceScreen(
-                    onSelectAndroid = { navController.navigate(ROUTE_ANDROID_SETUP) },
-                    onSelectRemote = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
-                    onAddRemoteLater = { navController.navigate(ROUTE_REMOTE_CONNECTION) }
-                )
-            }
-
-            composable(ROUTE_ANDROID_SETUP) {
-                val localRuntimeStatus by app.localRuntimeManager.state.collectAsState()
-                AndroidSetupScreen(
-                    runtimeStatus = localRuntimeStatus,
-                    onStartRuntimeSetup = workspaceViewModel::setupLocalRuntime,
-                    settingsState = settingsState,
-                    onOpenProviderAuth = settingsViewModel::openProviderAuth,
-                    onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,
-                    onProviderAuthInput = settingsViewModel::updateProviderAuthInput,
-                    onProviderApiKey = settingsViewModel::updateProviderApiKey,
-                    onSubmitProviderAuth = settingsViewModel::submitProviderAuth,
-                    onCompleteProviderOAuth = settingsViewModel::completeProviderOAuth,
-                    onDisconnectProvider = settingsViewModel::disconnectProvider,
-                    onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
-                    onRefreshProviderAuth = settingsViewModel::refreshProviderAuth,
-                    onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
-                    onConnectGitHub = { settingsViewModel.beginGitHubDeviceFlow() },
-                    onOpenGitHubVerification = { url ->
-                        context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                    },
-                    onDisconnectGitHub = settingsViewModel::disconnectGitHub,
-                    onBack = { navController.popBackStack() },
-                    onFinish = completeOnboardingAndGoToChat
-                )
-            }
-
-            composable(ROUTE_CHAT) {
-                LaunchedEffect(pendingSession) {
-                    pendingSession?.let { (id, title) ->
-                        chatViewModel.openSession(id, title)
-                        pendingSession = null
-                    }
-                }
-                LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id) {
-                    val pending = pendingHandoffPrompt
-                    if (pending != null && selectedRuntime?.id == pending.first) {
-                        chatViewModel.sendMessage(pending.second)
-                        pendingHandoffPrompt = null
-                    }
-                }
-                ChatHomeScreen(
-                    state = chatState,
-                    providers = settingsState.providers,
-                    agents = settingsState.agents,
-                    workspaces = workspaceState.workspaces,
-                    selectedProviderId = chatState.selectedProviderId ?: settingsState.providerId,
-                    selectedModelId = chatState.selectedModelId ?: settingsState.modelId,
-                    selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
-                    runtimeTargets = runtimeTargets,
-                    selectedRuntimeId = selectedRuntime?.id,
-                    onSelectRuntime = { id ->
-                        if (id != selectedRuntime?.id) {
-                            if (chatState.messages.isNotEmpty()) {
-                                onHandoff(id)
-                            } else {
-                                app.runtimeRegistry.select(id)
-                            }
-                        }
-                    },
-                    onSelectModel = settingsViewModel::selectModel,
-                    onSelectAgent = settingsViewModel::selectAgent,
-                    onSelectWorkspace = chatViewModel::selectWorkspace,
-                    selectedVariant = chatState.selectedVariant,
-                    onSelectVariant = chatViewModel::selectVariant,
-                    onAttach = { attachmentLauncher.launch("*/*") },
-                    onRemoveAttachment = chatViewModel::removeAttachment,
-                    onImageAttachment = { bitmap ->
-                        voiceScope.launch {
-                            runCatching {
-                                withContext(Dispatchers.IO) {
-                                    com.opencode.android.runtime.local.AttachmentImporter(context).import(bitmap)
-                                }
-                            }.onSuccess { attachment ->
-                                chatViewModel.addImageAttachment(attachment, bitmap)
-                            }
-                        }
-                    },
-                    favoriteModelKeys = settingsState.favoriteModelKeys,
-                    recentModelKeys = settingsState.recentModelKeys,
-                    onToggleFavorite = settingsViewModel::toggleFavoriteModel,
-                    onSelectQuestionAnswer = chatViewModel::selectQuestionAnswer,
-                    onSubmitQuestion = chatViewModel::submitQuestion,
-                    autoAcceptPermissions = settingsState.autoAcceptPermissions,
-                    onToggleAutoAccept = settingsViewModel::setAutoAcceptPermissions,
-                    onSendMessage = chatViewModel::sendMessage,
-                    onPermission = chatViewModel::respondToPermission,
-                    onAbort = chatViewModel::abort,
-                    onMic = requestVoiceInput,
-                    onNewChat = {
-                        pendingSession = null
-                        chatViewModel.newSession()
-                    },
-                    onOpenHistory = {
-                        navController.navigate(ROUTE_ACTIVITY) { launchSingleTop = true }
-                    },
-                    onOpenLocalSetup = {
-                        navController.navigate(ROUTE_ANDROID_SETUP) { launchSingleTop = true }
-                    },
-                    onOpenRemoteSetup = {
-                        navController.navigate(ROUTE_REMOTE_CONNECTION) { launchSingleTop = true }
-                    },
-                    onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
-                    onOpenDrawer = {
-                        app.catalogRepository.refreshSessionsOnly()
-                        drawerScope.launch { drawerState.open() }
-                    },
-                    subagents = subagentInfos,
-                    onSubagentClick = { childSessionId ->
-                        val childSession = activityState.sessions.firstOrNull { it.id == childSessionId }
-                        app.activityRepository.markSessionRead(childSessionId)
-                        pendingSession = childSessionId to (childSession?.title ?: childSessionId)
-                        navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-                    }
-                )
-            }
-
-            composable(ROUTE_SCHEDULE) {
-                val scheduleViewModel: ScheduleViewModel = viewModel(
-                    key = "schedule",
-                    factory = ViewModelFactory { ScheduleViewModel() }
-                )
-                val scheduleItems by scheduleViewModel.filteredSchedules.collectAsState()
-                val activeOnly by scheduleViewModel.activeOnly.collectAsState()
-                ScheduleScreen(
-                    items = scheduleItems,
-                    activeOnly = activeOnly,
-                    onActiveOnlyChange = scheduleViewModel::setActiveOnly,
-                    onToggle = scheduleViewModel::toggleSchedule,
-                    onAdd = scheduleViewModel::addSchedule,
-                    onDelete = scheduleViewModel::deleteSchedule,
-                    onOpenDrawer = { drawerScope.launch { drawerState.open() } }
-                )
-            }
-
-            settingsNavGraph(
-                navController = navController,
-                settingsViewModel = settingsViewModel,
-                settingsState = settingsState,
-                notificationsEnabled = notificationsEnabled,
-                onToggleNotifications = { enabled ->
-                    notificationsEnabled = enabled
-                    if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                },
-                appVersion = appVersion,
-                onOpenDrawer = { drawerScope.launch { drawerState.open() } },
-                onOpenAssistantSettings = onOpenAssistantSettings,
-                onShowDiagnostics = { showDiagnostics = true },
-                preferences = preferences,
-                appPreferences = app.preferences,
-                runtimeRegistry = app.runtimeRegistry,
-                context = context,
-                hasMicrophonePermission = { hasMicrophonePermission() },
-                onRequestWakeWordPermission = {
-                    startWakeWordAfterPermission = true
-                    microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                }
-            )
-
-            workspaceNavGraph(
-                navController = navController,
-                workspaceViewModel = workspaceViewModel,
-                workspaceState = workspaceState,
-                selectedWorkspace = selectedWorkspace,
-                onSelectWorkspace = { selectedWorkspace = it },
-                selectedRuntime = selectedRuntime,
-                app = app,
-                onImportFolder = { workspaceImportLauncher.launch(null) },
-                onShowCloneDialog = { showCloneDialog = true },
-                completeOnboardingAndGoToChat = completeOnboardingAndGoToChat
-            )
-
-            composable(ROUTE_ACTIVITY) {
-                ActivityScreen(
-                    state = activityState,
-                    onRefresh = activityViewModel::refresh,
-                    onInspectSession = { session ->
-                        selectedSession = session
-                        navController.navigate(SESSION_DETAIL_ROUTE)
-                    },
-                    onOpenSession = { id, title ->
-                        app.activityRepository.markSessionRead(id)
-                        pendingSession = id to title
-                        navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-                    },
-                    onPermission = activityViewModel::respondToPermission,
-                    onRenameSession = activityViewModel::renameSession,
-                    onDeleteSession = activityViewModel::deleteSession
-                )
-            }
-
-            composable(SESSION_DETAIL_ROUTE) {
-                val session = selectedSession
-                val runtime = selectedRuntime
-                if (session == null || runtime == null) {
-                    LaunchedEffect(Unit) { navController.popBackStack() }
-                } else {
-                    val detailViewModel: SessionDetailViewModel = viewModel(
-                        key = "session-detail-${runtime.id}-${session.id}",
-                        factory = ViewModelFactory {
-                            SessionDetailViewModel(runtime, session)
-                        }
-                    )
-                    val detailState by detailViewModel.state.collectAsState()
-                    SessionDetailScreen(
-                        state = detailState,
-                        onBack = { navController.popBackStack() },
-                        onRefresh = detailViewModel::refresh,
-                        onContinueChat = {
-                            pendingSession = session.id to session.title
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = currentRoute in DRAWER_ROOT_ROUTES,
+            drawerContent = {
+                ModalDrawerSheet {
+                    AppDrawerContent(
+                        recentSessions = recentSessions,
+                        workspaces = workspaceState.workspaces,
+                        selectedWorkspacePath = chatState.selectedWorkspacePath,
+                        onNewChat = {
+                            closeDrawer()
+                            pendingSession = null
+                            chatViewModel.newSession()
+                            chatViewModel.selectWorkspace(null)
                             navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-                        }
+                        },
+                        onSelectProject = { workspace ->
+                            closeDrawer()
+                            pendingSession = null
+                            chatViewModel.newSession()
+                            chatViewModel.selectWorkspace(workspace.path)
+                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                        },
+                        onOpenSession = { id, title ->
+                            closeDrawer()
+                            app.activityRepository.markSessionRead(id)
+                            pendingSession = id to title
+                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                        },
+                        onNavigate = { route ->
+                            closeDrawer()
+                            if (route == "command-palette") {
+                                showCommandPalette = true
+                            } else if (route == "session-import") {
+                                showSessionImport = true
+                            } else {
+                                navController.navigate(route) { launchSingleTop = true }
+                            }
+                        },
+                        onDeleteSession = { sessionId ->
+                            voiceScope.launch {
+                                runCatching { selectedRuntime?.deleteSession(sessionId) }
+                                app.catalogRepository.refreshSessionsOnly()
+                            }
+                        },
+                        onArchiveSession = { sessionId ->
+                            voiceScope.launch {
+                                runCatching { selectedRuntime?.archiveSession(sessionId) }
+                                app.catalogRepository.refreshSessionsOnly()
+                            }
+                        },
+                        onBatchDelete = { sessionIds ->
+                            voiceScope.launch {
+                                sessionIds.forEach { id ->
+                                    runCatching { selectedRuntime?.deleteSession(id) }
+                                }
+                                app.catalogRepository.refreshSessionsOnly()
+                            }
+                        },
+                        onBatchArchive = { sessionIds ->
+                            voiceScope.launch {
+                                sessionIds.forEach { id ->
+                                    runCatching { selectedRuntime?.archiveSession(id) }
+                                }
+                                app.catalogRepository.refreshSessionsOnly()
+                            }
+                        },
+                        sidebarGrouping = sidebarGrouping,
+                        onGroupingChange = { sidebarGrouping = it },
+                        collapsedSections = collapsedSections,
+                        onToggleSection = { section ->
+                            collapsedSections =
+                                if (section in collapsedSections) {
+                                    collapsedSections - section
+                                } else {
+                                    collapsedSections + section
+                                }
+                        },
                     )
+                }
+            },
+        ) {
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+            ) {
+                composable(ROUTE_ONBOARDING) {
+                    OnboardingChoiceScreen(
+                        onSelectAndroid = { navController.navigate(ROUTE_ANDROID_SETUP) },
+                        onSelectRemote = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
+                        onAddRemoteLater = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
+                    )
+                }
+
+                composable(ROUTE_ANDROID_SETUP) {
+                    val localRuntimeStatus by app.localRuntimeManager.state.collectAsState()
+                    AndroidSetupScreen(
+                        runtimeStatus = localRuntimeStatus,
+                        onStartRuntimeSetup = workspaceViewModel::setupLocalRuntime,
+                        settingsState = settingsState,
+                        onOpenProviderAuth = settingsViewModel::openProviderAuth,
+                        onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,
+                        onProviderAuthInput = settingsViewModel::updateProviderAuthInput,
+                        onProviderApiKey = settingsViewModel::updateProviderApiKey,
+                        onSubmitProviderAuth = settingsViewModel::submitProviderAuth,
+                        onCompleteProviderOAuth = settingsViewModel::completeProviderOAuth,
+                        onDisconnectProvider = settingsViewModel::disconnectProvider,
+                        onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
+                        onRefreshProviderAuth = settingsViewModel::refreshProviderAuth,
+                        onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
+                        onConnectGitHub = { settingsViewModel.beginGitHubDeviceFlow() },
+                        onOpenGitHubVerification = { url ->
+                            context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                        },
+                        onDisconnectGitHub = settingsViewModel::disconnectGitHub,
+                        onBack = { navController.popBackStack() },
+                        onFinish = completeOnboardingAndGoToChat,
+                    )
+                }
+
+                composable(ROUTE_CHAT) {
+                    LaunchedEffect(pendingSession) {
+                        pendingSession?.let { (id, title) ->
+                            chatViewModel.openSession(id, title)
+                            pendingSession = null
+                        }
+                    }
+                    LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id) {
+                        val pending = pendingHandoffPrompt
+                        if (pending != null && selectedRuntime?.id == pending.first) {
+                            chatViewModel.sendMessage(pending.second)
+                            pendingHandoffPrompt = null
+                        }
+                    }
+                    ChatHomeScreen(
+                        state = chatState,
+                        providers = settingsState.providers,
+                        agents = settingsState.agents,
+                        workspaces = workspaceState.workspaces,
+                        selectedProviderId = chatState.selectedProviderId ?: settingsState.providerId,
+                        selectedModelId = chatState.selectedModelId ?: settingsState.modelId,
+                        selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
+                        runtimeTargets = runtimeTargets,
+                        selectedRuntimeId = selectedRuntime?.id,
+                        onSelectRuntime = { id ->
+                            if (id != selectedRuntime?.id) {
+                                if (chatState.messages.isNotEmpty()) {
+                                    onHandoff(id)
+                                } else {
+                                    app.runtimeRegistry.select(id)
+                                }
+                            }
+                        },
+                        onSelectModel = settingsViewModel::selectModel,
+                        onSelectAgent = settingsViewModel::selectAgent,
+                        onSelectWorkspace = chatViewModel::selectWorkspace,
+                        selectedVariant = chatState.selectedVariant,
+                        onSelectVariant = chatViewModel::selectVariant,
+                        onAttach = { attachmentLauncher.launch("*/*") },
+                        onRemoveAttachment = chatViewModel::removeAttachment,
+                        onImageAttachment = { bitmap ->
+                            voiceScope.launch {
+                                runCatching {
+                                    withContext(Dispatchers.IO) {
+                                        com.opencode.android.runtime.local.AttachmentImporter(context).import(bitmap)
+                                    }
+                                }.onSuccess { attachment ->
+                                    chatViewModel.addImageAttachment(attachment, bitmap)
+                                }
+                            }
+                        },
+                        favoriteModelKeys = settingsState.favoriteModelKeys,
+                        recentModelKeys = settingsState.recentModelKeys,
+                        onToggleFavorite = settingsViewModel::toggleFavoriteModel,
+                        onSelectQuestionAnswer = chatViewModel::selectQuestionAnswer,
+                        onSubmitQuestion = chatViewModel::submitQuestion,
+                        autoAcceptPermissions = settingsState.autoAcceptPermissions,
+                        onToggleAutoAccept = settingsViewModel::setAutoAcceptPermissions,
+                        onSendMessage = chatViewModel::sendMessage,
+                        onPermission = chatViewModel::respondToPermission,
+                        onAbort = chatViewModel::abort,
+                        onMic = requestVoiceInput,
+                        onNewChat = {
+                            pendingSession = null
+                            chatViewModel.newSession()
+                        },
+                        onOpenHistory = {
+                            navController.navigate(ROUTE_ACTIVITY) { launchSingleTop = true }
+                        },
+                        onOpenLocalSetup = {
+                            navController.navigate(ROUTE_ANDROID_SETUP) { launchSingleTop = true }
+                        },
+                        onOpenRemoteSetup = {
+                            navController.navigate(ROUTE_REMOTE_CONNECTION) { launchSingleTop = true }
+                        },
+                        onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
+                        onOpenDrawer = {
+                            app.catalogRepository.refreshSessionsOnly()
+                            drawerScope.launch { drawerState.open() }
+                        },
+                        subagents = subagentInfos,
+                        onSubagentClick = { childSessionId ->
+                            val childSession = activityState.sessions.firstOrNull { it.id == childSessionId }
+                            app.activityRepository.markSessionRead(childSessionId)
+                            pendingSession = childSessionId to (childSession?.title ?: childSessionId)
+                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                        },
+                    )
+                }
+
+                composable(ROUTE_SCHEDULE) {
+                    val scheduleViewModel: ScheduleViewModel =
+                        viewModel(
+                            key = "schedule",
+                            factory = ViewModelFactory { ScheduleViewModel() },
+                        )
+                    val scheduleItems by scheduleViewModel.filteredSchedules.collectAsState()
+                    val activeOnly by scheduleViewModel.activeOnly.collectAsState()
+                    ScheduleScreen(
+                        items = scheduleItems,
+                        activeOnly = activeOnly,
+                        onActiveOnlyChange = scheduleViewModel::setActiveOnly,
+                        onToggle = scheduleViewModel::toggleSchedule,
+                        onAdd = scheduleViewModel::addSchedule,
+                        onDelete = scheduleViewModel::deleteSchedule,
+                        onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                    )
+                }
+
+                settingsNavGraph(
+                    navController = navController,
+                    settingsViewModel = settingsViewModel,
+                    settingsState = settingsState,
+                    notificationsEnabled = notificationsEnabled,
+                    onToggleNotifications = { enabled ->
+                        notificationsEnabled = enabled
+                        if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    },
+                    appVersion = appVersion,
+                    onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                    onOpenAssistantSettings = onOpenAssistantSettings,
+                    onShowDiagnostics = { showDiagnostics = true },
+                    preferences = preferences,
+                    appPreferences = app.preferences,
+                    runtimeRegistry = app.runtimeRegistry,
+                    context = context,
+                    hasMicrophonePermission = { hasMicrophonePermission() },
+                    onRequestWakeWordPermission = {
+                        startWakeWordAfterPermission = true
+                        microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    },
+                )
+
+                workspaceNavGraph(
+                    navController = navController,
+                    workspaceViewModel = workspaceViewModel,
+                    workspaceState = workspaceState,
+                    selectedWorkspace = selectedWorkspace,
+                    onSelectWorkspace = { selectedWorkspace = it },
+                    selectedRuntime = selectedRuntime,
+                    app = app,
+                    onImportFolder = { workspaceImportLauncher.launch(null) },
+                    onShowCloneDialog = { showCloneDialog = true },
+                    completeOnboardingAndGoToChat = completeOnboardingAndGoToChat,
+                )
+
+                composable(ROUTE_ACTIVITY) {
+                    ActivityScreen(
+                        state = activityState,
+                        onRefresh = activityViewModel::refresh,
+                        onInspectSession = { session ->
+                            selectedSession = session
+                            navController.navigate(SESSION_DETAIL_ROUTE)
+                        },
+                        onOpenSession = { id, title ->
+                            app.activityRepository.markSessionRead(id)
+                            pendingSession = id to title
+                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                        },
+                        onPermission = activityViewModel::respondToPermission,
+                        onRenameSession = activityViewModel::renameSession,
+                        onDeleteSession = activityViewModel::deleteSession,
+                    )
+                }
+
+                composable(SESSION_DETAIL_ROUTE) {
+                    val session = selectedSession
+                    val runtime = selectedRuntime
+                    if (session == null || runtime == null) {
+                        LaunchedEffect(Unit) { navController.popBackStack() }
+                    } else {
+                        val detailViewModel: SessionDetailViewModel =
+                            viewModel(
+                                key = "session-detail-${runtime.id}-${session.id}",
+                                factory =
+                                    ViewModelFactory {
+                                        SessionDetailViewModel(runtime, session)
+                                    },
+                            )
+                        val detailState by detailViewModel.state.collectAsState()
+                        SessionDetailScreen(
+                            state = detailState,
+                            onBack = { navController.popBackStack() },
+                            onRefresh = detailViewModel::refresh,
+                            onContinueChat = {
+                                pendingSession = session.id to session.title
+                                navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                            },
+                        )
+                    }
                 }
             }
         }
-    }
 
-    if (showCloneDialog) {
-        GithubCloneDialog(
-            githubConfigured = !app.settings.githubToken.isNullOrBlank(),
-            onClone = { url ->
-                val name = url.trim().removeSuffix("/").removeSuffix(".git").substringAfterLast('/')
-                withContext(Dispatchers.IO) { app.gitCloneRepository.clone(url, name) }
-            },
-            onListRepos = { settingsViewModel.listGitHubRepos() },
-            onCloned = { serverPath ->
-                workspaceViewModel.addProject(serverPath)
-                workspaceViewModel.refresh()
-                chatViewModel.newSession()
-                chatViewModel.selectWorkspace(serverPath)
-            },
-            onDismiss = { showCloneDialog = false }
-        )
-    }
+        if (showCloneDialog) {
+            GithubCloneDialog(
+                githubConfigured = !app.settings.githubToken.isNullOrBlank(),
+                onClone = { url ->
+                    val name = url.trim().removeSuffix("/").removeSuffix(".git").substringAfterLast('/')
+                    withContext(Dispatchers.IO) { app.gitCloneRepository.clone(url, name) }
+                },
+                onListRepos = { settingsViewModel.listGitHubRepos() },
+                onCloned = { serverPath ->
+                    workspaceViewModel.addProject(serverPath)
+                    workspaceViewModel.refresh()
+                    chatViewModel.newSession()
+                    chatViewModel.selectWorkspace(serverPath)
+                },
+                onDismiss = { showCloneDialog = false },
+            )
+        }
 
-    if (showCommandPalette) {
-        CommandPaletteSheet(
-            onDismiss = { showCommandPalette = false },
-            onNavigate = { route ->
-                showCommandPalette = false
-                navController.navigate(route) { launchSingleTop = true }
-            },
-            onOpenSession = { id, title ->
-                showCommandPalette = false
-                app.activityRepository.markSessionRead(id)
-                pendingSession = id to title
-                navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
-            },
-            sessions = activityState.sessions.filter { it.parentId == null }.map { it.id to it.title.ifBlank { it.slug ?: it.id } }
-        )
-    }
+        if (showCommandPalette) {
+            CommandPaletteSheet(
+                onDismiss = { showCommandPalette = false },
+                onNavigate = { route ->
+                    showCommandPalette = false
+                    navController.navigate(route) { launchSingleTop = true }
+                },
+                onOpenSession = { id, title ->
+                    showCommandPalette = false
+                    app.activityRepository.markSessionRead(id)
+                    pendingSession = id to title
+                    navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                },
+                sessions = activityState.sessions.filter { it.parentId == null }.map { it.id to it.title.ifBlank { it.slug ?: it.id } },
+            )
+        }
 
-    if (showSessionImport) {
-        SessionImportSheet(
-            onDismiss = { showSessionImport = false },
-            onImport = { _ ->
-                showSessionImport = false
-                navController.navigate(ROUTE_CHAT)
-            }
-        )
-    }
+        if (showSessionImport) {
+            SessionImportSheet(
+                onDismiss = { showSessionImport = false },
+                onImport = { _ ->
+                    showSessionImport = false
+                    navController.navigate(ROUTE_CHAT)
+                },
+            )
+        }
 
-    if (showDiagnostics) {
-        DiagnosticsSheet(
-            onDismiss = { showDiagnostics = false },
-            appVersion = "0.3.0",
-            connectionStatus = "connected",
-            runtimeStatus = "ready"
-        )
-    }
+        if (showDiagnostics) {
+            DiagnosticsSheet(
+                onDismiss = { showDiagnostics = false },
+                appVersion = "0.3.0",
+                connectionStatus = "connected",
+                runtimeStatus = "ready",
+            )
+        }
     }
 }
 
@@ -835,7 +863,7 @@ private fun GithubCloneDialog(
     onClone: suspend (String) -> GitCloneResult,
     onListRepos: suspend () -> List<GitHubRepo>,
     onCloned: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var source by remember { mutableStateOf(if (githubConfigured) CloneSource.REPOS else CloneSource.URL) }
     var url by remember { mutableStateOf("") }
@@ -870,11 +898,16 @@ private fun GithubCloneDialog(
         }
     }
 
-    val filteredRepos = remember(repos, search) {
-        if (search.isBlank()) repos else repos.filter {
-            it.fullName.contains(search, ignoreCase = true)
+    val filteredRepos =
+        remember(repos, search) {
+            if (search.isBlank()) {
+                repos
+            } else {
+                repos.filter {
+                    it.fullName.contains(search, ignoreCase = true)
+                }
+            }
         }
-    }
 
     AlertDialog(
         onDismissRequest = { if (!isCloning) onDismiss() },
@@ -885,19 +918,19 @@ private fun GithubCloneDialog(
                     Text(
                         text = stringResource(R.string.workspace_clone_requires_auth),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = MaterialTheme.colorScheme.tertiary,
                     )
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = source == CloneSource.REPOS,
                             onClick = { source = CloneSource.REPOS },
-                            label = { Text(stringResource(R.string.workspace_clone_my_repos)) }
+                            label = { Text(stringResource(R.string.workspace_clone_my_repos)) },
                         )
                         FilterChip(
                             selected = source == CloneSource.URL,
                             onClick = { source = CloneSource.URL },
-                            label = { Text(stringResource(R.string.workspace_clone_url_tab)) }
+                            label = { Text(stringResource(R.string.workspace_clone_url_tab)) },
                         )
                     }
                 }
@@ -908,28 +941,29 @@ private fun GithubCloneDialog(
                         onValueChange = { search = it },
                         placeholder = { Text(stringResource(R.string.workspace_clone_search)) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     if (isLoadingRepos) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp),
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                             Text(stringResource(R.string.workspace_clone_loading_repos), style = MaterialTheme.typography.bodySmall)
                         }
                     } else {
                         LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 280.dp)
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 280.dp),
                         ) {
                             items(filteredRepos, key = { it.fullName }) { repo ->
                                 RepoRow(
                                     repo = repo,
                                     enabled = !isCloning,
-                                    onClick = { startClone(repo.cloneUrl) }
+                                    onClick = { startClone(repo.cloneUrl) },
                                 )
                             }
                         }
@@ -945,7 +979,7 @@ private fun GithubCloneDialog(
                         placeholder = { Text(stringResource(R.string.workspace_clone_url_placeholder)) },
                         singleLine = true,
                         enabled = !isCloning,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
@@ -953,18 +987,18 @@ private fun GithubCloneDialog(
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 if (isCloning) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Text(
                             stringResource(R.string.workspace_clone_running),
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
@@ -974,7 +1008,7 @@ private fun GithubCloneDialog(
             if (source == CloneSource.URL || !githubConfigured) {
                 Button(
                     enabled = url.isNotBlank() && !isCloning,
-                    onClick = { startClone(url.trim()) }
+                    onClick = { startClone(url.trim()) },
                 ) {
                     Text(stringResource(R.string.workspace_clone_action))
                 }
@@ -984,7 +1018,7 @@ private fun GithubCloneDialog(
             TextButton(onClick = onDismiss, enabled = !isCloning) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }
 
@@ -992,32 +1026,33 @@ private fun GithubCloneDialog(
 private fun RepoRow(
     repo: GitHubRepo,
     enabled: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
                 if (repo.isPrivate) Icons.Default.Lock else Icons.Default.Folder,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 repo.fullName,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }

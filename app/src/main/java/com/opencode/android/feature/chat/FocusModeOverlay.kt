@@ -18,19 +18,20 @@ import androidx.compose.ui.unit.dp
 fun FocusModeOverlay(
     isActive: Boolean,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         SmallFloatingActionButton(
             onClick = onToggle,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(8.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            modifier =
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Icon(
                 imageVector = if (isActive) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                contentDescription = null
+                contentDescription = null,
             )
         }
     }

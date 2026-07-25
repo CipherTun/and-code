@@ -12,7 +12,7 @@ data class WorkspaceTab(
     val type: TabType,
     val title: String,
     val sessionId: String? = null,
-    val filePath: String? = null
+    val filePath: String? = null,
 )
 
 class WorkspaceTabManager {
@@ -24,12 +24,13 @@ class WorkspaceTabManager {
 
     fun addTab(tab: WorkspaceTab) {
         _tabs.update { current ->
-            val trimmed = if (current.size >= MAX_TABS) {
-                val evict = current.firstOrNull { it.id != _selectedTabId.value } ?: current.first()
-                current.filterNot { it.id == evict.id }
-            } else {
-                current
-            }
+            val trimmed =
+                if (current.size >= MAX_TABS) {
+                    val evict = current.firstOrNull { it.id != _selectedTabId.value } ?: current.first()
+                    current.filterNot { it.id == evict.id }
+                } else {
+                    current
+                }
             trimmed + tab
         }
         _selectedTabId.value = tab.id
@@ -52,7 +53,10 @@ class WorkspaceTabManager {
         }
     }
 
-    fun renameTab(tabId: String, newTitle: String) {
+    fun renameTab(
+        tabId: String,
+        newTitle: String,
+    ) {
         _tabs.update { current ->
             current.map { if (it.id == tabId) it.copy(title = newTitle) else it }
         }

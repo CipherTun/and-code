@@ -62,7 +62,7 @@ fun ScheduleScreen(
     onToggle: (String) -> Unit,
     onAdd: (String, String, String, String) -> Unit,
     onDelete: (String) -> Unit,
-    onOpenDrawer: () -> Unit
+    onOpenDrawer: () -> Unit,
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<ScheduleItem?>(null) }
@@ -76,32 +76,33 @@ fun ScheduleScreen(
                         Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu_description))
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                colors =
+                    TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                    ),
             )
 
             Text(
                 text = stringResource(R.string.schedule_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
                     selected = activeOnly,
                     onClick = { onActiveOnlyChange(true) },
-                    label = { Text(stringResource(R.string.filter_active)) }
+                    label = { Text(stringResource(R.string.filter_active)) },
                 )
                 FilterChip(
                     selected = !activeOnly,
                     onClick = { onActiveOnlyChange(false) },
-                    label = { Text(stringResource(R.string.filter_ended)) }
+                    label = { Text(stringResource(R.string.filter_ended)) },
                 )
             }
 
@@ -110,13 +111,13 @@ fun ScheduleScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items, key = { it.id }) { scheduleItem ->
                     ScheduleCard(
                         item = scheduleItem,
                         onToggle = onToggle,
-                        onDelete = { deleteTarget = scheduleItem }
+                        onDelete = { deleteTarget = scheduleItem },
                     )
                 }
                 item { Spacer(Modifier.height(80.dp)) }
@@ -125,14 +126,16 @@ fun ScheduleScreen(
 
         Button(
             onClick = { showCreateDialog = true },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp),
             shape = androidx.compose.foundation.shape.RoundedCornerShape(100.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(6.dp))
@@ -146,7 +149,7 @@ fun ScheduleScreen(
             onCreate = { name, prompt, cron, workspace ->
                 onAdd(name, prompt, cron, workspace)
                 showCreateDialog = false
-            }
+            },
         )
     }
 
@@ -167,7 +170,7 @@ fun ScheduleScreen(
                 TextButton(onClick = { deleteTarget = null }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -176,19 +179,19 @@ fun ScheduleScreen(
 private fun ScheduleCard(
     item: ScheduleItem,
     onToggle: (String) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     SectionCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Surface(
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
             ) {
                 Icon(
                     Icons.Default.CloudSync,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(8.dp),
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -199,12 +202,12 @@ private fun ScheduleCard(
                         Icons.Default.Schedule,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.height(14.dp)
+                        modifier = Modifier.height(14.dp),
                     )
                     Text(
                         text = item.cronExpression,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -212,22 +215,23 @@ private fun ScheduleCard(
                         Icons.Default.Work,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.height(14.dp)
+                        modifier = Modifier.height(14.dp),
                     )
                     Text(
                         text = item.workspaceId,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 item.nextRunAt?.let { nextRun ->
                     Text(
-                        text = stringResource(
-                            R.string.schedule_next_run,
-                            SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(nextRun))
-                        ),
+                        text =
+                            stringResource(
+                                R.string.schedule_next_run,
+                                SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(nextRun)),
+                            ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -238,7 +242,7 @@ private fun ScheduleCard(
                         Icons.Default.Delete,
                         contentDescription = stringResource(R.string.delete_button),
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.height(18.dp)
+                        modifier = Modifier.height(18.dp),
                     )
                 }
             }
@@ -249,7 +253,7 @@ private fun ScheduleCard(
 @Composable
 private fun CreateScheduleDialog(
     onDismiss: () -> Unit,
-    onCreate: (String, String, String, String) -> Unit
+    onCreate: (String, String, String, String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var prompt by remember { mutableStateOf("") }
@@ -266,42 +270,42 @@ private fun CreateScheduleDialog(
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.schedule_name_hint)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = prompt,
                     onValueChange = { prompt = it },
                     label = { Text(stringResource(R.string.schedule_prompt_hint)) },
                     maxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = cronExpression,
                     onValueChange = { cronExpression = it },
                     label = { Text(stringResource(R.string.schedule_cron_hint)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = workspace,
                     onValueChange = { workspace = it },
                     label = { Text(stringResource(R.string.schedule_workspace_hint)) },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onCreate(name, prompt, cronExpression, workspace) },
-                enabled = name.isNotBlank() && prompt.isNotBlank() && cronExpression.isNotBlank()
+                enabled = name.isNotBlank() && prompt.isNotBlank() && cronExpression.isNotBlank(),
             ) {
                 Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        }
+        },
     )
 }
 
@@ -310,30 +314,31 @@ private fun CreateScheduleDialog(
 private fun ScheduleScreenPreview() {
     OpenCodeAndroidTheme {
         ScheduleScreen(
-            items = listOf(
-                ScheduleItem(
-                    name = "デイリー同期",
-                    prompt = "Sync repos",
-                    cronExpression = "0 9 * * *",
-                    workspaceId = "default",
-                    isActive = true,
-                    nextRunAt = System.currentTimeMillis() + 3_600_000
+            items =
+                listOf(
+                    ScheduleItem(
+                        name = "デイリー同期",
+                        prompt = "Sync repos",
+                        cronExpression = "0 9 * * *",
+                        workspaceId = "default",
+                        isActive = true,
+                        nextRunAt = System.currentTimeMillis() + 3_600_000,
+                    ),
+                    ScheduleItem(
+                        name = "レポート生成",
+                        prompt = "Generate report",
+                        cronExpression = "0 8 * * 1",
+                        workspaceId = "reports",
+                        isActive = false,
+                        lastRunAt = System.currentTimeMillis() - 86_400_000,
+                    ),
                 ),
-                ScheduleItem(
-                    name = "レポート生成",
-                    prompt = "Generate report",
-                    cronExpression = "0 8 * * 1",
-                    workspaceId = "reports",
-                    isActive = false,
-                    lastRunAt = System.currentTimeMillis() - 86_400_000
-                )
-            ),
             activeOnly = true,
             onActiveOnlyChange = {},
             onToggle = {},
             onAdd = { _, _, _, _ -> },
             onDelete = {},
-            onOpenDrawer = {}
+            onOpenDrawer = {},
         )
     }
 }

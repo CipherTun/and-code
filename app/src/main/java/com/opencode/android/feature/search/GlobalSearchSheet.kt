@@ -30,7 +30,7 @@ data class SearchResult(
     val sessionId: String,
     val sessionTitle: String,
     val messagePreview: String,
-    val timestamp: String
+    val timestamp: String,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,28 +38,30 @@ data class SearchResult(
 fun GlobalSearchSheet(
     onDismiss: () -> Unit,
     results: List<SearchResult>,
-    onResultClick: (String) -> Unit
+    onResultClick: (String) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
 
-    val filtered = results.filter {
-        query.isBlank() ||
-            it.sessionTitle.contains(query, ignoreCase = true) ||
-            it.messagePreview.contains(query, ignoreCase = true)
-    }
+    val filtered =
+        results.filter {
+            query.isBlank() ||
+                it.sessionTitle.contains(query, ignoreCase = true) ||
+                it.messagePreview.contains(query, ignoreCase = true)
+        }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
         ) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Search") }
+                label = { Text("Search") },
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -69,36 +71,38 @@ fun GlobalSearchSheet(
                 text = "Search across all sessions",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
             )
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(filtered, key = { "${it.sessionId}-${it.timestamp}" }) { result ->
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onResultClick(result.sessionId) }
-                            .padding(vertical = 8.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onResultClick(result.sessionId) }
+                                .padding(vertical = 8.dp),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
                                 text = result.sessionTitle,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                             Text(
                                 text = result.timestamp,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         Text(
@@ -106,11 +110,11 @@ fun GlobalSearchSheet(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
                     )
                 }
                 item { Spacer(Modifier.height(24.dp)) }

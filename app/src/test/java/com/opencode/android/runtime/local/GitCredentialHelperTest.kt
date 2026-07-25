@@ -1,10 +1,9 @@
 package com.opencode.android.runtime.local
 
-import java.io.File
-import kotlin.io.path.createTempDirectory
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.io.path.createTempDirectory
 
 class GitCredentialHelperTest {
     @Test

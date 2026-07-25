@@ -11,5 +11,5 @@ data class SessionEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val providerId: String?,
-    val modelId: String?
+    val modelId: String?,
 )

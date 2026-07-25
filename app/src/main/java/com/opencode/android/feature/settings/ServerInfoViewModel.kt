@@ -23,15 +23,19 @@ data class ServerInfoUiState(
     val error: String? = null,
     val configEditDraft: String? = null,
     val isSaving: Boolean = false,
-    val saveSuccess: Boolean = false
+    val saveSuccess: Boolean = false,
 )
 
 class ServerInfoViewModel(
-    private val registry: RuntimeRegistry
+    private val registry: RuntimeRegistry,
 ) : ViewModel() {
     private val _state = MutableStateFlow(ServerInfoUiState())
     val state: StateFlow<ServerInfoUiState> = _state.asStateFlow()
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
     init {
         refresh()
@@ -55,7 +59,7 @@ class ServerInfoViewModel(
                         configProviders = providers,
                         commands = commands,
                         skills = skills,
-                        isLoading = false
+                        isLoading = false,
                     )
                 }
             }.onFailure { e ->
@@ -90,7 +94,7 @@ class ServerInfoViewModel(
                         configJson = result.toString(),
                         configEditDraft = null,
                         isSaving = false,
-                        saveSuccess = true
+                        saveSuccess = true,
                     )
                 }
             }.onFailure { e ->

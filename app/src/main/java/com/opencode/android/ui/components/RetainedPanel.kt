@@ -11,20 +11,21 @@ import androidx.compose.ui.input.pointer.pointerInput
 fun RetainedPanel(
     visible: Boolean,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .then(
-                if (!visible) {
-                    Modifier
-                        .alpha(0f)
-                        .pointerInput(Unit) {}
-                } else {
-                    Modifier
-                }
-            )
+        modifier =
+            modifier
+                .fillMaxSize()
+                .then(
+                    if (!visible) {
+                        Modifier
+                            .alpha(0f)
+                            .pointerInput(Unit) {}
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         content()
     }

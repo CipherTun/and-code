@@ -22,20 +22,21 @@ import com.opencode.android.ui.theme.LocalThemeColors
 fun ContextWindowRing(
     usageFraction: Float,
     modifier: Modifier = Modifier,
-    size: Int = 24
+    size: Int = 24,
 ) {
     val tc = LocalThemeColors.current
     val clamped = usageFraction.coerceIn(0f, 1f)
     val animated by animateFloatAsState(
         targetValue = clamped,
         animationSpec = tween(600),
-        label = "ring"
+        label = "ring",
     )
-    val color = when {
-        clamped < 0.7f -> tc.success
-        clamped < 0.9f -> tc.warning
-        else -> tc.destructive
-    }
+    val color =
+        when {
+            clamped < 0.7f -> tc.success
+            clamped < 0.9f -> tc.warning
+            else -> tc.destructive
+        }
     val trackColor = tc.border
 
     Box(modifier = modifier.size(size.dp), contentAlignment = Alignment.Center) {
@@ -50,7 +51,7 @@ fun ContextWindowRing(
                 useCenter = false,
                 topLeft = Offset(padding, padding),
                 size = arcSize,
-                style = Stroke(width = stroke, cap = StrokeCap.Round)
+                style = Stroke(width = stroke, cap = StrokeCap.Round),
             )
             if (animated > 0f) {
                 drawArc(
@@ -60,7 +61,7 @@ fun ContextWindowRing(
                     useCenter = false,
                     topLeft = Offset(padding, padding),
                     size = arcSize,
-                    style = Stroke(width = stroke, cap = StrokeCap.Round)
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
                 )
             }
         }
@@ -68,7 +69,7 @@ fun ContextWindowRing(
             Text(
                 text = "${(clamped * 100).toInt()}",
                 fontSize = (size / 3.5).sp,
-                color = color
+                color = color,
             )
         }
     }

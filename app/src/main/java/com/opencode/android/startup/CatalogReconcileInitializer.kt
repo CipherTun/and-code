@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class CatalogReconcileInitializer : Initializer<Unit> {
-
     override fun create(context: Context) {
         val app = context.applicationContext as OpenCodeApplication
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

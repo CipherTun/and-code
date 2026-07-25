@@ -52,12 +52,13 @@ import com.opencode.android.ui.components.StatusChip
 @Composable
 fun McpScreen(
     registry: RuntimeRegistry,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
-    val viewModel: McpViewModel = viewModel(
-        key = "mcp",
-        factory = ViewModelFactory { McpViewModel(registry) }
-    )
+    val viewModel: McpViewModel =
+        viewModel(
+            key = "mcp",
+            factory = ViewModelFactory { McpViewModel(registry) },
+        )
     val state by viewModel.state.collectAsState()
 
     Scaffold(
@@ -73,20 +74,20 @@ fun McpScreen(
                     IconButton(onClick = viewModel::refresh) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = viewModel::showAddDialog) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.mcp_add_server))
             }
-        }
+        },
     ) { padding ->
         if (state.isLoading && state.servers.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 CircularProgressIndicator()
             }
@@ -94,26 +95,26 @@ fun McpScreen(
             Column(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
                     stringResource(R.string.mcp_no_servers),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 8.dp, bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(state.servers, key = { it.name }) { server ->
                     McpServerCard(
                         server = server,
                         onConnect = { viewModel.connect(server.name) },
                         onDisconnect = { viewModel.disconnect(server.name) },
-                        onRemoveAuth = { viewModel.removeAuth(server.name) }
+                        onRemoveAuth = { viewModel.removeAuth(server.name) },
                     )
                 }
             }
@@ -127,7 +128,7 @@ fun McpScreen(
             onCommandChange = viewModel::updateAddCommand,
             onUrlChange = viewModel::updateAddUrl,
             onConfirm = viewModel::addServer,
-            onDismiss = viewModel::dismissAddDialog
+            onDismiss = viewModel::dismissAddDialog,
         )
     }
 
@@ -140,7 +141,7 @@ fun McpScreen(
                 TextButton(onClick = viewModel::clearError) {
                     Text(stringResource(R.string.close_description))
                 }
-            }
+            },
         )
     }
 }
@@ -150,19 +151,19 @@ private fun McpServerCard(
     server: McpServer,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onRemoveAuth: () -> Unit
+    onRemoveAuth: () -> Unit,
 ) {
     val isConnected = server.status == "connected" || server.status == "running"
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        tonalElevation = 1.dp
+        tonalElevation = 1.dp,
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(
                     server.name,
@@ -170,11 +171,11 @@ private fun McpServerCard(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 StatusChip(
                     text = server.status ?: "unknown",
-                    active = isConnected
+                    active = isConnected,
                 )
             }
             server.url?.let {
@@ -190,7 +191,7 @@ private fun McpServerCard(
                 Text(
                     stringResource(R.string.mcp_tools_count, server.tools.size),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             server.error?.let {
@@ -227,7 +228,7 @@ private fun McpAddDialog(
     onCommandChange: (String) -> Unit,
     onUrlChange: (String) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -239,26 +240,26 @@ private fun McpAddDialog(
                     onValueChange = onNameChange,
                     label = { Text(stringResource(R.string.mcp_name_hint)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = state.addCommand,
                     onValueChange = onCommandChange,
                     label = { Text(stringResource(R.string.mcp_command_hint)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 OutlinedTextField(
                     value = state.addUrl,
                     onValueChange = onUrlChange,
                     label = { Text(stringResource(R.string.mcp_url_hint)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
                 Text(
                     stringResource(R.string.mcp_add_help),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
@@ -275,6 +276,6 @@ private fun McpAddDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }

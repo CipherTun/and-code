@@ -58,7 +58,6 @@ import com.opencode.android.R
 import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.core.api.ProviderAuthMethod
 import com.opencode.android.feature.settings.ProviderAuthDialog
-import com.opencode.android.feature.settings.ProviderAuthDialogState
 import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
@@ -86,7 +85,7 @@ fun AndroidSetupScreen(
     onOpenGitHubVerification: (String) -> Unit = {},
     onDisconnectGitHub: () -> Unit = {},
     onBack: () -> Unit,
-    onFinish: () -> Unit
+    onFinish: () -> Unit,
 ) {
     val context = LocalContext.current
     val runtimeReady = runtimeStatus is LocalRuntimeStatus.Ready || runtimeStatus is LocalRuntimeStatus.Stopped
@@ -104,36 +103,45 @@ fun AndroidSetupScreen(
         onRefreshProviderAuth()
     }
 
-    val primaryAction: SetupPrimaryAction? = when (currentStep) {
-        1 -> when (runtimeStatus) {
-            LocalRuntimeStatus.NotInstalled,
-            is LocalRuntimeStatus.Broken -> SetupPrimaryAction(
-                label = stringResource(R.string.setup_this_device_button),
-                enabled = true,
-                onClick = onStartRuntimeSetup
-            )
-            is LocalRuntimeStatus.UnsupportedAbi,
-            is LocalRuntimeStatus.Installing,
-            is LocalRuntimeStatus.Starting,
-            is LocalRuntimeStatus.Updating -> null
-            is LocalRuntimeStatus.Ready,
-            is LocalRuntimeStatus.Stopped -> SetupPrimaryAction(
-                label = stringResource(R.string.setup_next_action),
-                enabled = true,
-                onClick = { currentStep = 2 }
-            )
+    val primaryAction: SetupPrimaryAction? =
+        when (currentStep) {
+            1 ->
+                when (runtimeStatus) {
+                    LocalRuntimeStatus.NotInstalled,
+                    is LocalRuntimeStatus.Broken,
+                    ->
+                        SetupPrimaryAction(
+                            label = stringResource(R.string.setup_this_device_button),
+                            enabled = true,
+                            onClick = onStartRuntimeSetup,
+                        )
+                    is LocalRuntimeStatus.UnsupportedAbi,
+                    is LocalRuntimeStatus.Installing,
+                    is LocalRuntimeStatus.Starting,
+                    is LocalRuntimeStatus.Updating,
+                    -> null
+                    is LocalRuntimeStatus.Ready,
+                    is LocalRuntimeStatus.Stopped,
+                    ->
+                        SetupPrimaryAction(
+                            label = stringResource(R.string.setup_next_action),
+                            enabled = true,
+                            onClick = { currentStep = 2 },
+                        )
+                }
+            2 ->
+                SetupPrimaryAction(
+                    label = stringResource(R.string.setup_next_action),
+                    enabled = true,
+                    onClick = { currentStep = 3 },
+                )
+            else ->
+                SetupPrimaryAction(
+                    label = stringResource(R.string.setup_complete_button),
+                    enabled = true,
+                    onClick = onFinish,
+                )
         }
-        2 -> SetupPrimaryAction(
-            label = stringResource(R.string.setup_next_action),
-            enabled = true,
-            onClick = { currentStep = 3 }
-        )
-        else -> SetupPrimaryAction(
-            label = stringResource(R.string.setup_complete_button),
-            enabled = true,
-            onClick = onFinish
-        )
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -142,26 +150,27 @@ fun AndroidSetupScreen(
                 title = {
                     Text(
                         stringResource(R.string.android_setup_title),
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = {
                             if (currentStep > 1) currentStep -= 1 else onBack()
-                        }
+                        },
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    ),
             )
         },
         bottomBar = {
@@ -169,32 +178,35 @@ fun AndroidSetupScreen(
                 currentStep = currentStep,
                 primaryAction = primaryAction,
                 onSkip = if (currentStep >= 2) onFinish else null,
-                onBackStep = { currentStep -= 1 }
+                onBackStep = { currentStep -= 1 },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             SetupProgress(currentStep = currentStep)
             when (currentStep) {
                 1 -> RuntimeDownloadStep(runtimeStatus)
-                2 -> ProviderConnectionStep(
-                    settingsState = settingsState,
-                    onOpenProviderAuth = onOpenProviderAuth,
-                    onDisconnectProvider = onDisconnectProvider
-                )
-                else -> GitHubConnectionStep(
-                    settingsState = settingsState,
-                    onConnect = onConnectGitHub,
-                    onDisconnect = onDisconnectGitHub,
-                    onOpenVerification = onOpenGitHubVerification
-                )
+                2 ->
+                    ProviderConnectionStep(
+                        settingsState = settingsState,
+                        onOpenProviderAuth = onOpenProviderAuth,
+                        onDisconnectProvider = onDisconnectProvider,
+                    )
+                else ->
+                    GitHubConnectionStep(
+                        settingsState = settingsState,
+                        onConnect = onConnectGitHub,
+                        onDisconnect = onDisconnectGitHub,
+                        onOpenVerification = onOpenGitHubVerification,
+                    )
             }
         }
     }
@@ -212,7 +224,7 @@ fun AndroidSetupScreen(
                     context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
                 }
             },
-            onDismiss = onDismissProviderAuth
+            onDismiss = onDismissProviderAuth,
         )
     }
 }
@@ -222,12 +234,12 @@ private fun GitHubConnectionStep(
     settingsState: SettingsUiState,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
-    onOpenVerification: (String) -> Unit
+    onOpenVerification: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         StepHeader(
             title = stringResource(R.string.github_git_operations),
-            description = stringResource(R.string.setup_github_optional_description)
+            description = stringResource(R.string.setup_github_optional_description),
         )
         Text(settingsState.githubLogin ?: stringResource(R.string.github_not_connected))
         settingsState.githubUserCode?.let { code ->
@@ -239,12 +251,16 @@ private fun GitHubConnectionStep(
         Button(
             onClick = if (settingsState.githubLogin == null) onConnect else onDisconnect,
             enabled = settingsState.githubConfigured && !settingsState.githubPolling,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                if (settingsState.githubPolling) stringResource(R.string.github_waiting_for_authorization)
-                else if (settingsState.githubLogin == null) stringResource(R.string.github_connect)
-                else stringResource(R.string.github_disconnect)
+                if (settingsState.githubPolling) {
+                    stringResource(R.string.github_waiting_for_authorization)
+                } else if (settingsState.githubLogin == null) {
+                    stringResource(R.string.github_connect)
+                } else {
+                    stringResource(R.string.github_disconnect)
+                },
             )
         }
         settingsState.githubVerificationUrl?.let { url ->
@@ -258,7 +274,7 @@ private fun GitHubConnectionStep(
 private data class SetupPrimaryAction(
     val label: String,
     val enabled: Boolean,
-    val onClick: () -> Unit
+    val onClick: () -> Unit,
 )
 
 @Composable
@@ -267,11 +283,11 @@ private fun SetupProgress(currentStep: Int) {
         Text(
             text = stringResource(R.string.setup_step_counter, currentStep, TOTAL_STEPS),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             (1..TOTAL_STEPS).forEach { step ->
                 val completed = step < currentStep
@@ -279,16 +295,18 @@ private fun SetupProgress(currentStep: Int) {
                 Surface(
                     modifier = Modifier.size(30.dp),
                     shape = CircleShape,
-                    color = when {
-                        active -> MaterialTheme.colorScheme.primary
-                        completed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                        else -> MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    contentColor = when {
-                        active -> MaterialTheme.colorScheme.onPrimary
-                        completed -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+                    color =
+                        when {
+                            active -> MaterialTheme.colorScheme.primary
+                            completed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        },
+                    contentColor =
+                        when {
+                            active -> MaterialTheme.colorScheme.onPrimary
+                            completed -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (completed) {
@@ -300,18 +318,20 @@ private fun SetupProgress(currentStep: Int) {
                 }
                 if (step < TOTAL_STEPS) {
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 6.dp)
-                            .height(1.dp)
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 6.dp)
+                                .height(1.dp),
                     ) {
                         Surface(
                             modifier = Modifier.fillMaxSize(),
-                            color = if (step < currentStep) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
-                            } else {
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
-                            }
+                            color =
+                                if (step < currentStep) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                                } else {
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+                                },
                         ) {}
                     }
                 }
@@ -321,17 +341,20 @@ private fun SetupProgress(currentStep: Int) {
 }
 
 @Composable
-private fun StepHeader(title: String, description: String) {
+private fun StepHeader(
+    title: String,
+    description: String,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -341,23 +364,23 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
             title = stringResource(R.string.setup_step_download),
-            description = stringResource(R.string.setup_download_description)
+            description = stringResource(R.string.setup_download_description),
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 when (runtimeStatus) {
                     LocalRuntimeStatus.NotInstalled -> {
                         Text(
                             stringResource(R.string.setup_runtime_not_installed),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     is LocalRuntimeStatus.Installing -> {
@@ -365,12 +388,12 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
                         if (runtimeStatus.progress != null) {
                             LinearProgressIndicator(
                                 progress = { runtimeStatus.progress.coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
                             Text(
                                 text = "${(runtimeStatus.progress * 100).toInt()}%",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -384,7 +407,7 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
                         Text(runtimeStatus.step)
                         LinearProgressIndicator(
                             progress = { runtimeStatus.progress?.coerceIn(0f, 1f) ?: 0f },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     is LocalRuntimeStatus.Ready -> ReadyRuntimeRow(runtimeStatus.version)
@@ -394,7 +417,7 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
                             Icon(
                                 Icons.Default.Error,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error,
                             )
                             Text(runtimeStatus.reason, color = MaterialTheme.colorScheme.error)
                         }
@@ -402,7 +425,7 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
                     is LocalRuntimeStatus.UnsupportedAbi -> {
                         Text(
                             stringResource(R.string.unsupported_abi, runtimeStatus.abi),
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
@@ -415,7 +438,7 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
 private fun ReadyRuntimeRow(version: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Column {
@@ -423,7 +446,7 @@ private fun ReadyRuntimeRow(version: String) {
             Text(
                 text = "OpenCode $version",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -433,29 +456,30 @@ private fun ReadyRuntimeRow(version: String) {
 private fun ProviderConnectionStep(
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
-    onDisconnectProvider: (String) -> Unit
+    onDisconnectProvider: (String) -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
             title = stringResource(R.string.setup_step_provider),
-            description = stringResource(R.string.setup_provider_optional_description)
+            description = stringResource(R.string.setup_provider_optional_description),
         )
 
         if (settingsState.availableProviders.isEmpty()) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 Text(
                     stringResource(R.string.setup_provider_loading),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
@@ -473,23 +497,24 @@ private fun ProviderConnectionStep(
                         }
                     }
                 },
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(14.dp),
             )
 
-            val filtered = settingsState.availableProviders
-                .sortedBy { it.name.lowercase() }
-                .filter { provider ->
-                    searchQuery.isBlank() ||
-                        provider.name.contains(searchQuery, ignoreCase = true) ||
-                        provider.id.contains(searchQuery, ignoreCase = true)
-                }
+            val filtered =
+                settingsState.availableProviders
+                    .sortedBy { it.name.lowercase() }
+                    .filter { provider ->
+                        searchQuery.isBlank() ||
+                            provider.name.contains(searchQuery, ignoreCase = true) ||
+                            provider.id.contains(searchQuery, ignoreCase = true)
+                    }
 
             if (filtered.isEmpty()) {
                 Text(
                     stringResource(R.string.setup_provider_no_results),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 8.dp),
                 )
             } else {
                 filtered.forEach { provider ->
@@ -498,14 +523,15 @@ private fun ProviderConnectionStep(
 
                     ProviderConnectionRow(
                         providerName = provider.name,
-                        methodSummary = if (methods.isNotEmpty()) {
-                            methods.joinToString(" · ") { it.label }
-                        } else {
-                            stringResource(R.string.setup_provider_api_key_only)
-                        },
+                        methodSummary =
+                            if (methods.isNotEmpty()) {
+                                methods.joinToString(" · ") { it.label }
+                            } else {
+                                stringResource(R.string.setup_provider_api_key_only)
+                            },
                         connected = connected,
                         onConnect = { onOpenProviderAuth(provider.id) },
-                        onDisconnect = { onDisconnectProvider(provider.id) }
+                        onDisconnect = { onDisconnectProvider(provider.id) },
                     )
                 }
             }
@@ -515,14 +541,14 @@ private fun ProviderConnectionStep(
             Text(
                 text = stringResource(R.string.provider_connected_success),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
         }
         settingsState.oauthMessage?.let { message ->
             Text(
                 message,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }
@@ -534,38 +560,38 @@ private fun ProviderConnectionRow(
     methodSummary: String,
     connected: Boolean,
     onConnect: () -> Unit,
-    onDisconnect: () -> Unit
+    onDisconnect: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = providerName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 if (connected) {
                     Surface(
                         shape = RoundedCornerShape(100.dp),
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                        contentColor = MaterialTheme.colorScheme.primary
+                        contentColor = MaterialTheme.colorScheme.primary,
                     ) {
                         Text(
                             text = stringResource(R.string.provider_connected),
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     }
                 }
@@ -573,7 +599,7 @@ private fun ProviderConnectionRow(
             Text(
                 text = methodSummary,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (connected) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -598,25 +624,27 @@ private fun SetupBottomBar(
     currentStep: Int,
     primaryAction: SetupPrimaryAction?,
     onSkip: (() -> Unit)?,
-    onBackStep: () -> Unit
+    onBackStep: () -> Unit,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-        )
+        border =
+            BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (currentStep > 1) {
                 OutlinedButton(
                     onClick = onBackStep,
-                    modifier = Modifier.width(96.dp)
+                    modifier = Modifier.width(96.dp),
                 ) {
                     Text(stringResource(R.string.setup_back_action))
                 }
@@ -630,7 +658,7 @@ private fun SetupBottomBar(
                 Button(
                     onClick = primaryAction.onClick,
                     enabled = primaryAction.enabled,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(primaryAction.label, textAlign = TextAlign.Center)
                 }
@@ -660,7 +688,7 @@ private fun AndroidSetupScreenPreview() {
             onRefreshProviderAuth = {},
             onRefreshCatalog = {},
             onBack = {},
-            onFinish = {}
+            onFinish = {},
         )
     }
 }
@@ -672,26 +700,32 @@ private fun AndroidSetupProviderStepPreview() {
         AndroidSetupScreen(
             runtimeStatus = LocalRuntimeStatus.Ready("1.0.0", 4097),
             onStartRuntimeSetup = {},
-            settingsState = SettingsUiState(
-                availableProviders = listOf(
-                    OpenCodeProvider(id = "openai", name = "OpenAI"),
-                    OpenCodeProvider(id = "anthropic", name = "Anthropic"),
-                    OpenCodeProvider(id = "ollama", name = "Ollama")
+            settingsState =
+                SettingsUiState(
+                    availableProviders =
+                        listOf(
+                            OpenCodeProvider(id = "openai", name = "OpenAI"),
+                            OpenCodeProvider(id = "anthropic", name = "Anthropic"),
+                            OpenCodeProvider(id = "ollama", name = "Ollama"),
+                        ),
+                    providerAuthMethods =
+                        mapOf(
+                            "openai" to
+                                listOf(
+                                    ProviderAuthMethod(type = "oauth", label = "ChatGPT Plus/Pro"),
+                                    ProviderAuthMethod(type = "api", label = "API key"),
+                                ),
+                            "anthropic" to
+                                listOf(
+                                    ProviderAuthMethod(type = "api", label = "API key"),
+                                ),
+                            "ollama" to
+                                listOf(
+                                    ProviderAuthMethod(type = "api", label = "No key needed"),
+                                ),
+                        ),
+                    connectedProviderIds = setOf("ollama"),
                 ),
-                providerAuthMethods = mapOf(
-                    "openai" to listOf(
-                        ProviderAuthMethod(type = "oauth", label = "ChatGPT Plus/Pro"),
-                        ProviderAuthMethod(type = "api", label = "API key")
-                    ),
-                    "anthropic" to listOf(
-                        ProviderAuthMethod(type = "api", label = "API key")
-                    ),
-                    "ollama" to listOf(
-                        ProviderAuthMethod(type = "api", label = "No key needed")
-                    )
-                ),
-                connectedProviderIds = setOf("ollama")
-            ),
             onOpenProviderAuth = {},
             onSelectProviderAuthMethod = {},
             onProviderAuthInput = { _, _ -> },
@@ -703,7 +737,7 @@ private fun AndroidSetupProviderStepPreview() {
             onRefreshProviderAuth = {},
             onRefreshCatalog = {},
             onBack = {},
-            onFinish = {}
+            onFinish = {},
         )
     }
 }

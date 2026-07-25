@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Refresh
@@ -46,17 +45,17 @@ fun HomeScreen(
     onOpenWorkspaces: () -> Unit,
     onOpenActivity: () -> Unit,
     onOpenSession: (String, String) -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 OpenCodeBrand(modifier = Modifier.weight(1f))
                 IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
@@ -70,32 +69,40 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Icon(
-                        imageVector = when (state.runtimeType) {
-                            RuntimeType.LOCAL -> Icons.Default.Android
-                            RuntimeType.REMOTE -> Icons.Default.Computer
-                            null -> Icons.Default.Computer
-                        },
+                        imageVector =
+                            when (state.runtimeType) {
+                                RuntimeType.LOCAL -> Icons.Default.Android
+                                RuntimeType.REMOTE -> Icons.Default.Computer
+                                null -> Icons.Default.Computer
+                            },
                         contentDescription = null,
-                        tint = if (state.connected) OpenCodeSuccess else MaterialTheme.colorScheme.primary
+                        tint = if (state.connected) OpenCodeSuccess else MaterialTheme.colorScheme.primary,
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = state.runtimeName.ifBlank { stringResource(R.string.select_a_runtime) },
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             text = runtimeDescription(state),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     StatusChip(
-                        text = if (state.connected) stringResource(R.string.connected_label) else stringResource(R.string.disconnected_label),
-                        active = state.connected
+                        text =
+                            if (state.connected) {
+                                stringResource(
+                                    R.string.connected_label,
+                                )
+                            } else {
+                                stringResource(R.string.disconnected_label)
+                            },
+                        active = state.connected,
                     )
                 }
             }
@@ -104,12 +111,12 @@ fun HomeScreen(
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Button(
                     onClick = onNewChat,
                     modifier = Modifier.weight(1f),
-                    enabled = state.runtimeId != null
+                    enabled = state.runtimeId != null,
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null)
                     Spacer(Modifier.padding(horizontal = 4.dp))
@@ -117,7 +124,7 @@ fun HomeScreen(
                 }
                 FilledTonalButton(
                     onClick = onOpenWorkspaces,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.Folder, contentDescription = null)
                     Spacer(Modifier.padding(horizontal = 4.dp))
@@ -127,12 +134,19 @@ fun HomeScreen(
         }
 
         item {
-            Text(stringResource(R.string.current_configuration), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.current_configuration),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
 
         item {
             SectionCard {
-                ConfigurationRow(stringResource(R.string.workspace_folder_label), state.workspace?.path ?: stringResource(R.string.not_selected))
+                ConfigurationRow(
+                    stringResource(R.string.workspace_folder_label),
+                    state.workspace?.path ?: stringResource(R.string.not_selected),
+                )
                 Spacer(Modifier.height(12.dp))
                 ConfigurationRow(stringResource(R.string.model), state.modelId ?: stringResource(R.string.opencode_default_value))
                 Spacer(Modifier.height(12.dp))
@@ -144,7 +158,7 @@ fun HomeScreen(
                     Text(
                         text = state.providerId ?: stringResource(R.string.no_ai_service_selected),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -153,7 +167,11 @@ fun HomeScreen(
         state.error?.let { error ->
             item {
                 SectionCard {
-                    Text(stringResource(R.string.connection_or_fetch_failed), fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        stringResource(R.string.connection_or_fetch_failed),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                     Spacer(Modifier.height(6.dp))
                     Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -163,13 +181,13 @@ fun HomeScreen(
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.recent_sessions),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 androidx.compose.material3.TextButton(onClick = onOpenActivity) {
                     Text(stringResource(R.string.view_all))
@@ -186,11 +204,11 @@ fun HomeScreen(
         } else {
             items(state.sessions.take(4), key = { it.id }) { session ->
                 SectionCard(
-                    modifier = Modifier.clickable { onOpenSession(session.id, session.title) }
+                    modifier = Modifier.clickable { onOpenSession(session.id, session.title) },
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Column(modifier = Modifier.weight(1f)) {
@@ -199,7 +217,7 @@ fun HomeScreen(
                                 session.directory.orEmpty(),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
+                                maxLines = 1,
                             )
                         }
                     }
@@ -210,7 +228,10 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ConfigurationRow(label: String, value: String) {
+private fun ConfigurationRow(
+    label: String,
+    value: String,
+) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Text(label, modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, fontWeight = FontWeight.Medium, maxLines = 1)
@@ -218,11 +239,12 @@ private fun ConfigurationRow(label: String, value: String) {
 }
 
 @Composable
-private fun runtimeDescription(state: HomeUiState): String = when {
-    state.connected -> stringResource(R.string.capability_version, state.version.orEmpty())
-    state.isRefreshing -> stringResource(R.string.checking_connection_status)
-    state.runtimeState is RuntimeState.Unavailable -> state.runtimeState.reason
-    state.runtimeState is RuntimeState.Failed -> state.runtimeState.message
-    state.runtimeId == null -> stringResource(R.string.choose_local_or_pc_runtime)
-    else -> stringResource(R.string.not_connected_to_opencode)
-}
+private fun runtimeDescription(state: HomeUiState): String =
+    when {
+        state.connected -> stringResource(R.string.capability_version, state.version.orEmpty())
+        state.isRefreshing -> stringResource(R.string.checking_connection_status)
+        state.runtimeState is RuntimeState.Unavailable -> state.runtimeState.reason
+        state.runtimeState is RuntimeState.Failed -> state.runtimeState.message
+        state.runtimeId == null -> stringResource(R.string.choose_local_or_pc_runtime)
+        else -> stringResource(R.string.not_connected_to_opencode)
+    }

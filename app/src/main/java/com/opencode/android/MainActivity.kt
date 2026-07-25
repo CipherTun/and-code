@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
             OpenCodeApp(
                 onOpenAssistantSettings = ::openAssistantSettings,
                 targetSessionId = targetSessionId,
-                deepLinkConnectionUrl = deepLinkConnectionUrl
+                deepLinkConnectionUrl = deepLinkConnectionUrl,
             )
         }
     }
@@ -45,43 +45,46 @@ class MainActivity : ComponentActivity() {
                 val host = uri.getQueryParameter("host").orEmpty()
                 val port = uri.getQueryParameter("port").orEmpty()
                 val token = uri.getQueryParameter("token").orEmpty()
-                val url = buildString {
-                    append("https://")
-                    append(host)
-                    if (port.isNotBlank()) append(":").append(port)
-                    if (token.isNotBlank()) append("?token=").append(Uri.encode(token))
-                }
+                val url =
+                    buildString {
+                        append("https://")
+                        append(host)
+                        if (port.isNotBlank()) append(":").append(port)
+                        if (token.isNotBlank()) append("?token=").append(Uri.encode(token))
+                    }
                 deepLinkConnectionUrl = url
             }
         }
     }
 
     private fun openAssistantSettings() {
-        val roleOpened = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java)
-            if (roleManager?.isRoleAvailable(RoleManager.ROLE_ASSISTANT) == true) {
-                runCatching {
-                    startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
-                    true
-                }.getOrDefault(false)
+        val roleOpened =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val roleManager = getSystemService(RoleManager::class.java)
+                if (roleManager?.isRoleAvailable(RoleManager.ROLE_ASSISTANT) == true) {
+                    runCatching {
+                        startActivity(roleManager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
+                        true
+                    }.getOrDefault(false)
+                } else {
+                    false
+                }
             } else {
                 false
             }
-        } else {
-            false
-        }
 
         if (roleOpened) return
 
-        val opened = listOf(
-            Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
-            Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
-        ).any { intent ->
-            runCatching {
-                startActivity(intent)
-                true
-            }.getOrDefault(false)
-        }
+        val opened =
+            listOf(
+                Intent(Settings.ACTION_VOICE_INPUT_SETTINGS),
+                Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS),
+            ).any { intent ->
+                runCatching {
+                    startActivity(intent)
+                    true
+                }.getOrDefault(false)
+            }
 
         if (!opened) {
             Toast.makeText(this, R.string.could_not_open_settings, Toast.LENGTH_SHORT).show()

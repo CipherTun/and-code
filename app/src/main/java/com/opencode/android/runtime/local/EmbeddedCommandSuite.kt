@@ -7,7 +7,7 @@ import java.io.File
 class EmbeddedCommandSuite(
     private val context: Context,
     private val runtimeDirectory: File,
-    private val abi: String
+    private val abi: String,
 ) {
     data class Paths(
         val home: File,
@@ -15,16 +15,17 @@ class EmbeddedCommandSuite(
         val nativeLibraryDirectory: File,
         val proot: File,
         val loader: File,
-        val loader32: File
+        val loader32: File,
     ) {
-        fun environment(): Map<String, String> = mapOf(
-            "HOME" to home.absolutePath,
-            "TMPDIR" to tmp.absolutePath,
-            "PATH" to "/system/bin:/system/xbin",
-            "LD_LIBRARY_PATH" to nativeLibraryDirectory.absolutePath,
-            "PROOT_LOADER" to loader.absolutePath,
-            "PROOT_LOADER_32" to loader32.absolutePath
-        )
+        fun environment(): Map<String, String> =
+            mapOf(
+                "HOME" to home.absolutePath,
+                "TMPDIR" to tmp.absolutePath,
+                "PATH" to "/system/bin:/system/xbin",
+                "LD_LIBRARY_PATH" to nativeLibraryDirectory.absolutePath,
+                "PROOT_LOADER" to loader.absolutePath,
+                "PROOT_LOADER_32" to loader32.absolutePath,
+            )
     }
 
     fun ensureInstalled(): Paths {

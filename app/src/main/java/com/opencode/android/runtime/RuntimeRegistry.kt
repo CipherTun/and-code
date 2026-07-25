@@ -11,7 +11,7 @@ class RuntimeRegistry(
     private val localTarget: RuntimeTarget,
     private val remoteFactory: (ConnectionProfile) -> RuntimeTarget = { profile ->
         RemoteRuntimeTarget(profile)
-    }
+    },
 ) {
     private val mutableTargets = MutableStateFlow(buildTargets())
     val targets: StateFlow<List<RuntimeTarget>> = mutableTargets.asStateFlow()
@@ -58,10 +58,11 @@ class RuntimeRegistry(
         mutableSelected.value = resolveSelected(mutableTargets.value)
     }
 
-    private fun buildTargets(): List<RuntimeTarget> = buildList {
-        add(localTarget)
-        addAll(store.connections().map(remoteFactory))
-    }
+    private fun buildTargets(): List<RuntimeTarget> =
+        buildList {
+            add(localTarget)
+            addAll(store.connections().map(remoteFactory))
+        }
 
     private fun rebuildTargets() {
         mutableTargets.value = buildTargets()

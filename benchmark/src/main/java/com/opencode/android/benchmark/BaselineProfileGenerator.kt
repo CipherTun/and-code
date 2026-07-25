@@ -14,15 +14,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @LargeTest
 class BaselineProfileGenerator {
-
     @get:Rule
     val rule = BaselineProfileRule()
 
     @Test
     fun generate() {
         rule.collect(
-            packageName = InstrumentationRegistry.getArguments().getString("targetAppId")
-                ?: "com.opencode.android",
+            packageName =
+                InstrumentationRegistry.getArguments().getString("targetAppId")
+                    ?: "com.opencode.android",
             includeInStartupProfile = true,
         ) {
             pressHome()

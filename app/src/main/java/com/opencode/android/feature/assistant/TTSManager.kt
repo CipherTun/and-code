@@ -19,7 +19,6 @@ private const val TAG = "TTSManager"
  * テキスト読み上げ（TTS）マネージャー
  */
 class TTSManager(context: Context) {
-
     private val appContext = context.applicationContext
     private var tts: TextToSpeech? = null
     private var isInitialized = false
@@ -29,148 +28,160 @@ class TTSManager(context: Context) {
         Log.e(TAG, "Initializing TTS...")
         // Try with explicit engine package name
         val engine = "com.google.android.tts"
-        tts = TextToSpeech(context.applicationContext, { status ->
-            Log.e(TAG, "TTS init callback, status=$status (SUCCESS=${TextToSpeech.SUCCESS})")
-            if (status == TextToSpeech.SUCCESS) {
-                isInitialized = true
-                // 日本語を優先、なければデフォルト
-                val result = tts?.setLanguage(Locale.JAPANESE)
-                Log.e(TAG, "setLanguage result=$result")
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    tts?.setLanguage(Locale.getDefault())
+        tts =
+            TextToSpeech(context.applicationContext, { status ->
+                Log.e(TAG, "TTS init callback, status=$status (SUCCESS=${TextToSpeech.SUCCESS})")
+                if (status == TextToSpeech.SUCCESS) {
+                    isInitialized = true
+                    // 日本語を優先、なければデフォルト
+                    val result = tts?.setLanguage(Locale.JAPANESE)
+                    Log.e(TAG, "setLanguage result=$result")
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        tts?.setLanguage(Locale.getDefault())
+                    }
+                    // 読み上げ速度調整
+                    tts?.setSpeechRate(1.0f)
+                    tts?.setPitch(1.0f)
+
+                    // 初期化待ちの発話があれば実行
+                    pendingSpeak?.invoke()
+                    pendingSpeak = null
+                } else {
+                    Log.e(TAG, "TTS init FAILED with status=$status, trying without engine...")
+                    // Retry without specifying engine
+                    tryInitWithoutEngine(context.applicationContext)
                 }
-                // 読み上げ速度調整
-                tts?.setSpeechRate(1.0f)
-                tts?.setPitch(1.0f)
-                
-                // 初期化待ちの発話があれば実行
-                pendingSpeak?.invoke()
-                pendingSpeak = null
-            } else {
-                Log.e(TAG, "TTS init FAILED with status=$status, trying without engine...")
-                // Retry without specifying engine
-                tryInitWithoutEngine(context.applicationContext)
-            }
-        }, engine)
+            }, engine)
     }
 
     private fun tryInitWithoutEngine(context: Context) {
-        tts = TextToSpeech(context) { status ->
-            Log.e(TAG, "TTS retry init callback, status=$status")
-            if (status == TextToSpeech.SUCCESS) {
-                isInitialized = true
-                val result = tts?.setLanguage(Locale.JAPANESE)
-                Log.e(TAG, "setLanguage result=$result")
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    tts?.setLanguage(Locale.getDefault())
+        tts =
+            TextToSpeech(context) { status ->
+                Log.e(TAG, "TTS retry init callback, status=$status")
+                if (status == TextToSpeech.SUCCESS) {
+                    isInitialized = true
+                    val result = tts?.setLanguage(Locale.JAPANESE)
+                    Log.e(TAG, "setLanguage result=$result")
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        tts?.setLanguage(Locale.getDefault())
+                    }
+                    tts?.setSpeechRate(1.0f)
+                    tts?.setPitch(1.0f)
+                    pendingSpeak?.invoke()
+                    pendingSpeak = null
+                } else {
+                    Log.e(TAG, "TTS retry also FAILED with status=$status")
                 }
-                tts?.setSpeechRate(1.0f)
-                tts?.setPitch(1.0f)
-                pendingSpeak?.invoke()
-                pendingSpeak = null
-            } else {
-                Log.e(TAG, "TTS retry also FAILED with status=$status")
             }
-        }
     }
 
     /**
      * テキストを読み上げ（suspend版）
      */
-    suspend fun speak(text: String): Boolean = suspendCancellableCoroutine { continuation ->
-        val utteranceId = UUID.randomUUID().toString()
+    suspend fun speak(text: String): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            val utteranceId = UUID.randomUUID().toString()
 
-        val listener = object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {}
+            val listener =
+                object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
 
-            override fun onDone(utteranceId: String?) {
-                if (continuation.isActive) {
-                    continuation.resume(true)
+                    override fun onDone(utteranceId: String?) {
+                        if (continuation.isActive) {
+                            continuation.resume(true)
+                        }
+                    }
+
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) {
+                        if (continuation.isActive) {
+                            continuation.resume(false)
+                        }
+                    }
+
+                    override fun onError(
+                        utteranceId: String?,
+                        errorCode: Int,
+                    ) {
+                        if (continuation.isActive) {
+                            continuation.resume(false)
+                        }
+                    }
                 }
-            }
 
-            @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) {
-                if (continuation.isActive) {
-                    continuation.resume(false)
-                }
-            }
-
-            override fun onError(utteranceId: String?, errorCode: Int) {
-                if (continuation.isActive) {
-                    continuation.resume(false)
-                }
-            }
-        }
-
-        if (isInitialized) {
-            tts?.setOnUtteranceProgressListener(listener)
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-        } else {
-            // 初期化待ち - Listenerを保持してpendingSpeakで使用
-            pendingSpeak = {
+            if (isInitialized) {
                 tts?.setOnUtteranceProgressListener(listener)
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-            }
-            // 初期化タイムアウト処理（3秒待っても初期化されなければfalseを返す）
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                if (continuation.isActive && !isInitialized) {
-                    pendingSpeak = null
-                    continuation.resume(false)
+            } else {
+                // 初期化待ち - Listenerを保持してpendingSpeakで使用
+                pendingSpeak = {
+                    tts?.setOnUtteranceProgressListener(listener)
+                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
                 }
-            }, 3000)
-        }
+                // 初期化タイムアウト処理（3秒待っても初期化されなければfalseを返す）
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    if (continuation.isActive && !isInitialized) {
+                        pendingSpeak = null
+                        continuation.resume(false)
+                    }
+                }, 3000)
+            }
 
-        continuation.invokeOnCancellation {
-            pendingSpeak = null
-            stop()
+            continuation.invokeOnCancellation {
+                pendingSpeak = null
+                stop()
+            }
         }
-    }
 
     /**
      * テキストを読み上げ（Flow版 - 進捗通知あり）
      */
-    fun speakWithProgress(text: String): Flow<TTSState> = callbackFlow {
-        val utteranceId = UUID.randomUUID().toString()
+    fun speakWithProgress(text: String): Flow<TTSState> =
+        callbackFlow {
+            val utteranceId = UUID.randomUUID().toString()
 
-        val listener = object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
-                trySend(TTSState.Speaking)
-            }
+            val listener =
+                object : UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {
+                        trySend(TTSState.Speaking)
+                    }
 
-            override fun onDone(utteranceId: String?) {
-                trySend(TTSState.Done)
-                close()
-            }
+                    override fun onDone(utteranceId: String?) {
+                        trySend(TTSState.Done)
+                        close()
+                    }
 
-            @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) {
-                trySend(TTSState.Error(appContext.getString(R.string.tts_error)))
-                close()
-            }
+                    @Deprecated("Deprecated in Java")
+                    override fun onError(utteranceId: String?) {
+                        trySend(TTSState.Error(appContext.getString(R.string.tts_error)))
+                        close()
+                    }
 
-            override fun onError(utteranceId: String?, errorCode: Int) {
-                trySend(TTSState.Error(appContext.getString(R.string.tts_error_code, errorCode)))
-                close()
-            }
-        }
+                    override fun onError(
+                        utteranceId: String?,
+                        errorCode: Int,
+                    ) {
+                        trySend(TTSState.Error(appContext.getString(R.string.tts_error_code, errorCode)))
+                        close()
+                    }
+                }
 
-        if (isInitialized) {
-            tts?.setOnUtteranceProgressListener(listener)
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
-            trySend(TTSState.Preparing)
-        } else {
-            trySend(TTSState.Preparing)
-            pendingSpeak = {
+            if (isInitialized) {
                 tts?.setOnUtteranceProgressListener(listener)
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                trySend(TTSState.Preparing)
+            } else {
+                trySend(TTSState.Preparing)
+                pendingSpeak = {
+                    tts?.setOnUtteranceProgressListener(listener)
+                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId)
+                }
+            }
+
+            awaitClose {
+                stop()
             }
         }
-
-        awaitClose {
-            stop()
-        }
-    }
 
     /**
      * キューに追加して読み上げ
@@ -210,7 +221,10 @@ class TTSManager(context: Context) {
  */
 sealed class TTSState {
     object Preparing : TTSState()
+
     object Speaking : TTSState()
+
     object Done : TTSState()
+
     data class Error(val message: String) : TTSState()
 }

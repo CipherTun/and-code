@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -41,7 +40,7 @@ data class WorkspaceScript(val name: String, val command: String)
 fun WorkspaceScriptsSheet(
     onDismiss: () -> Unit,
     scripts: List<WorkspaceScript>,
-    onRunScript: (WorkspaceScript) -> Unit
+    onRunScript: (WorkspaceScript) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showAddForm by remember { mutableStateOf(false) }
@@ -50,30 +49,31 @@ fun WorkspaceScriptsSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
         ) {
             Text(
                 "Scripts",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(12.dp))
 
             if (scripts.isEmpty() && !showAddForm) {
                 Text(
                     "No scripts configured",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(scripts, key = { it.name }) { script ->
                         SectionCard(modifier = Modifier.clickable { onRunScript(script) }) {
@@ -85,7 +85,7 @@ fun WorkspaceScriptsSheet(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -102,18 +102,18 @@ fun WorkspaceScriptsSheet(
                         onValueChange = { newName = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Name") },
-                        singleLine = true
+                        singleLine = true,
                     )
                     OutlinedTextField(
                         value = newCommand,
                         onValueChange = { newCommand = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Command") },
-                        singleLine = true
+                        singleLine = true,
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Button(
                             onClick = {
@@ -125,13 +125,13 @@ fun WorkspaceScriptsSheet(
                                 }
                             },
                             enabled = newName.isNotBlank() && newCommand.isNotBlank(),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) {
                             Text("Save")
                         }
                         OutlinedButton(
                             onClick = { showAddForm = false },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         ) {
                             Text("Cancel")
                         }
@@ -140,7 +140,7 @@ fun WorkspaceScriptsSheet(
             } else {
                 OutlinedButton(
                     onClick = { showAddForm = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.height(4.dp))

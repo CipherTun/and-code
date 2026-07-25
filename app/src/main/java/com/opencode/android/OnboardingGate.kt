@@ -12,7 +12,7 @@ import com.opencode.android.runtime.LocalRuntimeStatus
  */
 internal fun hasUsableRuntimeSetup(
     localRuntimeStatus: LocalRuntimeStatus,
-    hasRemoteConnection: Boolean
+    hasRemoteConnection: Boolean,
 ): Boolean {
     if (hasRemoteConnection) return true
 
@@ -20,10 +20,12 @@ internal fun hasUsableRuntimeSetup(
         is LocalRuntimeStatus.Stopped,
         is LocalRuntimeStatus.Starting,
         is LocalRuntimeStatus.Updating,
-        is LocalRuntimeStatus.Ready -> true
+        is LocalRuntimeStatus.Ready,
+        -> true
         LocalRuntimeStatus.NotInstalled,
         is LocalRuntimeStatus.Installing,
         is LocalRuntimeStatus.Broken,
-        is LocalRuntimeStatus.UnsupportedAbi -> false
+        is LocalRuntimeStatus.UnsupportedAbi,
+        -> false
     }
 }

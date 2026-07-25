@@ -15,27 +15,28 @@ enum class TerminalLineType { INPUT, OUTPUT, ERROR, SYSTEM }
 
 data class TerminalLine(
     val text: String,
-    val type: TerminalLineType
+    val type: TerminalLineType,
 )
 
 data class TerminalUiState(
     val lines: List<TerminalLine> = emptyList(),
     val isRunning: Boolean = false,
     val currentInput: String = "",
-    val workingDirectory: String = "/root"
+    val workingDirectory: String = "/root",
 )
 
 class TerminalViewModel(
-    private val commandRunner: LocalRuntimeCommandRunner
+    private val commandRunner: LocalRuntimeCommandRunner,
 ) : ViewModel() {
-
-    private val _state = MutableStateFlow(
-        TerminalUiState(
-            lines = listOf(
-                TerminalLine("OpenCode Terminal - PRoot Alpine Linux", TerminalLineType.SYSTEM)
-            )
+    private val _state =
+        MutableStateFlow(
+            TerminalUiState(
+                lines =
+                    listOf(
+                        TerminalLine("OpenCode Terminal - PRoot Alpine Linux", TerminalLineType.SYSTEM),
+                    ),
+            ),
         )
-    )
     val state: StateFlow<TerminalUiState> = _state.asStateFlow()
 
     fun executeCommand(command: String) {
@@ -46,19 +47,21 @@ class TerminalViewModel(
             s.copy(
                 lines = appendLine(s.lines, TerminalLine("${s.workingDirectory} $ $trimmed", TerminalLineType.INPUT)),
                 currentInput = "",
-                isRunning = true
+                isRunning = true,
             )
         }
 
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                val fullCommand = if (_state.value.workingDirectory != "/root") {
-                    "cd ${_state.value.workingDirectory} && $trimmed"
-                } else {
-                    trimmed
+            val result =
+                withContext(Dispatchers.IO) {
+                    val fullCommand =
+                        if (_state.value.workingDirectory != "/root") {
+                            "cd ${_state.value.workingDirectory} && $trimmed"
+                        } else {
+                            trimmed
+                        }
+                    commandRunner.runShell(fullCommand, timeoutSeconds = 30L)
                 }
-                commandRunner.runShell(fullCommand, timeoutSeconds = 30L)
-            }
 
             _state.update { s ->
                 val newLines = s.lines.toMutableList()
@@ -74,7 +77,7 @@ class TerminalViewModel(
                 s.copy(
                     lines = trimScrollback(newLines),
                     isRunning = false,
-                    workingDirectory = resolveWorkingDirectory(s.workingDirectory, trimmed)
+                    workingDirectory = resolveWorkingDirectory(s.workingDirectory, trimmed),
                 )
             }
         }
@@ -87,14 +90,18 @@ class TerminalViewModel(
     fun clear() {
         _state.update {
             it.copy(
-                lines = listOf(
-                    TerminalLine("OpenCode Terminal - PRoot Alpine Linux", TerminalLineType.SYSTEM)
-                )
+                lines =
+                    listOf(
+                        TerminalLine("OpenCode Terminal - PRoot Alpine Linux", TerminalLineType.SYSTEM),
+                    ),
             )
         }
     }
 
-    private fun resolveWorkingDirectory(current: String, command: String): String {
+    private fun resolveWorkingDirectory(
+        current: String,
+        command: String,
+    ): String {
         val cdPattern = Regex("""^cd\s+(.*)$""")
         val match = cdPattern.find(command.trim()) ?: return current
         val target = match.groupValues[1].trim().removeSurrounding("\"").removeSurrounding("'")
@@ -107,7 +114,10 @@ class TerminalViewModel(
         }
     }
 
-    private fun appendLine(lines: List<TerminalLine>, line: TerminalLine): List<TerminalLine> {
+    private fun appendLine(
+        lines: List<TerminalLine>,
+        line: TerminalLine,
+    ): List<TerminalLine> {
         return trimScrollback(lines + line)
     }
 

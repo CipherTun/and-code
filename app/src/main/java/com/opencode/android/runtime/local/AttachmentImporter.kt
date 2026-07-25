@@ -14,7 +14,7 @@ import java.io.File
  */
 class AttachmentImporter(
     private val context: Context,
-    private val runtimeDirectory: File = File(context.filesDir, "runtime")
+    private val runtimeDirectory: File = File(context.filesDir, "runtime"),
 ) {
     fun import(uri: Uri): PromptAttachment {
         val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
@@ -28,11 +28,14 @@ class AttachmentImporter(
         return PromptAttachment(
             filename = destination.name,
             mime = mime,
-            url = "file:///workspace/${destination.name}"
+            url = "file:///workspace/${destination.name}",
         )
     }
 
-    fun import(bitmap: Bitmap, filename: String = "image-${System.currentTimeMillis()}.jpg"): PromptAttachment {
+    fun import(
+        bitmap: Bitmap,
+        filename: String = "image-${System.currentTimeMillis()}.jpg",
+    ): PromptAttachment {
         val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
         val destination = uniqueFile(workspace, sanitize(filename))
         destination.outputStream().use { output ->
@@ -41,14 +44,18 @@ class AttachmentImporter(
         return PromptAttachment(destination.name, "image/jpeg", "file:///workspace/${destination.name}")
     }
 
-    private fun queryDisplayName(uri: Uri): String? = runCatching {
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
-        }
-    }.getOrNull()
+    private fun queryDisplayName(uri: Uri): String? =
+        runCatching {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+            }
+        }.getOrNull()
 
-    private fun uniqueFile(dir: File, name: String): File {
+    private fun uniqueFile(
+        dir: File,
+        name: String,
+    ): File {
         var candidate = File(dir, name)
         var counter = 1
         val base = name.substringBeforeLast('.', name)
@@ -61,6 +68,5 @@ class AttachmentImporter(
         return candidate
     }
 
-    private fun sanitize(name: String): String =
-        name.replace(Regex("[^a-zA-Z0-9._-]"), "_").ifBlank { "attachment" }
+    private fun sanitize(name: String): String = name.replace(Regex("[^a-zA-Z0-9._-]"), "_").ifBlank { "attachment" }
 }

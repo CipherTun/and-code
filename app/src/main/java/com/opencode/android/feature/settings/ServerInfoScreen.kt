@@ -55,19 +55,19 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.opencode.android.R
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.ui.ViewModelFactory
-import com.opencode.android.ui.components.LabelValueRow
 import com.opencode.android.ui.components.StatusChip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServerInfoScreen(
     registry: RuntimeRegistry,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
-    val viewModel: ServerInfoViewModel = viewModel(
-        key = "server-info",
-        factory = ViewModelFactory { ServerInfoViewModel(registry) }
-    )
+    val viewModel: ServerInfoViewModel =
+        viewModel(
+            key = "server-info",
+            factory = ViewModelFactory { ServerInfoViewModel(registry) },
+        )
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -92,24 +92,40 @@ fun ServerInfoScreen(
                     IconButton(onClick = viewModel::refresh) {
                         Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
                     }
-                }
+                },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             TabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text(stringResource(R.string.server_info_tab_config)) })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text(stringResource(R.string.server_info_tab_providers)) })
-                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text(stringResource(R.string.server_info_tab_commands)) })
-                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text(stringResource(R.string.server_info_tab_skills)) })
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text(stringResource(R.string.server_info_tab_config)) },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text(stringResource(R.string.server_info_tab_providers)) },
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text(stringResource(R.string.server_info_tab_commands)) },
+                )
+                Tab(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    text = { Text(stringResource(R.string.server_info_tab_skills)) },
+                )
             }
 
             if (state.isLoading) {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     CircularProgressIndicator()
                 }
@@ -133,24 +149,27 @@ fun ServerInfoScreen(
                 TextButton(onClick = viewModel::clearError) {
                     Text(stringResource(R.string.close_description))
                 }
-            }
+            },
         )
     }
 }
 
 @Composable
-private fun ConfigTab(state: ServerInfoUiState, viewModel: ServerInfoViewModel) {
+private fun ConfigTab(
+    state: ServerInfoUiState,
+    viewModel: ServerInfoViewModel,
+) {
     val isEditing = state.configEditDraft != null
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (isEditing) {
                     IconButton(onClick = viewModel::cancelEdit) {
@@ -158,7 +177,7 @@ private fun ConfigTab(state: ServerInfoUiState, viewModel: ServerInfoViewModel) 
                     }
                     IconButton(
                         onClick = viewModel::saveConfig,
-                        enabled = !state.isSaving
+                        enabled = !state.isSaving,
                     ) {
                         if (state.isSaving) {
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -179,20 +198,21 @@ private fun ConfigTab(state: ServerInfoUiState, viewModel: ServerInfoViewModel) 
                     value = state.configEditDraft.orEmpty(),
                     onValueChange = viewModel::updateConfigDraft,
                     modifier = Modifier.fillMaxWidth().height(400.dp),
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
                 )
             } else {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
-                    tonalElevation = 1.dp
+                    tonalElevation = 1.dp,
                 ) {
                     Text(
                         text = state.configJson ?: "{}",
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .horizontalScroll(rememberScrollState()),
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                        modifier =
+                            Modifier
+                                .padding(12.dp)
+                                .horizontalScroll(rememberScrollState()),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace, fontSize = 11.sp),
                     )
                 }
             }
@@ -206,11 +226,11 @@ private fun ProvidersTab(state: ServerInfoUiState) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 stringResource(R.string.server_info_no_providers),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         return
@@ -218,18 +238,18 @@ private fun ProvidersTab(state: ServerInfoUiState) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(state.configProviders, key = { it.id }) { provider ->
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                tonalElevation = 1.dp
+                tonalElevation = 1.dp,
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(provider.name, fontWeight = FontWeight.Medium)
@@ -237,13 +257,20 @@ private fun ProvidersTab(state: ServerInfoUiState) {
                             Text(
                                 it,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                     StatusChip(
-                        text = if (provider.connected) stringResource(R.string.connected_label) else stringResource(R.string.disconnected_label),
-                        active = provider.connected
+                        text =
+                            if (provider.connected) {
+                                stringResource(
+                                    R.string.connected_label,
+                                )
+                            } else {
+                                stringResource(R.string.disconnected_label)
+                            },
+                        active = provider.connected,
                     )
                 }
             }
@@ -257,11 +284,11 @@ private fun CommandsTab(state: ServerInfoUiState) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 stringResource(R.string.server_info_no_commands),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         return
@@ -269,13 +296,13 @@ private fun CommandsTab(state: ServerInfoUiState) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(state.commands, key = { it.name }) { command ->
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                tonalElevation = 1.dp
+                tonalElevation = 1.dp,
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text("/${command.name}", fontWeight = FontWeight.Medium)
@@ -295,11 +322,11 @@ private fun SkillsTab(state: ServerInfoUiState) {
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 stringResource(R.string.server_info_no_skills),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         return
@@ -307,23 +334,35 @@ private fun SkillsTab(state: ServerInfoUiState) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(state.skills, key = { it.name }) { skill ->
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium,
-                tonalElevation = 1.dp
+                tonalElevation = 1.dp,
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(skill.name, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     skill.description?.let {
                         Spacer(Modifier.height(2.dp))
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                     skill.location?.let {
                         Spacer(Modifier.height(2.dp))
-                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }

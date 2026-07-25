@@ -21,29 +21,46 @@ import kotlinx.coroutines.flow.emptyFlow
 internal class PreviewRuntimeTarget(
     override val id: String,
     override val displayName: String,
-    override val type: RuntimeType
+    override val type: RuntimeType,
 ) : RuntimeTarget {
     override val kind: BackendKind = if (type == RuntimeType.LOCAL) BackendKind.LOCAL else BackendKind.REMOTE
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Connected("1.0.0"))
     override val state: StateFlow<RuntimeState> = mutableState
 
     override suspend fun connect(): Result<OpenCodeHealth> = Result.success(health())
+
     override fun disconnect() = Unit
+
     override suspend fun listWorkspaces(): List<WorkspaceRef> = emptyList()
+
     override suspend fun health(): OpenCodeHealth = OpenCodeHealth(healthy = true, version = "1.0.0")
+
     override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
-    override suspend fun createSession(title: String?, directory: String?): OpenCodeSession =
-        OpenCodeSession(id = "preview", title = title.orEmpty(), directory = directory)
+
+    override suspend fun createSession(
+        title: String?,
+        directory: String?,
+    ): OpenCodeSession = OpenCodeSession(id = "preview", title = title.orEmpty(), directory = directory)
+
     override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
+
     override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
+
     override suspend fun listAgents(): List<OpenCodeAgent> = emptyList()
-    override suspend fun sendMessage(sessionId: String, request: PromptRequest) = Unit
+
+    override suspend fun sendMessage(
+        sessionId: String,
+        request: PromptRequest,
+    ) = Unit
+
     override suspend fun abortSession(sessionId: String): Boolean = true
+
     override suspend fun respondToPermission(
         sessionId: String,
         permissionId: String,
         response: PermissionResponse,
-        remember: Boolean
+        remember: Boolean,
     ): Boolean = true
+
     override fun events(): Flow<OpenCodeEvent> = emptyFlow()
 }

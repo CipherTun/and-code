@@ -29,40 +29,44 @@ data class AppPreferences(
     val sidebarGrouping: String = "project",
     val workspaceTitleSource: String = "title",
     val language: String = "system",
-    val liveTranscriptEnabled: Boolean = false
+    val liveTranscriptEnabled: Boolean = false,
 )
 
 class AppPreferencesRepository(
-    private val settings: SecureSettingsRepository
+    private val settings: SecureSettingsRepository,
 ) {
-    private val mutableState = MutableStateFlow(
-        AppPreferences(
-            providerId = settings.selectedProviderId,
-            modelId = settings.selectedModelId,
-            agentId = settings.selectedAgentId,
-            ttsEnabled = settings.ttsEnabled,
-            continuousConversation = settings.continuousConversation,
-            wakeWordEnabled = settings.wakeWordEnabled,
-            autoAcceptPermissions = settings.autoAcceptPermissions,
-            favoriteModelKeys = settings.favoriteModelKeys,
-            recentModelKeys = settings.recentModelKeys,
-            hiddenModelKeys = settings.hiddenModelKeys,
-            theme = settings.theme,
-            uiFontSize = settings.uiFontSize,
-            codeFontSize = settings.codeFontSize,
-            syntaxTheme = settings.syntaxTheme,
-            toolCallDetailLevel = settings.toolCallDetailLevel,
-            autoExpandReasoning = settings.autoExpandReasoning,
-            sendBehavior = settings.sendBehavior,
-            sidebarGrouping = settings.sidebarGrouping,
-            workspaceTitleSource = settings.workspaceTitleSource,
-            language = settings.language,
-            liveTranscriptEnabled = settings.liveTranscriptEnabled
+    private val mutableState =
+        MutableStateFlow(
+            AppPreferences(
+                providerId = settings.selectedProviderId,
+                modelId = settings.selectedModelId,
+                agentId = settings.selectedAgentId,
+                ttsEnabled = settings.ttsEnabled,
+                continuousConversation = settings.continuousConversation,
+                wakeWordEnabled = settings.wakeWordEnabled,
+                autoAcceptPermissions = settings.autoAcceptPermissions,
+                favoriteModelKeys = settings.favoriteModelKeys,
+                recentModelKeys = settings.recentModelKeys,
+                hiddenModelKeys = settings.hiddenModelKeys,
+                theme = settings.theme,
+                uiFontSize = settings.uiFontSize,
+                codeFontSize = settings.codeFontSize,
+                syntaxTheme = settings.syntaxTheme,
+                toolCallDetailLevel = settings.toolCallDetailLevel,
+                autoExpandReasoning = settings.autoExpandReasoning,
+                sendBehavior = settings.sendBehavior,
+                sidebarGrouping = settings.sidebarGrouping,
+                workspaceTitleSource = settings.workspaceTitleSource,
+                language = settings.language,
+                liveTranscriptEnabled = settings.liveTranscriptEnabled,
+            ),
         )
-    )
     val state: StateFlow<AppPreferences> = mutableState.asStateFlow()
 
-    fun selectModel(providerId: String?, modelId: String?) {
+    fun selectModel(
+        providerId: String?,
+        modelId: String?,
+    ) {
         settings.selectedProviderId = providerId
         settings.selectedModelId = modelId
         mutableState.update { it.copy(providerId = providerId, modelId = modelId) }
@@ -79,23 +83,29 @@ class AppPreferencesRepository(
         mutableState.update { it.copy(agentId = agentId) }
     }
 
-    fun reconcile(catalog: ProviderCatalog, agents: List<OpenCodeAgent>) {
+    fun reconcile(
+        catalog: ProviderCatalog,
+        agents: List<OpenCodeAgent>,
+    ) {
         val current = mutableState.value
         val connected = catalog.connected.toSet()
         val providers = catalog.all.filter { it.id in connected }
-        val providerId = current.providerId?.takeIf { it in connected }
-            ?: "opencode".takeIf { it in connected }
-            ?: providers.firstOrNull()?.id
+        val providerId =
+            current.providerId?.takeIf { it in connected }
+                ?: "opencode".takeIf { it in connected }
+                ?: providers.firstOrNull()?.id
         val provider = providers.firstOrNull { it.id == providerId }
-        val modelId = current.modelId?.takeIf { it in provider?.models.orEmpty() }
-            ?: providerId?.let { catalog.default[it] }?.takeIf { it in provider?.models.orEmpty() }
-            ?: provider?.models?.values
-                ?.firstOrNull { it.status == null || it.status == "active" }
-                ?.id
+        val modelId =
+            current.modelId?.takeIf { it in provider?.models.orEmpty() }
+                ?: providerId?.let { catalog.default[it] }?.takeIf { it in provider?.models.orEmpty() }
+                ?: provider?.models?.values
+                    ?.firstOrNull { it.status == null || it.status == "active" }
+                    ?.id
         val primaryAgents = agents.filter { it.mode == null || it.mode == "primary" }
-        val agentId = current.agentId?.takeIf { selected -> primaryAgents.any { it.name == selected } }
-            ?: primaryAgents.firstOrNull { it.name == "build" }?.name
-            ?: primaryAgents.firstOrNull()?.name
+        val agentId =
+            current.agentId?.takeIf { selected -> primaryAgents.any { it.name == selected } }
+                ?: primaryAgents.firstOrNull { it.name == "build" }?.name
+                ?: primaryAgents.firstOrNull()?.name
 
         if (providerId != current.providerId || modelId != current.modelId) {
             selectModel(providerId, modelId)
@@ -125,7 +135,10 @@ class AppPreferencesRepository(
         mutableState.update { it.copy(autoAcceptPermissions = enabled) }
     }
 
-    fun toggleFavoriteModel(providerId: String, modelId: String) {
+    fun toggleFavoriteModel(
+        providerId: String,
+        modelId: String,
+    ) {
         val key = "$providerId/$modelId"
         val current = mutableState.value.favoriteModelKeys
         val updated = if (key in current) current - key else current + key
@@ -133,7 +146,10 @@ class AppPreferencesRepository(
         mutableState.update { it.copy(favoriteModelKeys = updated) }
     }
 
-    fun toggleModelVisibility(providerId: String, modelId: String) {
+    fun toggleModelVisibility(
+        providerId: String,
+        modelId: String,
+    ) {
         val key = "$providerId/$modelId"
         val current = mutableState.value.hiddenModelKeys
         val updated = if (key in current) current - key else current + key

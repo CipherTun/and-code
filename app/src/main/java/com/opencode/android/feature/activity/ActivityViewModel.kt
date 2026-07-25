@@ -25,42 +25,43 @@ data class ActivityUiState(
     val logs: List<RuntimeEventLog> = emptyList(),
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val permissionBusyIds: Set<String> = emptySet()
+    val permissionBusyIds: Set<String> = emptySet(),
 )
 
 class ActivityViewModel(
     private val catalog: RuntimeCatalogRepository,
     private val activity: RuntimeActivityRepository,
     private val registry: RuntimeRegistry,
-    private val onPermissionResolved: (String) -> Unit = {}
+    private val onPermissionResolved: (String) -> Unit = {},
 ) : ViewModel() {
     private val permissionBusyIds = MutableStateFlow<Set<String>>(emptySet())
     private val actionError = MutableStateFlow<String?>(null)
 
-    val state: StateFlow<ActivityUiState> = combine(
-        catalog.state,
-        activity.state,
-        permissionBusyIds,
-        actionError
-    ) { runtime, events, busy, actionErr ->
-        ActivityUiState(
-            sessions = runtime.sessions.sortedByDescending { it.time.updated ?: it.time.created },
-            activeSessionIds = events.activeSessionIds,
-            completedSessionIds = events.completedSessionIds,
-            permissions = events.permissions,
-            logs = events.logs,
-            isRefreshing = runtime.isRefreshing,
-            error = actionErr ?: events.streamError ?: runtime.error,
-            permissionBusyIds = busy
-        )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, ActivityUiState())
+    val state: StateFlow<ActivityUiState> =
+        combine(
+            catalog.state,
+            activity.state,
+            permissionBusyIds,
+            actionError,
+        ) { runtime, events, busy, actionErr ->
+            ActivityUiState(
+                sessions = runtime.sessions.sortedByDescending { it.time.updated ?: it.time.created },
+                activeSessionIds = events.activeSessionIds,
+                completedSessionIds = events.completedSessionIds,
+                permissions = events.permissions,
+                logs = events.logs,
+                isRefreshing = runtime.isRefreshing,
+                error = actionErr ?: events.streamError ?: runtime.error,
+                permissionBusyIds = busy,
+            )
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, ActivityUiState())
 
     fun refresh() = catalog.refresh()
 
     fun respondToPermission(
         permissionId: String,
         response: PermissionResponse,
-        remember: Boolean
+        remember: Boolean,
     ) {
         val permission = activity.state.value.permissions.firstOrNull { it.id == permissionId } ?: return
         val backend = registry.selected.value ?: return
@@ -72,7 +73,7 @@ class ActivityViewModel(
                     permission.sessionId,
                     permission.id,
                     response,
-                    remember
+                    remember,
                 )
             }.onSuccess { accepted ->
                 if (accepted) {
@@ -88,7 +89,10 @@ class ActivityViewModel(
         }
     }
 
-    fun renameSession(sessionId: String, title: String) {
+    fun renameSession(
+        sessionId: String,
+        title: String,
+    ) {
         val backend = registry.selected.value ?: return
         actionError.value = null
         viewModelScope.launch {

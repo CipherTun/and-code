@@ -44,122 +44,127 @@ class ChatViewModelQuestionTest {
     }
 
     @Test
-    fun `question event is shown only for active session`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
+    fun `question event is shown only for active session`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
 
-        viewModel.openSession("session-1")
-        advanceUntilIdle()
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
 
-        backend.events.emit(OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-2")))
-        advanceUntilIdle()
+            backend.events.emit(OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-2")))
+            advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
-    }
-
-    @Test
-    fun `single select answer replaces prior selection`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
-
-        viewModel.openSession("session-1")
-        advanceUntilIdle()
-        backend.events.emit(
-            OpenCodeEvent.QuestionAsked(
-                request(
-                    id = "q-1",
-                    sessionId = "session-1",
-                    options = listOf("src", "docs")
-                )
-            )
-        )
-        advanceUntilIdle()
-
-        viewModel.selectQuestionAnswer("q-1", 0, "src")
-        viewModel.selectQuestionAnswer("q-1", 0, "docs")
-
-        assertEquals(listOf("docs"), viewModel.uiState.value.pendingQuestions.single().selectedAnswers.single())
-    }
+            assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
+        }
 
     @Test
-    fun `successful answer removes pending question`() = runTest(dispatcher) {
-        val backend = FakeBackend()
-        val viewModel = ChatViewModel(backend)
+    fun `single select answer replaces prior selection`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
 
-        viewModel.openSession("session-1")
-        advanceUntilIdle()
-        backend.events.emit(
-            OpenCodeEvent.QuestionAsked(
-                request(
-                    id = "q-1",
-                    sessionId = "session-1",
-                    options = listOf("src", "docs")
-                )
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(
+                    request(
+                        id = "q-1",
+                        sessionId = "session-1",
+                        options = listOf("src", "docs"),
+                    ),
+                ),
             )
-        )
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        viewModel.selectQuestionAnswer("q-1", 0, "src")
-        viewModel.submitQuestion("q-1")
-        advanceUntilIdle()
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.selectQuestionAnswer("q-1", 0, "docs")
 
-        assertEquals(listOf(listOf("src")), backend.answeredQuestions.single().answers)
-        assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
-    }
+            assertEquals(listOf("docs"), viewModel.uiState.value.pendingQuestions.single().selectedAnswers.single())
+        }
 
     @Test
-    fun `failed answer keeps question and trims fallback input`() = runTest(dispatcher) {
-        val backend = FakeBackend(answerResult = false)
-        val viewModel = ChatViewModel(backend)
+    fun `successful answer removes pending question`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
 
-        viewModel.openSession("session-1")
-        advanceUntilIdle()
-        backend.events.emit(
-            OpenCodeEvent.QuestionAsked(
-                request(
-                    id = "q-1",
-                    sessionId = "session-1",
-                    question = "Type a folder",
-                    options = emptyList(),
-                    placeholder = "src/main"
-                )
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(
+                    request(
+                        id = "q-1",
+                        sessionId = "session-1",
+                        options = listOf("src", "docs"),
+                    ),
+                ),
             )
-        )
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        viewModel.selectQuestionAnswer("q-1", 0, "   src/main   ")
-        viewModel.submitQuestion("q-1")
-        advanceUntilIdle()
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
 
-        assertEquals(listOf(listOf("src/main")), backend.answeredQuestions.single().answers)
-        val pending = viewModel.uiState.value.pendingQuestions.single()
-        assertEquals(listOf("src/main"), pending.selectedAnswers.single())
-        assertEquals("OpenCode question failed", pending.error)
-        assertFalse(pending.isSubmitting)
-    }
+            assertEquals(listOf(listOf("src")), backend.answeredQuestions.single().answers)
+            assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
+        }
+
+    @Test
+    fun `failed answer keeps question and trims fallback input`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend(answerResult = false)
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(
+                    request(
+                        id = "q-1",
+                        sessionId = "session-1",
+                        question = "Type a folder",
+                        options = emptyList(),
+                        placeholder = "src/main",
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "   src/main   ")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf(listOf("src/main")), backend.answeredQuestions.single().answers)
+            val pending = viewModel.uiState.value.pendingQuestions.single()
+            assertEquals(listOf("src/main"), pending.selectedAnswers.single())
+            assertEquals("OpenCode question failed", pending.error)
+            assertFalse(pending.isSubmitting)
+        }
 
     private fun request(
         id: String,
         sessionId: String,
         question: String = "Pick a folder",
         options: List<String> = listOf("src"),
-        placeholder: String? = null
+        placeholder: String? = null,
     ) = QuestionRequest(
         id = id,
         sessionId = sessionId,
         multiple = false,
-        questions = listOf(
-            QuestionPrompt(
-                question = question,
-                header = "Folder",
-                options = options.map(::QuestionOption),
-                placeholder = placeholder
-            )
-        )
+        questions =
+            listOf(
+                QuestionPrompt(
+                    question = question,
+                    header = "Folder",
+                    options = options.map(::QuestionOption),
+                    placeholder = placeholder,
+                ),
+            ),
     )
 
     private class FakeBackend(
-        private val answerResult: Boolean = true
+        private val answerResult: Boolean = true,
     ) : OpenCodeBackend {
         override val id: String = "fake"
         override val displayName: String = "Fake"
@@ -168,31 +173,44 @@ class ChatViewModelQuestionTest {
         val answeredQuestions = mutableListOf<AnswerRecord>()
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
+
         override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
-        override suspend fun createSession(title: String?, directory: String?): OpenCodeSession =
+
+        override suspend fun createSession(
+            title: String?,
+            directory: String?,
+        ): OpenCodeSession =
             OpenCodeSession(
                 id = "session-1",
                 directory = directory,
                 title = title.orEmpty(),
-                time = OpenCodeTime(created = 1)
+                time = OpenCodeTime(created = 1),
             )
 
         override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
+
         override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
+
         override suspend fun listAgents(): List<OpenCodeAgent> = emptyList()
-        override suspend fun sendMessage(sessionId: String, request: PromptRequest) = Unit
+
+        override suspend fun sendMessage(
+            sessionId: String,
+            request: PromptRequest,
+        ) = Unit
+
         override suspend fun abortSession(sessionId: String): Boolean = true
+
         override suspend fun respondToPermission(
             sessionId: String,
             permissionId: String,
             response: com.opencode.android.runtime.PermissionResponse,
-            remember: Boolean
+            remember: Boolean,
         ): Boolean = true
 
         override suspend fun answerQuestion(
             sessionId: String,
             requestId: String,
-            answers: List<List<String>>
+            answers: List<List<String>>,
         ): Boolean {
             answeredQuestions += AnswerRecord(sessionId, requestId, answers)
             return answerResult
@@ -204,6 +222,6 @@ class ChatViewModelQuestionTest {
     private data class AnswerRecord(
         val sessionId: String,
         val requestId: String,
-        val answers: List<List<String>>
+        val answers: List<List<String>>,
     )
 }

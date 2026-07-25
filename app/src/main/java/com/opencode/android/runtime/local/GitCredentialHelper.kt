@@ -13,7 +13,7 @@ import java.io.File
  */
 class GitCredentialHelper(
     private val rootfs: File,
-    private val token: () -> String?
+    private val token: () -> String?,
 ) {
     private val helperFile
         get() = File(rootfs, "usr/local/bin/git-credential-opencode")
@@ -25,7 +25,8 @@ class GitCredentialHelper(
     fun install(): File {
         helperFile.parentFile?.mkdirs()
         helperFile.writeText(
-            """#!/bin/sh
+            """
+            #!/bin/sh
             case "${'$'}1" in
               get)
                 read protocol
@@ -34,7 +35,7 @@ class GitCredentialHelper(
                 [ -n "${'$'}token" ] && printf 'protocol=%s\\nhost=%s\\nusername=x-access-token\\npassword=%s\\n\\n' "${'$'}protocol" "${'$'}host" "${'$'}token"
                 ;;
             esac
-            """.trimIndent()
+            """.trimIndent(),
         )
         helperFile.setExecutable(true, true)
         helperFile.setReadable(true, true)
@@ -65,24 +66,26 @@ class GitCredentialHelper(
 
     private fun installGitHubCredentialConfig() {
         val existing = gitConfigFile.takeIf(File::isFile)?.readText().orEmpty()
-        val cleaned = existing
-            .replace(GITHUB_CREDENTIAL_SECTION_MALFORMED, "")
-            .replace(GITHUB_CREDENTIAL_SECTION, "")
-            .trim()
+        val cleaned =
+            existing
+                .replace(GITHUB_CREDENTIAL_SECTION_MALFORMED, "")
+                .replace(GITHUB_CREDENTIAL_SECTION, "")
+                .trim()
         gitConfigFile.parentFile?.mkdirs()
         gitConfigFile.writeText(
             listOf(cleaned, GITHUB_CREDENTIAL_SECTION)
                 .filter(String::isNotEmpty)
-                .joinToString("\n\n", postfix = "\n")
+                .joinToString("\n\n", postfix = "\n"),
         )
     }
 
     private fun removeGitHubCredentialConfig() {
         if (!gitConfigFile.isFile) return
-        val remaining = gitConfigFile.readText()
-            .replace(GITHUB_CREDENTIAL_SECTION, "")
-            .replace(GITHUB_CREDENTIAL_SECTION_MALFORMED, "")
-            .trim()
+        val remaining =
+            gitConfigFile.readText()
+                .replace(GITHUB_CREDENTIAL_SECTION, "")
+                .replace(GITHUB_CREDENTIAL_SECTION_MALFORMED, "")
+                .trim()
         if (remaining.isEmpty()) gitConfigFile.delete() else gitConfigFile.writeText("$remaining\n")
     }
 

@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -78,7 +78,7 @@ data class CommitInfo(
     val hash: String,
     val message: String,
     val author: String,
-    val relativeTime: String
+    val relativeTime: String,
 )
 
 enum class DiffViewMode { UNIFIED, SPLIT }
@@ -103,27 +103,29 @@ fun WorkspaceExplorerScreen(
     prDescription: String? = null,
     tabManager: WorkspaceTabManager? = null,
     workspaceDeck: List<String> = emptyList(),
-    onOpenTerminal: () -> Unit = {}
+    onOpenTerminal: () -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var showScripts by remember { mutableStateOf(false) }
-    val tabs = listOf(
-        stringResource(R.string.tab_files),
-        stringResource(R.string.tab_search),
-        stringResource(R.string.tab_changes),
-        stringResource(R.string.tab_pr)
-    )
+    val tabs =
+        listOf(
+            stringResource(R.string.tab_files),
+            stringResource(R.string.tab_search),
+            stringResource(R.string.tab_changes),
+            stringResource(R.string.tab_pr),
+        )
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (workspaceDeck.size > 1) {
             WorkspaceDeckRow(workspaceDeck, state.workspace.name)
         }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
@@ -132,14 +134,14 @@ fun WorkspaceExplorerScreen(
                 Text(
                     state.workspace.name,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     state.workspace.path,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             IconButton(onClick = onOpenTerminal) {
@@ -150,7 +152,7 @@ fun WorkspaceExplorerScreen(
             }
             IconButton(
                 onClick = if (selectedTab == 2) onRefreshChanges else onRefresh,
-                enabled = !state.isLoadingFiles && !state.isLoadingChanges
+                enabled = !state.isLoadingFiles && !state.isLoadingChanges,
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
@@ -165,7 +167,7 @@ fun WorkspaceExplorerScreen(
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    text = { Text(title) },
                 )
             }
         }
@@ -193,25 +195,29 @@ fun WorkspaceExplorerScreen(
         WorkspaceScriptsSheet(
             onDismiss = { showScripts = false },
             scripts = emptyList(),
-            onRunScript = {}
+            onRunScript = {},
         )
     }
 }
 
 @Composable
-private fun WorkspaceDeckRow(workspaces: List<String>, activeName: String) {
+private fun WorkspaceDeckRow(
+    workspaces: List<String>,
+    activeName: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         workspaces.forEach { name ->
             FilterChip(
                 selected = name == activeName,
                 onClick = {},
-                label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             )
         }
     }
@@ -232,22 +238,23 @@ private fun WorkspaceTabRow(tabManager: WorkspaceTabManager) {
     Box {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             ScrollableTabRow(
                 selectedTabIndex = selectedIndex,
                 modifier = Modifier.weight(1f),
-                edgePadding = 8.dp
+                edgePadding = 8.dp,
             ) {
                 workspaceTabs.forEach { tab ->
                     Tab(
                         selected = tab.id == selectedTabId,
                         onClick = { tabManager.selectTab(tab.id) },
                         text = { Text(tab.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                        modifier = Modifier.combinedClickable(
-                            onClick = { tabManager.selectTab(tab.id) },
-                            onLongClick = { tabDropdownId = tab.id }
-                        )
+                        modifier =
+                            Modifier.combinedClickable(
+                                onClick = { tabManager.selectTab(tab.id) },
+                                onLongClick = { tabDropdownId = tab.id },
+                            ),
                     )
                 }
             }
@@ -263,11 +270,11 @@ private fun WorkspaceTabRow(tabManager: WorkspaceTabManager) {
                                 WorkspaceTab(
                                     id = java.util.UUID.randomUUID().toString(),
                                     type = TabType.AGENT,
-                                    title = "New"
-                                )
+                                    title = "New",
+                                ),
                             )
                             showAddMenu = false
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text("Terminal") },
@@ -276,11 +283,11 @@ private fun WorkspaceTabRow(tabManager: WorkspaceTabManager) {
                                 WorkspaceTab(
                                     id = java.util.UUID.randomUUID().toString(),
                                     type = TabType.TERMINAL,
-                                    title = "Terminal"
-                                )
+                                    title = "Terminal",
+                                ),
                             )
                             showAddMenu = false
-                        }
+                        },
                     )
                 }
             }
@@ -291,14 +298,14 @@ private fun WorkspaceTabRow(tabManager: WorkspaceTabManager) {
                 onClick = {
                     tabDropdownId?.let { tabManager.removeTab(it) }
                     tabDropdownId = null
-                }
+                },
             )
             DropdownMenuItem(
                 text = { Text("Close Others") },
                 onClick = {
                     tabDropdownId?.let { tabManager.closeOthers(it) }
                     tabDropdownId = null
-                }
+                },
             )
         }
     }
@@ -307,7 +314,7 @@ private fun WorkspaceTabRow(tabManager: WorkspaceTabManager) {
 @Composable
 private fun WorkspaceTabContent(
     tabManager: WorkspaceTabManager,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val workspaceTabs by tabManager.tabs.collectAsState()
     val selectedTabId by tabManager.selectedTabId.collectAsState()
@@ -329,30 +336,32 @@ private fun WorkspaceTabContent(
 private fun TerminalTabPlaceholder() {
     var input by remember { mutableStateOf("") }
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1E1E1E))
-            .padding(12.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color(0xFF1E1E1E))
+                .padding(12.dp),
     ) {
         Column {
             Text(
                 "$ ",
                 fontFamily = FontFamily.Monospace,
-                color = Color(0xFF6FCF97)
+                color = Color(0xFF6FCF97),
             )
             TextField(
                 value = input,
                 onValueChange = { input = it },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = Color.White
-                )
+                colors =
+                    TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = Color.White,
+                    ),
             )
         }
     }
@@ -363,19 +372,19 @@ private fun FilesTab(
     state: WorkspaceExplorerUiState,
     onOpenNode: (OpenCodeFileNode) -> Unit,
     onCloseFile: () -> Unit,
-    onNavigateUp: () -> Unit
+    onNavigateUp: () -> Unit,
 ) {
     if (state.selectedFilePath != null) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     IconButton(onClick = onCloseFile) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back_to_file_list))
@@ -385,13 +394,13 @@ private fun FilesTab(
                             state.selectedFilePath,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                         state.selectedFile?.mimeType?.let {
                             Text(
                                 it,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -412,7 +421,7 @@ private fun FilesTab(
                                         file.content,
                                         fontFamily = FontFamily.Monospace,
                                         style = MaterialTheme.typography.bodySmall,
-                                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                                        modifier = Modifier.horizontalScroll(rememberScrollState()),
                                     )
                                 }
                             }
@@ -429,14 +438,14 @@ private fun FilesTab(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
             SectionCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text(
@@ -444,7 +453,7 @@ private fun FilesTab(
                         modifier = Modifier.weight(1f),
                         fontFamily = FontFamily.Monospace,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     IconButton(onClick = onNavigateUp, enabled = state.currentPath != ".") {
                         Icon(Icons.Default.ArrowUpward, contentDescription = stringResource(R.string.parent_folder))
@@ -467,11 +476,11 @@ private fun FilesTab(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         FileTypeIcon(
                             fileName = node.name,
-                            isDirectory = node.type == "directory"
+                            isDirectory = node.type == "directory",
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(node.name, fontWeight = FontWeight.Medium)
@@ -480,7 +489,7 @@ private fun FilesTab(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                         if (node.ignored) StatusChip(stringResource(R.string.ignored_label), active = false)
@@ -496,14 +505,14 @@ private fun FilesTab(
 @Composable
 private fun SearchTab(
     state: WorkspaceExplorerUiState,
-    onSearch: (String) -> Unit
+    onSearch: (String) -> Unit,
 ) {
     var query by rememberSaveable(state.workspace.id) { mutableStateOf(state.searchQuery) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             OutlinedTextField(
@@ -512,13 +521,13 @@ private fun SearchTab(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.search_files_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
+                singleLine = true,
             )
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = { onSearch(query) },
                 enabled = query.isNotBlank() && !state.isSearching,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.tab_search))
             }
@@ -554,7 +563,7 @@ private fun SearchTab(
             item { SectionTitle(stringResource(R.string.section_title_content), state.textMatches.size) }
             items(
                 state.textMatches,
-                key = { "${it.path.text}:${it.lineNumber}:${it.absoluteOffset}" }
+                key = { "${it.path.text}:${it.lineNumber}:${it.absoluteOffset}" },
             ) { match ->
                 SectionCard {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
@@ -563,7 +572,7 @@ private fun SearchTab(
                             Text(
                                 "${match.path.text}:${match.lineNumber}",
                                 fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
                             )
                             Spacer(Modifier.height(6.dp))
                             SelectionContainer {
@@ -571,7 +580,7 @@ private fun SearchTab(
                                     match.lines.text.trimEnd(),
                                     fontFamily = FontFamily.Monospace,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -591,7 +600,7 @@ private fun ChangesTab(
     branches: List<String>,
     onSwitchBranch: (String) -> Unit,
     onCreateBranch: (String) -> Unit,
-    commits: List<CommitInfo>
+    commits: List<CommitInfo>,
 ) {
     var showBranchSheet by remember { mutableStateOf(false) }
     var diffViewMode by remember { mutableStateOf(DiffViewMode.UNIFIED) }
@@ -599,14 +608,14 @@ private fun ChangesTab(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             SectionCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Icon(Icons.Default.Source, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Column(modifier = Modifier.weight(1f)) {
@@ -616,7 +625,7 @@ private fun ChangesTab(
                                 ?: stringResource(R.string.no_git_info),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.clickable { showBranchSheet = true }
+                            modifier = Modifier.clickable { showBranchSheet = true },
                         )
                     }
                     Text(stringResource(R.string.item_count, state.changes.size))
@@ -627,17 +636,17 @@ private fun ChangesTab(
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
                     selected = diffViewMode == DiffViewMode.UNIFIED,
                     onClick = { diffViewMode = DiffViewMode.UNIFIED },
-                    label = { Text(stringResource(R.string.unified_view)) }
+                    label = { Text(stringResource(R.string.unified_view)) },
                 )
                 FilterChip(
                     selected = diffViewMode == DiffViewMode.SPLIT,
                     onClick = { diffViewMode = DiffViewMode.SPLIT },
-                    label = { Text(stringResource(R.string.split_view)) }
+                    label = { Text(stringResource(R.string.split_view)) },
                 )
             }
         }
@@ -680,7 +689,7 @@ private fun ChangesTab(
                 onCreateBranch(name)
                 showBranchSheet = false
             },
-            onDismiss = { showBranchSheet = false }
+            onDismiss = { showBranchSheet = false },
         )
     }
 }
@@ -692,33 +701,35 @@ private fun BranchSwitcherSheet(
     branches: List<String>,
     onSwitchBranch: (String) -> Unit,
     onCreateBranch: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var searchQuery by remember { mutableStateOf("") }
     var newBranchName by remember { mutableStateOf("") }
     var showNewBranchField by remember { mutableStateOf(false) }
 
-    val filteredBranches = if (searchQuery.isBlank()) {
-        branches
-    } else {
-        branches.filter { it.contains(searchQuery, ignoreCase = true) }
-    }
+    val filteredBranches =
+        if (searchQuery.isBlank()) {
+            branches
+        } else {
+            branches.filter { it.contains(searchQuery, ignoreCase = true) }
+        }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
         ) {
             Text(
                 stringResource(R.string.switch_branch),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -727,27 +738,28 @@ private fun BranchSwitcherSheet(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.search_branches)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
+                singleLine = true,
             )
             Spacer(Modifier.height(12.dp))
             LazyColumn(
                 modifier = Modifier.fillMaxWidth().height(300.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(filteredBranches, key = { it }) { branch ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSwitchBranch(branch) }
-                            .padding(vertical = 10.dp, horizontal = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSwitchBranch(branch) }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         if (branch == currentBranch) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         } else {
                             Spacer(Modifier.height(24.dp))
@@ -755,7 +767,7 @@ private fun BranchSwitcherSheet(
                         Text(
                             branch,
                             modifier = Modifier.weight(1f),
-                            fontWeight = if (branch == currentBranch) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (branch == currentBranch) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     }
                 }
@@ -765,18 +777,18 @@ private fun BranchSwitcherSheet(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedTextField(
                         value = newBranchName,
                         onValueChange = { newBranchName = it },
                         modifier = Modifier.weight(1f),
                         label = { Text(stringResource(R.string.branch_name_hint)) },
-                        singleLine = true
+                        singleLine = true,
                     )
                     Button(
                         onClick = { if (newBranchName.isNotBlank()) onCreateBranch(newBranchName) },
-                        enabled = newBranchName.isNotBlank()
+                        enabled = newBranchName.isNotBlank(),
                     ) {
                         Text(stringResource(R.string.create_branch))
                     }
@@ -784,7 +796,7 @@ private fun BranchSwitcherSheet(
             } else {
                 OutlinedButton(
                     onClick = { showNewBranchField = true },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.height(4.dp))
@@ -796,13 +808,16 @@ private fun BranchSwitcherSheet(
 }
 
 @Composable
-private fun ChangeCard(change: OpenCodeFileChange, diffViewMode: DiffViewMode) {
+private fun ChangeCard(
+    change: OpenCodeFileChange,
+    diffViewMode: DiffViewMode,
+) {
     var expanded by remember(change.displayPath, change.patch) { mutableStateOf(false) }
     SectionCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             FileTypeIcon(fileName = change.displayPath.substringAfterLast('/'))
             Column(modifier = Modifier.weight(1f)) {
@@ -811,12 +826,12 @@ private fun ChangeCard(change: OpenCodeFileChange, diffViewMode: DiffViewMode) {
                     Text(
                         stringResource(R.string.diff_stat, change.additions.toInt(), change.deletions.toInt()),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         change.status.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -840,24 +855,27 @@ private fun ChangeCard(change: OpenCodeFileChange, diffViewMode: DiffViewMode) {
 private fun UnifiedDiffView(patch: String) {
     SelectionContainer {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
         ) {
             patch.lines().forEach { line ->
-                val background = when {
-                    line.startsWith("+") && !line.startsWith("+++") -> Color(0x2A6FCF97)
-                    line.startsWith("-") && !line.startsWith("---") -> Color(0x2AF07178)
-                    else -> Color.Transparent
-                }
+                val background =
+                    when {
+                        line.startsWith("+") && !line.startsWith("+++") -> Color(0x2A6FCF97)
+                        line.startsWith("-") && !line.startsWith("---") -> Color(0x2AF07178)
+                        else -> Color.Transparent
+                    }
                 Text(
                     line,
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(background)
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(background)
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
                 )
             }
         }
@@ -887,9 +905,10 @@ private fun SplitDiffView(patch: String) {
 
     SelectionContainer {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 oldLines.forEach { line ->
@@ -897,10 +916,11 @@ private fun SplitDiffView(patch: String) {
                         line,
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(if (line.isNotEmpty()) Color(0x2AF07178) else Color.Transparent)
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(if (line.isNotEmpty()) Color(0x2AF07178) else Color.Transparent)
+                                .padding(horizontal = 4.dp, vertical = 1.dp),
                     )
                 }
             }
@@ -910,10 +930,11 @@ private fun SplitDiffView(patch: String) {
                         line,
                         fontFamily = FontFamily.Monospace,
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(if (line.isNotEmpty()) Color(0x2A6FCF97) else Color.Transparent)
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(if (line.isNotEmpty()) Color(0x2A6FCF97) else Color.Transparent)
+                                .padding(horizontal = 4.dp, vertical = 1.dp),
                     )
                 }
             }
@@ -927,7 +948,7 @@ private fun CommitCard(commit: CommitInfo) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(commit.message, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -935,14 +956,14 @@ private fun CommitCard(commit: CommitInfo) {
                 Text(
                     "${commit.author} · ${commit.relativeTime}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
                 commit.hash.take(7),
                 fontFamily = FontFamily.Monospace,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -952,19 +973,19 @@ private fun CommitCard(commit: CommitInfo) {
 private fun PrTab(
     prTitle: String?,
     prStatus: String?,
-    prDescription: String?
+    prDescription: String?,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (prTitle == null) {
             item {
                 SectionCard {
                     Text(
                         stringResource(R.string.no_pr_found),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -975,13 +996,13 @@ private fun PrTab(
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
                                 prTitle,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                             if (prStatus != null) {
                                 StatusChip(prStatus, active = prStatus.equals("open", ignoreCase = true))
@@ -991,7 +1012,7 @@ private fun PrTab(
                             Text(
                                 prDescription,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -1003,7 +1024,10 @@ private fun PrTab(
 }
 
 @Composable
-private fun SectionTitle(title: String, count: Int) {
+private fun SectionTitle(
+    title: String,
+    count: Int,
+) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Text(stringResource(R.string.item_count, count), color = MaterialTheme.colorScheme.onSurfaceVariant)

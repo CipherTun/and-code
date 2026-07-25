@@ -11,8 +11,8 @@ class OnboardingGateTest {
         assertFalse(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.NotInstalled,
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
         )
     }
 
@@ -21,8 +21,8 @@ class OnboardingGateTest {
         assertTrue(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.NotInstalled,
-                hasRemoteConnection = true
-            )
+                hasRemoteConnection = true,
+            ),
         )
     }
 
@@ -31,8 +31,8 @@ class OnboardingGateTest {
         assertTrue(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.Stopped("1.0.0", 4097),
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
         )
     }
 
@@ -41,8 +41,8 @@ class OnboardingGateTest {
         assertTrue(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.Ready("1.0.0", 4097),
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
         )
     }
 
@@ -51,8 +51,8 @@ class OnboardingGateTest {
         assertFalse(
             hasUsableRuntimeSetup(
                 localRuntimeStatus = LocalRuntimeStatus.Broken("metadata missing"),
-                hasRemoteConnection = false
-            )
+                hasRemoteConnection = false,
+            ),
         )
     }
 }

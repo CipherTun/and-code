@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Result> {
-
     class Result internal constructor(internal val warmupJob: Job?)
 
     override fun create(context: Context): Result {
@@ -22,10 +21,11 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         val runtimeStatus = app.localRuntimeManager.status()
-        val setupConfigured = hasUsableRuntimeSetup(
-            localRuntimeStatus = runtimeStatus,
-            hasRemoteConnection = app.settings.connections().isNotEmpty()
-        )
+        val setupConfigured =
+            hasUsableRuntimeSetup(
+                localRuntimeStatus = runtimeStatus,
+                hasRemoteConnection = app.settings.connections().isNotEmpty(),
+            )
         if (app.settings.onboardingCompleted != setupConfigured) {
             app.settings.onboardingCompleted = setupConfigured
         }
@@ -45,13 +45,14 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
                         app.runtimeRegistry.select(LOCAL_RUNTIME_ID)
                     }
                     warmupJob?.cancel()
-                    warmupJob = scope.launch {
-                        repeat(CATALOG_WARMUP_ATTEMPTS) {
-                            app.catalogRepository.refresh()
-                            delay(CATALOG_WARMUP_DELAY_MS)
-                            if (app.catalogRepository.state.value.providers.all.isNotEmpty()) return@launch
+                    warmupJob =
+                        scope.launch {
+                            repeat(CATALOG_WARMUP_ATTEMPTS) {
+                                app.catalogRepository.refresh()
+                                delay(CATALOG_WARMUP_DELAY_MS)
+                                if (app.catalogRepository.state.value.providers.all.isNotEmpty()) return@launch
+                            }
                         }
-                    }
                 }
             }
         }

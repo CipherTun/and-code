@@ -1,10 +1,11 @@
 package com.opencode.android.feature.chat
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +14,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -74,7 +76,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import android.content.Intent
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -86,7 +87,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.opencode.android.R
@@ -119,7 +119,7 @@ fun OpenCodeChatScreen(
     onPermission: (String, PermissionResponse, Boolean) -> Unit,
     onAbort: () -> Unit,
     onMic: () -> Unit,
-    onHandoff: (String) -> Unit = {}
+    onHandoff: (String) -> Unit = {},
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -152,15 +152,16 @@ fun OpenCodeChatScreen(
             onSelectModel = onSelectModel,
             onSelectAgent = onSelectAgent,
             onSelectWorkspace = onSelectWorkspace,
-            onHandoff = onHandoff
+            onHandoff = onHandoff,
         )
 
         if (state.backendName.isBlank()) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                contentAlignment = Alignment.Center,
             ) {
                 SectionCard {
                     Text(stringResource(R.string.no_connection_chat))
@@ -173,7 +174,7 @@ fun OpenCodeChatScreen(
             state = listState,
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (state.messages.isEmpty() && !state.isLoadingHistory) {
                 item {
@@ -182,12 +183,12 @@ fun OpenCodeChatScreen(
                             text = stringResource(R.string.chat_intro_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
                             text = stringResource(R.string.chat_intro_body),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -213,14 +214,15 @@ fun OpenCodeChatScreen(
             state.error?.let { error ->
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                        )
+                        colors =
+                            CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                            ),
                     ) {
                         Text(
                             text = error,
                             modifier = Modifier.padding(14.dp),
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
@@ -228,12 +230,13 @@ fun OpenCodeChatScreen(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(12.dp),
             verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             IconButton(onClick = onMic) {
                 Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.voice))
@@ -244,16 +247,17 @@ fun OpenCodeChatScreen(
                 modifier = Modifier.weight(1f),
                 placeholder = { Text(stringResource(R.string.message_hint)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                keyboardActions = KeyboardActions(
-                    onSend = {
-                        if (input.isNotBlank()) {
-                            onSendMessage(input)
-                            input = ""
-                        }
-                    }
-                ),
+                keyboardActions =
+                    KeyboardActions(
+                        onSend = {
+                            if (input.isNotBlank()) {
+                                onSendMessage(input)
+                                input = ""
+                            }
+                        },
+                    ),
                 maxLines = 5,
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
             )
             if (state.isRunning) {
                 IconButton(onClick = onAbort) {
@@ -267,7 +271,7 @@ fun OpenCodeChatScreen(
                             input = ""
                         }
                     },
-                    enabled = input.isNotBlank()
+                    enabled = input.isNotBlank(),
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.send_description))
                 }
@@ -289,7 +293,7 @@ private fun ChatHeader(
     onSelectModel: (String, String) -> Unit,
     onSelectAgent: (String) -> Unit,
     onSelectWorkspace: (String?) -> Unit,
-    onHandoff: (String) -> Unit
+    onHandoff: (String) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var showHandoffDialog by remember { mutableStateOf(false) }
@@ -297,11 +301,12 @@ private fun ChatHeader(
     val context = LocalContext.current
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -309,18 +314,18 @@ private fun ChatHeader(
                     text = state.sessionTitle.ifBlank { stringResource(R.string.new_chat) },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 Text(
                     text = state.backendName,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
                 )
             }
             StatusChip(
                 text = if (state.isConnected) stringResource(R.string.active) else stringResource(R.string.not_set),
-                active = state.isConnected
+                active = state.isConnected,
             )
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
@@ -333,7 +338,7 @@ private fun ChatHeader(
                         onClick = {
                             menuExpanded = false
                             showHandoffDialog = true
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text("Copy resume command") },
@@ -341,7 +346,7 @@ private fun ChatHeader(
                         onClick = {
                             menuExpanded = false
                             state.sessionId?.let { ResumeCommandHelper.copyToClipboard(context, it) }
-                        }
+                        },
                     )
                 }
             }
@@ -353,14 +358,14 @@ private fun ChatHeader(
                 onSelect = { runtimeId ->
                     showHandoffDialog = false
                     onHandoff(runtimeId)
-                }
+                },
             )
         }
         WorkspaceSelector(
             workspaces = workspaces,
             selectedPath = state.selectedWorkspacePath,
             enabled = state.sessionId == null,
-            onSelect = onSelectWorkspace
+            onSelect = onSelectWorkspace,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ModelSelector(
@@ -368,13 +373,13 @@ private fun ChatHeader(
                 providerId = selectedProviderId,
                 modelId = selectedModelId,
                 onSelect = onSelectModel,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             AgentSelector(
                 agents = agents,
                 selectedAgentId = selectedAgentId,
                 onSelect = onSelectAgent,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -384,7 +389,7 @@ private fun ChatHeader(
 private fun HandoffDialog(
     runtimes: List<RuntimeTarget>,
     onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -394,17 +399,18 @@ private fun HandoffDialog(
                 runtimes.forEach { runtime ->
                     Text(
                         text = runtime.displayName,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(runtime.id) }
-                            .padding(vertical = 12.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(runtime.id) }
+                                .padding(vertical = 12.dp),
                     )
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        }
+        },
     )
 }
 
@@ -413,7 +419,7 @@ private fun WorkspaceSelector(
     workspaces: List<WorkspaceRef>,
     selectedPath: String?,
     enabled: Boolean,
-    onSelect: (String?) -> Unit
+    onSelect: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selected = workspaces.firstOrNull { it.path == selectedPath }
@@ -421,7 +427,7 @@ private fun WorkspaceSelector(
         OutlinedButton(
             onClick = { expanded = true },
             enabled = enabled && workspaces.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(Icons.Default.Folder, contentDescription = null)
             Spacer(Modifier.padding(horizontal = 4.dp))
@@ -430,7 +436,7 @@ private fun WorkspaceSelector(
                 Text(
                     selected?.name ?: selectedPath ?: stringResource(R.string.default_folder),
                     maxLines = 1,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
@@ -443,14 +449,14 @@ private fun WorkspaceSelector(
                         Text(
                             stringResource(R.string.default_folder_description),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 },
                 onClick = {
                     onSelect(null)
                     expanded = false
-                }
+                },
             )
             workspaces.forEach { workspace ->
                 DropdownMenuItem(
@@ -461,14 +467,14 @@ private fun WorkspaceSelector(
                                 workspace.path,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
+                                maxLines = 1,
                             )
                         }
                     },
                     onClick = {
                         onSelect(workspace.path)
                         expanded = false
-                    }
+                    },
                 )
             }
         }
@@ -481,7 +487,7 @@ private fun ModelSelector(
     providerId: String?,
     modelId: String?,
     onSelect: (String, String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val provider = providers.firstOrNull { it.id == providerId }
@@ -495,16 +501,17 @@ private fun ModelSelector(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             providers.forEach { itemProvider ->
-                val models = itemProvider.models.values
-                    .filter { it.status == null || it.status == "active" }
-                    .sortedBy { it.name.lowercase() }
-                    .take(60)
+                val models =
+                    itemProvider.models.values
+                        .filter { it.status == null || it.status == "active" }
+                        .sortedBy { it.name.lowercase() }
+                        .take(60)
                 if (models.isNotEmpty()) {
                     Text(
                         text = itemProvider.name,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     models.forEach { model: OpenCodeModel ->
                         DropdownMenuItem(
@@ -515,14 +522,14 @@ private fun ModelSelector(
                                         model.id,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
+                                        maxLines = 1,
                                     )
                                 }
                             },
                             onClick = {
                                 onSelect(itemProvider.id, model.id)
                                 expanded = false
-                            }
+                            },
                         )
                     }
                 }
@@ -539,7 +546,7 @@ private fun AgentSelector(
     agents: List<OpenCodeAgent>,
     selectedAgentId: String?,
     onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier) {
@@ -561,7 +568,7 @@ private fun AgentSelector(
                                     it,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2
+                                    maxLines = 2,
                                 )
                             }
                         }
@@ -569,7 +576,7 @@ private fun AgentSelector(
                     onClick = {
                         onSelect(agent.name)
                         expanded = false
-                    }
+                    },
                 )
             }
         }
@@ -581,55 +588,59 @@ private fun AgentSelector(
 fun MessageBubble(message: ChatMessage) {
     Box(
         modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.CenterEnd
+        contentAlignment = Alignment.CenterEnd,
     ) {
         Surface(
             modifier = Modifier.widthIn(max = 340.dp),
             shape = RoundedCornerShape(20.dp, 20.dp, 5.dp, 20.dp),
             color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    message.imagePreviews.forEach { preview ->
-                        Image(
-                            bitmap = preview.asImageBitmap(),
-                            contentDescription = null,
-                            modifier = Modifier
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                message.imagePreviews.forEach { preview ->
+                    Image(
+                        bitmap = preview.asImageBitmap(),
+                        contentDescription = null,
+                        modifier =
+                            Modifier
                                 .widthIn(max = 280.dp)
                                 .heightIn(max = 220.dp)
                                 .padding(bottom = 8.dp),
-                            contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+                message.attachments.forEach { attachment ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        Icon(Icons.Default.Description, contentDescription = null)
+                        Text(
+                            text = attachment.filename,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         )
                     }
-                    message.attachments.forEach { attachment ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        ) {
-                            Icon(Icons.Default.Description, contentDescription = null)
-                            Text(
-                                text = attachment.filename,
-                                style = MaterialTheme.typography.labelMedium,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                    if (message.text.isNotBlank()) {
-                        Text(text = message.text)
-                    }
                 }
+                if (message.text.isNotBlank()) {
+                    Text(text = message.text)
+                }
+            }
         }
     }
 }
 
 // Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
 @Composable
-fun AssistantTimeline(message: ChatMessage, showProcessing: Boolean = false) {
+fun AssistantTimeline(
+    message: ChatMessage,
+    showProcessing: Boolean = false,
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         message.parts.forEach { part ->
             key(part.id) {
@@ -645,7 +656,7 @@ fun AssistantTimeline(message: ChatMessage, showProcessing: Boolean = false) {
             Text(
                 text = stringResource(R.string.processing),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -657,12 +668,13 @@ private fun InlineText(
     style: TextStyle,
     linkColor: Color,
     codeBackground: Color,
-    onFilePathClick: (String) -> Unit
+    onFilePathClick: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    val annotated = remember(inlines, linkColor, codeBackground) {
-        annotateFilePaths(renderInline(inlines, codeBackground, linkColor), linkColor)
-    }
+    val annotated =
+        remember(inlines, linkColor, codeBackground) {
+            annotateFilePaths(renderInline(inlines, codeBackground, linkColor), linkColor)
+        }
     ClickableText(
         text = annotated,
         style = style,
@@ -673,138 +685,157 @@ private fun InlineText(
                 }
             } ?: annotated.getStringAnnotations("filepath", offset, offset).firstOrNull()
                 ?.let { onFilePathClick(it.item) }
-        }
+        },
     )
 }
 
 @Composable
-private fun MarkdownText(text: String, onFilePathClick: (String) -> Unit = {}) {
+private fun MarkdownText(
+    text: String,
+    onFilePathClick: (String) -> Unit = {},
+) {
     val blocks = remember(text) { MarkdownLite.parse(text) }
     val codeInlineBackground = MaterialTheme.colorScheme.surfaceVariant
     val linkColor = MaterialTheme.colorScheme.primary
-    val bodyStyle = MaterialTheme.typography.bodyLarge.copy(
-        color = MaterialTheme.colorScheme.onSurface
-    )
+    val bodyStyle =
+        MaterialTheme.typography.bodyLarge.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         blocks.forEach { block ->
             when (block) {
-                is MarkdownBlock.Heading -> InlineText(
-                    inlines = block.inlines,
-                    style = when (block.level) {
-                        1 -> MaterialTheme.typography.titleLarge
-                        2 -> MaterialTheme.typography.titleMedium
-                        else -> MaterialTheme.typography.titleSmall
-                    }.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface),
-                    linkColor = linkColor,
-                    codeBackground = codeInlineBackground,
-                    onFilePathClick = onFilePathClick
-                )
-                is MarkdownBlock.Paragraph -> InlineText(
-                    inlines = block.inlines,
-                    style = bodyStyle,
-                    linkColor = linkColor,
-                    codeBackground = codeInlineBackground,
-                    onFilePathClick = onFilePathClick
-                )
-                is MarkdownBlock.CodeBlock -> Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ) {
-                    Text(
-                        text = block.code,
-                        modifier = Modifier
-                            .horizontalScroll(rememberScrollState())
-                            .padding(10.dp),
-                        fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall
+                is MarkdownBlock.Heading ->
+                    InlineText(
+                        inlines = block.inlines,
+                        style =
+                            when (block.level) {
+                                1 -> MaterialTheme.typography.titleLarge
+                                2 -> MaterialTheme.typography.titleMedium
+                                else -> MaterialTheme.typography.titleSmall
+                            }.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface),
+                        linkColor = linkColor,
+                        codeBackground = codeInlineBackground,
+                        onFilePathClick = onFilePathClick,
                     )
-                }
-                is MarkdownBlock.BulletList -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    block.items.forEach { item ->
-                        Row {
-                            Text("•  ", color = MaterialTheme.colorScheme.onSurface)
-                            InlineText(item, bodyStyle, linkColor, codeInlineBackground, onFilePathClick)
-                        }
-                    }
-                }
-                is MarkdownBlock.OrderedList -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    block.items.forEachIndexed { index, item ->
-                        Row {
-                            Text("${index + 1}.  ", color = MaterialTheme.colorScheme.onSurface)
-                            InlineText(item, bodyStyle, linkColor, codeInlineBackground, onFilePathClick)
-                        }
-                    }
-                }
-                is MarkdownBlock.Blockquote -> Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ) {
-                    Box(
-                        modifier = Modifier.padding(
-                            start = 10.dp,
-                            end = 8.dp,
-                            top = 6.dp,
-                            bottom = 6.dp
-                        )
+                is MarkdownBlock.Paragraph ->
+                    InlineText(
+                        inlines = block.inlines,
+                        style = bodyStyle,
+                        linkColor = linkColor,
+                        codeBackground = codeInlineBackground,
+                        onFilePathClick = onFilePathClick,
+                    )
+                is MarkdownBlock.CodeBlock ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
                     ) {
-                        InlineText(
-                            inlines = block.inlines,
-                            style = bodyStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
-                            linkColor = linkColor,
-                            codeBackground = codeInlineBackground,
-                            onFilePathClick = onFilePathClick
+                        Text(
+                            text = block.code,
+                            modifier =
+                                Modifier
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(10.dp),
+                            fontFamily = FontFamily.Monospace,
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                }
-                is MarkdownBlock.Table -> Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Row {
-                            block.headers.forEach { header ->
-                                Text(
-                                    text = header,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(end = 8.dp),
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                is MarkdownBlock.BulletList ->
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        block.items.forEach { item ->
+                            Row {
+                                Text("•  ", color = MaterialTheme.colorScheme.onSurface)
+                                InlineText(item, bodyStyle, linkColor, codeInlineBackground, onFilePathClick)
                             }
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-                        block.rows.forEach { row ->
-                            val padded = row.take(block.headers.size) +
-                                List((block.headers.size - row.size).coerceAtLeast(0)) { "" }
+                    }
+                is MarkdownBlock.OrderedList ->
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        block.items.forEachIndexed { index, item ->
                             Row {
-                                padded.forEach { cell ->
+                                Text("${index + 1}.  ", color = MaterialTheme.colorScheme.onSurface)
+                                InlineText(item, bodyStyle, linkColor, codeInlineBackground, onFilePathClick)
+                            }
+                        }
+                    }
+                is MarkdownBlock.Blockquote ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ) {
+                        Box(
+                            modifier =
+                                Modifier.padding(
+                                    start = 10.dp,
+                                    end = 8.dp,
+                                    top = 6.dp,
+                                    bottom = 6.dp,
+                                ),
+                        ) {
+                            InlineText(
+                                inlines = block.inlines,
+                                style = bodyStyle.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
+                                linkColor = linkColor,
+                                codeBackground = codeInlineBackground,
+                                onFilePathClick = onFilePathClick,
+                            )
+                        }
+                    }
+                is MarkdownBlock.Table ->
+                    Surface(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Row {
+                                block.headers.forEach { header ->
                                     Text(
-                                        text = cell,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .padding(end = 8.dp),
-                                        style = MaterialTheme.typography.bodyMedium
+                                        text = header,
+                                        modifier =
+                                            Modifier
+                                                .weight(1f)
+                                                .padding(end = 8.dp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        style = MaterialTheme.typography.bodyMedium,
                                     )
+                                }
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                            block.rows.forEach { row ->
+                                val padded =
+                                    row.take(block.headers.size) +
+                                        List((block.headers.size - row.size).coerceAtLeast(0)) { "" }
+                                Row {
+                                    padded.forEach { cell ->
+                                        Text(
+                                            text = cell,
+                                            modifier =
+                                                Modifier
+                                                    .weight(1f)
+                                                    .padding(end = 8.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                is MarkdownBlock.HorizontalRule -> HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                )
+                is MarkdownBlock.HorizontalRule ->
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                    )
             }
         }
     }
@@ -812,73 +843,88 @@ private fun MarkdownText(text: String, onFilePathClick: (String) -> Unit = {}) {
 
 private val FILE_PATH_REGEX = Regex("[\\w./-]+\\.\\w+")
 
-private fun annotateFilePaths(source: AnnotatedString, linkColor: Color): AnnotatedString {
+private fun annotateFilePaths(
+    source: AnnotatedString,
+    linkColor: Color,
+): AnnotatedString {
     return buildAnnotatedString {
         append(source)
         FILE_PATH_REGEX.findAll(source.text).forEach { match ->
             addStyle(
                 SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
                 match.range.first,
-                match.range.last + 1
+                match.range.last + 1,
             )
             addStringAnnotation("filepath", match.value, match.range.first, match.range.last + 1)
         }
     }
 }
 
-private fun renderInline(inlines: List<MarkdownInline>, codeBackground: Color, linkColor: Color): AnnotatedString = buildAnnotatedString {
-    inlines.forEach { inline ->
-        when (inline) {
-            is MarkdownInline.Plain -> append(inline.text)
-            is MarkdownInline.Bold -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(inline.text) }
-            is MarkdownInline.Italic -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(inline.text) }
-            is MarkdownInline.Strikethrough -> withStyle(
-                SpanStyle(textDecoration = TextDecoration.LineThrough)
-            ) { append(inline.text) }
-            is MarkdownInline.Code -> withStyle(
-                SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground)
-            ) { append(inline.text) }
-            is MarkdownInline.Link -> {
-                val start = length
-                withStyle(
-                    SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline)
-                ) { append(inline.text) }
-                addStringAnnotation("link", inline.url, start, length)
+private fun renderInline(
+    inlines: List<MarkdownInline>,
+    codeBackground: Color,
+    linkColor: Color,
+): AnnotatedString =
+    buildAnnotatedString {
+        inlines.forEach { inline ->
+            when (inline) {
+                is MarkdownInline.Plain -> append(inline.text)
+                is MarkdownInline.Bold -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(inline.text) }
+                is MarkdownInline.Italic -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(inline.text) }
+                is MarkdownInline.Strikethrough ->
+                    withStyle(
+                        SpanStyle(textDecoration = TextDecoration.LineThrough),
+                    ) { append(inline.text) }
+                is MarkdownInline.Code ->
+                    withStyle(
+                        SpanStyle(fontFamily = FontFamily.Monospace, background = codeBackground),
+                    ) { append(inline.text) }
+                is MarkdownInline.Link -> {
+                    val start = length
+                    withStyle(
+                        SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
+                    ) { append(inline.text) }
+                    addStringAnnotation("link", inline.url, start, length)
+                }
             }
         }
     }
-}
 
 @Composable
-private fun ReasoningCard(part: ChatPart.Reasoning, autoExpand: Boolean = false) {
+private fun ReasoningCard(
+    part: ChatPart.Reasoning,
+    autoExpand: Boolean = false,
+) {
     var expanded by remember { mutableStateOf(autoExpand) }
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Psychology,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.padding(horizontal = 4.dp))
                 Text(
                     text = stringResource(R.string.reasoning_card_title),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (expanded && part.text.isNotBlank()) {
@@ -886,7 +932,7 @@ private fun ReasoningCard(part: ChatPart.Reasoning, autoExpand: Boolean = false)
                 Text(
                     text = part.text,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 )
             }
         }
@@ -897,11 +943,12 @@ private fun ReasoningCard(part: ChatPart.Reasoning, autoExpand: Boolean = false)
 private fun ToolCard(part: ChatPart.Tool) {
     var expanded by remember { mutableStateOf(part.status == ToolStatus.RUNNING) }
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -909,14 +956,14 @@ private fun ToolCard(part: ChatPart.Tool) {
                     Icons.Default.Build,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.size(15.dp),
                 )
                 Text(
                     text = part.name,
                     fontWeight = FontWeight.Medium,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 part.title?.let {
                     Text(
@@ -925,14 +972,14 @@ private fun ToolCard(part: ChatPart.Tool) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                 }
                 ToolStatusChip(part.status)
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
                 )
             }
             if (expanded) {
@@ -941,16 +988,17 @@ private fun ToolCard(part: ChatPart.Tool) {
                     Text(
                         text = stringResource(R.string.tool_input_label),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = input,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(vertical = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 4.dp),
                         fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
                 part.output?.let { output ->
@@ -958,24 +1006,25 @@ private fun ToolCard(part: ChatPart.Tool) {
                     Text(
                         text = stringResource(R.string.tool_output_label),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = output,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 240.dp)
-                            .verticalScroll(rememberScrollState())
-                            .horizontalScroll(rememberScrollState())
-                            .padding(vertical = 4.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 240.dp)
+                                .verticalScroll(rememberScrollState())
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 4.dp),
                         fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     if (part.outputTruncated) {
                         Text(
                             text = stringResource(R.string.tool_output_truncated),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -985,7 +1034,7 @@ private fun ToolCard(part: ChatPart.Tool) {
                         text = error,
                         color = MaterialTheme.colorScheme.error,
                         fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
@@ -995,23 +1044,24 @@ private fun ToolCard(part: ChatPart.Tool) {
 
 @Composable
 private fun ToolStatusChip(status: ToolStatus) {
-    val (label, color) = when (status) {
-        ToolStatus.PENDING -> stringResource(R.string.tool_status_pending) to MaterialTheme.colorScheme.onSurfaceVariant
-        ToolStatus.RUNNING -> stringResource(R.string.tool_status_running) to MaterialTheme.colorScheme.primary
-        ToolStatus.COMPLETED -> stringResource(R.string.tool_status_completed) to OpenCodeSuccess
-        ToolStatus.ERROR -> stringResource(R.string.tool_status_error) to MaterialTheme.colorScheme.error
-        ToolStatus.UNKNOWN -> stringResource(R.string.tool_status_pending) to MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val (label, color) =
+        when (status) {
+            ToolStatus.PENDING -> stringResource(R.string.tool_status_pending) to MaterialTheme.colorScheme.onSurfaceVariant
+            ToolStatus.RUNNING -> stringResource(R.string.tool_status_running) to MaterialTheme.colorScheme.primary
+            ToolStatus.COMPLETED -> stringResource(R.string.tool_status_completed) to OpenCodeSuccess
+            ToolStatus.ERROR -> stringResource(R.string.tool_status_error) to MaterialTheme.colorScheme.error
+            ToolStatus.UNKNOWN -> stringResource(R.string.tool_status_pending) to MaterialTheme.colorScheme.onSurfaceVariant
+        }
     Surface(
         color = color.copy(alpha = 0.14f),
         contentColor = color,
-        shape = RoundedCornerShape(100.dp)
+        shape = RoundedCornerShape(100.dp),
     ) {
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
     }
 }
@@ -1021,7 +1071,7 @@ private fun PatchCard(part: ChatPart.Patch) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1029,13 +1079,13 @@ private fun PatchCard(part: ChatPart.Patch) {
                     Icons.Default.Description,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.size(15.dp),
                 )
                 Spacer(Modifier.padding(horizontal = 3.dp))
                 Text(
                     stringResource(R.string.file_changes_title),
                     fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -1043,7 +1093,7 @@ private fun PatchCard(part: ChatPart.Patch) {
                 Text(
                     text = stringResource(R.string.file_changes_generic),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 part.files.forEach { file ->
@@ -1058,15 +1108,15 @@ private fun PatchCard(part: ChatPart.Patch) {
 @Composable
 fun PermissionCard(
     permission: PermissionRequest,
-    onPermission: (String, PermissionResponse, Boolean) -> Unit
+    onPermission: (String, PermissionResponse, Boolean) -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = OpenCodeWarning.copy(alpha = 0.10f)),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(18.dp),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Security, contentDescription = null, tint = OpenCodeWarning)
@@ -1076,35 +1126,35 @@ fun PermissionCard(
             Text(
                 text = permission.permission,
                 fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
             permission.patterns.forEach { pattern ->
                 Text(
                     text = pattern,
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
                     onClick = { onPermission(permission.id, PermissionResponse.REJECT, false) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.reject))
                 }
                 FilledTonalButton(
                     onClick = { onPermission(permission.id, PermissionResponse.ONCE, false) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.allow_once))
                 }
                 Button(
                     onClick = { onPermission(permission.id, PermissionResponse.ALWAYS, true) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.always_allow))
                 }
@@ -1114,24 +1164,27 @@ fun PermissionCard(
 }
 
 @Composable
-fun TurnBoundary(timestamp: String, modifier: Modifier = Modifier) {
+fun TurnBoundary(
+    timestamp: String,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         )
         Text(
             text = timestamp,
             modifier = Modifier.padding(horizontal = 12.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
+            fontSize = 12.sp,
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         )
     }
 }
@@ -1140,41 +1193,44 @@ fun TurnBoundary(timestamp: String, modifier: Modifier = Modifier) {
 fun ToolCallSummaryCard(
     toolNames: List<String>,
     modifier: Modifier = Modifier,
-    onExpand: () -> Unit
+    onExpand: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    SectionCard(modifier = modifier.clickable {
-        expanded = !expanded
-        onExpand()
-    }) {
+    SectionCard(
+        modifier =
+            modifier.clickable {
+                expanded = !expanded
+                onExpand()
+            },
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "🔧 ${toolNames.size} tool calls",
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.weight(1f))
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         AnimatedVisibility(visible = expanded) {
             Row(
                 modifier = Modifier.padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 toolNames.forEach { name ->
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(100.dp)
+                        shape = RoundedCornerShape(100.dp),
                     ) {
                         Text(
                             text = name,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -1187,27 +1243,27 @@ fun ToolCallSummaryCard(
 fun CompactionMarker(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         )
         Icon(
             Icons.Default.Compress,
             contentDescription = null,
             modifier = Modifier.padding(horizontal = 4.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = "context compacted",
             modifier = Modifier.padding(horizontal = 4.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
+            fontSize = 12.sp,
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
         )
     }
 }
@@ -1215,32 +1271,33 @@ fun CompactionMarker(modifier: Modifier = Modifier) {
 @Composable
 fun PlanCard(
     planContent: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(true) }
     SectionCard(modifier = modifier) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded },
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 Icons.Default.Checklist,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.padding(horizontal = 4.dp))
             Text(
                 text = "Plan",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         AnimatedVisibility(visible = expanded) {
@@ -1254,13 +1311,13 @@ fun PlanCard(
 data class TodoItem(
     val content: String,
     val status: String,
-    val priority: String
+    val priority: String,
 )
 
 @Composable
 fun TodoListCard(
     todos: List<TodoItem>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val completedCount = todos.count { it.status == "completed" }
     SectionCard(modifier = modifier) {
@@ -1269,12 +1326,12 @@ fun TodoListCard(
                 text = "Tasks",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Text(
                 text = "$completedCount/${todos.size} done",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -1282,33 +1339,36 @@ fun TodoListCard(
             todos.forEach { todo ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     when (todo.status) {
-                        "completed" -> Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = OpenCodeSuccess
-                        )
-                        "in_progress" -> Icon(
-                            Icons.Default.Pending,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        else -> Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
+                        "completed" ->
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = OpenCodeSuccess,
+                            )
+                        "in_progress" ->
+                            Icon(
+                                Icons.Default.Pending,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        else ->
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
                     }
                     Text(
                         text = todo.content,
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                     StatusChip(
                         text = todo.priority,
-                        active = todo.priority == "high"
+                        active = todo.priority == "high",
                     )
                 }
             }

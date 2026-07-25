@@ -28,7 +28,7 @@ data class LocalRuntimeManagementUiState(
     val showDeleteConfirmation: Boolean = false,
     val deleteCompleted: Boolean = false,
     val error: String? = null,
-    val updateError: String? = null
+    val updateError: String? = null,
 )
 
 class LocalRuntimeManagementViewModel(
@@ -41,18 +41,19 @@ class LocalRuntimeManagementViewModel(
     private val updateAction: () -> Unit,
     private val rollbackAction: () -> Unit,
     private val deleteAction: () -> Unit,
-    private val deleteTimeoutMillis: Long = 30_000L
+    private val deleteTimeoutMillis: Long = 30_000L,
 ) : ViewModel() {
     init {
         require(deleteTimeoutMillis > 0L)
     }
 
-    private val mutableState = MutableStateFlow(
-        LocalRuntimeManagementUiState(
-            runtimeStatus = runtimeState.value,
-            lastOperation = lastOperationState.value
+    private val mutableState =
+        MutableStateFlow(
+            LocalRuntimeManagementUiState(
+                runtimeStatus = runtimeState.value,
+                lastOperation = lastOperationState.value,
+            ),
         )
-    )
     val state: StateFlow<LocalRuntimeManagementUiState> = mutableState.asStateFlow()
     private var deleteTimeoutJob: Job? = null
 
@@ -64,7 +65,7 @@ class LocalRuntimeManagementViewModel(
                 mutableState.update {
                     it.copy(
                         runtimeStatus = status,
-                        diagnostics = it.diagnostics?.copy(status = status)
+                        diagnostics = it.diagnostics?.copy(status = status),
                     )
                 }
                 when {
@@ -75,7 +76,7 @@ class LocalRuntimeManagementViewModel(
                             it.copy(
                                 isDeleting = false,
                                 deleteCompleted = true,
-                                error = null
+                                error = null,
                             )
                         }
                     }
@@ -85,7 +86,7 @@ class LocalRuntimeManagementViewModel(
                         mutableState.update {
                             it.copy(
                                 isDeleting = false,
-                                error = status.reason
+                                error = status.reason,
                             )
                         }
                     }
@@ -115,7 +116,7 @@ class LocalRuntimeManagementViewModel(
                             runtimeStatus = diagnostics.status,
                             rollbackVersion = rollbackResult.getOrNull(),
                             isLoading = false,
-                            error = null
+                            error = null,
                         )
                     }
                 }
@@ -125,8 +126,9 @@ class LocalRuntimeManagementViewModel(
                             diagnostics = null,
                             rollbackVersion = rollbackResult.getOrNull(),
                             isLoading = false,
-                            error = error.message?.takeIf(String::isNotBlank)
-                                ?: "ローカルランタイムの診断に失敗しました"
+                            error =
+                                error.message?.takeIf(String::isNotBlank)
+                                    ?: "ローカルランタイムの診断に失敗しました",
                         )
                     }
                 }
@@ -138,15 +140,16 @@ class LocalRuntimeManagementViewModel(
         if (mutableState.value.isCheckingUpdate) return
         mutableState.update { it.copy(isCheckingUpdate = true, updateError = null) }
         viewModelScope.launch {
-            val result = runCatching { updateCheckProvider() }
-                .getOrElse { Result.failure(it) }
+            val result =
+                runCatching { updateCheckProvider() }
+                    .getOrElse { Result.failure(it) }
             result
                 .onSuccess { check ->
                     mutableState.update {
                         it.copy(
                             updateCheck = check,
                             isCheckingUpdate = false,
-                            updateError = null
+                            updateError = null,
                         )
                     }
                 }
@@ -154,8 +157,9 @@ class LocalRuntimeManagementViewModel(
                     mutableState.update {
                         it.copy(
                             isCheckingUpdate = false,
-                            updateError = error.message?.takeIf(String::isNotBlank)
-                                ?: "OpenCodeの更新確認に失敗しました"
+                            updateError =
+                                error.message?.takeIf(String::isNotBlank)
+                                    ?: "OpenCodeの更新確認に失敗しました",
                         )
                     }
                 }
@@ -210,7 +214,7 @@ class LocalRuntimeManagementViewModel(
             it.copy(
                 showDeleteConfirmation = false,
                 isDeleting = true,
-                error = null
+                error = null,
             )
         }
         runCatching(deleteAction)
@@ -221,8 +225,9 @@ class LocalRuntimeManagementViewModel(
                 mutableState.update {
                     it.copy(
                         isDeleting = false,
-                        error = error.message?.takeIf(String::isNotBlank)
-                            ?: "ローカルランタイムを削除できません"
+                        error =
+                            error.message?.takeIf(String::isNotBlank)
+                                ?: "ローカルランタイムを削除できません",
                     )
                 }
             }
@@ -240,18 +245,21 @@ class LocalRuntimeManagementViewModel(
                 it.copy(
                     diagnostics = diagnostics ?: it.diagnostics,
                     rollbackVersion = rollbackVersion,
-                    error = if (diagnostics == null) it.error else null
+                    error = if (diagnostics == null) it.error else null,
                 )
             }
         }
         checkForUpdate()
     }
 
-    private fun dispatchAction(fallbackMessage: String, action: () -> Unit) {
+    private fun dispatchAction(
+        fallbackMessage: String,
+        action: () -> Unit,
+    ) {
         runCatching(action).onFailure { error ->
             mutableState.update {
                 it.copy(
-                    error = error.message?.takeIf(String::isNotBlank) ?: fallbackMessage
+                    error = error.message?.takeIf(String::isNotBlank) ?: fallbackMessage,
                 )
             }
         }
@@ -259,18 +267,19 @@ class LocalRuntimeManagementViewModel(
 
     private fun startDeleteTimeout() {
         deleteTimeoutJob?.cancel()
-        deleteTimeoutJob = viewModelScope.launch {
-            delay(deleteTimeoutMillis)
-            if (mutableState.value.isDeleting) {
-                mutableState.update {
-                    it.copy(
-                        isDeleting = false,
-                        error = "ランタイムの削除がタイムアウトしました"
-                    )
+        deleteTimeoutJob =
+            viewModelScope.launch {
+                delay(deleteTimeoutMillis)
+                if (mutableState.value.isDeleting) {
+                    mutableState.update {
+                        it.copy(
+                            isDeleting = false,
+                            error = "ランタイムの削除がタイムアウトしました",
+                        )
+                    }
                 }
+                deleteTimeoutJob = null
             }
-            deleteTimeoutJob = null
-        }
     }
 }
 

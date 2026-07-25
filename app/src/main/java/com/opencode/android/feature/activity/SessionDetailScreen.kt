@@ -35,9 +35,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.opencode.android.R
@@ -51,18 +51,18 @@ fun SessionDetailScreen(
     state: SessionDetailUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
-    onContinueChat: () -> Unit
+    onContinueChat: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
@@ -73,14 +73,14 @@ fun SessionDetailScreen(
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         state.session.directory.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 IconButton(onClick = onRefresh, enabled = !state.isLoading) {
@@ -110,7 +110,7 @@ fun SessionDetailScreen(
                 SectionCard {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.session_info_loading))
@@ -167,20 +167,22 @@ private fun TodoCard(todo: OpenCodeTodo) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(
-                imageVector = when (todo.status) {
-                    "completed" -> Icons.Default.CheckCircle
-                    "in_progress" -> Icons.Default.PendingActions
-                    else -> Icons.Default.TaskAlt
-                },
+                imageVector =
+                    when (todo.status) {
+                        "completed" -> Icons.Default.CheckCircle
+                        "in_progress" -> Icons.Default.PendingActions
+                        else -> Icons.Default.TaskAlt
+                    },
                 contentDescription = null,
-                tint = when (todo.status) {
-                    "completed" -> MaterialTheme.colorScheme.secondary
-                    "in_progress" -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                tint =
+                    when (todo.status) {
+                        "completed" -> MaterialTheme.colorScheme.secondary
+                        "in_progress" -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(todo.content, fontWeight = FontWeight.Medium)
@@ -201,7 +203,7 @@ private fun SessionChangeCard(change: OpenCodeFileChange) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
             Column(modifier = Modifier.weight(1f)) {
@@ -209,7 +211,7 @@ private fun SessionChangeCard(change: OpenCodeFileChange) {
                 Text(
                     "+${change.additions.toInt()}  -${change.deletions.toInt()}  ${change.status.orEmpty()}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (!change.patch.isNullOrBlank()) {
@@ -225,7 +227,7 @@ private fun SessionChangeCard(change: OpenCodeFileChange) {
                     change.patch,
                     fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
                 )
             }
         }
@@ -233,7 +235,10 @@ private fun SessionChangeCard(change: OpenCodeFileChange) {
 }
 
 @Composable
-private fun SectionHeading(title: String, count: Int) {
+private fun SectionHeading(
+    title: String,
+    count: Int,
+) {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Text(stringResource(R.string.item_count, count), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -241,7 +246,10 @@ private fun SectionHeading(title: String, count: Int) {
 }
 
 @Composable
-private fun SessionInfoRow(label: String, value: String) {
+private fun SessionInfoRow(
+    label: String,
+    value: String,
+) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.35f))
         Text(value, fontFamily = FontFamily.Monospace, modifier = Modifier.weight(0.65f))
@@ -249,16 +257,18 @@ private fun SessionInfoRow(label: String, value: String) {
 }
 
 @Composable
-private fun todoStatusLabel(status: String): String = when (status) {
-    "in_progress" -> stringResource(R.string.todo_status_in_progress)
-    "completed" -> stringResource(R.string.tool_status_completed)
-    "cancelled" -> stringResource(R.string.todo_status_cancelled)
-    else -> stringResource(R.string.todo_status_pending)
-}
+private fun todoStatusLabel(status: String): String =
+    when (status) {
+        "in_progress" -> stringResource(R.string.todo_status_in_progress)
+        "completed" -> stringResource(R.string.tool_status_completed)
+        "cancelled" -> stringResource(R.string.todo_status_cancelled)
+        else -> stringResource(R.string.todo_status_pending)
+    }
 
 @Composable
-private fun todoPriorityLabel(priority: String): String = when (priority) {
-    "high" -> stringResource(R.string.priority_high)
-    "medium" -> stringResource(R.string.priority_medium)
-    else -> stringResource(R.string.priority_low)
-}
+private fun todoPriorityLabel(priority: String): String =
+    when (priority) {
+        "high" -> stringResource(R.string.priority_high)
+        "medium" -> stringResource(R.string.priority_medium)
+        else -> stringResource(R.string.priority_low)
+    }

@@ -36,22 +36,22 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Psychology
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -65,7 +65,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -98,9 +97,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -166,7 +165,7 @@ fun ChatHomeScreen(
     subagents: List<SubagentInfo> = emptyList(),
     onSubagentClick: (String) -> Unit = {},
     githubRefs: List<GitHubReference> = emptyList(),
-    onImageAttachment: (Bitmap) -> Unit = {}
+    onImageAttachment: (Bitmap) -> Unit = {},
 ) {
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -185,29 +184,33 @@ fun ChatHomeScreen(
     val attachedImages = remember { mutableStateListOf<Bitmap>() }
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            attachedImages.add(bitmap)
-            onImageAttachment(bitmap)
+    val cameraLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.TakePicturePreview(),
+        ) { bitmap ->
+            if (bitmap != null) {
+                attachedImages.add(bitmap)
+                onImageAttachment(bitmap)
+            }
         }
-    }
-    val galleryLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            try {
-                val bitmap = context.contentResolver.openInputStream(uri)?.use {
-                    android.graphics.BitmapFactory.decodeStream(it)
+    val galleryLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.PickVisualMedia(),
+        ) { uri ->
+            if (uri != null) {
+                try {
+                    val bitmap =
+                        context.contentResolver.openInputStream(uri)?.use {
+                            android.graphics.BitmapFactory.decodeStream(it)
+                        }
+                    if (bitmap != null) {
+                        attachedImages.add(bitmap)
+                        onImageAttachment(bitmap)
+                    }
+                } catch (_: Exception) {
                 }
-                if (bitmap != null) {
-                    attachedImages.add(bitmap)
-                    onImageAttachment(bitmap)
-                }
-            } catch (_: Exception) {}
+            }
         }
-    }
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -236,34 +239,36 @@ fun ChatHomeScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures { change, dragAmount ->
-                    val atEdge = change.position.x > size.width - 80f || showSidePanel
-                    if (!atEdge) return@detectHorizontalDragGestures
-                    change.consume()
-                    dragOffset += dragAmount
-                    if (dragOffset < -100f && change.position.x > size.width - 80f) {
-                        showSidePanel = true
-                        dragOffset = 0f
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures { change, dragAmount ->
+                        val atEdge = change.position.x > size.width - 80f || showSidePanel
+                        if (!atEdge) return@detectHorizontalDragGestures
+                        change.consume()
+                        dragOffset += dragAmount
+                        if (dragOffset < -100f && change.position.x > size.width - 80f) {
+                            showSidePanel = true
+                            dragOffset = 0f
+                        }
+                        if (dragOffset > 100f && showSidePanel) {
+                            showSidePanel = false
+                            dragOffset = 0f
+                        }
                     }
-                    if (dragOffset > 100f && showSidePanel) {
-                        showSidePanel = false
-                        dragOffset = 0f
-                    }
-                }
-            }
+                },
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
         ) {
             AnimatedVisibility(
                 visible = !focusMode,
                 enter = fadeIn(),
-                exit = fadeOut()
+                exit = fadeOut(),
             ) {
                 CenterAlignedTopAppBar(
                     title = {
@@ -272,7 +277,7 @@ fun ChatHomeScreen(
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                     },
                     navigationIcon = {
@@ -285,43 +290,46 @@ fun ChatHomeScreen(
                             Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_chat))
                         }
                     },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
-                        actionIconContentColor = MaterialTheme.colorScheme.onBackground
-                    )
+                    colors =
+                        TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            titleContentColor = MaterialTheme.colorScheme.onBackground,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                            actionIconContentColor = MaterialTheme.colorScheme.onBackground,
+                        ),
                 )
             }
 
             Box(modifier = Modifier.weight(1f)) {
                 when {
                     state.isLoadingHistory -> LoadingState()
-                    runtimeNotReady -> RuntimeSetupRequiredState(
-                        onOpenLocalSetup = onOpenLocalSetup,
-                        onOpenRemoteSetup = onOpenRemoteSetup
-                    )
+                    runtimeNotReady ->
+                        RuntimeSetupRequiredState(
+                            onOpenLocalSetup = onOpenLocalSetup,
+                            onOpenRemoteSetup = onOpenRemoteSetup,
+                        )
                     else -> {
                         val lastAssistantId = state.messages.lastOrNull { !it.isUser }?.id
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             items(state.messages, key = { it.id }) { message ->
                                 Box(
-                                    modifier = Modifier.combinedClickable(
-                                        onClick = {},
-                                        onLongClick = { showActionSheet = message.id to message.text }
-                                    )
+                                    modifier =
+                                        Modifier.combinedClickable(
+                                            onClick = {},
+                                            onLongClick = { showActionSheet = message.id to message.text },
+                                        ),
                                 ) {
                                     if (message.isUser) {
                                         MessageBubble(message)
                                     } else {
                                         AssistantTimeline(
                                             message,
-                                            showProcessing = state.isRunning && message.id == lastAssistantId
+                                            showProcessing = state.isRunning && message.id == lastAssistantId,
                                         )
                                     }
                                 }
@@ -333,7 +341,7 @@ fun ChatHomeScreen(
                                 QuestionCard(
                                     question = question,
                                     onAnswerSelected = onSelectQuestionAnswer,
-                                    onSubmit = onSubmitQuestion
+                                    onSubmit = onSubmitQuestion,
                                 )
                             }
                             if (state.isThinking) {
@@ -345,7 +353,7 @@ fun ChatHomeScreen(
                                         error = error,
                                         kind = errorKind ?: ChatErrorKind.GENERIC,
                                         onOpenLocalSetup = onOpenLocalSetup,
-                                        onOpenRemoteSetup = onOpenRemoteSetup
+                                        onOpenRemoteSetup = onOpenRemoteSetup,
                                     )
                                 }
                             }
@@ -362,7 +370,7 @@ fun ChatHomeScreen(
                                 if (totalItems > 0) listState.animateScrollToItem(totalItems - 1)
                             }
                         },
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
                     ) {
                         Icon(Icons.Default.ArrowDownward, contentDescription = null)
                     }
@@ -398,10 +406,11 @@ fun ChatHomeScreen(
                     agents = agents,
                     selectedAgentId = selectedAgentId,
                     onSelectAgent = onSelectAgent,
-                    thinkingOptions = providers
-                        .firstOrNull { it.id == selectedProviderId }
-                        ?.models?.get(selectedModelId)
-                        ?.variants?.keys?.toList() ?: emptyList(),
+                    thinkingOptions =
+                        providers
+                            .firstOrNull { it.id == selectedProviderId }
+                            ?.models?.get(selectedModelId)
+                            ?.variants?.keys?.toList() ?: emptyList(),
                     selectedVariant = state.selectedVariant,
                     onSelectVariant = onSelectVariant,
                     attachments = state.attachments,
@@ -411,10 +420,11 @@ fun ChatHomeScreen(
                     onToggleAutoAccept = onToggleAutoAccept,
                     sendBehavior = sendBehavior,
                     contextTokensUsed = state.contextTokensUsed,
-                    contextLimit = providers
-                        .firstOrNull { it.id == selectedProviderId }
-                        ?.models?.get(selectedModelId)
-                        ?.limit?.context ?: 0L,
+                    contextLimit =
+                        providers
+                            .firstOrNull { it.id == selectedProviderId }
+                            ?.models?.get(selectedModelId)
+                            ?.limit?.context ?: 0L,
                     showSlashCommands = showSlashCommands,
                     onSlashCommandSelect = { command ->
                         input = command.name + " "
@@ -430,10 +440,10 @@ fun ChatHomeScreen(
                     onGalleryLaunch = {
                         galleryLauncher.launch(
                             androidx.activity.result.PickVisualMediaRequest(
-                                ActivityResultContracts.PickVisualMedia.ImageOnly
-                            )
+                                ActivityResultContracts.PickVisualMedia.ImageOnly,
+                            ),
                         )
-                    }
+                    },
                 )
             }
         }
@@ -447,33 +457,34 @@ fun ChatHomeScreen(
             onAccept = {},
             onCancel = {},
             onAcceptAndSend = {},
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
 
         AnimatedVisibility(
             visible = showSidePanel,
             enter = slideInHorizontally(initialOffsetX = { it }),
             exit = slideOutHorizontally(targetOffsetX = { it }),
-            modifier = Modifier.align(Alignment.CenterEnd)
+            modifier = Modifier.align(Alignment.CenterEnd),
         ) {
             Surface(
-                modifier = Modifier
-                    .width(280.dp)
-                    .fillMaxSize(),
+                modifier =
+                    Modifier
+                        .width(280.dp)
+                        .fillMaxSize(),
                 color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 4.dp
+                tonalElevation = 4.dp,
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Files",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = "File explorer",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -497,7 +508,7 @@ fun ChatHomeScreen(
             recentModelKeys = recentModelKeys,
             hiddenModelKeys = hiddenModelKeys,
             onToggleFavorite = onToggleFavorite,
-            onDismiss = { showModelPicker = false }
+            onDismiss = { showModelPicker = false },
         )
     }
 
@@ -509,14 +520,14 @@ fun ChatHomeScreen(
                     onClick = {
                         clipboardManager.setText(AnnotatedString(content))
                         showActionSheet = null
-                    }
+                    },
                 )
                 DropdownMenuItem(
                     text = { Text("Copy as Markdown") },
                     onClick = {
                         clipboardManager.setText(AnnotatedString(content))
                         showActionSheet = null
-                    }
+                    },
                 )
             }
         }
@@ -533,15 +544,16 @@ private fun LoadingState() {
 @Composable
 private fun RuntimeSetupRequiredState(
     onOpenLocalSetup: () -> Unit,
-    onOpenRemoteSetup: () -> Unit
+    onOpenRemoteSetup: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp, vertical = 28.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         OpenCodeMark()
         Spacer(Modifier.height(22.dp))
@@ -549,26 +561,26 @@ private fun RuntimeSetupRequiredState(
             text = stringResource(R.string.runtime_setup_required_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(10.dp))
         Text(
             text = stringResource(R.string.runtime_setup_required_body_compact),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(28.dp))
         Button(
             onClick = onOpenLocalSetup,
-            modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth(),
         ) {
             Text(stringResource(R.string.setup_this_android_action))
         }
         Spacer(Modifier.height(10.dp))
         OutlinedButton(
             onClick = onOpenRemoteSetup,
-            modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth()
+            modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth(),
         ) {
             Text(stringResource(R.string.connect_pc_mac_action))
         }
@@ -581,14 +593,14 @@ private fun OpenCodeMark() {
         modifier = Modifier.size(52.dp),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = Icons.Default.Terminal,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(27.dp)
+                modifier = Modifier.size(27.dp),
             )
         }
     }
@@ -599,23 +611,23 @@ private fun ChatErrorCard(
     error: String,
     kind: ChatErrorKind,
     onOpenLocalSetup: () -> Unit,
-    onOpenRemoteSetup: () -> Unit
+    onOpenRemoteSetup: () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             if (kind == ChatErrorKind.RUNTIME_NOT_READY) {
                 Text(
                     text = stringResource(R.string.runtime_setup_required_title),
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(R.string.runtime_setup_required_body_compact),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -629,12 +641,12 @@ private fun ChatErrorCard(
             } else if (kind == ChatErrorKind.TRANSIENT_CONNECTION) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Text(
                         text = stringResource(R.string.chat_reconnecting),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -676,24 +688,26 @@ private fun ChatComposer(
     attachedImages: List<Bitmap>,
     onRemoveImage: (Int) -> Unit,
     onCameraLaunch: () -> Unit,
-    onGalleryLaunch: () -> Unit
+    onGalleryLaunch: () -> Unit,
 ) {
     var showAttachMenu by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .imePadding()
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         if (showSlashCommands) {
             val filtered = SlashCommandRegistry.filter(input)
             if (filtered.isNotEmpty()) {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 4.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
                         filtered.forEach { command ->
@@ -701,21 +715,21 @@ private fun ChatComposer(
                                 text = {
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
                                             text = command.name,
                                             style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.SemiBold
+                                            fontWeight = FontWeight.SemiBold,
                                         )
                                         Text(
                                             text = command.description,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 },
-                                onClick = { onSlashCommandSelect(command) }
+                                onClick = { onSlashCommandSelect(command) },
                             )
                         }
                     }
@@ -726,32 +740,34 @@ private fun ChatComposer(
         GitHubAutoAttachChips(
             references = githubRefs,
             onAttach = {},
-            modifier = Modifier.padding(bottom = 4.dp)
+            modifier = Modifier.padding(bottom = 4.dp),
         )
 
         if (attachedImages.isNotEmpty()) {
             LazyRow(
                 modifier = Modifier.padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 itemsIndexed(attachedImages) { index, bitmap ->
                     Box {
                         Image(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
+                            modifier =
+                                Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop,
                         )
                         Icon(
                             Icons.Default.Close,
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .align(Alignment.TopEnd)
-                                .clickable { onRemoveImage(index) },
-                            tint = MaterialTheme.colorScheme.onSurface
+                            modifier =
+                                Modifier
+                                    .size(18.dp)
+                                    .align(Alignment.TopEnd)
+                                    .clickable { onRemoveImage(index) },
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 }
@@ -763,7 +779,7 @@ private fun ChatComposer(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 if (attachments.isNotEmpty()) {
@@ -771,33 +787,36 @@ private fun ChatComposer(
                     Spacer(Modifier.height(6.dp))
                 }
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
                 ) {
                     if (input.isEmpty()) {
                         Text(
                             text = stringResource(R.string.chat_message_placeholder),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     BasicTextField(
                         value = input,
                         onValueChange = onInputChange,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("chat-message-input"),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .testTag("chat-message-input"),
                         minLines = 1,
                         maxLines = 4,
-                        textStyle = TextStyle(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = MaterialTheme.typography.bodyLarge.fontSize,
-                            lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
-                        ),
+                        textStyle =
+                            TextStyle(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                                lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
+                            ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                         keyboardActions = KeyboardActions(onSend = { onSend() }),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     )
                 }
                 if (isListening || isSpeechProcessing) {
@@ -812,23 +831,27 @@ private fun ChatComposer(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Box {
                         AttachButton(onClick = { showAttachMenu = true })
                         DropdownMenu(
                             expanded = showAttachMenu,
-                            onDismissRequest = { showAttachMenu = false }
+                            onDismissRequest = { showAttachMenu = false },
                         ) {
                             DropdownMenuItem(
                                 text = { Text("File") },
                                 leadingIcon = {
-                                    Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.InsertDriveFile,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
                                 },
                                 onClick = {
                                     showAttachMenu = false
                                     onAttach()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text("Camera") },
@@ -838,7 +861,7 @@ private fun ChatComposer(
                                 onClick = {
                                     showAttachMenu = false
                                     onCameraLaunch()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text("Gallery") },
@@ -848,50 +871,53 @@ private fun ChatComposer(
                                 onClick = {
                                     showAttachMenu = false
                                     onGalleryLaunch()
-                                }
+                                },
                             )
                         }
                     }
                     CompactContextButton(
                         label = modelLabel,
                         maxWidth = 84.dp,
-                        onClick = onModelChipClick
+                        onClick = onModelChipClick,
                     )
                     if (thinkingOptions.isNotEmpty()) {
                         ThinkingChip(
                             options = thinkingOptions,
                             selected = selectedVariant,
-                            onSelect = onSelectVariant
+                            onSelect = onSelectVariant,
                         )
                     }
                     Spacer(Modifier.weight(1f))
                     if (isListening) {
                         VolumeMeter(amplitude = 0.5f, idle = true)
                     }
-                    val micContainerColor = if (isListening) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                    val micContentColor = if (isListening) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+                    val micContainerColor =
+                        if (isListening) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
+                    val micContentColor =
+                        if (isListening) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     Surface(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .testTag("chat-mic-button"),
+                        modifier =
+                            Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(19.dp))
+                                .testTag("chat-mic-button"),
                         shape = RoundedCornerShape(19.dp),
-                        color = micContainerColor
+                        color = micContainerColor,
                     ) {
                         IconButton(onClick = onMic, modifier = Modifier.fillMaxSize()) {
                             Icon(
                                 Icons.Default.Mic,
                                 contentDescription = stringResource(R.string.voice),
                                 modifier = Modifier.size(21.dp),
-                                tint = micContentColor
+                                tint = micContentColor,
                             )
                         }
                     }
@@ -900,12 +926,12 @@ private fun ChatComposer(
                             Surface(
                                 shape = RoundedCornerShape(100.dp),
                                 color = MaterialTheme.colorScheme.tertiaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
                             ) {
                                 Text(
                                     text = "Queued",
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
                                 )
                             }
                         }
@@ -916,12 +942,12 @@ private fun ChatComposer(
                         FilledIconButton(
                             onClick = onSend,
                             enabled = input.isNotBlank() || attachments.isNotEmpty(),
-                            modifier = Modifier.size(38.dp)
+                            modifier = Modifier.size(38.dp),
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Send,
                                 contentDescription = stringResource(R.string.send_description),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
@@ -930,25 +956,26 @@ private fun ChatComposer(
         }
         Spacer(Modifier.height(6.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             ModeChip(
                 agents = agents,
                 selectedAgentId = selectedAgentId,
-                onSelect = onSelectAgent
+                onSelect = onSelectAgent,
             )
             AutoAcceptChip(
                 enabled = autoAcceptPermissions,
-                onToggle = onToggleAutoAccept
+                onToggle = onToggleAutoAccept,
             )
             if (contextLimit > 0L) {
                 CompactContextMeter(
                     tokensUsed = contextTokensUsed,
-                    contextLimit = contextLimit
+                    contextLimit = contextLimit,
                 )
             }
         }
@@ -958,19 +985,20 @@ private fun ChatComposer(
 @Composable
 private fun AttachButton(onClick: () -> Unit) {
     Surface(
-        modifier = Modifier
-            .size(34.dp)
-            .clip(RoundedCornerShape(17.dp))
-            .testTag("chat-attach-button"),
+        modifier =
+            Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(17.dp))
+                .testTag("chat-attach-button"),
         shape = RoundedCornerShape(17.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         IconButton(onClick = onClick, modifier = Modifier.fillMaxSize()) {
             Icon(
                 Icons.Default.Add,
                 contentDescription = stringResource(R.string.chat_attach),
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -980,36 +1008,39 @@ private fun AttachButton(onClick: () -> Unit) {
 private fun ThinkingChip(
     options: List<String>,
     selected: String?,
-    onSelect: (String?) -> Unit
+    onSelect: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         Surface(
-            modifier = Modifier
-                .clip(RoundedCornerShape(100.dp))
-                .clickable(onClick = { expanded = true }),
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(100.dp))
+                    .clickable(onClick = { expanded = true }),
             shape = RoundedCornerShape(100.dp),
-            color = if (selected != null) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-            contentColor = if (selected != null) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            }
+            color =
+                if (selected != null) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+            contentColor =
+                if (selected != null) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(14.dp))
                 Text(
                     selected ?: stringResource(R.string.chat_thinking_default),
                     style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1
+                    maxLines = 1,
                 )
             }
         }
@@ -1019,7 +1050,7 @@ private fun ThinkingChip(
                 onClick = {
                     onSelect(null)
                     expanded = false
-                }
+                },
             )
             options.forEach { option ->
                 DropdownMenuItem(
@@ -1027,7 +1058,7 @@ private fun ThinkingChip(
                     onClick = {
                         onSelect(option)
                         expanded = false
-                    }
+                    },
                 )
             }
         }
@@ -1037,42 +1068,43 @@ private fun ThinkingChip(
 @Composable
 private fun AttachmentTray(
     attachments: List<PromptAttachment>,
-    onRemove: (Int) -> Unit
+    onRemove: (Int) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         attachments.forEachIndexed { index, attachment ->
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.InsertDriveFile,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         attachment.filename,
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 120.dp)
+                        modifier = Modifier.widthIn(max = 120.dp),
                     )
                     Icon(
                         Icons.Default.Close,
                         contentDescription = stringResource(R.string.chat_remove_attachment),
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clickable { onRemove(index) },
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        modifier =
+                            Modifier
+                                .size(14.dp)
+                                .clickable { onRemove(index) },
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -1084,39 +1116,40 @@ private fun AttachmentTray(
 private fun ModeChip(
     agents: List<OpenCodeAgent>,
     selectedAgentId: String?,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val label = selectedAgentId ?: "build"
     Box {
         Surface(
-            modifier = Modifier
-                .widthIn(max = 92.dp)
-                .clickable(onClick = { expanded = true }),
+            modifier =
+                Modifier
+                    .widthIn(max = 92.dp)
+                    .clickable(onClick = { expanded = true }),
             shape = RoundedCornerShape(100.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Icon(
                     Icons.Outlined.Shield,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(14.dp),
                 )
                 Text(
                     label,
                     style = MaterialTheme.typography.labelMedium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Icon(
                     Icons.Default.ArrowDropDown,
                     contentDescription = null,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(14.dp),
                 )
             }
         }
@@ -1128,7 +1161,7 @@ private fun ModeChip(
                         onSelect(agent.name)
                         expanded = false
                     },
-                    modifier = Modifier.testTag("chat-mode-${agent.name}")
+                    modifier = Modifier.testTag("chat-mode-${agent.name}"),
                 )
             }
         }
@@ -1138,65 +1171,67 @@ private fun ModeChip(
 @Composable
 private fun AutoAcceptChip(
     enabled: Boolean,
-    onToggle: (Boolean) -> Unit
+    onToggle: (Boolean) -> Unit,
 ) {
-    val containerColor = if (enabled) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    val contentColor = if (enabled) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val containerColor =
+        if (enabled) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val contentColor =
+        if (enabled) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
     Surface(
-        modifier = Modifier
-            .clip(RoundedCornerShape(100.dp))
-            .clickable(onClick = { onToggle(!enabled) })
-            .testTag("chat-auto-accept"),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(100.dp))
+                .clickable(onClick = { onToggle(!enabled) })
+                .testTag("chat-auto-accept"),
         shape = RoundedCornerShape(100.dp),
         color = containerColor,
-        contentColor = contentColor
+        contentColor = contentColor,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(
                 if (enabled) Icons.Filled.VerifiedUser else Icons.Outlined.VerifiedUser,
                 contentDescription = stringResource(R.string.chat_mode_auto_accept),
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(14.dp),
             )
             Text(
                 stringResource(R.string.chat_auto_accept_short),
                 style = MaterialTheme.typography.labelMedium,
-                maxLines = 1
+                maxLines = 1,
             )
         }
     }
 }
 
 @Composable
-private fun ListeningStatus(
-    modifier: Modifier = Modifier
-) {
+private fun ListeningStatus(modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier
-            .background(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = stringResource(R.string.voice_state_listening),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -1204,24 +1239,25 @@ private fun ListeningStatus(
 @Composable
 private fun ProcessingStatus(modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .testTag("chat-voice-processing"),
+        modifier =
+            modifier
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .testTag("chat-voice-processing"),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(16.dp),
-            strokeWidth = 2.dp
+            strokeWidth = 2.dp,
         )
         Text(
             text = stringResource(R.string.processing),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -1231,27 +1267,28 @@ private fun CompactContextButton(
     label: String,
     maxWidth: androidx.compose.ui.unit.Dp,
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .widthIn(max = maxWidth)
-            .clickable(enabled = enabled, onClick = onClick),
+        modifier =
+            Modifier
+                .widthIn(max = maxWidth)
+                .clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(100.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 1f else 0.55f),
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = label,
                 modifier = Modifier.weight(1f, fill = false),
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(14.dp))
         }
@@ -1261,51 +1298,54 @@ private fun CompactContextButton(
 @Composable
 private fun CompactContextMeter(
     tokensUsed: Long,
-    contextLimit: Long
+    contextLimit: Long,
 ) {
     // Session token totals can exceed the model window; the meter represents window usage.
     val displayedTokens = tokensUsed.coerceIn(0L, contextLimit)
     val fraction = displayedTokens.toFloat() / contextLimit.toFloat()
-    val barColor = when {
-        fraction >= 0.9f -> MaterialTheme.colorScheme.error
-        fraction >= 0.7f -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.primary
-    }
+    val barColor =
+        when {
+            fraction >= 0.9f -> MaterialTheme.colorScheme.error
+            fraction >= 0.7f -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.primary
+        }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.padding(horizontal = 2.dp)
+        modifier = Modifier.padding(horizontal = 2.dp),
     ) {
         LinearProgressIndicator(
             progress = { fraction },
-            modifier = Modifier
-                .width(34.dp)
-                .height(3.dp)
-                .clip(RoundedCornerShape(2.dp)),
+            modifier =
+                Modifier
+                    .width(34.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp)),
             color = barColor,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
         Text(
             text = "${formatTokenCount(displayedTokens)}/${formatTokenCount(contextLimit)}",
             style = MaterialTheme.typography.labelSmall,
             fontSize = 9.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
-private fun formatTokenCount(tokens: Long): String = when {
-    tokens >= 1_000_000 -> "%.1fM".format(tokens / 1_000_000.0)
-    tokens >= 1_000 -> "%.0fk".format(tokens / 1_000.0)
-    else -> tokens.toString()
-}
+private fun formatTokenCount(tokens: Long): String =
+    when {
+        tokens >= 1_000_000 -> "%.1fM".format(tokens / 1_000_000.0)
+        tokens >= 1_000 -> "%.0fk".format(tokens / 1_000.0)
+        else -> tokens.toString()
+    }
 
 @Composable
 private fun CompactWorkspaceButton(
     workspaces: List<WorkspaceRef>,
     selectedPath: String?,
     enabled: Boolean,
-    onSelect: (String?) -> Unit
+    onSelect: (String?) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selected = workspaces.firstOrNull { it.path == selectedPath }
@@ -1314,7 +1354,7 @@ private fun CompactWorkspaceButton(
             label = selected?.name ?: stringResource(R.string.chat_workspace_short_default),
             maxWidth = 78.dp,
             enabled = enabled,
-            onClick = { expanded = true }
+            onClick = { expanded = true },
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
@@ -1322,7 +1362,7 @@ private fun CompactWorkspaceButton(
                 onClick = {
                     onSelect(null)
                     expanded = false
-                }
+                },
             )
             workspaces.forEach { workspace ->
                 DropdownMenuItem(
@@ -1330,7 +1370,7 @@ private fun CompactWorkspaceButton(
                     onClick = {
                         onSelect(workspace.path)
                         expanded = false
-                    }
+                    },
                 )
             }
         }
@@ -1365,7 +1405,7 @@ private fun ChatHomeScreenEmptyPreview() {
             onOpenHistory = {},
             onOpenLocalSetup = {},
             onOpenRemoteSetup = {},
-            onOpenDrawer = {}
+            onOpenDrawer = {},
         )
     }
 }

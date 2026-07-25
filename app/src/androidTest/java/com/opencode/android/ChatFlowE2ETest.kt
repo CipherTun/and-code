@@ -9,7 +9,6 @@ import org.junit.Rule
 import org.junit.Test
 
 class ChatFlowE2ETest {
-
     @get:Rule
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 

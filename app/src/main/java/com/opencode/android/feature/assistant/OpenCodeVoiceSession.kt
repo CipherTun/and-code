@@ -67,11 +67,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
-class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
+class OpenCodeVoiceSession(context: Context) :
+    VoiceInteractionSession(context),
     LifecycleOwner,
     SavedStateRegistryOwner,
     ViewModelStoreOwner {
-
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val savedStateController = SavedStateRegistryController.create(this)
     override val lifecycle: Lifecycle get() = lifecycleRegistry
@@ -108,28 +108,32 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
         tts = TTSManager(context)
     }
 
-    override fun onCreateContentView(): View = ComposeView(context).apply {
-        setViewTreeLifecycleOwner(this@OpenCodeVoiceSession)
-        setViewTreeSavedStateRegistryOwner(this@OpenCodeVoiceSession)
-        setViewTreeViewModelStoreOwner(this@OpenCodeVoiceSession)
-        setContent {
-            OpenCodeAndroidTheme {
-                VoiceAssistantSurface(
-                    state = assistantState.value,
-                    userText = userText.value,
-                    responseText = responseText.value,
-                    partialText = partialText.value,
-                    error = errorText.value,
-                    permission = permissionRequest.value,
-                    onClose = ::finish,
-                    onRetry = ::startListening,
-                    onPermission = ::respondPermission
-                )
+    override fun onCreateContentView(): View =
+        ComposeView(context).apply {
+            setViewTreeLifecycleOwner(this@OpenCodeVoiceSession)
+            setViewTreeSavedStateRegistryOwner(this@OpenCodeVoiceSession)
+            setViewTreeViewModelStoreOwner(this@OpenCodeVoiceSession)
+            setContent {
+                OpenCodeAndroidTheme {
+                    VoiceAssistantSurface(
+                        state = assistantState.value,
+                        userText = userText.value,
+                        responseText = responseText.value,
+                        partialText = partialText.value,
+                        error = errorText.value,
+                        permission = permissionRequest.value,
+                        onClose = ::finish,
+                        onRetry = ::startListening,
+                        onPermission = ::respondPermission,
+                    )
+                }
             }
         }
-    }
 
-    override fun onShow(args: Bundle?, showFlags: Int) {
+    override fun onShow(
+        args: Bundle?,
+        showFlags: Int,
+    ) {
         super.onShow(args, showFlags)
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
@@ -139,9 +143,10 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
         }
 
         val preferredRuntimeId = settings.assistantRuntimeId
-        val target = app.runtimeRegistry.targets.value
-            .firstOrNull { it.id == preferredRuntimeId }
-            ?: app.runtimeRegistry.selected.value
+        val target =
+            app.runtimeRegistry.targets.value
+                .firstOrNull { it.id == preferredRuntimeId }
+                ?: app.runtimeRegistry.selected.value
         if (target == null) {
             assistantState.value = VoiceState.ERROR
             errorText.value = context.getString(R.string.voice_no_runtime_configured)
@@ -179,51 +184,53 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
     private fun startEventCollection() {
         val activeBackend = backend ?: return
         eventJob?.cancel()
-        eventJob = scope.launch {
-            activeBackend.events()
-                .catch { error -> showError(error.message ?: context.getString(R.string.voice_event_connection_failed)) }
-                .collect { event ->
-                    when (event) {
-                        is OpenCodeEvent.MessagePartUpdated -> {
-                            if (event.part.sessionId == sessionId && event.part.type == "text") {
-                                val partKey = event.part.id ?: event.part.messageId ?: "text"
-                                textPartIds += partKey
-                                responseParts[partKey] = event.part.text.orEmpty()
-                                responseText.value = responseParts.values.joinToString("")
-                                assistantState.value = VoiceState.THINKING
+        eventJob =
+            scope.launch {
+                activeBackend.events()
+                    .catch { error -> showError(error.message ?: context.getString(R.string.voice_event_connection_failed)) }
+                    .collect { event ->
+                        when (event) {
+                            is OpenCodeEvent.MessagePartUpdated -> {
+                                if (event.part.sessionId == sessionId && event.part.type == "text") {
+                                    val partKey = event.part.id ?: event.part.messageId ?: "text"
+                                    textPartIds += partKey
+                                    responseParts[partKey] = event.part.text.orEmpty()
+                                    responseText.value = responseParts.values.joinToString("")
+                                    assistantState.value = VoiceState.THINKING
+                                }
                             }
-                        }
-                        is OpenCodeEvent.MessagePartDelta -> {
-                            if (
-                                event.sessionId == sessionId &&
-                                event.field == "text" &&
-                                event.partId in textPartIds
-                            ) {
-                                responseParts[event.partId] = responseParts[event.partId].orEmpty() + event.delta
-                                responseText.value = responseParts.values.joinToString("")
-                                assistantState.value = VoiceState.THINKING
+                            is OpenCodeEvent.MessagePartDelta -> {
+                                if (
+                                    event.sessionId == sessionId &&
+                                    event.field == "text" &&
+                                    event.partId in textPartIds
+                                ) {
+                                    responseParts[event.partId] = responseParts[event.partId].orEmpty() + event.delta
+                                    responseText.value = responseParts.values.joinToString("")
+                                    assistantState.value = VoiceState.THINKING
+                                }
                             }
-                        }
-                        is OpenCodeEvent.PermissionAsked -> {
-                            if (event.request.sessionId == sessionId) {
-                                permissionRequest.value = event.request
-                                assistantState.value = VoiceState.PERMISSION
+                            is OpenCodeEvent.PermissionAsked -> {
+                                if (event.request.sessionId == sessionId) {
+                                    permissionRequest.value = event.request
+                                    assistantState.value = VoiceState.PERMISSION
+                                }
                             }
-                        }
-                        is OpenCodeEvent.SessionIdle -> {
-                            if (event.sessionId == sessionId) onResponseComplete()
-                        }
-                        is OpenCodeEvent.SessionError -> {
-                            if (event.sessionId == null || event.sessionId == sessionId) {
-                                showError(event.message ?: context.getString(R.string.voice_processing_failed))
+                            is OpenCodeEvent.SessionIdle -> {
+                                if (event.sessionId == sessionId) onResponseComplete()
                             }
+                            is OpenCodeEvent.SessionError -> {
+                                if (event.sessionId == null || event.sessionId == sessionId) {
+                                    showError(event.message ?: context.getString(R.string.voice_processing_failed))
+                                }
+                            }
+                            OpenCodeEvent.ServerConnected,
+                            is OpenCodeEvent.QuestionAsked,
+                            is OpenCodeEvent.Unknown,
+                            -> Unit
                         }
-                        OpenCodeEvent.ServerConnected,
-                        is OpenCodeEvent.QuestionAsked,
-                        is OpenCodeEvent.Unknown -> Unit
                     }
-                }
-        }
+            }
     }
 
     private fun startListening() {
@@ -239,22 +246,24 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
         responseHandled = false
         assistantState.value = VoiceState.LISTENING
 
-        listeningJob = scope.launch {
-            speech.startListening(language = speechLanguageTag(context)).collect { result ->
-                when (result) {
-                    SpeechResult.Ready,
-                    SpeechResult.Listening -> assistantState.value = VoiceState.LISTENING
-                    SpeechResult.Processing -> assistantState.value = VoiceState.THINKING
-                    is SpeechResult.PartialResult -> partialText.value = result.text
-                    is SpeechResult.Result -> {
-                        userText.value = result.text
-                        partialText.value = ""
-                        sendToOpenCode(result.text)
+        listeningJob =
+            scope.launch {
+                speech.startListening(language = speechLanguageTag(context)).collect { result ->
+                    when (result) {
+                        SpeechResult.Ready,
+                        SpeechResult.Listening,
+                        -> assistantState.value = VoiceState.LISTENING
+                        SpeechResult.Processing -> assistantState.value = VoiceState.THINKING
+                        is SpeechResult.PartialResult -> partialText.value = result.text
+                        is SpeechResult.Result -> {
+                            userText.value = result.text
+                            partialText.value = ""
+                            sendToOpenCode(result.text)
+                        }
+                        is SpeechResult.Error -> showError(result.message)
                     }
-                    is SpeechResult.Error -> showError(result.message)
                 }
             }
-        }
     }
 
     private fun sendToOpenCode(text: String) {
@@ -263,10 +272,11 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
         responseText.value = ""
         scope.launch {
             runCatching {
-                val targetSessionId = sessionId ?: activeBackend.createSession(
-                    title = "Voice: ${text.take(48)}",
-                    directory = preferredWorkspace
-                ).id
+                val targetSessionId =
+                    sessionId ?: activeBackend.createSession(
+                        title = "Voice: ${text.take(48)}",
+                        directory = preferredWorkspace,
+                    ).id
                 sessionId = targetSessionId
                 if (settings.continuousConversation) settings.assistantSessionId = targetSessionId
                 activeBackend.sendMessage(
@@ -275,8 +285,8 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
                         text = text,
                         providerId = settings.selectedProviderId,
                         modelId = settings.selectedModelId,
-                        agent = settings.selectedAgentId
-                    )
+                        agent = settings.selectedAgentId,
+                    ),
                 )
             }.onFailure { showError(it.message ?: context.getString(R.string.voice_send_failed)) }
         }
@@ -310,7 +320,7 @@ class OpenCodeVoiceSession(context: Context) : VoiceInteractionSession(context),
                     sessionId = request.sessionId,
                     permissionId = request.id,
                     response = response,
-                    remember = response == PermissionResponse.ALWAYS
+                    remember = response == PermissionResponse.ALWAYS,
                 )
             }.onSuccess {
                 permissionRequest.value = null
@@ -332,16 +342,17 @@ private enum class VoiceState {
     PERMISSION,
     SPEAKING,
     DONE,
-    ERROR
+    ERROR,
 }
 
 private fun speechLanguageTag(context: Context): String {
-    val locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-        context.resources.configuration.locales[0]
-    } else {
-        @Suppress("DEPRECATION")
-        context.resources.configuration.locale
-    }
+    val locale =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            context.resources.configuration.locales[0]
+        } else {
+            @Suppress("DEPRECATION")
+            context.resources.configuration.locale
+        }
     return locale?.toLanguageTag()?.takeIf { it.isNotBlank() } ?: "en-US"
 }
 
@@ -355,15 +366,16 @@ private fun VoiceAssistantSurface(
     permission: PermissionRequest?,
     onClose: () -> Unit,
     onRetry: () -> Unit,
-    onPermission: (PermissionResponse) -> Unit
+    onPermission: (PermissionResponse) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(20.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
@@ -377,7 +389,7 @@ private fun VoiceAssistantSurface(
 
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
         ) {
             if (state == VoiceState.THINKING || state == VoiceState.SPEAKING) {
                 CircularProgressIndicator(modifier = Modifier.padding(24.dp))
@@ -386,23 +398,24 @@ private fun VoiceAssistantSurface(
                     Icons.Default.Mic,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(24.dp)
+                    modifier = Modifier.padding(24.dp),
                 )
             }
         }
 
         Text(
-            text = when (state) {
-                VoiceState.LISTENING -> stringResource(R.string.voice_state_listening)
-                VoiceState.THINKING -> stringResource(R.string.voice_state_thinking)
-                VoiceState.PERMISSION -> stringResource(R.string.permission_required)
-                VoiceState.SPEAKING -> stringResource(R.string.voice_state_speaking)
-                VoiceState.DONE -> stringResource(R.string.voice_state_done)
-                VoiceState.ERROR -> stringResource(R.string.voice_state_error)
-                VoiceState.IDLE -> stringResource(R.string.voice_state_idle)
-            },
+            text =
+                when (state) {
+                    VoiceState.LISTENING -> stringResource(R.string.voice_state_listening)
+                    VoiceState.THINKING -> stringResource(R.string.voice_state_thinking)
+                    VoiceState.PERMISSION -> stringResource(R.string.permission_required)
+                    VoiceState.SPEAKING -> stringResource(R.string.voice_state_speaking)
+                    VoiceState.DONE -> stringResource(R.string.voice_state_done)
+                    VoiceState.ERROR -> stringResource(R.string.voice_state_error)
+                    VoiceState.IDLE -> stringResource(R.string.voice_state_idle)
+                },
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
 
         val spoken = partialText.ifBlank { userText }
@@ -410,7 +423,7 @@ private fun VoiceAssistantSurface(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
             ) {
                 Text(spoken, modifier = Modifier.padding(14.dp))
             }
@@ -420,7 +433,7 @@ private fun VoiceAssistantSurface(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
             ) {
                 Text(responseText, modifier = Modifier.padding(14.dp))
             }
@@ -430,7 +443,7 @@ private fun VoiceAssistantSurface(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.10f)),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(18.dp),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -443,19 +456,19 @@ private fun VoiceAssistantSurface(
                     }
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         TextButton(
                             onClick = { onPermission(PermissionResponse.REJECT) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) { Text(stringResource(R.string.reject)) }
                         FilledTonalButton(
                             onClick = { onPermission(PermissionResponse.ONCE) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) { Text(stringResource(R.string.allow_once)) }
                         Button(
                             onClick = { onPermission(PermissionResponse.ALWAYS) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         ) { Text(stringResource(R.string.always_allow)) }
                     }
                 }

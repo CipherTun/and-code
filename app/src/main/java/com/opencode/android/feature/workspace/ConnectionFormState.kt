@@ -13,7 +13,7 @@ data class ConnectionFormState(
     val allowInsecureLan: Boolean = false,
     val isTesting: Boolean = false,
     val testMessage: String? = null,
-    val testSucceeded: Boolean = false
+    val testSucceeded: Boolean = false,
 ) {
     val normalizedUrl: String?
         get() = OpenCodeUrl.normalize(baseUrl).getOrNull()?.toString()
@@ -25,24 +25,26 @@ data class ConnectionFormState(
             return name.isNotBlank() && cleartextAllowed
         }
 
-    fun toProfile(): ConnectionProfile = ConnectionProfile(
-        id = id,
-        name = name.trim(),
-        baseUrl = requireNotNull(normalizedUrl),
-        username = username.trim().ifBlank { "opencode" },
-        password = password.takeIf { it.isNotBlank() },
-        allowInsecureLan = allowInsecureLan
-    )
+    fun toProfile(): ConnectionProfile =
+        ConnectionProfile(
+            id = id,
+            name = name.trim(),
+            baseUrl = requireNotNull(normalizedUrl),
+            username = username.trim().ifBlank { "opencode" },
+            password = password.takeIf { it.isNotBlank() },
+            allowInsecureLan = allowInsecureLan,
+        )
 
     companion object {
-        fun from(profile: ConnectionProfile): ConnectionFormState = ConnectionFormState(
-            id = profile.id,
-            name = profile.name,
-            baseUrl = profile.baseUrl,
-            username = profile.username,
-            password = profile.password.orEmpty(),
-            allowInsecureLan = profile.allowInsecureLan,
-            testSucceeded = true
-        )
+        fun from(profile: ConnectionProfile): ConnectionFormState =
+            ConnectionFormState(
+                id = profile.id,
+                name = profile.name,
+                baseUrl = profile.baseUrl,
+                username = profile.username,
+                password = profile.password.orEmpty(),
+                allowInsecureLan = profile.allowInsecureLan,
+                testSucceeded = true,
+            )
     }
 }

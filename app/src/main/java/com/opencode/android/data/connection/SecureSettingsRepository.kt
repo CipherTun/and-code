@@ -7,22 +7,25 @@ import androidx.security.crypto.MasterKey
 import com.opencode.android.runtime.RuntimeConnectionStore
 
 class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val masterKey =
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
 
-    private val preferences: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        PREFS_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val preferences: SharedPreferences =
+        EncryptedSharedPreferences.create(
+            context,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
 
     @Synchronized
-    override fun connections(): List<ConnectionProfile> = runCatching {
-        ConnectionProfileCodec.decode(preferences.getString(KEY_CONNECTIONS, "[]").orEmpty())
-    }.getOrDefault(emptyList())
+    override fun connections(): List<ConnectionProfile> =
+        runCatching {
+            ConnectionProfileCodec.decode(preferences.getString(KEY_CONNECTIONS, "[]").orEmpty())
+        }.getOrDefault(emptyList())
 
     @Synchronized
     override fun upsertConnection(profile: ConnectionProfile) {
@@ -48,8 +51,7 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
             selectedConnectionId = value
         }
 
-    fun selectedConnection(): ConnectionProfile? =
-        selectedConnectionId?.let { selected -> connections().firstOrNull { it.id == selected } }
+    fun selectedConnection(): ConnectionProfile? = selectedConnectionId?.let { selected -> connections().firstOrNull { it.id == selected } }
 
     var ttsEnabled: Boolean
         get() = preferences.getBoolean(KEY_TTS_ENABLED, true)
@@ -88,11 +90,12 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
         set(value) = preferences.edit().putStringSet(KEY_FAVORITE_MODELS, value).apply()
 
     var recentModelKeys: List<String>
-        get() = preferences.getString(KEY_RECENT_MODELS, null)
-            ?.split('\n')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            .orEmpty()
+        get() =
+            preferences.getString(KEY_RECENT_MODELS, null)
+                ?.split('\n')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
         set(value) {
             preferences.edit()
                 .putString(KEY_RECENT_MODELS, value.take(MAX_RECENT_MODELS).joinToString("\n"))
@@ -109,30 +112,31 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
             preferences.edit()
                 .putString(
                     KEY_PROVIDER_API_KEYS,
-                    com.opencode.android.runtime.local.LocalProviderCredentialStore.encodeMap(value)
+                    com.opencode.android.runtime.local.LocalProviderCredentialStore.encodeMap(value),
                 )
                 .apply()
         }
 
     fun providerApiKeys(): Map<String, String> =
         com.opencode.android.runtime.local.LocalProviderCredentialStore.decodeMap(
-            preferences.getString(KEY_PROVIDER_API_KEYS, null)
+            preferences.getString(KEY_PROVIDER_API_KEYS, null),
         )
 
     val hasManagedProviderApiKeyIds: Boolean
         get() = preferences.contains(KEY_MANAGED_PROVIDER_API_KEY_IDS)
 
     var managedProviderApiKeyIds: Set<String>
-        get() = preferences.getStringSet(KEY_MANAGED_PROVIDER_API_KEY_IDS, emptySet())
-            .orEmpty()
-            .map(String::trim)
-            .filter(String::isNotEmpty)
-            .toSet()
+        get() =
+            preferences.getStringSet(KEY_MANAGED_PROVIDER_API_KEY_IDS, emptySet())
+                .orEmpty()
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .toSet()
         set(value) {
             preferences.edit()
                 .putStringSet(
                     KEY_MANAGED_PROVIDER_API_KEY_IDS,
-                    value.map(String::trim).filter(String::isNotEmpty).toSet()
+                    value.map(String::trim).filter(String::isNotEmpty).toSet(),
                 )
                 .apply()
         }
@@ -146,11 +150,12 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
         set(value) = preferences.edit().putString(KEY_ASSISTANT_WORKSPACE_PATH, value).apply()
 
     var safWorkspaceUris: List<String>
-        get() = preferences.getString(KEY_SAF_WORKSPACE_URIS, null)
-            ?.split('\n')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            .orEmpty()
+        get() =
+            preferences.getString(KEY_SAF_WORKSPACE_URIS, null)
+                ?.split('\n')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
         set(value) {
             preferences.edit()
                 .putString(KEY_SAF_WORKSPACE_URIS, value.joinToString("\n"))
@@ -158,11 +163,12 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore {
         }
 
     var projectPaths: List<String>
-        get() = preferences.getString(KEY_PROJECT_PATHS, null)
-            ?.split('\n')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            .orEmpty()
+        get() =
+            preferences.getString(KEY_PROJECT_PATHS, null)
+                ?.split('\n')
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                .orEmpty()
         set(value) {
             preferences.edit()
                 .putString(KEY_PROJECT_PATHS, value.joinToString("\n"))

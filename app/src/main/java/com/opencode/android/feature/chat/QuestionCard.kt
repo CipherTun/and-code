@@ -30,19 +30,21 @@ import com.opencode.android.R
 fun QuestionCard(
     question: PendingQuestionUi,
     onAnswerSelected: (String, Int, String) -> Unit,
-    onSubmit: (String) -> Unit
+    onSubmit: (String) -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("question-${question.request.id}"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag("question-${question.request.id}"),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+            ),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             question.request.questions.forEachIndexed { index, prompt ->
                 val selectedAnswers = question.selectedAnswers.getOrElse(index) { emptyList() }
@@ -55,31 +57,32 @@ fun QuestionCard(
                             text = header,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
                     Text(
                         text = prompt.question,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
 
                     prompt.options.forEach { option ->
                         val selected = option.label in selectedAnswers
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onAnswerSelected(question.request.id, index, option.label) },
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onAnswerSelected(question.request.id, index, option.label) },
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             if (question.request.multiple) {
                                 Checkbox(
                                     checked = selected,
-                                    onCheckedChange = { onAnswerSelected(question.request.id, index, option.label) }
+                                    onCheckedChange = { onAnswerSelected(question.request.id, index, option.label) },
                                 )
                             } else {
                                 RadioButton(
                                     selected = selected,
-                                    onClick = { onAnswerSelected(question.request.id, index, option.label) }
+                                    onClick = { onAnswerSelected(question.request.id, index, option.label) },
                                 )
                             }
                             Column {
@@ -88,7 +91,7 @@ fun QuestionCard(
                                     Text(
                                         text = description,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -103,7 +106,7 @@ fun QuestionCard(
                             placeholder = {
                                 Text(prompt.placeholder ?: stringResource(R.string.message_hint))
                             },
-                            singleLine = !question.request.multiple
+                            singleLine = !question.request.multiple,
                         )
                     }
                 }
@@ -113,7 +116,7 @@ fun QuestionCard(
                 Text(
                     text = error,
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
 
@@ -122,9 +125,10 @@ fun QuestionCard(
             Button(
                 onClick = { onSubmit(question.request.id) },
                 enabled = question.canSubmit && !question.isSubmitting,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .testTag("question-submit-${question.request.id}")
+                modifier =
+                    Modifier
+                        .align(Alignment.End)
+                        .testTag("question-submit-${question.request.id}"),
             ) {
                 if (question.isSubmitting) {
                     CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp)

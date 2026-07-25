@@ -25,7 +25,11 @@ class OpenCodeVoiceInteractionService : VoiceInteractionService() {
         super.onShutdown()
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
         if (intent?.action == ACTION_SHOW_ASSISTANT) showAssistant()
         return START_STICKY
     }
@@ -48,7 +52,7 @@ class OpenCodeVoiceInteractionService : VoiceInteractionService() {
             context.startService(
                 Intent(context, OpenCodeVoiceInteractionService::class.java).apply {
                     action = ACTION_SHOW_ASSISTANT
-                }
+                },
             )
         }
     }

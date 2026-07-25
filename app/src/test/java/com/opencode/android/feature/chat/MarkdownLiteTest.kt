@@ -15,14 +15,15 @@ class MarkdownLiteTest {
 
     @Test
     fun `fenced code block is parsed with language`() {
-        val blocks = MarkdownLite.parse(
-            """
-            ```kotlin
-            val x = 1
-            println(x)
-            ```
-            """.trimIndent()
-        )
+        val blocks =
+            MarkdownLite.parse(
+                """
+                ```kotlin
+                val x = 1
+                println(x)
+                ```
+                """.trimIndent(),
+            )
         val code = blocks.single() as MarkdownBlock.CodeBlock
         assertEquals("kotlin", code.language)
         assertEquals("val x = 1\nprintln(x)", code.code)
@@ -44,9 +45,9 @@ class MarkdownLiteTest {
             listOf(
                 MarkdownInline.Plain("Run "),
                 MarkdownInline.Code("ls -la"),
-                MarkdownInline.Plain(" to list files")
+                MarkdownInline.Plain(" to list files"),
             ),
-            paragraph.inlines
+            paragraph.inlines,
         )
     }
 
@@ -57,9 +58,9 @@ class MarkdownLiteTest {
             listOf(
                 MarkdownInline.Plain("Open "),
                 MarkdownInline.Link("https://example.com/docs?q=1", "https://example.com/docs?q=1"),
-                MarkdownInline.Plain(".")
+                MarkdownInline.Plain("."),
             ),
-            paragraph.inlines
+            paragraph.inlines,
         )
     }
 
@@ -71,9 +72,9 @@ class MarkdownLiteTest {
             listOf(
                 MarkdownInline.Plain("This is "),
                 MarkdownInline.Bold("important"),
-                MarkdownInline.Plain(" text")
+                MarkdownInline.Plain(" text"),
             ),
-            paragraph.inlines
+            paragraph.inlines,
         )
     }
 
@@ -86,7 +87,7 @@ class MarkdownLiteTest {
         assertEquals(3, (blocks[2] as MarkdownBlock.Heading).level)
         assertEquals(
             listOf(MarkdownInline.Plain("Title")),
-            (blocks[0] as MarkdownBlock.Heading).inlines
+            (blocks[0] as MarkdownBlock.Heading).inlines,
         )
     }
 
@@ -102,18 +103,19 @@ class MarkdownLiteTest {
 
     @Test
     fun `mixed content keeps block order`() {
-        val blocks = MarkdownLite.parse(
-            """
-            # Heading
-            Some paragraph text.
-            - item one
-            - item two
-            ```
-            code here
-            ```
-            Trailing paragraph.
-            """.trimIndent()
-        )
+        val blocks =
+            MarkdownLite.parse(
+                """
+                # Heading
+                Some paragraph text.
+                - item one
+                - item two
+                ```
+                code here
+                ```
+                Trailing paragraph.
+                """.trimIndent(),
+            )
         assertTrue(blocks[0] is MarkdownBlock.Heading)
         assertTrue(blocks[1] is MarkdownBlock.Paragraph)
         assertTrue(blocks[2] is MarkdownBlock.BulletList)

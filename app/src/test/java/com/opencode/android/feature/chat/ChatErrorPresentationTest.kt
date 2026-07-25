@@ -10,7 +10,7 @@ class ChatErrorPresentationTest {
     fun `classifies missing local runtime as setup required`() {
         assertEquals(
             ChatErrorKind.RUNTIME_NOT_READY,
-            classifyChatError("Android local OpenCode runtime is not installed")
+            classifyChatError("Android local OpenCode runtime is not installed"),
         )
     }
 
@@ -18,7 +18,7 @@ class ChatErrorPresentationTest {
     fun `classifies unconfigured connection as setup required`() {
         assertEquals(
             ChatErrorKind.RUNTIME_NOT_READY,
-            classifyChatError("OpenCode connection is not configured")
+            classifyChatError("OpenCode connection is not configured"),
         )
     }
 
@@ -26,7 +26,7 @@ class ChatErrorPresentationTest {
     fun `classifies timeouts as transient connection failures`() {
         assertEquals(
             ChatErrorKind.TRANSIENT_CONNECTION,
-            classifyChatError("Request timed out")
+            classifyChatError("Request timed out"),
         )
     }
 
@@ -40,7 +40,7 @@ class ChatErrorPresentationTest {
     fun `classifies 401 as auth error via exception`() {
         assertEquals(
             ChatErrorKind.AUTH_ERROR,
-            classifyChatError(OpenCodeApiException(401, "OpenCode request failed (HTTP 401)"))
+            classifyChatError(OpenCodeApiException(401, "OpenCode request failed (HTTP 401)")),
         )
     }
 
@@ -48,7 +48,7 @@ class ChatErrorPresentationTest {
     fun `classifies 403 as auth error via exception`() {
         assertEquals(
             ChatErrorKind.AUTH_ERROR,
-            classifyChatError(OpenCodeApiException(403, "OpenCode request failed (HTTP 403)"))
+            classifyChatError(OpenCodeApiException(403, "OpenCode request failed (HTTP 403)")),
         )
     }
 
@@ -56,7 +56,7 @@ class ChatErrorPresentationTest {
     fun `classifies 404 as not found via exception`() {
         assertEquals(
             ChatErrorKind.NOT_FOUND,
-            classifyChatError(OpenCodeApiException(404, "OpenCode request failed (HTTP 404)"))
+            classifyChatError(OpenCodeApiException(404, "OpenCode request failed (HTTP 404)")),
         )
     }
 
@@ -64,7 +64,7 @@ class ChatErrorPresentationTest {
     fun `classifies 429 as rate limited via exception`() {
         assertEquals(
             ChatErrorKind.RATE_LIMITED,
-            classifyChatError(OpenCodeApiException(429, "OpenCode request failed (HTTP 429)"))
+            classifyChatError(OpenCodeApiException(429, "OpenCode request failed (HTTP 429)")),
         )
     }
 
@@ -72,7 +72,7 @@ class ChatErrorPresentationTest {
     fun `classifies 500 as server error via exception`() {
         assertEquals(
             ChatErrorKind.SERVER_ERROR,
-            classifyChatError(OpenCodeApiException(500, "OpenCode request failed (HTTP 500)"))
+            classifyChatError(OpenCodeApiException(500, "OpenCode request failed (HTTP 500)")),
         )
     }
 
@@ -80,7 +80,7 @@ class ChatErrorPresentationTest {
     fun `classifies 502 as server error via exception`() {
         assertEquals(
             ChatErrorKind.SERVER_ERROR,
-            classifyChatError(OpenCodeApiException(502, "OpenCode request failed (HTTP 502)"))
+            classifyChatError(OpenCodeApiException(502, "OpenCode request failed (HTTP 502)")),
         )
     }
 
@@ -88,15 +88,15 @@ class ChatErrorPresentationTest {
     fun `classifies HTTP codes in message string without exception`() {
         assertEquals(
             ChatErrorKind.AUTH_ERROR,
-            classifyChatError("OpenCode request failed (HTTP 401)")
+            classifyChatError("OpenCode request failed (HTTP 401)"),
         )
         assertEquals(
             ChatErrorKind.RATE_LIMITED,
-            classifyChatError("OpenCode request failed (HTTP 429): too many requests")
+            classifyChatError("OpenCode request failed (HTTP 429): too many requests"),
         )
         assertEquals(
             ChatErrorKind.SERVER_ERROR,
-            classifyChatError("OpenCode request failed (HTTP 503): service unavailable")
+            classifyChatError("OpenCode request failed (HTTP 503): service unavailable"),
         )
     }
 
@@ -104,7 +104,7 @@ class ChatErrorPresentationTest {
     fun `classifies connection reset as transient`() {
         assertEquals(
             ChatErrorKind.TRANSIENT_CONNECTION,
-            classifyChatError("connection reset by peer")
+            classifyChatError("connection reset by peer"),
         )
     }
 
@@ -112,7 +112,7 @@ class ChatErrorPresentationTest {
     fun `classifies non-HTTP throwable by message`() {
         assertEquals(
             ChatErrorKind.TRANSIENT_CONNECTION,
-            classifyChatError(java.net.SocketTimeoutException("connect timed out"))
+            classifyChatError(java.net.SocketTimeoutException("connect timed out")),
         )
     }
 

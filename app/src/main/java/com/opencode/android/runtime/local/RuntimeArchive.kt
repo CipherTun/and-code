@@ -1,11 +1,11 @@
 package com.opencode.android.runtime.local
 
 import android.system.Os
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 object RuntimeArchive {
     fun sha256(file: File): String {
@@ -21,14 +21,20 @@ object RuntimeArchive {
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    fun verifySha256(file: File, expected: String) {
+    fun verifySha256(
+        file: File,
+        expected: String,
+    ) {
         val actual = sha256(file)
         require(actual.equals(expected, ignoreCase = true)) {
             "SHA-256 mismatch for ${file.name}: expected $expected, got $actual"
         }
     }
 
-    fun extractTarGz(input: InputStream, destination: File) {
+    fun extractTarGz(
+        input: InputStream,
+        destination: File,
+    ) {
         destination.mkdirs()
         val canonicalRoot = destination.canonicalFile
         GzipCompressorInputStream(input.buffered()).use { gzip ->

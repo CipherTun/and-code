@@ -38,17 +38,17 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -94,7 +94,7 @@ fun WorkspacesScreen(
     onCloneGithub: () -> Unit = {},
     onRemoveProject: (String) -> Unit = {},
     onDeleteProjectFiles: (String) -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
 ) {
     var editing by remember { mutableStateOf<ConnectionFormState?>(null) }
     var discoveryDialogOpen by remember { mutableStateOf(false) }
@@ -104,18 +104,20 @@ fun WorkspacesScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val text = result.contents ?: return@rememberLauncherForActivityResult
-        ConnectionQrPayload.parse(text)?.let { payload ->
-            editing = ConnectionFormState(
-                name = payload.name.orEmpty(),
-                baseUrl = payload.url.orEmpty(),
-                username = payload.username?.takeIf { it.isNotBlank() } ?: "opencode",
-                password = payload.password.orEmpty(),
-                allowInsecureLan = payload.insecure
-            )
+    val qrScanLauncher =
+        rememberLauncherForActivityResult(ScanContract()) { result ->
+            val text = result.contents ?: return@rememberLauncherForActivityResult
+            ConnectionQrPayload.parse(text)?.let { payload ->
+                editing =
+                    ConnectionFormState(
+                        name = payload.name.orEmpty(),
+                        baseUrl = payload.url.orEmpty(),
+                        username = payload.username?.takeIf { it.isNotBlank() } ?: "opencode",
+                        password = payload.password.orEmpty(),
+                        allowInsecureLan = payload.insecure,
+                    )
+            }
         }
-    }
 
     fun startLanDiscovery() {
         discoveryDialogOpen = true
@@ -125,8 +127,9 @@ fun WorkspacesScreen(
             val nsdManager = context.getSystemService(Context.NSD_SERVICE) as NsdManager
             withTimeoutOrNull(10_000) {
                 LanDiscovery(nsdManager).discover().collect { server ->
-                    discoveredServers = (discoveredServers + server)
-                        .distinctBy { it.host to it.port }
+                    discoveredServers =
+                        (discoveredServers + server)
+                            .distinctBy { it.host to it.port }
                 }
             }
             isDiscovering = false
@@ -141,39 +144,40 @@ fun WorkspacesScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { editing = ConnectionFormState() }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_pc_connection_description))
             }
-        }
+        },
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = stringResource(R.string.workspaces_title),
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                         Text(
                             text = stringResource(R.string.workspaces_subtitle),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
@@ -185,17 +189,17 @@ fun WorkspacesScreen(
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     OutlinedButton(
                         onClick = {
                             qrScanLauncher.launch(
                                 ScanOptions()
                                     .setBeepEnabled(false)
-                                    .setOrientationLocked(false)
+                                    .setOrientationLocked(false),
                             )
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                         Spacer(Modifier.padding(horizontal = 4.dp))
@@ -203,7 +207,7 @@ fun WorkspacesScreen(
                     }
                     OutlinedButton(
                         onClick = { startLanDiscovery() },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.WifiFind, contentDescription = null)
                         Spacer(Modifier.padding(horizontal = 4.dp))
@@ -213,32 +217,37 @@ fun WorkspacesScreen(
             }
 
             item {
-                Text(stringResource(R.string.runtime_targets_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.runtime_targets_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
 
             items(state.targets, key = { it.id }) { target ->
                 val remoteProfile = state.connections.firstOrNull { it.id == target.id }
                 SectionCard(
-                    modifier = Modifier.clickable(enabled = target.type == RuntimeType.REMOTE || state.localStatus is LocalRuntimeStatus.Ready) {
-                        onSelectRuntime(target.id)
-                    }
+                    modifier =
+                        Modifier.clickable(enabled = target.type == RuntimeType.REMOTE || state.localStatus is LocalRuntimeStatus.Ready) {
+                            onSelectRuntime(target.id)
+                        },
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
                             imageVector = if (target.type == RuntimeType.LOCAL) Icons.Default.Android else Icons.Default.Computer,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(target.name, fontWeight = FontWeight.SemiBold)
                             Text(
                                 text = targetSubtitle(target, state.localStatus, remoteProfile?.baseUrl),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         if (target.selected) {
@@ -268,7 +277,7 @@ fun WorkspacesScreen(
                                 if (local.progress != null) {
                                     LinearProgressIndicator(
                                         progress = { local.progress.coerceIn(0f, 1f) },
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
                                     )
                                 } else {
                                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -285,7 +294,7 @@ fun WorkspacesScreen(
                                 if (local.progress != null) {
                                     LinearProgressIndicator(
                                         progress = { local.progress.coerceIn(0f, 1f) },
-                                        modifier = Modifier.fillMaxWidth()
+                                        modifier = Modifier.fillMaxWidth(),
                                     )
                                 } else {
                                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -318,10 +327,11 @@ fun WorkspacesScreen(
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(
                                 onClick = onOpenLocalManagement,
-                                enabled = state.localStatus !is LocalRuntimeStatus.Installing &&
-                                    state.localStatus !is LocalRuntimeStatus.Starting &&
-                                    state.localStatus !is LocalRuntimeStatus.Updating,
-                                modifier = Modifier.fillMaxWidth()
+                                enabled =
+                                    state.localStatus !is LocalRuntimeStatus.Installing &&
+                                        state.localStatus !is LocalRuntimeStatus.Starting &&
+                                        state.localStatus !is LocalRuntimeStatus.Updating,
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Icon(Icons.Default.Settings, contentDescription = null)
                                 Spacer(Modifier.padding(horizontal = 4.dp))
@@ -335,24 +345,24 @@ fun WorkspacesScreen(
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = stringResource(R.string.workspace_folders_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     Text(stringResource(R.string.item_count, state.workspaces.size), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedButton(
                         onClick = onImportFolder,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.DriveFolderUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -360,7 +370,7 @@ fun WorkspacesScreen(
                     }
                     OutlinedButton(
                         onClick = onCloneGithub,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -378,7 +388,7 @@ fun WorkspacesScreen(
                         Text(
                             stringResource(R.string.no_workspaces_body),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 }
@@ -388,7 +398,7 @@ fun WorkspacesScreen(
                         workspace = workspace,
                         onOpen = { onOpenWorkspace(workspace) },
                         onRemove = { onRemoveProject(workspace.path) },
-                        onDeleteFiles = { onDeleteProjectFiles(workspace.path) }
+                        onDeleteFiles = { onDeleteProjectFiles(workspace.path) },
                     )
                 }
             }
@@ -396,7 +406,11 @@ fun WorkspacesScreen(
             state.error?.let { error ->
                 item {
                     SectionCard {
-                        Text(stringResource(R.string.status_fetch_failed), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            stringResource(R.string.status_fetch_failed),
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                         Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -412,13 +426,16 @@ fun WorkspacesScreen(
                 onSaveConnection(it)
                 editing = null
             },
-            onDelete = if (state.connections.any { it.id == initial.id }) {
-                {
-                    onDeleteConnection(initial.id)
-                    editing = null
-                }
-            } else null,
-            onTest = onTestConnection
+            onDelete =
+                if (state.connections.any { it.id == initial.id }) {
+                    {
+                        onDeleteConnection(initial.id)
+                        editing = null
+                    }
+                } else {
+                    null
+                },
+            onTest = onTestConnection,
         )
     }
 
@@ -429,13 +446,13 @@ fun WorkspacesScreen(
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (isDiscovering) {
                         Text(
                             stringResource(R.string.discovering_servers),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(4.dp))
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -444,26 +461,28 @@ fun WorkspacesScreen(
                         if (!isDiscovering) {
                             Text(
                                 stringResource(R.string.no_servers_found),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     } else {
                         discoveredServers.forEach { server ->
                             SectionCard(
-                                modifier = Modifier.clickable {
-                                    editing = ConnectionFormState(
-                                        name = server.name,
-                                        baseUrl = server.baseUrl,
-                                        allowInsecureLan = true
-                                    )
-                                    discoveryDialogOpen = false
-                                }
+                                modifier =
+                                    Modifier.clickable {
+                                        editing =
+                                            ConnectionFormState(
+                                                name = server.name,
+                                                baseUrl = server.baseUrl,
+                                                allowInsecureLan = true,
+                                            )
+                                        discoveryDialogOpen = false
+                                    },
                             ) {
                                 Text(server.name, fontWeight = FontWeight.Medium)
                                 Text(
                                     server.baseUrl,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -475,7 +494,7 @@ fun WorkspacesScreen(
                 TextButton(onClick = { discoveryDialogOpen = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -485,7 +504,7 @@ private fun WorkspaceProjectRow(
     workspace: WorkspaceRef,
     onOpen: () -> Unit,
     onRemove: () -> Unit,
-    onDeleteFiles: () -> Unit
+    onDeleteFiles: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -493,7 +512,7 @@ private fun WorkspaceProjectRow(
     SectionCard(modifier = Modifier.clickable { onOpen() }) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Column(modifier = Modifier.weight(1f)) {
@@ -502,7 +521,7 @@ private fun WorkspaceProjectRow(
                     workspace.path,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    maxLines = 2,
                 )
             }
             Box {
@@ -510,7 +529,7 @@ private fun WorkspaceProjectRow(
                     Icon(
                         Icons.Default.MoreVert,
                         contentDescription = stringResource(R.string.workspace_more_options),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
@@ -519,14 +538,14 @@ private fun WorkspaceProjectRow(
                         onClick = {
                             menuOpen = false
                             onRemove()
-                        }
+                        },
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.workspace_delete_files)) },
                         onClick = {
                             menuOpen = false
                             confirmDelete = true
-                        }
+                        },
                     )
                 }
             }
@@ -550,7 +569,7 @@ private fun WorkspaceProjectRow(
                 TextButton(onClick = { confirmDelete = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -559,39 +578,43 @@ private fun WorkspaceProjectRow(
 private fun targetSubtitle(
     target: RuntimeSummary,
     localStatus: LocalRuntimeStatus,
-    remoteUrl: String?
-): String = when (target.type) {
-    RuntimeType.REMOTE -> when (val runtimeState = target.state) {
-        is RuntimeState.Connected -> stringResource(R.string.connected_at_url, runtimeState.version, remoteUrl.orEmpty())
-        RuntimeState.Connecting -> stringResource(R.string.connecting_at, remoteUrl.orEmpty())
-        is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
-        is RuntimeState.Unavailable -> runtimeState.reason
-        RuntimeState.Disconnected -> remoteUrl.orEmpty()
+    remoteUrl: String?,
+): String =
+    when (target.type) {
+        RuntimeType.REMOTE ->
+            when (val runtimeState = target.state) {
+                is RuntimeState.Connected -> stringResource(R.string.connected_at_url, runtimeState.version, remoteUrl.orEmpty())
+                RuntimeState.Connecting -> stringResource(R.string.connecting_at, remoteUrl.orEmpty())
+                is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
+                is RuntimeState.Unavailable -> runtimeState.reason
+                RuntimeState.Disconnected -> remoteUrl.orEmpty()
+            }
+        RuntimeType.LOCAL ->
+            when (localStatus) {
+                LocalRuntimeStatus.NotInstalled -> stringResource(R.string.runtime_status_not_installed)
+                is LocalRuntimeStatus.Installing -> stringResource(R.string.setting_up_with_step, localStatus.step)
+                is LocalRuntimeStatus.Starting -> stringResource(R.string.starting_opencode_version, localStatus.version)
+                is LocalRuntimeStatus.Updating ->
+                    stringResource(
+                        R.string.updating_with_step,
+                        localStatus.currentVersion,
+                        localStatus.targetVersion,
+                        localStatus.step,
+                    )
+                is LocalRuntimeStatus.Stopped -> stringResource(R.string.installed_stopped, localStatus.version)
+                is LocalRuntimeStatus.Ready -> stringResource(R.string.ready_running, localStatus.version)
+                is LocalRuntimeStatus.Broken -> compactRuntimeError(localStatus.reason)
+                is LocalRuntimeStatus.UnsupportedAbi -> stringResource(R.string.unsupported_abi, localStatus.abi)
+            }
     }
-    RuntimeType.LOCAL -> when (localStatus) {
-        LocalRuntimeStatus.NotInstalled -> stringResource(R.string.runtime_status_not_installed)
-        is LocalRuntimeStatus.Installing -> stringResource(R.string.setting_up_with_step, localStatus.step)
-        is LocalRuntimeStatus.Starting -> stringResource(R.string.starting_opencode_version, localStatus.version)
-        is LocalRuntimeStatus.Updating ->
-            stringResource(
-                R.string.updating_with_step,
-                localStatus.currentVersion,
-                localStatus.targetVersion,
-                localStatus.step
-            )
-        is LocalRuntimeStatus.Stopped -> stringResource(R.string.installed_stopped, localStatus.version)
-        is LocalRuntimeStatus.Ready -> stringResource(R.string.ready_running, localStatus.version)
-        is LocalRuntimeStatus.Broken -> compactRuntimeError(localStatus.reason)
-        is LocalRuntimeStatus.UnsupportedAbi -> stringResource(R.string.unsupported_abi, localStatus.abi)
-    }
-}
 
 @Composable
 private fun compactRuntimeError(message: String): String {
-    val firstUsefulLine = message.lineSequence()
-        .map(String::trim)
-        .firstOrNull { it.isNotBlank() }
-        .orEmpty()
+    val firstUsefulLine =
+        message.lineSequence()
+            .map(String::trim)
+            .firstOrNull { it.isNotBlank() }
+            .orEmpty()
     val compact = firstUsefulLine.take(160)
     return when {
         compact.isBlank() -> stringResource(R.string.generic_runtime_problem)

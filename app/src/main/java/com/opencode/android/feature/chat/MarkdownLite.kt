@@ -2,33 +2,46 @@ package com.opencode.android.feature.chat
 
 sealed interface MarkdownInline {
     data class Plain(val text: String) : MarkdownInline
+
     data class Bold(val text: String) : MarkdownInline
+
     data class Italic(val text: String) : MarkdownInline
+
     data class Strikethrough(val text: String) : MarkdownInline
+
     data class Code(val text: String) : MarkdownInline
+
     data class Link(val text: String, val url: String) : MarkdownInline
 }
 
 sealed interface MarkdownBlock {
     data class Heading(val level: Int, val inlines: List<MarkdownInline>) : MarkdownBlock
+
     data class Paragraph(val inlines: List<MarkdownInline>) : MarkdownBlock
+
     data class CodeBlock(val code: String, val language: String? = null) : MarkdownBlock
+
     data class BulletList(val items: List<List<MarkdownInline>>) : MarkdownBlock
+
     data class OrderedList(val items: List<List<MarkdownInline>>) : MarkdownBlock
+
     data class Blockquote(val inlines: List<MarkdownInline>) : MarkdownBlock
+
     data class Table(val headers: List<String>, val rows: List<List<String>>) : MarkdownBlock
+
     data object HorizontalRule : MarkdownBlock
 }
 
 object MarkdownLite {
-    private val inlineRegex = Regex(
-        "`([^`]+)`" +
-            "|\\*\\*([^*]+)\\*\\*" +
-            "|~~([^~]+)~~" +
-            "|\\[([^\\]]+)\\]\\(([^)\\s]+)\\)" +
-            "|\\*([^*]+)\\*" +
-            "|(?<![\\w@])(https?://[A-Za-z0-9][A-Za-z0-9._~:/?#\\[\\]@!&'()*+,;=%-]*)"
-    )
+    private val inlineRegex =
+        Regex(
+            "`([^`]+)`" +
+                "|\\*\\*([^*]+)\\*\\*" +
+                "|~~([^~]+)~~" +
+                "|\\[([^\\]]+)\\]\\(([^)\\s]+)\\)" +
+                "|\\*([^*]+)\\*" +
+                "|(?<![\\w@])(https?://[A-Za-z0-9][A-Za-z0-9._~:/?#\\[\\]@!&'()*+,;=%-]*)",
+        )
     private val ORDERED_REGEX = Regex("^\\d+\\.\\s+")
     private val HR_REGEX = Regex("^(-{3,}|\\*{3,}|_{3,})$")
     private val TABLE_SEP_REGEX = Regex("^\\|?[\\s:|-]*-[\\s:|-]*\\|?$")

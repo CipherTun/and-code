@@ -13,9 +13,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.WrapText
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.automirrored.filled.WrapText
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,12 +51,13 @@ private val CodeBackground = Color(0xFF282C34)
 private val LineNumberColor = Color(0xFF6B7280)
 private val MatchHighlight = Color(0x99FFD54F)
 
-private val TOKEN_REGEX = Regex(
-    "(//[^\\n]*|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)" +
-        "|(\"(?:[^\"\\\\]|\\\\.)*\")" +
-        "|\\b(val|var|fun|class|import|package|return|if|else|when|for|while)\\b" +
-        "|\\b(\\d+(?:\\.\\d+)?[fFL]?)\\b"
-)
+private val TOKEN_REGEX =
+    Regex(
+        "(//[^\\n]*|/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)" +
+            "|(\"(?:[^\"\\\\]|\\\\.)*\")" +
+            "|\\b(val|var|fun|class|import|package|return|if|else|when|for|while)\\b" +
+            "|\\b(\\d+(?:\\.\\d+)?[fFL]?)\\b",
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +65,7 @@ fun CodeViewerScreen(
     fileName: String,
     content: String,
     onBack: () -> Unit,
-    syntaxThemeKey: String? = null
+    syntaxThemeKey: String? = null,
 ) {
     val theme = remember(syntaxThemeKey) { syntaxThemeFor(syntaxThemeKey) }
     val lines = remember(content) { content.split("\n") }
@@ -79,12 +80,16 @@ fun CodeViewerScreen(
     val hScrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    val matchLines = remember(searchQuery, lines) {
-        if (searchQuery.isEmpty()) emptyList()
-        else lines.mapIndexedNotNull { index, line ->
-            index.takeIf { line.contains(searchQuery) }
+    val matchLines =
+        remember(searchQuery, lines) {
+            if (searchQuery.isEmpty()) {
+                emptyList()
+            } else {
+                lines.mapIndexedNotNull { index, line ->
+                    index.takeIf { line.contains(searchQuery) }
+                }
+            }
         }
-    }
 
     LaunchedEffect(codeListState) {
         snapshotFlow { codeListState.firstVisibleItemIndex to codeListState.firstVisibleItemScrollOffset }
@@ -111,28 +116,30 @@ fun CodeViewerScreen(
                     IconButton(onClick = { wrap = !wrap }) {
                         Icon(Icons.AutoMirrored.Filled.WrapText, contentDescription = "Toggle wrap")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(CodeBackground)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(CodeBackground),
         ) {
             if (showSearch) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        label = { Text("Search") }
+                        label = { Text("Search") },
                     )
                     IconButton(
                         onClick = {
@@ -141,7 +148,7 @@ fun CodeViewerScreen(
                                 val target = matchLines[currentMatch]
                                 scope.launch { codeListState.animateScrollToItem(target) }
                             }
-                        }
+                        },
                     ) {
                         Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next match")
                     }
@@ -151,7 +158,7 @@ fun CodeViewerScreen(
                         text = if (matchLines.isEmpty()) "No matches" else "${currentMatch + 1} / ${matchLines.size}",
                         style = MaterialTheme.typography.labelSmall,
                         color = LineNumberColor,
-                        modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                        modifier = Modifier.padding(start = 16.dp, bottom = 4.dp),
                     )
                 }
             }
@@ -159,7 +166,7 @@ fun CodeViewerScreen(
                 LazyColumn(
                     state = numbersListState,
                     userScrollEnabled = false,
-                    modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp),
                 ) {
                     items(lines.size) { index ->
                         Text(
@@ -169,15 +176,16 @@ fun CodeViewerScreen(
                             lineHeight = 18.sp,
                             fontFamily = FontFamily.Monospace,
                             textAlign = TextAlign.End,
-                            modifier = Modifier.width(40.dp)
+                            modifier = Modifier.width(40.dp),
                         )
                     }
                 }
                 LazyColumn(
                     state = codeListState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(if (wrap) Modifier else Modifier.horizontalScroll(hScrollState))
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .then(if (wrap) Modifier else Modifier.horizontalScroll(hScrollState)),
                 ) {
                     items(lines.size) { index ->
                         Text(
@@ -186,7 +194,7 @@ fun CodeViewerScreen(
                             lineHeight = 18.sp,
                             fontFamily = FontFamily.Monospace,
                             softWrap = wrap,
-                            maxLines = if (wrap) Int.MAX_VALUE else 1
+                            maxLines = if (wrap) Int.MAX_VALUE else 1,
                         )
                     }
                 }
@@ -195,17 +203,22 @@ fun CodeViewerScreen(
     }
 }
 
-private fun highlightLine(line: String, theme: SyntaxTheme, searchQuery: String): AnnotatedString =
+private fun highlightLine(
+    line: String,
+    theme: SyntaxTheme,
+    searchQuery: String,
+): AnnotatedString =
     buildAnnotatedString {
         var last = 0
         for (match in TOKEN_REGEX.findAll(line)) {
             if (match.range.first > last) append(line.substring(last, match.range.first))
-            val style = when {
-                match.groups[1] != null -> SpanStyle(color = theme.comment)
-                match.groups[2] != null -> SpanStyle(color = theme.string)
-                match.groups[3] != null -> SpanStyle(color = theme.keyword)
-                else -> SpanStyle(color = theme.number)
-            }
+            val style =
+                when {
+                    match.groups[1] != null -> SpanStyle(color = theme.comment)
+                    match.groups[2] != null -> SpanStyle(color = theme.string)
+                    match.groups[3] != null -> SpanStyle(color = theme.keyword)
+                    else -> SpanStyle(color = theme.number)
+                }
             withStyle(style) { append(match.value) }
             last = match.range.last + 1
         }

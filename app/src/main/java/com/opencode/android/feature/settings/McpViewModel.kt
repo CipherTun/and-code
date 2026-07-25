@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -21,11 +20,11 @@ data class McpUiState(
     val addName: String = "",
     val addCommand: String = "",
     val addUrl: String = "",
-    val isAdding: Boolean = false
+    val isAdding: Boolean = false,
 )
 
 class McpViewModel(
-    private val registry: RuntimeRegistry
+    private val registry: RuntimeRegistry,
 ) : ViewModel() {
     private val _state = MutableStateFlow(McpUiState())
     val state: StateFlow<McpUiState> = _state.asStateFlow()
@@ -101,16 +100,17 @@ class McpViewModel(
         if (current.addName.isBlank()) return
         viewModelScope.launch {
             _state.update { it.copy(isAdding = true) }
-            val body = buildJsonObject {
-                put("name", current.addName.trim())
-                if (current.addUrl.isNotBlank()) {
-                    put("type", "remote")
-                    put("url", current.addUrl.trim())
-                } else if (current.addCommand.isNotBlank()) {
-                    put("type", "local")
-                    put("command", current.addCommand.trim())
+            val body =
+                buildJsonObject {
+                    put("name", current.addName.trim())
+                    if (current.addUrl.isNotBlank()) {
+                        put("type", "remote")
+                        put("url", current.addUrl.trim())
+                    } else if (current.addCommand.isNotBlank()) {
+                        put("type", "local")
+                        put("command", current.addCommand.trim())
+                    }
                 }
-            }
             runCatching { backend.addMcpServer(body) }
                 .onSuccess {
                     _state.update { it.copy(showAddDialog = false, isAdding = false) }

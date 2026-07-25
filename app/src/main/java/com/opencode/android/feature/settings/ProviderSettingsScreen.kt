@@ -5,10 +5,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -66,7 +64,7 @@ fun ProviderSettingsScreen(
     onConnectGitHub: () -> Unit = {},
     onDisconnectGitHub: () -> Unit = {},
     onOpenGitHubVerification: (String) -> Unit = {},
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -78,20 +76,21 @@ fun ProviderSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedTextField(
                 value = searchQuery,
@@ -107,23 +106,24 @@ fun ProviderSettingsScreen(
                         }
                     }
                 },
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(14.dp),
             )
 
-            val filtered = state.availableProviders
-                .sortedBy { it.name.lowercase() }
-                .filter { provider ->
-                    searchQuery.isBlank() ||
-                        provider.name.contains(searchQuery, ignoreCase = true) ||
-                        provider.id.contains(searchQuery, ignoreCase = true)
-                }
+            val filtered =
+                state.availableProviders
+                    .sortedBy { it.name.lowercase() }
+                    .filter { provider ->
+                        searchQuery.isBlank() ||
+                            provider.name.contains(searchQuery, ignoreCase = true) ||
+                            provider.id.contains(searchQuery, ignoreCase = true)
+                    }
 
             if (filtered.isEmpty()) {
                 Text(
                     stringResource(R.string.setup_provider_no_results),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    modifier = Modifier.padding(vertical = 8.dp),
                 )
             } else {
                 filtered.forEach { provider ->
@@ -132,44 +132,46 @@ fun ProviderSettingsScreen(
 
                     ProviderRow(
                         providerName = provider.name,
-                        methodSummary = if (methods.isNotEmpty()) {
-                            methods.joinToString(" · ") { it.label }
-                        } else {
-                            stringResource(R.string.setup_provider_api_key_only)
-                        },
+                        methodSummary =
+                            if (methods.isNotEmpty()) {
+                                methods.joinToString(" · ") { it.label }
+                            } else {
+                                stringResource(R.string.setup_provider_api_key_only)
+                            },
                         connected = connected,
                         onConnect = { onOpenProviderAuth(provider.id) },
-                        onDisconnect = { onDisconnectProvider(provider.id) }
+                        onDisconnect = { onDisconnectProvider(provider.id) },
                     )
                 }
             }
 
             state.providerAuthNotice?.let { notice ->
                 Text(
-                    text = stringResource(
-                        when (notice) {
-                            ProviderAuthNotice.CONNECTED -> R.string.provider_connected_success
-                            ProviderAuthNotice.DISCONNECTED -> R.string.provider_disconnected_success
-                        }
-                    ),
+                    text =
+                        stringResource(
+                            when (notice) {
+                                ProviderAuthNotice.CONNECTED -> R.string.provider_connected_success
+                                ProviderAuthNotice.DISCONNECTED -> R.string.provider_disconnected_success
+                            },
+                        ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
             state.oauthMessage?.let { message ->
                 Text(
                     message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
             Text(
                 text = stringResource(R.string.github_git_operations),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
             Text(
                 text = state.githubLogin ?: stringResource(R.string.github_not_connected),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             state.githubMessage?.let { message ->
                 Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -179,19 +181,19 @@ fun ProviderSettingsScreen(
                 GithubDeviceCodeCard(
                     code = userCode,
                     verificationUrl = state.githubVerificationUrl,
-                    onOpenVerification = onOpenGitHubVerification
+                    onOpenVerification = onOpenGitHubVerification,
                 )
             } else {
                 OutlinedButton(
                     onClick = if (state.githubLogin == null) onConnectGitHub else onDisconnectGitHub,
-                    enabled = state.githubConfigured
+                    enabled = state.githubConfigured,
                 ) {
                     Text(
                         if (state.githubLogin == null) {
                             stringResource(R.string.github_connect)
                         } else {
                             stringResource(R.string.github_disconnect)
-                        }
+                        },
                     )
                 }
             }
@@ -207,7 +209,7 @@ fun ProviderSettingsScreen(
             onSubmit = onSubmitProviderAuth,
             onCompleteCode = onCompleteProviderOAuth,
             onLaunchBrowser = onLaunchOAuthBrowser,
-            onDismiss = onDismissProviderAuth
+            onDismiss = onDismissProviderAuth,
         )
     }
 }
@@ -216,7 +218,7 @@ fun ProviderSettingsScreen(
 private fun GithubDeviceCodeCard(
     code: String,
     verificationUrl: String?,
-    onOpenVerification: (String) -> Unit
+    onOpenVerification: (String) -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
@@ -224,25 +226,25 @@ private fun GithubDeviceCodeCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = stringResource(R.string.github_device_flow_instructions),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.surface,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     SelectionContainer {
                         Text(
@@ -250,7 +252,7 @@ private fun GithubDeviceCodeCard(
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 2.sp,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                     }
                     OutlinedButton(onClick = {
@@ -263,19 +265,19 @@ private fun GithubDeviceCodeCard(
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Text(
                     text = stringResource(R.string.github_waiting_for_authorization),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             verificationUrl?.let { url ->
                 Button(
                     onClick = { onOpenVerification(url) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(stringResource(R.string.github_open_verification))
                 }
@@ -290,53 +292,56 @@ private fun ProviderRow(
     methodSummary: String,
     connected: Boolean,
     onConnect: () -> Unit,
-    onDisconnect: () -> Unit
+    onDisconnect: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = providerName,
                 style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Text(
-                text = if (connected) {
-                    stringResource(R.string.provider_connected)
-                } else {
-                    stringResource(R.string.provider_not_connected)
-                },
+                text =
+                    if (connected) {
+                        stringResource(R.string.provider_connected)
+                    } else {
+                        stringResource(R.string.provider_not_connected)
+                    },
                 style = MaterialTheme.typography.labelSmall,
-                color = if (connected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                color =
+                    if (connected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
             )
         }
         Text(
             text = methodSummary,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(
                 onClick = onConnect,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     if (connected) {
                         stringResource(R.string.provider_change_connection)
                     } else {
                         stringResource(R.string.provider_connect)
-                    }
+                    },
                 )
             }
             if (connected) {
@@ -353,23 +358,28 @@ private fun ProviderRow(
 private fun ProviderSettingsScreenPreview() {
     OpenCodeAndroidTheme {
         ProviderSettingsScreen(
-            state = SettingsUiState(
-                availableProviders = listOf(
-                    OpenCodeProvider(id = "openai", name = "OpenAI"),
-                    OpenCodeProvider(id = "anthropic", name = "Anthropic"),
-                    OpenCodeProvider(id = "ollama", name = "Ollama")
+            state =
+                SettingsUiState(
+                    availableProviders =
+                        listOf(
+                            OpenCodeProvider(id = "openai", name = "OpenAI"),
+                            OpenCodeProvider(id = "anthropic", name = "Anthropic"),
+                            OpenCodeProvider(id = "ollama", name = "Ollama"),
+                        ),
+                    providerAuthMethods =
+                        mapOf(
+                            "openai" to
+                                listOf(
+                                    ProviderAuthMethod(type = "oauth", label = "ChatGPT Plus/Pro"),
+                                    ProviderAuthMethod(type = "api", label = "API key"),
+                                ),
+                            "anthropic" to
+                                listOf(
+                                    ProviderAuthMethod(type = "api", label = "API key"),
+                                ),
+                        ),
+                    connectedProviderIds = setOf("openai"),
                 ),
-                providerAuthMethods = mapOf(
-                    "openai" to listOf(
-                        ProviderAuthMethod(type = "oauth", label = "ChatGPT Plus/Pro"),
-                        ProviderAuthMethod(type = "api", label = "API key")
-                    ),
-                    "anthropic" to listOf(
-                        ProviderAuthMethod(type = "api", label = "API key")
-                    )
-                ),
-                connectedProviderIds = setOf("openai")
-            ),
             onOpenProviderAuth = {},
             onSelectProviderAuthMethod = {},
             onProviderAuthInput = { _, _ -> },
@@ -382,7 +392,7 @@ private fun ProviderSettingsScreenPreview() {
             onConnectGitHub = {},
             onDisconnectGitHub = {},
             onOpenGitHubVerification = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }

@@ -22,16 +22,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Button
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -63,30 +62,31 @@ fun ModelAndRuntimePickerSheet(
     recentModelKeys: List<String> = emptyList(),
     hiddenModelKeys: Set<String> = emptySet(),
     onToggleFavorite: (String, String) -> Unit = { _, _ -> },
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             item {
                 Column {
                     Text(
                         text = stringResource(R.string.picker_title),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = stringResource(R.string.picker_caption),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -96,7 +96,7 @@ fun ModelAndRuntimePickerSheet(
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    label = { Text(stringResource(R.string.picker_search)) }
+                    label = { Text(stringResource(R.string.picker_search)) },
                 )
             }
 
@@ -107,7 +107,7 @@ fun ModelAndRuntimePickerSheet(
                 RuntimeRow(
                     target = target,
                     selected = target.id == selectedRuntimeId,
-                    onClick = { onSelectRuntime(target.id) }
+                    onClick = { onSelectRuntime(target.id) },
                 )
             }
 
@@ -125,30 +125,32 @@ fun ModelAndRuntimePickerSheet(
                         text = stringResource(R.string.picker_no_providers),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 12.dp)
+                        modifier = Modifier.padding(vertical = 12.dp),
                     )
                 }
             } else {
                 data class FavoriteEntry(
                     val provider: OpenCodeProvider,
-                    val model: OpenCodeModel
+                    val model: OpenCodeModel,
                 )
 
-                val favoriteEntries = providers.flatMap { provider ->
-                    provider.models.values
-                        .filter { "$provider.id/${it.id}" in favoriteModelKeys }
-                        .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
-                        .map { FavoriteEntry(provider, it) }
-                }.sortedBy { it.model.name.lowercase() }
+                val favoriteEntries =
+                    providers.flatMap { provider ->
+                        provider.models.values
+                            .filter { "$provider.id/${it.id}" in favoriteModelKeys }
+                            .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
+                            .map { FavoriteEntry(provider, it) }
+                    }.sortedBy { it.model.name.lowercase() }
 
-                val recentEntries = recentModelKeys.mapNotNull { key ->
-                    val providerId = key.substringBefore('/')
-                    val modelId = key.substringAfter('/')
-                    val provider = providers.firstOrNull { it.id == providerId } ?: return@mapNotNull null
-                    val model = provider.models[modelId] ?: return@mapNotNull null
-                    FavoriteEntry(provider, model)
-                }.filter { entry -> "${entry.provider.id}/${entry.model.id}" !in favoriteModelKeys }
-                 .filter { query.isBlank() || it.model.name.contains(query, true) || it.model.id.contains(query, true) }
+                val recentEntries =
+                    recentModelKeys.mapNotNull { key ->
+                        val providerId = key.substringBefore('/')
+                        val modelId = key.substringAfter('/')
+                        val provider = providers.firstOrNull { it.id == providerId } ?: return@mapNotNull null
+                        val model = provider.models[modelId] ?: return@mapNotNull null
+                        FavoriteEntry(provider, model)
+                    }.filter { entry -> "${entry.provider.id}/${entry.model.id}" !in favoriteModelKeys }
+                        .filter { query.isBlank() || it.model.name.contains(query, true) || it.model.id.contains(query, true) }
 
                 if (favoriteEntries.isNotEmpty()) {
                     item {
@@ -156,7 +158,7 @@ fun ModelAndRuntimePickerSheet(
                             text = stringResource(R.string.section_favorites),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                         )
                     }
                     items(favoriteEntries, key = { "fav-${it.provider.id}-${it.model.id}" }) { entry ->
@@ -165,7 +167,7 @@ fun ModelAndRuntimePickerSheet(
                             selected = entry.provider.id == selectedProviderId && entry.model.id == selectedModelId,
                             isFavorite = true,
                             onClick = { onSelectModel(entry.provider.id, entry.model.id) },
-                            onToggleFavorite = { onToggleFavorite(entry.provider.id, entry.model.id) }
+                            onToggleFavorite = { onToggleFavorite(entry.provider.id, entry.model.id) },
                         )
                     }
                     item {
@@ -179,7 +181,7 @@ fun ModelAndRuntimePickerSheet(
                             text = stringResource(R.string.section_recent),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                         )
                     }
                     items(recentEntries, key = { "recent-${it.provider.id}-${it.model.id}" }) { entry ->
@@ -188,7 +190,7 @@ fun ModelAndRuntimePickerSheet(
                             selected = entry.provider.id == selectedProviderId && entry.model.id == selectedModelId,
                             isFavorite = "${entry.provider.id}/${entry.model.id}" in favoriteModelKeys,
                             onClick = { onSelectModel(entry.provider.id, entry.model.id) },
-                            onToggleFavorite = { onToggleFavorite(entry.provider.id, entry.model.id) }
+                            onToggleFavorite = { onToggleFavorite(entry.provider.id, entry.model.id) },
                         )
                     }
                     item {
@@ -197,18 +199,19 @@ fun ModelAndRuntimePickerSheet(
                 }
 
                 providers.forEach { provider ->
-                    val models = provider.models.values
-                        .filter { it.status == null || it.status == "active" }
-                        .filter { "${provider.id}/${it.id}" !in hiddenModelKeys }
-                        .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
-                        .sortedBy { it.name.lowercase() }
+                    val models =
+                        provider.models.values
+                            .filter { it.status == null || it.status == "active" }
+                            .filter { "${provider.id}/${it.id}" !in hiddenModelKeys }
+                            .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
+                            .sortedBy { it.name.lowercase() }
                     if (models.isNotEmpty()) {
                         item {
                             Text(
                                 text = "${provider.name} (${models.size})",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                             )
                         }
                         items(models, key = { "model-${provider.id}-${it.id}" }) { model ->
@@ -217,7 +220,7 @@ fun ModelAndRuntimePickerSheet(
                                 selected = provider.id == selectedProviderId && model.id == selectedModelId,
                                 isFavorite = "${provider.id}/${model.id}" in favoriteModelKeys,
                                 onClick = { onSelectModel(provider.id, model.id) },
-                                onToggleFavorite = { onToggleFavorite(provider.id, model.id) }
+                                onToggleFavorite = { onToggleFavorite(provider.id, model.id) },
                             )
                         }
                     }
@@ -238,7 +241,7 @@ private fun SheetSectionHeader(text: String) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
     )
 }
 
@@ -246,29 +249,31 @@ private fun SheetSectionHeader(text: String) {
 private fun RuntimeRow(
     target: RuntimeTarget,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(
             imageVector = if (target.type == RuntimeType.LOCAL) Icons.Default.Android else Icons.Default.Computer,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = if (target.type == RuntimeType.LOCAL) {
-                stringResource(R.string.this_android)
-            } else {
-                target.displayName
-            },
+            text =
+                if (target.type == RuntimeType.LOCAL) {
+                    stringResource(R.string.this_android)
+                } else {
+                    target.displayName
+                },
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
         )
         RadioButton(selected = selected, onClick = onClick)
     }
@@ -280,26 +285,28 @@ private fun ModelRow(
     selected: Boolean,
     isFavorite: Boolean,
     onClick: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                 contentDescription = null,
-                tint = if (isFavorite) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(18.dp)
+                tint =
+                    if (isFavorite) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                modifier = Modifier.size(18.dp),
             )
         }
         Column(modifier = Modifier.weight(1f)) {
@@ -308,7 +315,7 @@ private fun ModelRow(
                 model.id,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                maxLines = 1,
             )
         }
         RadioButton(selected = selected, onClick = onClick)

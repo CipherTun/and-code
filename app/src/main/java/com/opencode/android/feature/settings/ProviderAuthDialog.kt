@@ -37,7 +37,7 @@ fun ProviderAuthDialog(
     onSubmit: () -> Unit,
     onCompleteCode: (String) -> Unit,
     onLaunchBrowser: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val authorization = state.authorization
     var code by remember(authorization?.url) { mutableStateOf("") }
@@ -57,7 +57,7 @@ fun ProviderAuthDialog(
                         confirmationCode(authorization.instructions)?.let { confirmation ->
                             Text(
                                 stringResource(R.string.provider_confirmation_code),
-                                style = MaterialTheme.typography.labelMedium
+                                style = MaterialTheme.typography.labelMedium,
                             )
                             SelectionContainer {
                                 Text(confirmation, style = MaterialTheme.typography.titleMedium)
@@ -70,13 +70,13 @@ fun ProviderAuthDialog(
                                 label = { Text(stringResource(R.string.provider_confirmation_code)) },
                                 singleLine = true,
                                 enabled = !state.isSubmitting,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         } else {
                             Text(
                                 stringResource(R.string.provider_waiting_for_browser),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -86,7 +86,7 @@ fun ProviderAuthDialog(
                             OutlinedButton(
                                 onClick = { onSelectMethod(index) },
                                 enabled = !state.isSubmitting,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(method.label)
                             }
@@ -110,20 +110,21 @@ fun ProviderAuthDialog(
                                                             Text(hint, style = MaterialTheme.typography.labelSmall)
                                                         }
                                                     }
-                                                }
+                                                },
                                             )
                                         }
                                     }
                                 }
-                                else -> OutlinedTextField(
-                                    value = state.inputs[prompt.key].orEmpty(),
-                                    onValueChange = { onInputChange(prompt.key, it) },
-                                    label = { Text(prompt.message) },
-                                    placeholder = prompt.placeholder?.let { value -> { Text(value) } },
-                                    singleLine = true,
-                                    enabled = !state.isSubmitting,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                else ->
+                                    OutlinedTextField(
+                                        value = state.inputs[prompt.key].orEmpty(),
+                                        onValueChange = { onInputChange(prompt.key, it) },
+                                        label = { Text(prompt.message) },
+                                        placeholder = prompt.placeholder?.let { value -> { Text(value) } },
+                                        singleLine = true,
+                                        enabled = !state.isSubmitting,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
                             }
                         }
                         if (method?.type == "api") {
@@ -135,7 +136,7 @@ fun ProviderAuthDialog(
                                 enabled = !state.isSubmitting,
                                 visualTransformation = PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
@@ -145,7 +146,7 @@ fun ProviderAuthDialog(
                     Text(
                         state.error ?: stringResource(R.string.provider_auth_failed),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 if (state.isSubmitting) {
@@ -158,28 +159,31 @@ fun ProviderAuthDialog(
         },
         confirmButton = {
             when {
-                authorization?.method == "code" -> Button(
-                    enabled = code.isNotBlank() && !state.isSubmitting,
-                    onClick = { onCompleteCode(code) }
-                ) {
-                    Text(stringResource(R.string.continue_label))
-                }
+                authorization?.method == "code" ->
+                    Button(
+                        enabled = code.isNotBlank() && !state.isSubmitting,
+                        onClick = { onCompleteCode(code) },
+                    ) {
+                        Text(stringResource(R.string.continue_label))
+                    }
                 authorization != null -> Unit
-                state.methodIndex != null -> Button(
-                    enabled = state.promptsComplete &&
-                        (state.selectedMethod?.type != "api" || state.apiKey.isNotBlank()) &&
-                        !state.isSubmitting,
-                    onClick = onSubmit
-                ) {
-                    Text(stringResource(R.string.continue_label))
-                }
+                state.methodIndex != null ->
+                    Button(
+                        enabled =
+                            state.promptsComplete &&
+                                (state.selectedMethod?.type != "api" || state.apiKey.isNotBlank()) &&
+                                !state.isSubmitting,
+                        onClick = onSubmit,
+                    ) {
+                        Text(stringResource(R.string.continue_label))
+                    }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !state.isSubmitting) {
                 Text(stringResource(R.string.cancel))
             }
-        }
+        },
     )
 }
 

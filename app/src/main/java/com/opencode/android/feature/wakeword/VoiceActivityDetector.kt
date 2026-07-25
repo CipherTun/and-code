@@ -1,11 +1,10 @@
 package com.opencode.android.feature.wakeword
 
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 class VoiceActivityDetector(
     private val energyThreshold: Float = DEFAULT_THRESHOLD,
-    private val hangoverFrames: Int = DEFAULT_HANGOVER
+    private val hangoverFrames: Int = DEFAULT_HANGOVER,
 ) {
     private var silentFrames = 0
 

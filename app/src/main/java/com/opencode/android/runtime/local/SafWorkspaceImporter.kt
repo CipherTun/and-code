@@ -11,23 +11,29 @@ import java.io.File
  */
 class SafWorkspaceImporter(
     private val context: Context,
-    private val runtimeDirectory: File = File(context.filesDir, "runtime")
+    private val runtimeDirectory: File = File(context.filesDir, "runtime"),
 ) {
     fun importTree(treeUri: Uri): File {
-        val source = DocumentFile.fromTreeUri(context, treeUri)
-            ?: error("Unable to open selected folder")
-        val name = source.name?.replace(Regex("[^A-Za-z0-9._-]"), "_")
-            ?.takeIf { it.isNotBlank() }
-            ?: "imported-${System.currentTimeMillis()}"
-        val destination = File(runtimeDirectory, "workspace/$name").apply {
-            if (exists()) deleteRecursively()
-            mkdirs()
-        }
+        val source =
+            DocumentFile.fromTreeUri(context, treeUri)
+                ?: error("Unable to open selected folder")
+        val name =
+            source.name?.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                ?.takeIf { it.isNotBlank() }
+                ?: "imported-${System.currentTimeMillis()}"
+        val destination =
+            File(runtimeDirectory, "workspace/$name").apply {
+                if (exists()) deleteRecursively()
+                mkdirs()
+            }
         copyDocument(source, destination)
         return destination
     }
 
-    private fun copyDocument(source: DocumentFile, destination: File) {
+    private fun copyDocument(
+        source: DocumentFile,
+        destination: File,
+    ) {
         if (source.isDirectory) {
             destination.mkdirs()
             source.listFiles().forEach { child ->
@@ -44,7 +50,10 @@ class SafWorkspaceImporter(
         }
     }
 
-    private fun copyFile(source: DocumentFile, destination: File) {
+    private fun copyFile(
+        source: DocumentFile,
+        destination: File,
+    ) {
         destination.parentFile?.mkdirs()
         context.contentResolver.openInputStream(source.uri)?.use { input ->
             destination.outputStream().use { output -> input.copyTo(output) }

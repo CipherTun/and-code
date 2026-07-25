@@ -16,27 +16,29 @@ enum class ConnectionStatus {
     GOOD,
     FAIR,
     POOR,
-    DISCONNECTED;
+    DISCONNECTED,
+    ;
 
     companion object {
-        fun fromLatency(latencyMs: Long): ConnectionStatus = when {
-            latencyMs < 100L -> EXCELLENT
-            latencyMs < 300L -> GOOD
-            latencyMs < 1000L -> FAIR
-            else -> POOR
-        }
+        fun fromLatency(latencyMs: Long): ConnectionStatus =
+            when {
+                latencyMs < 100L -> EXCELLENT
+                latencyMs < 300L -> GOOD
+                latencyMs < 1000L -> FAIR
+                else -> POOR
+            }
     }
 }
 
 data class ConnectionQuality(
     val latencyMs: Long = 0L,
     val tokensPerSecond: Double = 0.0,
-    val status: ConnectionStatus = ConnectionStatus.DISCONNECTED
+    val status: ConnectionStatus = ConnectionStatus.DISCONNECTED,
 )
 
 class ConnectionQualityMonitor(
     private val scope: CoroutineScope,
-    private val smoothingFactor: Double = DEFAULT_SMOOTHING_FACTOR
+    private val smoothingFactor: Double = DEFAULT_SMOOTHING_FACTOR,
 ) {
     private val _quality = MutableStateFlow(ConnectionQuality())
     val quality: StateFlow<ConnectionQuality> = _quality.asStateFlow()
@@ -68,12 +70,13 @@ class ConnectionQualityMonitor(
             val elapsedSeconds = (nowNanos - streamWindowStartNanos) / NANOS_PER_SECOND
             if (elapsedSeconds < TOKEN_RATE_WINDOW_SECONDS) return
             val instantaneousRate = streamTokenCount / elapsedSeconds
-            smoothedTokensPerSecond = if (!hasTokenSample) {
-                hasTokenSample = true
-                instantaneousRate
-            } else {
-                smoothingFactor * instantaneousRate + (1.0 - smoothingFactor) * smoothedTokensPerSecond
-            }
+            smoothedTokensPerSecond =
+                if (!hasTokenSample) {
+                    hasTokenSample = true
+                    instantaneousRate
+                } else {
+                    smoothingFactor * instantaneousRate + (1.0 - smoothingFactor) * smoothedTokensPerSecond
+                }
             streamTokenCount = 0
             streamWindowStartNanos = nowNanos
             _quality.update { it.copy(tokensPerSecond = smoothedTokensPerSecond) }
@@ -82,16 +85,17 @@ class ConnectionQualityMonitor(
 
     private suspend fun probe(healthCheck: suspend () -> Unit) {
         var succeeded = false
-        val elapsedMs = measureTimeMillis {
-            try {
-                healthCheck()
-                succeeded = true
-            } catch (cancellation: CancellationException) {
-                throw cancellation
-            } catch (_: Throwable) {
-                succeeded = false
+        val elapsedMs =
+            measureTimeMillis {
+                try {
+                    healthCheck()
+                    succeeded = true
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Throwable) {
+                    succeeded = false
+                }
             }
-        }
         if (succeeded) {
             recordLatency(elapsedMs)
         } else {
@@ -101,17 +105,18 @@ class ConnectionQualityMonitor(
 
     private fun recordLatency(latencyMs: Long) {
         synchronized(lock) {
-            smoothedLatencyMs = if (!hasLatencySample) {
-                hasLatencySample = true
-                latencyMs.toDouble()
-            } else {
-                smoothingFactor * latencyMs + (1.0 - smoothingFactor) * smoothedLatencyMs
-            }
+            smoothedLatencyMs =
+                if (!hasLatencySample) {
+                    hasLatencySample = true
+                    latencyMs.toDouble()
+                } else {
+                    smoothingFactor * latencyMs + (1.0 - smoothingFactor) * smoothedLatencyMs
+                }
             val roundedLatency = smoothedLatencyMs.toLong()
             _quality.update {
                 it.copy(
                     latencyMs = roundedLatency,
-                    status = ConnectionStatus.fromLatency(roundedLatency)
+                    status = ConnectionStatus.fromLatency(roundedLatency),
                 )
             }
         }

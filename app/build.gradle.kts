@@ -9,68 +9,87 @@ plugins {
 }
 
 val repoRoot = rootProject.projectDir
-val githubClientId = (System.getenv("GITHUB_CLIENT_ID")
-    ?: findProperty("GITHUB_CLIENT_ID")?.toString()
-    ?: "Ov23liTw50EzjFhS9ESg").trim()
+val githubClientId =
+    (
+        System.getenv("GITHUB_CLIENT_ID")
+            ?: findProperty("GITHUB_CLIENT_ID")?.toString()
+            ?: "Ov23liTw50EzjFhS9ESg"
+    ).trim()
 val generatedRuntimeAssets = rootProject.layout.buildDirectory.dir("generated/runtime-assets")
 val generatedRuntimeJni = rootProject.layout.buildDirectory.dir("generated/runtime-jni")
 
-val prepareOpenCodeRuntimeAssets = tasks.register<Exec>("prepareOpenCodeRuntimeAssets") {
-    inputs.file(repoRoot.resolve("runtime_tools/termux_assets.py"))
-    inputs.file(repoRoot.resolve("runtime_tools/termux_assets.lock.json"))
-    inputs.file(repoRoot.resolve("scripts/prepare_android_runtime_assets.py"))
-    outputs.dir(generatedRuntimeAssets)
-    commandLine(
-        "python3",
-        repoRoot.resolve("scripts/prepare_android_runtime_assets.py").absolutePath,
-        "--output-dir",
-        generatedRuntimeAssets.get().asFile.absolutePath,
-        "--lock-file",
-        repoRoot.resolve("runtime_tools/termux_assets.lock.json").absolutePath
-    )
-}
-
-val prepareOpenCodeRuntimeNativeLibs = tasks.register<Exec>("prepareOpenCodeRuntimeNativeLibs") {
-    dependsOn(prepareOpenCodeRuntimeAssets)
-    inputs.dir(generatedRuntimeAssets)
-    inputs.file(repoRoot.resolve("scripts/prepare_android_runtime_native_libs.py"))
-    outputs.dir(generatedRuntimeJni)
-    commandLine(
-        "python3",
-        repoRoot.resolve("scripts/prepare_android_runtime_native_libs.py").absolutePath,
-        "--linux-assets-dir",
-        generatedRuntimeAssets.get().asFile.absolutePath,
-        "--output-dir",
-        generatedRuntimeJni.get().asFile.absolutePath
-    )
-}
-
-val releaseStoreFile = (System.getenv("OPENCODE_STORE_FILE")
-    ?: findProperty("OPENCODE_STORE_FILE")?.toString())
-    ?.takeIf { it.isNotBlank() }
-val releaseStorePassword = (System.getenv("OPENCODE_STORE_PASSWORD")
-    ?: findProperty("OPENCODE_STORE_PASSWORD")?.toString())
-    ?.takeIf { it.isNotBlank() }
-val releaseKeyAlias = (System.getenv("OPENCODE_KEY_ALIAS")
-    ?: findProperty("OPENCODE_KEY_ALIAS")?.toString())
-    ?.takeIf { it.isNotBlank() }
-val releaseKeyPassword = (System.getenv("OPENCODE_KEY_PASSWORD")
-    ?: findProperty("OPENCODE_KEY_PASSWORD")?.toString())
-    ?.takeIf { it.isNotBlank() }
-val hasReleaseSigning = listOf(
-    releaseStoreFile,
-    releaseStorePassword,
-    releaseKeyAlias,
-    releaseKeyPassword
-).all { !it.isNullOrBlank() } &&
-    releaseStoreFile!!.let { path ->
-        val resolved = if (File(path).isAbsolute) {
-            File(path)
-        } else {
-            File(rootProject.projectDir, path)
-        }
-        resolved.isFile
+val prepareOpenCodeRuntimeAssets =
+    tasks.register<Exec>("prepareOpenCodeRuntimeAssets") {
+        inputs.file(repoRoot.resolve("runtime_tools/termux_assets.py"))
+        inputs.file(repoRoot.resolve("runtime_tools/termux_assets.lock.json"))
+        inputs.file(repoRoot.resolve("scripts/prepare_android_runtime_assets.py"))
+        outputs.dir(generatedRuntimeAssets)
+        commandLine(
+            "python3",
+            repoRoot.resolve("scripts/prepare_android_runtime_assets.py").absolutePath,
+            "--output-dir",
+            generatedRuntimeAssets.get().asFile.absolutePath,
+            "--lock-file",
+            repoRoot.resolve("runtime_tools/termux_assets.lock.json").absolutePath,
+        )
     }
+
+val prepareOpenCodeRuntimeNativeLibs =
+    tasks.register<Exec>("prepareOpenCodeRuntimeNativeLibs") {
+        dependsOn(prepareOpenCodeRuntimeAssets)
+        inputs.dir(generatedRuntimeAssets)
+        inputs.file(repoRoot.resolve("scripts/prepare_android_runtime_native_libs.py"))
+        outputs.dir(generatedRuntimeJni)
+        commandLine(
+            "python3",
+            repoRoot.resolve("scripts/prepare_android_runtime_native_libs.py").absolutePath,
+            "--linux-assets-dir",
+            generatedRuntimeAssets.get().asFile.absolutePath,
+            "--output-dir",
+            generatedRuntimeJni.get().asFile.absolutePath,
+        )
+    }
+
+val releaseStoreFile =
+    (
+        System.getenv("OPENCODE_STORE_FILE")
+            ?: findProperty("OPENCODE_STORE_FILE")?.toString()
+    )
+        ?.takeIf { it.isNotBlank() }
+val releaseStorePassword =
+    (
+        System.getenv("OPENCODE_STORE_PASSWORD")
+            ?: findProperty("OPENCODE_STORE_PASSWORD")?.toString()
+    )
+        ?.takeIf { it.isNotBlank() }
+val releaseKeyAlias =
+    (
+        System.getenv("OPENCODE_KEY_ALIAS")
+            ?: findProperty("OPENCODE_KEY_ALIAS")?.toString()
+    )
+        ?.takeIf { it.isNotBlank() }
+val releaseKeyPassword =
+    (
+        System.getenv("OPENCODE_KEY_PASSWORD")
+            ?: findProperty("OPENCODE_KEY_PASSWORD")?.toString()
+    )
+        ?.takeIf { it.isNotBlank() }
+val hasReleaseSigning =
+    listOf(
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() } &&
+        releaseStoreFile!!.let { path ->
+            val resolved =
+                if (File(path).isAbsolute) {
+                    File(path)
+                } else {
+                    File(rootProject.projectDir, path)
+                }
+            resolved.isFile
+        }
 
 android {
     namespace = "com.opencode.android"
@@ -94,11 +113,12 @@ android {
         signingConfigs {
             create("release") {
                 val storeFilePath = releaseStoreFile!!
-                storeFile = if (File(storeFilePath).isAbsolute) {
-                    File(storeFilePath)
-                } else {
-                    File(rootProject.projectDir, storeFilePath)
-                }
+                storeFile =
+                    if (File(storeFilePath).isAbsolute) {
+                        File(storeFilePath)
+                    } else {
+                        File(rootProject.projectDir, storeFilePath)
+                    }
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
@@ -111,7 +131,7 @@ android {
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.getByName("release")
@@ -124,9 +144,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
-        )
+        freeCompilerArgs +=
+            listOf(
+                "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            )
     }
     buildFeatures {
         compose = true
@@ -158,7 +179,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.startup:startup-runtime:1.2.0")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
-    
+
     // Compose
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
@@ -166,10 +187,10 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    
+
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    
+
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
@@ -178,11 +199,11 @@ dependencies {
 
     // QR code scanning for connection setup
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-    
+
     // Encrypted SharedPreferences
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.documentfile:documentfile:1.0.1")
-    
+
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
@@ -201,7 +222,7 @@ dependencies {
 
     // Baseline Profiles
     baselineProfile(project(":benchmark"))
-    
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")

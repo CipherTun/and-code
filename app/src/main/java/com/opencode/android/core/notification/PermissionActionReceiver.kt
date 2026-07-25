@@ -11,7 +11,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class PermissionActionReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent?) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent?,
+    ) {
         if (intent?.action != RuntimeNotificationHelper.ACTION_PERMISSION_RESPONSE) return
         val sessionId = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_SESSION_ID) ?: return
         val permissionId = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_PERMISSION_ID) ?: return

@@ -18,25 +18,26 @@ import androidx.compose.ui.unit.dp
 fun ProviderIcon(
     providerId: String,
     modifier: Modifier = Modifier,
-    size: Int = 18
+    size: Int = 18,
 ) {
-    val icon: ImageVector = when {
-        providerId.contains("claude", ignoreCase = true) ||
-            providerId.contains("anthropic", ignoreCase = true) -> Icons.Default.AutoAwesome
-        providerId.contains("openai", ignoreCase = true) ||
-            providerId.contains("codex", ignoreCase = true) ||
-            providerId.contains("gpt", ignoreCase = true) -> Icons.Default.SmartToy
-        providerId.contains("copilot", ignoreCase = true) ||
-            providerId.contains("github", ignoreCase = true) -> Icons.Default.Code
-        providerId.contains("gemini", ignoreCase = true) ||
-            providerId.contains("google", ignoreCase = true) -> Icons.Default.Android
-        providerId.contains("opencode", ignoreCase = true) -> Icons.Default.Terminal
-        else -> Icons.Default.SmartToy
-    }
+    val icon: ImageVector =
+        when {
+            providerId.contains("claude", ignoreCase = true) ||
+                providerId.contains("anthropic", ignoreCase = true) -> Icons.Default.AutoAwesome
+            providerId.contains("openai", ignoreCase = true) ||
+                providerId.contains("codex", ignoreCase = true) ||
+                providerId.contains("gpt", ignoreCase = true) -> Icons.Default.SmartToy
+            providerId.contains("copilot", ignoreCase = true) ||
+                providerId.contains("github", ignoreCase = true) -> Icons.Default.Code
+            providerId.contains("gemini", ignoreCase = true) ||
+                providerId.contains("google", ignoreCase = true) -> Icons.Default.Android
+            providerId.contains("opencode", ignoreCase = true) -> Icons.Default.Terminal
+            else -> Icons.Default.SmartToy
+        }
     Icon(
         imageVector = icon,
         contentDescription = providerId,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.size(size.dp)
+        modifier = modifier.size(size.dp),
     )
 }

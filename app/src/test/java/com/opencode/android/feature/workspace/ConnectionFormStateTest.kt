@@ -18,14 +18,14 @@ class ConnectionFormStateTest {
             ConnectionFormState(
                 name = "Mac mini",
                 baseUrl = "192.168.1.10:4096",
-                allowInsecureLan = true
-            ).canSave
+                allowInsecureLan = true,
+            ).canSave,
         )
         assertTrue(
             ConnectionFormState(
                 name = "Server",
-                baseUrl = "https://opencode.example.com"
-            ).canSave
+                baseUrl = "https://opencode.example.com",
+            ).canSave,
         )
     }
 
@@ -35,8 +35,8 @@ class ConnectionFormStateTest {
             ConnectionFormState(
                 name = "Unsafe",
                 baseUrl = "http://example.com:4096",
-                allowInsecureLan = true
-            ).canSave
+                allowInsecureLan = true,
+            ).canSave,
         )
     }
 }

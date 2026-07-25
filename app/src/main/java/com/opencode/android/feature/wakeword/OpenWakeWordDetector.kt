@@ -8,17 +8,15 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-import kotlin.math.ln
 import kotlin.math.max
 
 data class WakeWordResult(
     val keyword: String,
     val confidence: Float,
-    val timestamp: Long
+    val timestamp: Long,
 )
 
 class OpenWakeWordDetector(private val context: Context) {
-
     private var melspecInterpreter: Interpreter? = null
     private var embeddingInterpreter: Interpreter? = null
     private var wakewordInterpreter: Interpreter? = null
@@ -86,7 +84,9 @@ class OpenWakeWordDetector(private val context: Context) {
         val score = runWakewordModel()
         return if (score >= DETECTION_THRESHOLD) {
             WakeWordResult("hey_mycroft", score, System.currentTimeMillis())
-        } else null
+        } else {
+            null
+        }
     }
 
     private fun computeMelspectrogram(): FloatArray {
@@ -118,9 +118,10 @@ class OpenWakeWordDetector(private val context: Context) {
     }
 
     private fun appendMelspec(frame: FloatArray) {
-        melspecBuffer = Array(76) { i ->
-            if (i < 75) melspecBuffer[i + 1] else frame
-        }
+        melspecBuffer =
+            Array(76) { i ->
+                if (i < 75) melspecBuffer[i + 1] else frame
+            }
     }
 
     private fun computeEmbedding(): FloatArray? {
@@ -169,7 +170,10 @@ class OpenWakeWordDetector(private val context: Context) {
         initialized = false
     }
 
-    private fun loadModel(context: Context, path: String): MappedByteBuffer {
+    private fun loadModel(
+        context: Context,
+        path: String,
+    ): MappedByteBuffer {
         val fd = context.assets.openFd(path)
         val inputStream = FileInputStream(fd.fileDescriptor)
         val channel = inputStream.channel

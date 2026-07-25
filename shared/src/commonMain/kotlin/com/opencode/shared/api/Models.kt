@@ -7,14 +7,14 @@ import kotlinx.serialization.json.JsonElement
 @Serializable
 data class OpenCodeHealth(
     val healthy: Boolean,
-    val version: String
+    val version: String,
 )
 
 @Serializable
 data class OpenCodeTime(
     val created: Long = 0L,
     val updated: Long? = null,
-    val completed: Long? = null
+    val completed: Long? = null,
 )
 
 @Serializable
@@ -29,12 +29,12 @@ data class OpenCodeSession(
     val version: String? = null,
     val time: OpenCodeTime = OpenCodeTime(),
     val tokens: OpenCodeSessionTokens? = null,
-    val share: OpenCodeSessionShare? = null
+    val share: OpenCodeSessionShare? = null,
 )
 
 @Serializable
 data class OpenCodeSessionShare(
-    val url: String
+    val url: String,
 )
 
 @Serializable
@@ -42,7 +42,7 @@ data class OpenCodeSessionTokens(
     val input: Long = 0L,
     val output: Long = 0L,
     val reasoning: Long = 0L,
-    val cache: OpenCodeCacheTokens? = null
+    val cache: OpenCodeCacheTokens? = null,
 ) {
     val contextUsed: Long
         get() = input + (cache?.read ?: 0L)
@@ -51,13 +51,13 @@ data class OpenCodeSessionTokens(
 @Serializable
 data class OpenCodeCacheTokens(
     val read: Long = 0L,
-    val write: Long = 0L
+    val write: Long = 0L,
 )
 
 @Serializable
 data class OpenCodeModelReference(
     @SerialName("providerID") val providerId: String,
-    @SerialName("modelID") val modelId: String
+    @SerialName("modelID") val modelId: String,
 )
 
 @Serializable
@@ -68,7 +68,7 @@ data class OpenCodeMessageInfo(
     val time: OpenCodeTime = OpenCodeTime(),
     val agent: String? = null,
     val model: OpenCodeModelReference? = null,
-    val tokens: OpenCodeSessionTokens? = null
+    val tokens: OpenCodeSessionTokens? = null,
 )
 
 @Serializable
@@ -83,13 +83,13 @@ data class OpenCodePart(
     val url: String? = null,
     val tool: String? = null,
     val callID: String? = null,
-    val state: Map<String, JsonElement>? = null
+    val state: Map<String, JsonElement>? = null,
 )
 
 @Serializable
 data class OpenCodeMessage(
     val info: OpenCodeMessageInfo,
-    val parts: List<OpenCodePart> = emptyList()
+    val parts: List<OpenCodePart> = emptyList(),
 ) {
     val text: String
         get() = parts.filter { it.type == "text" }.mapNotNull { it.text }.joinToString("")
@@ -102,27 +102,27 @@ data class OpenCodeModel(
     val name: String = id,
     val status: String? = null,
     val limit: OpenCodeModelLimit? = null,
-    val variants: Map<String, JsonElement> = emptyMap()
+    val variants: Map<String, JsonElement> = emptyMap(),
 )
 
 @Serializable
 data class OpenCodeModelLimit(
     val context: Long = 0L,
-    val output: Long = 0L
+    val output: Long = 0L,
 )
 
 @Serializable
 data class OpenCodeProvider(
     val id: String,
     val name: String = id,
-    val models: Map<String, OpenCodeModel> = emptyMap()
+    val models: Map<String, OpenCodeModel> = emptyMap(),
 )
 
 @Serializable
 data class ProviderCatalog(
     val all: List<OpenCodeProvider> = emptyList(),
     val default: Map<String, String> = emptyMap(),
-    val connected: List<String> = emptyList()
+    val connected: List<String> = emptyList(),
 )
 
 @Serializable
@@ -130,14 +130,14 @@ data class OpenCodeAgent(
     val name: String,
     val description: String? = null,
     val mode: String? = null,
-    val native: Boolean = false
+    val native: Boolean = false,
 )
 
 @Serializable
 data class OpenCodeProject(
     val id: String,
     val worktree: String,
-    val name: String? = null
+    val name: String? = null,
 )
 
 @Serializable
@@ -146,7 +146,7 @@ data class OpenCodePathInfo(
     val state: String,
     val config: String,
     val worktree: String,
-    val directory: String
+    val directory: String,
 )
 
 @Serializable
@@ -155,7 +155,7 @@ data class OpenCodeFileNode(
     val path: String,
     val absolute: String,
     val type: String,
-    val ignored: Boolean = false
+    val ignored: Boolean = false,
 )
 
 @Serializable
@@ -164,7 +164,7 @@ data class OpenCodePatchHunk(
     val oldLines: Int,
     val newStart: Int,
     val newLines: Int,
-    val lines: List<String> = emptyList()
+    val lines: List<String> = emptyList(),
 )
 
 @Serializable
@@ -174,7 +174,7 @@ data class OpenCodeFilePatch(
     val oldHeader: String? = null,
     val newHeader: String? = null,
     val hunks: List<OpenCodePatchHunk> = emptyList(),
-    val index: String? = null
+    val index: String? = null,
 )
 
 @Serializable
@@ -184,19 +184,19 @@ data class OpenCodeFileContent(
     val diff: String? = null,
     val patch: OpenCodeFilePatch? = null,
     val encoding: String? = null,
-    val mimeType: String? = null
+    val mimeType: String? = null,
 )
 
 @Serializable
 data class OpenCodeSearchText(
-    val text: String
+    val text: String,
 )
 
 @Serializable
 data class OpenCodeSearchSubmatch(
     val match: OpenCodeSearchText,
     val start: Int,
-    val end: Int
+    val end: Int,
 )
 
 @Serializable
@@ -205,7 +205,7 @@ data class OpenCodeSearchMatch(
     val lines: OpenCodeSearchText,
     @SerialName("line_number") val lineNumber: Int,
     @SerialName("absolute_offset") val absoluteOffset: Int,
-    val submatches: List<OpenCodeSearchSubmatch> = emptyList()
+    val submatches: List<OpenCodeSearchSubmatch> = emptyList(),
 )
 
 @Serializable
@@ -217,7 +217,7 @@ data class OpenCodeFileChange(
     val deletions: Double = 0.0,
     val added: Int = 0,
     val removed: Int = 0,
-    val status: String? = null
+    val status: String? = null,
 ) {
     val displayPath: String
         get() = file ?: path.orEmpty()
@@ -227,13 +227,13 @@ data class OpenCodeFileChange(
 data class OpenCodeTodo(
     val content: String,
     val status: String,
-    val priority: String
+    val priority: String,
 )
 
 @Serializable
 data class OpenCodeVcsInfo(
     val branch: String? = null,
-    @SerialName("default_branch") val defaultBranch: String? = null
+    @SerialName("default_branch") val defaultBranch: String? = null,
 )
 
 @Serializable
@@ -244,14 +244,14 @@ data class PromptRequest(
     val agent: String? = null,
     val variant: String? = null,
     val attachments: List<PromptAttachment> = emptyList(),
-    val noReply: Boolean = false
+    val noReply: Boolean = false,
 )
 
 @Serializable
 data class PromptAttachment(
     val filename: String,
     val mime: String,
-    val url: String
+    val url: String,
 )
 
 @Serializable
@@ -260,13 +260,13 @@ data class PermissionRequest(
     val sessionId: String,
     val permission: String,
     val patterns: List<String> = emptyList(),
-    val metadata: Map<String, JsonElement> = emptyMap()
+    val metadata: Map<String, JsonElement> = emptyMap(),
 )
 
 @Serializable
 data class QuestionOption(
     val label: String,
-    val description: String? = null
+    val description: String? = null,
 )
 
 @Serializable
@@ -274,7 +274,7 @@ data class QuestionPrompt(
     val question: String,
     val header: String? = null,
     val options: List<QuestionOption> = emptyList(),
-    val placeholder: String? = null
+    val placeholder: String? = null,
 )
 
 @Serializable
@@ -282,23 +282,30 @@ data class QuestionRequest(
     val id: String,
     val sessionId: String,
     val questions: List<QuestionPrompt>,
-    val multiple: Boolean = false
+    val multiple: Boolean = false,
 )
 
 sealed interface OpenCodeEvent {
     data object ServerConnected : OpenCodeEvent
+
     data class MessagePartUpdated(val part: OpenCodePart) : OpenCodeEvent
+
     data class MessagePartDelta(
         val sessionId: String,
         val messageId: String,
         val partId: String,
         val field: String,
-        val delta: String
+        val delta: String,
     ) : OpenCodeEvent
+
     data class PermissionAsked(val request: PermissionRequest) : OpenCodeEvent
+
     data class QuestionAsked(val request: QuestionRequest) : OpenCodeEvent
+
     data class SessionIdle(val sessionId: String) : OpenCodeEvent
+
     data class SessionError(val sessionId: String?, val message: String?) : OpenCodeEvent
+
     data class Unknown(val type: String, val rawJson: String) : OpenCodeEvent
 }
 
@@ -310,12 +317,12 @@ data class McpServer(
     val command: String? = null,
     val url: String? = null,
     val tools: List<String> = emptyList(),
-    val error: String? = null
+    val error: String? = null,
 )
 
 @Serializable
 data class OpenCodeConfig(
-    val config: JsonElement? = null
+    val config: JsonElement? = null,
 )
 
 @Serializable
@@ -323,24 +330,24 @@ data class ConfiguredProvider(
     val id: String,
     val name: String = id,
     @SerialName("default_model") val defaultModel: String? = null,
-    val connected: Boolean = false
+    val connected: Boolean = false,
 )
 
 @Serializable
 data class OpenCodeCommand(
     val name: String,
     val description: String? = null,
-    val template: String? = null
+    val template: String? = null,
 )
 
 @Serializable
 data class OpenCodeSkill(
     val name: String,
     val description: String? = null,
-    val location: String? = null
+    val location: String? = null,
 )
 
 class OpenCodeApiException(
     val statusCode: Int,
-    message: String
+    message: String,
 ) : Exception(message)

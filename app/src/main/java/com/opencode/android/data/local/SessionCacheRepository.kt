@@ -5,7 +5,6 @@ import com.opencode.android.core.api.OpenCodeSession
 import kotlinx.coroutines.flow.Flow
 
 class SessionCacheRepository(private val sessionDao: SessionDao) {
-
     suspend fun cacheSessions(sessions: List<OpenCodeSession>) {
         sessionDao.insertSessions(
             sessions.map { session ->
@@ -16,15 +15,18 @@ class SessionCacheRepository(private val sessionDao: SessionDao) {
                     createdAt = session.time.created,
                     updatedAt = session.time.updated ?: session.time.created,
                     providerId = null,
-                    modelId = null
+                    modelId = null,
                 )
-            }
+            },
         )
     }
 
     fun getCachedSessions(): Flow<List<SessionEntity>> = sessionDao.getAllSessions()
 
-    suspend fun cacheMessages(sessionId: String, messages: List<OpenCodeMessage>) {
+    suspend fun cacheMessages(
+        sessionId: String,
+        messages: List<OpenCodeMessage>,
+    ) {
         sessionDao.insertMessages(
             messages.map { message ->
                 MessageEntity(
@@ -32,12 +34,11 @@ class SessionCacheRepository(private val sessionDao: SessionDao) {
                     sessionId = sessionId,
                     role = message.info.role,
                     text = message.text,
-                    createdAt = message.info.time.created
+                    createdAt = message.info.time.created,
                 )
-            }
+            },
         )
     }
 
-    fun getCachedMessages(sessionId: String): Flow<List<MessageEntity>> =
-        sessionDao.getMessagesForSession(sessionId)
+    fun getCachedMessages(sessionId: String): Flow<List<MessageEntity>> = sessionDao.getMessagesForSession(sessionId)
 }

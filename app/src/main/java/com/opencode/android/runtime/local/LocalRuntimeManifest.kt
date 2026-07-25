@@ -12,7 +12,7 @@ data class LocalRuntimeManifest(
     @SerialName("openCodeVersion") val openCodeVersion: String,
     @SerialName("alpineVersion") val alpineVersion: String,
     @SerialName("port") val port: Int,
-    @SerialName("architectures") val architectures: Map<String, LocalRuntimeArchitecture>
+    @SerialName("architectures") val architectures: Map<String, LocalRuntimeArchitecture>,
 ) {
     fun architecture(abi: String): LocalRuntimeArchitecture =
         requireNotNull(architectures[abi]) { "Local runtime does not support ABI $abi" }
@@ -32,7 +32,7 @@ data class LocalRuntimeArchitecture(
     @SerialName("alpineUrl") val alpineUrl: String,
     @SerialName("alpineSha256") val alpineSha256: String,
     @SerialName("openCodeUrl") val openCodeUrl: String,
-    @SerialName("openCodeSha256") val openCodeSha256: String
+    @SerialName("openCodeSha256") val openCodeSha256: String,
 ) {
     fun validate(abi: String) {
         require(alpineUrl.startsWith("https://")) { "Alpine URL for $abi must use HTTPS" }
@@ -48,7 +48,11 @@ data class LocalRuntimeArchitecture(
 
 class LocalRuntimeManifestReader(
     private val context: Context,
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        },
 ) {
     fun read(): LocalRuntimeManifest {
         val payload = context.assets.open(ASSET_NAME).bufferedReader().use { it.readText() }

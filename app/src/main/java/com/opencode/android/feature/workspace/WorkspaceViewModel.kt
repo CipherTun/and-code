@@ -14,7 +14,6 @@ import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.runtime.local.LocalRuntimeManager
 import com.opencode.android.runtime.local.LocalRuntimeServiceController
-import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,13 +21,14 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class RuntimeSummary(
     val id: String,
     val name: String,
     val type: RuntimeType,
     val state: RuntimeState,
-    val selected: Boolean
+    val selected: Boolean,
 )
 
 data class WorkspaceUiState(
@@ -38,7 +38,7 @@ data class WorkspaceUiState(
     val workspaces: List<WorkspaceRef> = emptyList(),
     val localStatus: LocalRuntimeStatus = LocalRuntimeStatus.NotInstalled,
     val isRefreshing: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )
 
 class WorkspaceViewModel(
@@ -47,35 +47,37 @@ class WorkspaceViewModel(
     private val localRuntimeManager: LocalRuntimeManager,
     private val localRuntimeController: LocalRuntimeServiceController,
     private val settings: SecureSettingsRepository,
-    private val workspaceHostDir: File
+    private val workspaceHostDir: File,
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
 
-    val state: StateFlow<WorkspaceUiState> = combine(
-        registry.targets,
-        registry.selected,
-        catalog.state,
-        localRuntimeManager.state,
-        registeredTick
-    ) { targets, selected, runtime, localStatus, _ ->
-        WorkspaceUiState(
-            targets = targets.map { target ->
-                RuntimeSummary(
-                    id = target.id,
-                    name = target.displayName,
-                    type = target.type,
-                    state = target.state.value,
-                    selected = target.id == selected?.id
-                )
-            },
-            connections = registry.remoteProfiles(),
-            selectedRuntimeId = selected?.id,
-            workspaces = mergeWorkspaces(runtime.workspaces, registeredProjects()),
-            localStatus = localStatus,
-            isRefreshing = runtime.isRefreshing,
-            error = runtime.error
-        )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
+    val state: StateFlow<WorkspaceUiState> =
+        combine(
+            registry.targets,
+            registry.selected,
+            catalog.state,
+            localRuntimeManager.state,
+            registeredTick,
+        ) { targets, selected, runtime, localStatus, _ ->
+            WorkspaceUiState(
+                targets =
+                    targets.map { target ->
+                        RuntimeSummary(
+                            id = target.id,
+                            name = target.displayName,
+                            type = target.type,
+                            state = target.state.value,
+                            selected = target.id == selected?.id,
+                        )
+                    },
+                connections = registry.remoteProfiles(),
+                selectedRuntimeId = selected?.id,
+                workspaces = mergeWorkspaces(runtime.workspaces, registeredProjects()),
+                localStatus = localStatus,
+                isRefreshing = runtime.isRefreshing,
+                error = runtime.error,
+            )
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
 
     init {
         viewModelScope.launch {
@@ -95,7 +97,7 @@ class WorkspaceViewModel(
 
     private fun mergeWorkspaces(
         server: List<WorkspaceRef>,
-        registered: List<WorkspaceRef>
+        registered: List<WorkspaceRef>,
     ): List<WorkspaceRef> {
         val byPath = linkedMapOf<String, WorkspaceRef>()
         registered.forEach { byPath[it.path] = it }
@@ -103,8 +105,7 @@ class WorkspaceViewModel(
         return byPath.values.toList()
     }
 
-    private fun displayName(serverPath: String): String =
-        serverPath.trimEnd('/').substringAfterLast('/').ifBlank { serverPath }
+    private fun displayName(serverPath: String): String = serverPath.trimEnd('/').substringAfterLast('/').ifBlank { serverPath }
 
     fun addProject(serverPath: String) {
         val current = settings.projectPaths.toMutableList()

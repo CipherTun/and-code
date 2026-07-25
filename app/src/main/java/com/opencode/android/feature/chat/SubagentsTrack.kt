@@ -21,36 +21,36 @@ data class SubagentInfo(
     val id: String,
     val name: String,
     val status: String,
-    val providerId: String
+    val providerId: String,
 )
 
 @Composable
 fun SubagentsTrack(
     subagents: List<SubagentInfo>,
     onSubagentClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (subagents.isEmpty()) return
 
     LazyRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(subagents, key = { it.id }) { subagent ->
             Surface(
                 onClick = { onSubagentClick(subagent.id) },
                 shape = RoundedCornerShape(100.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     StatusDot(status = subagent.status.toSessionStatus())
                     Text(
                         text = subagent.name,
-                        style = MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.labelLarge,
                     )
                     ProviderIcon(providerId = subagent.providerId, size = 16)
                 }
@@ -59,10 +59,11 @@ fun SubagentsTrack(
     }
 }
 
-private fun String.toSessionStatus(): SessionStatus = when (lowercase()) {
-    "running" -> SessionStatus.RUNNING
-    "waiting" -> SessionStatus.WAITING
-    "error" -> SessionStatus.ERROR
-    "permission" -> SessionStatus.PERMISSION
-    else -> SessionStatus.IDLE
-}
+private fun String.toSessionStatus(): SessionStatus =
+    when (lowercase()) {
+        "running" -> SessionStatus.RUNNING
+        "waiting" -> SessionStatus.WAITING
+        "error" -> SessionStatus.ERROR
+        "permission" -> SessionStatus.PERMISSION
+        else -> SessionStatus.IDLE
+    }

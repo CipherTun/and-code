@@ -1,25 +1,25 @@
 package com.opencode.android.runtime.local
 
 import com.opencode.android.runtime.remote.RemoteOpenCodeBackend
+import org.junit.Assert.assertEquals
+import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import org.junit.Assert.assertEquals
-import org.junit.Test
 
 class LocalOpenCodeBackendConcurrencyTest {
-
     @Test
     fun `delegate is thread-safe under concurrent access`() {
         val created = java.util.concurrent.atomic.AtomicInteger(0)
-        val backend = LocalOpenCodeBackend(
-            portProvider = { 8080 },
-            backendFactory = { profile ->
-                created.incrementAndGet()
-                Thread.sleep(50)
-                RemoteOpenCodeBackend(profile)
-            }
-        )
+        val backend =
+            LocalOpenCodeBackend(
+                portProvider = { 8080 },
+                backendFactory = { profile ->
+                    created.incrementAndGet()
+                    Thread.sleep(50)
+                    RemoteOpenCodeBackend(profile)
+                },
+            )
 
         val threads = 10
         val latch = CountDownLatch(threads)

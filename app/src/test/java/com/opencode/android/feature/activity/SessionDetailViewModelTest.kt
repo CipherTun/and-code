@@ -43,21 +43,23 @@ class SessionDetailViewModelTest {
     }
 
     @Test
-    fun `loads todo and diff for selected session`() = runTest(dispatcher) {
-        val session = OpenCodeSession(
-            id = "ses_1",
-            title = "Implement feature",
-            directory = "/repo",
-            time = OpenCodeTime(created = 1)
-        )
-        val viewModel = SessionDetailViewModel(FakeBackend(), session)
+    fun `loads todo and diff for selected session`() =
+        runTest(dispatcher) {
+            val session =
+                OpenCodeSession(
+                    id = "ses_1",
+                    title = "Implement feature",
+                    directory = "/repo",
+                    time = OpenCodeTime(created = 1),
+                )
+            val viewModel = SessionDetailViewModel(FakeBackend(), session)
 
-        advanceUntilIdle()
+            advanceUntilIdle()
 
-        assertEquals("Run tests", viewModel.state.value.todos.single().content)
-        assertEquals("src/Main.kt", viewModel.state.value.diff.single().displayPath)
-        assertFalse(viewModel.state.value.isLoading)
-    }
+            assertEquals("Run tests", viewModel.state.value.todos.single().content)
+            assertEquals("src/Main.kt", viewModel.state.value.diff.single().displayPath)
+            assertFalse(viewModel.state.value.isLoading)
+        }
 
     private class FakeBackend : OpenCodeBackend {
         override val id: String = "fake"
@@ -65,35 +67,57 @@ class SessionDetailViewModelTest {
         override val kind: BackendKind = BackendKind.REMOTE
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "1.18.3")
+
         override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
-        override suspend fun createSession(title: String?, directory: String?): OpenCodeSession = error("unused")
+
+        override suspend fun createSession(
+            title: String?,
+            directory: String?,
+        ): OpenCodeSession = error("unused")
+
         override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
+
         override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
+
         override suspend fun listAgents(): List<OpenCodeAgent> = emptyList()
+
         override suspend fun sessionDiff(
             sessionId: String,
             directory: String?,
-            messageId: String?
-        ): List<OpenCodeFileChange> = listOf(
-            OpenCodeFileChange(
-                file = "src/Main.kt",
-                patch = "@@ -1 +1 @@\n-old\n+new",
-                additions = 1.0,
-                deletions = 1.0,
-                status = "modified"
+            messageId: String?,
+        ): List<OpenCodeFileChange> =
+            listOf(
+                OpenCodeFileChange(
+                    file = "src/Main.kt",
+                    patch = "@@ -1 +1 @@\n-old\n+new",
+                    additions = 1.0,
+                    deletions = 1.0,
+                    status = "modified",
+                ),
             )
-        )
-        override suspend fun sessionTodo(sessionId: String, directory: String?): List<OpenCodeTodo> = listOf(
-            OpenCodeTodo("Run tests", "in_progress", "high")
-        )
-        override suspend fun sendMessage(sessionId: String, request: PromptRequest) = Unit
+
+        override suspend fun sessionTodo(
+            sessionId: String,
+            directory: String?,
+        ): List<OpenCodeTodo> =
+            listOf(
+                OpenCodeTodo("Run tests", "in_progress", "high"),
+            )
+
+        override suspend fun sendMessage(
+            sessionId: String,
+            request: PromptRequest,
+        ) = Unit
+
         override suspend fun abortSession(sessionId: String): Boolean = true
+
         override suspend fun respondToPermission(
             sessionId: String,
             permissionId: String,
             response: PermissionResponse,
-            remember: Boolean
+            remember: Boolean,
         ): Boolean = true
+
         override fun events(): Flow<OpenCodeEvent> = emptyFlow()
     }
 }

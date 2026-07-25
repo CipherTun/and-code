@@ -7,25 +7,25 @@ import java.io.RandomAccessFile
 data class LocalRuntimeProcessMetrics(
     val pid: Long?,
     val rssBytes: Long?,
-    val uptimeMillis: Long
+    val uptimeMillis: Long,
 )
 
 data class LocalRuntimeCommandResult(
     val exitCode: Int,
-    val output: String
+    val output: String,
 )
 
 data class LocalRuntimeToolDefinition(
     val id: String,
     val label: String,
-    val command: String
+    val command: String,
 )
 
 data class LocalRuntimeToolCheck(
     val id: String,
     val label: String,
     val available: Boolean,
-    val detail: String
+    val detail: String,
 )
 
 data class LocalRuntimeDiagnostics(
@@ -38,7 +38,7 @@ data class LocalRuntimeDiagnostics(
     val process: LocalRuntimeProcessMetrics?,
     val tools: List<LocalRuntimeToolCheck>,
     val logTail: String,
-    val collectedAtMillis: Long
+    val collectedAtMillis: Long,
 )
 
 class LocalRuntimeDiagnosticsCollector(
@@ -51,7 +51,7 @@ class LocalRuntimeDiagnosticsCollector(
     private val processMetricsProvider: () -> LocalRuntimeProcessMetrics?,
     private val commandExecutor: (LocalRuntimeToolDefinition) -> LocalRuntimeCommandResult,
     private val nowMillis: () -> Long = System::currentTimeMillis,
-    private val maxLogCharacters: Int = 12_000
+    private val maxLogCharacters: Int = 12_000,
 ) {
     init {
         require(maxLogCharacters >= 0)
@@ -59,42 +59,45 @@ class LocalRuntimeDiagnosticsCollector(
 
     fun collect(): LocalRuntimeDiagnostics {
         val status = statusProvider()
-        val installed = status !is LocalRuntimeStatus.NotInstalled &&
-            status !is LocalRuntimeStatus.UnsupportedAbi
-        val tools = if (installed) {
-            REQUIRED_TOOLS.map { definition ->
-                runCatching { commandExecutor(definition) }
-                    .fold(
-                        onSuccess = { result ->
-                            LocalRuntimeToolCheck(
-                                id = definition.id,
-                                label = definition.label,
-                                available = result.exitCode == 0,
-                                detail = result.output.trim().ifBlank {
-                                    if (result.exitCode == 0) "利用可能" else "終了コード ${result.exitCode}"
-                                }
-                            )
-                        },
-                        onFailure = { error ->
-                            LocalRuntimeToolCheck(
-                                id = definition.id,
-                                label = definition.label,
-                                available = false,
-                                detail = error.message?.takeIf(String::isNotBlank) ?: "確認に失敗しました"
-                            )
-                        }
+        val installed =
+            status !is LocalRuntimeStatus.NotInstalled &&
+                status !is LocalRuntimeStatus.UnsupportedAbi
+        val tools =
+            if (installed) {
+                REQUIRED_TOOLS.map { definition ->
+                    runCatching { commandExecutor(definition) }
+                        .fold(
+                            onSuccess = { result ->
+                                LocalRuntimeToolCheck(
+                                    id = definition.id,
+                                    label = definition.label,
+                                    available = result.exitCode == 0,
+                                    detail =
+                                        result.output.trim().ifBlank {
+                                            if (result.exitCode == 0) "利用可能" else "終了コード ${result.exitCode}"
+                                        },
+                                )
+                            },
+                            onFailure = { error ->
+                                LocalRuntimeToolCheck(
+                                    id = definition.id,
+                                    label = definition.label,
+                                    available = false,
+                                    detail = error.message?.takeIf(String::isNotBlank) ?: "確認に失敗しました",
+                                )
+                            },
+                        )
+                }
+            } else {
+                REQUIRED_TOOLS.map { definition ->
+                    LocalRuntimeToolCheck(
+                        id = definition.id,
+                        label = definition.label,
+                        available = false,
+                        detail = "未インストール",
                     )
+                }
             }
-        } else {
-            REQUIRED_TOOLS.map { definition ->
-                LocalRuntimeToolCheck(
-                    id = definition.id,
-                    label = definition.label,
-                    available = false,
-                    detail = "未インストール"
-                )
-            }
-        }
 
         return LocalRuntimeDiagnostics(
             status = status,
@@ -106,7 +109,7 @@ class LocalRuntimeDiagnosticsCollector(
             process = processMetricsProvider(),
             tools = tools,
             logTail = readLogTail(),
-            collectedAtMillis = nowMillis()
+            collectedAtMillis = nowMillis(),
         )
     }
 
@@ -114,52 +117,55 @@ class LocalRuntimeDiagnosticsCollector(
         if (maxLogCharacters == 0) return ""
         val logsDirectory = File(runtimeDirectory, "logs")
         if (!logsDirectory.isDirectory) return ""
-        val combined = logsDirectory
-            .listFiles()
-            .orEmpty()
-            .asSequence()
-            .filter { it.isFile && it.extension.equals("log", ignoreCase = true) }
-            .sortedBy { it.name }
-            .joinToString(separator = "\n") { file -> readFileTail(file) }
+        val combined =
+            logsDirectory
+                .listFiles()
+                .orEmpty()
+                .asSequence()
+                .filter { it.isFile && it.extension.equals("log", ignoreCase = true) }
+                .sortedBy { it.name }
+                .joinToString(separator = "\n") { file -> readFileTail(file) }
         return combined.takeLast(maxLogCharacters)
     }
 
-    private fun readFileTail(file: File): String = runCatching {
-        RandomAccessFile(file, "r").use { input ->
-            val requestedBytes = maxLogCharacters.toLong() * MAX_UTF8_BYTES_PER_CHARACTER
-            val start = (input.length() - requestedBytes).coerceAtLeast(0L)
-            input.seek(start)
-            val byteCount = (input.length() - start).toInt()
-            val bytes = ByteArray(byteCount)
-            input.readFully(bytes)
-            bytes.toString(Charsets.UTF_8).takeLast(maxLogCharacters)
+    private fun readFileTail(file: File): String =
+        runCatching {
+            RandomAccessFile(file, "r").use { input ->
+                val requestedBytes = maxLogCharacters.toLong() * MAX_UTF8_BYTES_PER_CHARACTER
+                val start = (input.length() - requestedBytes).coerceAtLeast(0L)
+                input.seek(start)
+                val byteCount = (input.length() - start).toInt()
+                val bytes = ByteArray(byteCount)
+                input.readFully(bytes)
+                bytes.toString(Charsets.UTF_8).takeLast(maxLogCharacters)
+            }
+        }.getOrElse { error ->
+            "${file.name}: ${error.message.orEmpty()}"
         }
-    }.getOrElse { error ->
-        "${file.name}: ${error.message.orEmpty()}"
-    }
 
     companion object {
         private const val MAX_UTF8_BYTES_PER_CHARACTER = 4L
 
-        val REQUIRED_TOOLS = listOf(
-            LocalRuntimeToolDefinition("opencode", "OpenCode", "/usr/local/bin/opencode --version"),
-            LocalRuntimeToolDefinition("git", "Git", "git --version"),
-            LocalRuntimeToolDefinition("bash", "Bash", "bash --version | head -n 1"),
-            LocalRuntimeToolDefinition("curl", "curl", "curl --version | head -n 1"),
-            LocalRuntimeToolDefinition("ssh", "SSH", "ssh -V"),
-            LocalRuntimeToolDefinition("rg", "ripgrep", "rg --version | head -n 1"),
-            LocalRuntimeToolDefinition(
-                "ca-certificates",
-                "CA証明書",
-                "test -s /etc/ssl/certs/ca-certificates.crt && echo installed"
+        val REQUIRED_TOOLS =
+            listOf(
+                LocalRuntimeToolDefinition("opencode", "OpenCode", "/usr/local/bin/opencode --version"),
+                LocalRuntimeToolDefinition("git", "Git", "git --version"),
+                LocalRuntimeToolDefinition("bash", "Bash", "bash --version | head -n 1"),
+                LocalRuntimeToolDefinition("curl", "curl", "curl --version | head -n 1"),
+                LocalRuntimeToolDefinition("ssh", "SSH", "ssh -V"),
+                LocalRuntimeToolDefinition("rg", "ripgrep", "rg --version | head -n 1"),
+                LocalRuntimeToolDefinition(
+                    "ca-certificates",
+                    "CA証明書",
+                    "test -s /etc/ssl/certs/ca-certificates.crt && echo installed",
+                ),
             )
-        )
     }
 }
 
 internal fun readDirectChildPids(
     parentPid: Long,
-    procRoot: File = File("/proc")
+    procRoot: File = File("/proc"),
 ): List<Long> {
     val standardChildren = File(procRoot, "$parentPid/task/$parentPid/children")
     if (standardChildren.isFile) {
@@ -178,26 +184,28 @@ internal fun readDirectChildPids(
         .filter(File::isDirectory)
         .mapNotNull { directory ->
             val pid = directory.name.toLongOrNull() ?: return@mapNotNull null
-            val statusText = runCatching {
-                File(directory, "status").readText()
-            }.getOrNull() ?: return@mapNotNull null
+            val statusText =
+                runCatching {
+                    File(directory, "status").readText()
+                }.getOrNull() ?: return@mapNotNull null
             pid.takeIf { parseParentProcessId(statusText) == parentPid }
         }
         .sorted()
         .toList()
 }
 
-internal fun parseParentProcessId(statusText: String): Long? = statusText.lineSequence()
-    .firstOrNull { it.startsWith("PPid:") }
-    ?.substringAfter("PPid:")
-    ?.trim()
-    ?.substringBefore(' ')
-    ?.toLongOrNull()
+internal fun parseParentProcessId(statusText: String): Long? =
+    statusText.lineSequence()
+        .firstOrNull { it.startsWith("PPid:") }
+        ?.substringAfter("PPid:")
+        ?.trim()
+        ?.substringBefore(' ')
+        ?.toLongOrNull()
 
 internal fun totalResidentSetBytes(
     rootPid: Long,
     statusReader: (Long) -> String?,
-    childrenReader: (Long) -> List<Long>
+    childrenReader: (Long) -> List<Long>,
 ): Long? {
     val pending = ArrayDeque<Long>().apply { add(rootPid) }
     val visited = mutableSetOf<Long>()
@@ -216,31 +224,35 @@ internal fun totalResidentSetBytes(
 }
 
 internal fun parseResidentSetBytes(statusText: String): Long? {
-    val valueKb = statusText.lineSequence()
-        .firstOrNull { it.startsWith("VmRSS:") }
-        ?.substringAfter("VmRSS:")
-        ?.trim()
-        ?.substringBefore(' ')
-        ?.toLongOrNull()
+    val valueKb =
+        statusText.lineSequence()
+            .firstOrNull { it.startsWith("VmRSS:") }
+            ?.substringAfter("VmRSS:")
+            ?.trim()
+            ?.substringBefore(' ')
+            ?.toLongOrNull()
     return valueKb?.times(1024L)
 }
 
-private fun File.recursiveFileBytes(): Long = walkTopDown()
-    .filter(File::isFile)
-    .sumOf(File::length)
+private fun File.recursiveFileBytes(): Long =
+    walkTopDown()
+        .filter(File::isFile)
+        .sumOf(File::length)
 
-private fun LocalRuntimeStatus.versionOrNull(): String? = when (this) {
-    is LocalRuntimeStatus.Ready -> version
-    is LocalRuntimeStatus.Starting -> version
-    is LocalRuntimeStatus.Updating -> currentVersion
-    is LocalRuntimeStatus.Stopped -> version
-    else -> null
-}
+private fun LocalRuntimeStatus.versionOrNull(): String? =
+    when (this) {
+        is LocalRuntimeStatus.Ready -> version
+        is LocalRuntimeStatus.Starting -> version
+        is LocalRuntimeStatus.Updating -> currentVersion
+        is LocalRuntimeStatus.Stopped -> version
+        else -> null
+    }
 
-private fun LocalRuntimeStatus.portOrNull(): Int? = when (this) {
-    is LocalRuntimeStatus.Ready -> port
-    is LocalRuntimeStatus.Starting -> port
-    is LocalRuntimeStatus.Updating -> null
-    is LocalRuntimeStatus.Stopped -> port
-    else -> null
-}
+private fun LocalRuntimeStatus.portOrNull(): Int? =
+    when (this) {
+        is LocalRuntimeStatus.Ready -> port
+        is LocalRuntimeStatus.Starting -> port
+        is LocalRuntimeStatus.Updating -> null
+        is LocalRuntimeStatus.Stopped -> port
+        else -> null
+    }

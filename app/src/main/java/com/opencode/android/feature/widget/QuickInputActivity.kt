@@ -23,60 +23,67 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class QuickInputActivity : ComponentActivity() {
-
     private var speechRecognizer: SpeechRecognizer? = null
     private var pendingInputField: EditText? = null
     private var pendingStatusText: TextView? = null
 
-    private val audioPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            Toast.makeText(this, "Permission granted. Tap mic again.", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "Microphone permission required", Toast.LENGTH_SHORT).show()
-            finish()
+    private val audioPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) {
+                Toast.makeText(this, "Permission granted. Tap mic again.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Microphone permission required", Toast.LENGTH_SHORT).show()
+                finish()
+            }
         }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val rootLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(32, 0, 32, 48)
-        }
+        val rootLayout =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(32, 0, 32, 48)
+            }
 
-        val statusText = TextView(this).apply {
-            textSize = 14f
-            setTextColor(0xFFAAAAAA.toInt())
-            setPadding(0, 0, 0, 16)
-        }
+        val statusText =
+            TextView(this).apply {
+                textSize = 14f
+                setTextColor(0xFFAAAAAA.toInt())
+                setPadding(0, 0, 0, 16)
+            }
         rootLayout.addView(statusText)
 
-        val inputRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
+        val inputRow =
+            LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+            }
 
-        val inputField = EditText(this).apply {
-            hint = "Message OpenCode…"
-            isSingleLine = true
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
+        val inputField =
+            EditText(this).apply {
+                hint = "Message OpenCode…"
+                isSingleLine = true
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
         inputRow.addView(inputField)
 
-        val sendButton = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_menu_send)
-            layoutParams = LinearLayout.LayoutParams(96, 96)
-        }
+        val sendButton =
+            ImageButton(this).apply {
+                setImageResource(android.R.drawable.ic_menu_send)
+                layoutParams = LinearLayout.LayoutParams(96, 96)
+            }
         inputRow.addView(sendButton)
 
-        val micButton = ImageButton(this).apply {
-            setImageResource(android.R.drawable.ic_btn_speak_now)
-            layoutParams = LinearLayout.LayoutParams(96, 96).apply {
-                marginStart = 8
+        val micButton =
+            ImageButton(this).apply {
+                setImageResource(android.R.drawable.ic_btn_speak_now)
+                layoutParams =
+                    LinearLayout.LayoutParams(96, 96).apply {
+                        marginStart = 8
+                    }
             }
-        }
         inputRow.addView(micButton)
 
         rootLayout.addView(inputRow)
@@ -105,7 +112,10 @@ class QuickInputActivity : ComponentActivity() {
         }
     }
 
-    private fun sendMessage(text: String, statusText: TextView) {
+    private fun sendMessage(
+        text: String,
+        statusText: TextView,
+    ) {
         val app = application as OpenCodeApplication
         val runtime = app.runtimeRegistry.selected.value
 
@@ -120,13 +130,14 @@ class QuickInputActivity : ComponentActivity() {
         statusText.setTextColor(0xFFAAAAAA.toInt())
 
         lifecycleScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    val title = "Widget: ${text.take(30)}"
-                    val session = runtime.createSession(title = title)
-                    runtime.sendMessage(session.id, PromptRequest(text = text))
+            val result =
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        val title = "Widget: ${text.take(30)}"
+                        val session = runtime.createSession(title = title)
+                        runtime.sendMessage(session.id, PromptRequest(text = text))
+                    }
                 }
-            }
 
             result.onSuccess {
                 statusText.text = "Sent!"
@@ -140,7 +151,10 @@ class QuickInputActivity : ComponentActivity() {
         }
     }
 
-    private fun startVoiceInput(inputField: EditText, statusText: TextView) {
+    private fun startVoiceInput(
+        inputField: EditText,
+        statusText: TextView,
+    ) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -151,49 +165,58 @@ class QuickInputActivity : ComponentActivity() {
         val recognizer = SpeechRecognizer.createSpeechRecognizer(this)
         speechRecognizer = recognizer
 
-        recognizer.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                statusText.text = "Listening…"
-            }
+        recognizer.setRecognitionListener(
+            object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {
+                    statusText.text = "Listening…"
+                }
 
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {
-                statusText.text = "Processing…"
-            }
+                override fun onBeginningOfSpeech() {}
 
-            override fun onError(error: Int) {
-                statusText.text = "Voice error"
-                statusText.setTextColor(0xFFFF5555.toInt())
-                finishAfterDelay()
-            }
+                override fun onRmsChanged(rmsdB: Float) {}
 
-            override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                val text = matches?.firstOrNull()
-                if (!text.isNullOrBlank()) {
-                    inputField.setText(text)
-                    sendMessage(text, statusText)
-                } else {
-                    statusText.text = "No speech detected"
+                override fun onBufferReceived(buffer: ByteArray?) {}
+
+                override fun onEndOfSpeech() {
+                    statusText.text = "Processing…"
+                }
+
+                override fun onError(error: Int) {
+                    statusText.text = "Voice error"
+                    statusText.setTextColor(0xFFFF5555.toInt())
                     finishAfterDelay()
                 }
+
+                override fun onResults(results: Bundle?) {
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    val text = matches?.firstOrNull()
+                    if (!text.isNullOrBlank()) {
+                        inputField.setText(text)
+                        sendMessage(text, statusText)
+                    } else {
+                        statusText.text = "No speech detected"
+                        finishAfterDelay()
+                    }
+                }
+
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    matches?.firstOrNull()?.let { inputField.setText(it) }
+                }
+
+                override fun onEvent(
+                    eventType: Int,
+                    params: Bundle?,
+                ) {}
+            },
+        )
+
+        val intent =
+            Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             }
-
-            override fun onPartialResults(partialResults: Bundle?) {
-                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                matches?.firstOrNull()?.let { inputField.setText(it) }
-            }
-
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        }
         recognizer.startListening(intent)
     }
 

@@ -1,6 +1,5 @@
 package com.opencode.android.runtime.local
 
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -8,9 +7,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 
 class VerifiedRuntimeDownloader(
-    private val httpClient: OkHttpClient = OkHttpClient()
+    private val httpClient: OkHttpClient = OkHttpClient(),
 ) {
     private val operationMutex = Mutex()
 
@@ -19,7 +19,7 @@ class VerifiedRuntimeDownloader(
         destination: File,
         expectedSha256: String,
         expectedSizeBytes: Long? = null,
-        onProgress: (Float?) -> Unit = {}
+        onProgress: (Float?) -> Unit = {},
     ) = operationMutex.withLock {
         withContext(Dispatchers.IO) {
             downloadLocked(
@@ -27,7 +27,7 @@ class VerifiedRuntimeDownloader(
                 destination = destination,
                 expectedSha256 = expectedSha256,
                 expectedSizeBytes = expectedSizeBytes,
-                onProgress = onProgress
+                onProgress = onProgress,
             )
         }
     }
@@ -37,7 +37,7 @@ class VerifiedRuntimeDownloader(
         destination: File,
         expectedSha256: String,
         expectedSizeBytes: Long?,
-        onProgress: (Float?) -> Unit
+        onProgress: (Float?) -> Unit,
     ) {
         val parsedUrl = url.toHttpUrl()
         require(parsedUrl.isHttps || parsedUrl.host in LOOPBACK_HOSTS) {
@@ -81,7 +81,8 @@ class VerifiedRuntimeDownloader(
             }
             RuntimeArchive.verifySha256(partial, expectedSha256)
 
-            if (destination.isFile && runCatching {
+            if (destination.isFile &&
+                runCatching {
                     RuntimeArchive.verifySha256(destination, expectedSha256)
                 }.isSuccess
             ) {
@@ -117,13 +118,19 @@ class VerifiedRuntimeDownloader(
         }
     }
 
-    private fun recoverBackupIfDestinationMissing(destination: File, backup: File) {
+    private fun recoverBackupIfDestinationMissing(
+        destination: File,
+        backup: File,
+    ) {
         if (!destination.exists() && backup.exists()) {
             move(backup, destination)
         }
     }
 
-    private fun move(source: File, destination: File) {
+    private fun move(
+        source: File,
+        destination: File,
+    ) {
         require(source.parentFile?.canonicalFile == destination.parentFile?.canonicalFile) {
             "Verified runtime download moves must stay on one filesystem"
         }

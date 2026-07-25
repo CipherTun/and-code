@@ -33,20 +33,20 @@ import com.opencode.android.feature.chat.ModelAndRuntimePickerSheet
 import com.opencode.android.feature.onboarding.AndroidSetupScreen
 import com.opencode.android.feature.onboarding.OnboardingChoiceScreen
 import com.opencode.android.feature.settings.ProviderSettingsScreen
-import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.settings.SettingsScreenV2
+import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.settings.VoiceSettingsScreen
 import com.opencode.android.feature.workspace.RemoteConnectionScreen
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
-import java.io.File
-import java.io.FileOutputStream
-import java.util.Locale
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.io.FileOutputStream
+import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
 @LargeTest
@@ -55,35 +55,41 @@ class UiScreenshotInstrumentedTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     private val previewAgents = listOf(OpenCodeAgent(name = "build"))
-    private val previewWorkspaces = listOf(
-        WorkspaceRef(
-            id = "/workspace/project",
-            name = "project",
-            path = "/workspace/project"
+    private val previewWorkspaces =
+        listOf(
+            WorkspaceRef(
+                id = "/workspace/project",
+                name = "project",
+                path = "/workspace/project",
+            ),
         )
-    )
-    private val previewProviders = listOf(
-        OpenCodeProvider(
-            id = "zai",
-            name = "Z.ai",
-            models = linkedMapOf(
-                "glm-5" to OpenCodeModel(
-                    id = "glm-5",
-                    providerId = "zai",
-                    name = "GLM-5"
-                ),
-                "glm-4.5" to OpenCodeModel(
-                    id = "glm-4.5",
-                    providerId = "zai",
-                    name = "GLM-4.5"
-                )
-            )
+    private val previewProviders =
+        listOf(
+            OpenCodeProvider(
+                id = "zai",
+                name = "Z.ai",
+                models =
+                    linkedMapOf(
+                        "glm-5" to
+                            OpenCodeModel(
+                                id = "glm-5",
+                                providerId = "zai",
+                                name = "GLM-5",
+                            ),
+                        "glm-4.5" to
+                            OpenCodeModel(
+                                id = "glm-4.5",
+                                providerId = "zai",
+                                name = "GLM-4.5",
+                            ),
+                    ),
+            ),
         )
-    )
-    private val previewRuntimeTargets = listOf(
-        PreviewRuntimeTarget("local", "このAndroid", RuntimeType.LOCAL),
-        PreviewRuntimeTarget("home-mac", "自宅のMacBook", RuntimeType.REMOTE)
-    )
+    private val previewRuntimeTargets =
+        listOf(
+            PreviewRuntimeTarget("local", "このAndroid", RuntimeType.LOCAL),
+            PreviewRuntimeTarget("home-mac", "自宅のMacBook", RuntimeType.REMOTE),
+        )
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Test
@@ -101,11 +107,11 @@ class UiScreenshotInstrumentedTest {
             composeRule.onNodeWithText("PC・Macに接続").assertIsDisplayed()
             check(
                 composeRule.onAllNodesWithText("OpenCodeにメッセージを送る…")
-                    .fetchSemanticsNodes().isEmpty()
+                    .fetchSemanticsNodes().isEmpty(),
             ) { "Composer must be hidden while the runtime is not ready" }
         }) {
             PreviewChatHome(
-                state = ChatUiState(error = "Android local OpenCode runtime is not installed")
+                state = ChatUiState(error = "Android local OpenCode runtime is not installed"),
             )
         }
 
@@ -120,19 +126,20 @@ class UiScreenshotInstrumentedTest {
                 drawerContent = {
                     ModalDrawerSheet {
                         AppDrawerContent(
-                            recentSessions = listOf(
-                                DrawerRecentSession("1", "認証エラーの調査", "3時間前"),
-                                DrawerRecentSession("2", "READMEを更新", "昨日"),
-                                DrawerRecentSession("3", "テスト失敗を修正", "2日前"),
-                                DrawerRecentSession("4", "APIレスポンスを整理", "4日前"),
-                                DrawerRecentSession("5", "依存関係を更新", "1週間前")
-                            ),
+                            recentSessions =
+                                listOf(
+                                    DrawerRecentSession("1", "認証エラーの調査", "3時間前"),
+                                    DrawerRecentSession("2", "READMEを更新", "昨日"),
+                                    DrawerRecentSession("3", "テスト失敗を修正", "2日前"),
+                                    DrawerRecentSession("4", "APIレスポンスを整理", "4日前"),
+                                    DrawerRecentSession("5", "依存関係を更新", "1週間前"),
+                                ),
                             onNewChat = {},
                             onOpenSession = { _, _ -> },
-                            onNavigate = {}
+                            onNavigate = {},
                         )
                     }
-                }
+                },
             ) { PreviewChatHome() }
         }
 
@@ -152,7 +159,7 @@ class UiScreenshotInstrumentedTest {
                 onOpenLocalRuntime = {},
                 onOpenRemoteConnection = {},
                 onOpenWorkspaces = {},
-                onOpenDiagnostics = {}
+                onOpenDiagnostics = {},
             )
         }
 
@@ -164,7 +171,7 @@ class UiScreenshotInstrumentedTest {
             OnboardingChoiceScreen(
                 onSelectAndroid = {},
                 onSelectRemote = {},
-                onAddRemoteLater = {}
+                onAddRemoteLater = {},
             )
         }
 
@@ -174,10 +181,11 @@ class UiScreenshotInstrumentedTest {
             composeRule.onNodeWithText("ランタイムをダウンロード中").assertIsDisplayed()
         }) {
             AndroidSetupScreen(
-                runtimeStatus = LocalRuntimeStatus.Installing(
-                    progress = 0.68f,
-                    step = "ランタイムをダウンロード中"
-                ),
+                runtimeStatus =
+                    LocalRuntimeStatus.Installing(
+                        progress = 0.68f,
+                        step = "ランタイムをダウンロード中",
+                    ),
                 onStartRuntimeSetup = {},
                 settingsState = com.opencode.android.feature.settings.SettingsUiState(),
                 onOpenProviderAuth = {},
@@ -191,7 +199,7 @@ class UiScreenshotInstrumentedTest {
                 onRefreshProviderAuth = {},
                 onRefreshCatalog = {},
                 onBack = {},
-                onFinish = {}
+                onFinish = {},
             )
         }
 
@@ -203,7 +211,7 @@ class UiScreenshotInstrumentedTest {
                 onTestConnection = { Result.success(OpenCodeHealth(true, "1.0.0")) },
                 onSaveConnection = {},
                 onBack = {},
-                onConnected = {}
+                onConnected = {},
             )
         }
 
@@ -226,7 +234,7 @@ class UiScreenshotInstrumentedTest {
                     selectedProviderId = "zai",
                     selectedModelId = "glm-5",
                     onSelectModel = { _, _ -> },
-                    onDismiss = {}
+                    onDismiss = {},
                 )
             }
         }
@@ -237,10 +245,11 @@ class UiScreenshotInstrumentedTest {
             composeRule.onNodeWithText("APIキーを追加・更新").assertIsDisplayed()
         }) {
             ProviderSettingsScreen(
-                state = SettingsUiState(
-                    availableProviders = previewProviders,
-                    credentialStatuses = linkedMapOf("openai" to true, "anthropic" to false)
-                ),
+                state =
+                    SettingsUiState(
+                        availableProviders = previewProviders,
+                        credentialStatuses = linkedMapOf("openai" to true, "anthropic" to false),
+                    ),
                 onOpenProviderAuth = {},
                 onSelectProviderAuthMethod = {},
                 onProviderAuthInput = { _, _ -> },
@@ -250,7 +259,7 @@ class UiScreenshotInstrumentedTest {
                 onDisconnectProvider = {},
                 onLaunchOAuthBrowser = {},
                 onDismissProviderAuth = {},
-                onBack = {}
+                onBack = {},
             )
         }
 
@@ -264,17 +273,18 @@ class UiScreenshotInstrumentedTest {
                 continuousConversation = false,
                 onTtsChange = {},
                 onContinuousChange = {},
-                onBack = {}
+                onBack = {},
             )
         }
     }
 
     @Composable
     private fun PreviewChatHome(
-        state: ChatUiState = ChatUiState(
-            isConnected = true,
-            selectedWorkspacePath = "/workspace/project"
-        )
+        state: ChatUiState =
+            ChatUiState(
+                isConnected = true,
+                selectedWorkspacePath = "/workspace/project",
+            ),
     ) {
         ChatHomeScreen(
             state = state,
@@ -300,7 +310,7 @@ class UiScreenshotInstrumentedTest {
             onOpenHistory = {},
             onOpenLocalSetup = {},
             onOpenRemoteSetup = {},
-            onOpenDrawer = {}
+            onOpenDrawer = {},
         )
     }
 
@@ -309,9 +319,10 @@ class UiScreenshotInstrumentedTest {
         composeRule.activity.runOnUiThread {
             Locale.setDefault(Locale.JAPAN)
             val resources = composeRule.activity.resources
-            val configuration = Configuration(resources.configuration).apply {
-                setLocale(Locale.JAPAN)
-            }
+            val configuration =
+                Configuration(resources.configuration).apply {
+                    setLocale(Locale.JAPAN)
+                }
             resources.updateConfiguration(configuration, resources.displayMetrics)
         }
         composeRule.waitForIdle()
@@ -320,14 +331,14 @@ class UiScreenshotInstrumentedTest {
     private fun capture(
         name: String,
         assertions: () -> Unit,
-        content: @Composable () -> Unit
+        content: @Composable () -> Unit,
     ) {
         composeRule.activity.setContent {
             OpenCodeAndroidTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
-                    contentColor = MaterialTheme.colorScheme.onBackground
+                    contentColor = MaterialTheme.colorScheme.onBackground,
                 ) { content() }
             }
         }
@@ -336,13 +347,15 @@ class UiScreenshotInstrumentedTest {
         assertions()
         Thread.sleep(400)
 
-        val bitmap = requireNotNull(
-            InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-        ) { "Unable to capture emulator screenshot: $name" }
-        val directory = File(
-            InstrumentationRegistry.getInstrumentation().targetContext.filesDir,
-            "ui-screenshots"
-        ).apply { mkdirs() }
+        val bitmap =
+            requireNotNull(
+                InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot(),
+            ) { "Unable to capture emulator screenshot: $name" }
+        val directory =
+            File(
+                InstrumentationRegistry.getInstrumentation().targetContext.filesDir,
+                "ui-screenshots",
+            ).apply { mkdirs() }
         FileOutputStream(File(directory, "$name.png")).use { output ->
             check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
                 "Unable to encode emulator screenshot: $name"

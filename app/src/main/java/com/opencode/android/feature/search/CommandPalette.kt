@@ -39,44 +39,49 @@ fun CommandPaletteSheet(
     onDismiss: () -> Unit,
     onNavigate: (String) -> Unit,
     onOpenSession: (String, String) -> Unit,
-    sessions: List<Pair<String, String>>
+    sessions: List<Pair<String, String>>,
 ) {
     var query by remember { mutableStateOf("") }
 
-    val actions = listOf(
-        PaletteAction("New Chat", Icons.Default.Add, "new_chat"),
-        PaletteAction("Settings", Icons.Default.Settings, "settings"),
-        PaletteAction("Workspaces", Icons.Default.Folder, "workspaces"),
-        PaletteAction("Activity", Icons.Default.History, "activity")
-    )
+    val actions =
+        listOf(
+            PaletteAction("New Chat", Icons.Default.Add, "new_chat"),
+            PaletteAction("Settings", Icons.Default.Settings, "settings"),
+            PaletteAction("Workspaces", Icons.Default.Folder, "workspaces"),
+            PaletteAction("Activity", Icons.Default.History, "activity"),
+        )
 
-    val filteredActions = actions.filter {
-        query.isBlank() || it.title.contains(query, ignoreCase = true)
-    }
-    val filteredSessions = sessions.filter { (id, title) ->
-        query.isBlank() || title.contains(query, ignoreCase = true) || id.contains(query, ignoreCase = true)
-    }
+    val filteredActions =
+        actions.filter {
+            query.isBlank() || it.title.contains(query, ignoreCase = true)
+        }
+    val filteredSessions =
+        sessions.filter { (id, title) ->
+            query.isBlank() || title.contains(query, ignoreCase = true) || id.contains(query, ignoreCase = true)
+        }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
         ) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Search") }
+                label = { Text("Search") },
             )
             Spacer(Modifier.height(8.dp))
         }
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (filteredActions.isNotEmpty()) {
                 item { PaletteSectionHeader("Actions") }
@@ -87,7 +92,7 @@ fun CommandPaletteSheet(
                         onClick = {
                             onNavigate(action.route)
                             onDismiss()
-                        }
+                        },
                     )
                 }
             }
@@ -100,7 +105,7 @@ fun CommandPaletteSheet(
                         onClick = {
                             onOpenSession(id, title)
                             onDismiss()
-                        }
+                        },
                     )
                 }
             }
@@ -112,7 +117,7 @@ fun CommandPaletteSheet(
 private data class PaletteAction(
     val title: String,
     val icon: ImageVector,
-    val route: String
+    val route: String,
 )
 
 @Composable
@@ -122,7 +127,7 @@ private fun PaletteSectionHeader(text: String) {
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
     )
 }
 
@@ -130,24 +135,25 @@ private fun PaletteSectionHeader(text: String) {
 private fun PaletteRow(
     icon: ImageVector,
     title: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
 }

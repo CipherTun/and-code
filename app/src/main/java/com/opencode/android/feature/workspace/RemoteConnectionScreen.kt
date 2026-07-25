@@ -26,10 +26,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Visibility
@@ -84,7 +84,7 @@ fun RemoteConnectionScreen(
     onTestConnection: suspend (ConnectionFormState) -> Result<OpenCodeHealth>,
     onSaveConnection: (ConnectionFormState) -> Unit,
     onBack: () -> Unit,
-    onConnected: () -> Unit
+    onConnected: () -> Unit,
 ) {
     var form by remember { mutableStateOf(ConnectionFormState()) }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -95,18 +95,20 @@ fun RemoteConnectionScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
-        val text = result.contents ?: return@rememberLauncherForActivityResult
-        ConnectionQrPayload.parse(text)?.let { payload ->
-            form = ConnectionFormState(
-                name = payload.name.orEmpty(),
-                baseUrl = payload.url.orEmpty(),
-                username = payload.username?.takeIf { it.isNotBlank() } ?: "opencode",
-                password = payload.password.orEmpty(),
-                allowInsecureLan = payload.insecure
-            )
+    val qrScanLauncher =
+        rememberLauncherForActivityResult(ScanContract()) { result ->
+            val text = result.contents ?: return@rememberLauncherForActivityResult
+            ConnectionQrPayload.parse(text)?.let { payload ->
+                form =
+                    ConnectionFormState(
+                        name = payload.name.orEmpty(),
+                        baseUrl = payload.url.orEmpty(),
+                        username = payload.username?.takeIf { it.isNotBlank() } ?: "opencode",
+                        password = payload.password.orEmpty(),
+                        allowInsecureLan = payload.insecure,
+                    )
+            }
         }
-    }
 
     fun startLanDiscovery() {
         discoveryDialogOpen = true
@@ -128,23 +130,26 @@ fun RemoteConnectionScreen(
             form = form.copy(isTesting = true, testMessage = null)
             onTestConnection(form).fold(
                 onSuccess = { health ->
-                    form = form.copy(
-                        isTesting = false,
-                        testSucceeded = health.healthy,
-                        testMessage = if (health.healthy) {
-                            "OpenCode ${health.version}"
-                        } else {
-                            context.getString(R.string.remote_connection_unhealthy)
-                        }
-                    )
+                    form =
+                        form.copy(
+                            isTesting = false,
+                            testSucceeded = health.healthy,
+                            testMessage =
+                                if (health.healthy) {
+                                    "OpenCode ${health.version}"
+                                } else {
+                                    context.getString(R.string.remote_connection_unhealthy)
+                                },
+                        )
                 },
                 onFailure = { error ->
-                    form = form.copy(
-                        isTesting = false,
-                        testSucceeded = false,
-                        testMessage = error.message ?: context.getString(R.string.remote_connection_failed)
-                    )
-                }
+                    form =
+                        form.copy(
+                            isTesting = false,
+                            testSucceeded = false,
+                            testMessage = error.message ?: context.getString(R.string.remote_connection_failed),
+                        )
+                },
             )
         }
     }
@@ -156,22 +161,23 @@ fun RemoteConnectionScreen(
                 title = {
                     Text(
                         stringResource(R.string.remote_connection_title),
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        titleContentColor = MaterialTheme.colorScheme.onBackground,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+                    ),
             )
         },
         bottomBar = {
@@ -181,70 +187,72 @@ fun RemoteConnectionScreen(
                 onSave = {
                     onSaveConnection(form)
                     onConnected()
-                }
+                },
             )
-        }
+        },
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Text(
                 text = stringResource(R.string.remote_connection_intro),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CompactStepRow(
                     number = 1,
                     title = stringResource(R.string.remote_step1_title),
-                    description = stringResource(R.string.remote_step1_desc)
+                    description = stringResource(R.string.remote_step1_desc),
                 )
                 val serveCommand = stringResource(R.string.remote_serve_command)
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("opencode serve", serveCommand))
-                            Toast.makeText(context, R.string.remote_command_copied, Toast.LENGTH_SHORT).show()
-                        },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(ClipData.newPlainText("opencode serve", serveCommand))
+                                Toast.makeText(context, R.string.remote_command_copied, Toast.LENGTH_SHORT).show()
+                            },
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f)
+                    color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f),
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             stringResource(R.string.remote_serve_command),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.inverseOnSurface,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(8.dp))
                         Icon(
                             Icons.Default.ContentCopy,
                             contentDescription = stringResource(R.string.remote_copy_command),
                             tint = MaterialTheme.colorScheme.inverseOnSurface,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
                 CompactStepRow(
                     number = 2,
                     title = stringResource(R.string.remote_step2_title),
-                    description = stringResource(R.string.remote_step2_desc)
+                    description = stringResource(R.string.remote_step2_desc),
                 )
                 CompactStepRow(
                     number = 3,
                     title = stringResource(R.string.remote_step3_title),
-                    description = stringResource(R.string.remote_step3_desc)
+                    description = stringResource(R.string.remote_step3_desc),
                 )
             }
 
@@ -257,7 +265,7 @@ fun RemoteConnectionScreen(
                     label = { Text(stringResource(R.string.connection_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
                 )
                 OutlinedTextField(
                     value = form.baseUrl,
@@ -270,7 +278,7 @@ fun RemoteConnectionScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = form.baseUrl.isNotBlank() && form.normalizedUrl == null,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
                 )
                 OutlinedTextField(
                     value = form.username,
@@ -280,7 +288,7 @@ fun RemoteConnectionScreen(
                     label = { Text(stringResource(R.string.username)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
                 )
                 OutlinedTextField(
                     value = form.password,
@@ -293,32 +301,33 @@ fun RemoteConnectionScreen(
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null
+                                contentDescription = null,
                             )
                         }
                     },
-                    visualTransformation = if (passwordVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
+                    visualTransformation =
+                        if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
                 )
             }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OutlinedButton(
                     onClick = {
                         qrScanLauncher.launch(
-                            ScanOptions().setBeepEnabled(false).setOrientationLocked(false)
+                            ScanOptions().setBeepEnabled(false).setOrientationLocked(false),
                         )
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(19.dp))
                     Spacer(Modifier.width(6.dp))
@@ -326,7 +335,7 @@ fun RemoteConnectionScreen(
                 }
                 OutlinedButton(
                     onClick = { startLanDiscovery() },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Icon(Icons.Default.WifiFind, contentDescription = null, modifier = Modifier.size(19.dp))
                     Spacer(Modifier.width(6.dp))
@@ -337,23 +346,23 @@ fun RemoteConnectionScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Icon(
                         Icons.Default.Info,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                     Text(
                         stringResource(R.string.remote_hint),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -362,21 +371,23 @@ fun RemoteConnectionScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = if (form.testSucceeded) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                    } else {
-                        MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
-                    }
+                    color =
+                        if (form.testSucceeded) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                        } else {
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                        },
                 ) {
                     Text(
                         text = message,
                         modifier = Modifier.padding(14.dp),
-                        color = if (form.testSucceeded) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
-                        style = MaterialTheme.typography.bodyMedium
+                        color =
+                            if (form.testSucceeded) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -391,36 +402,38 @@ fun RemoteConnectionScreen(
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (isDiscovering) {
                         Text(
                             stringResource(R.string.discovering_servers),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     } else if (discoveredServers.isEmpty()) {
                         Text(
                             stringResource(R.string.no_servers_found),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     discoveredServers.forEach { server ->
                         Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    form = ConnectionFormState(
-                                        name = server.name,
-                                        baseUrl = server.baseUrl,
-                                        allowInsecureLan = true
-                                    )
-                                    discoveryDialogOpen = false
-                                },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        form =
+                                            ConnectionFormState(
+                                                name = server.name,
+                                                baseUrl = server.baseUrl,
+                                                allowInsecureLan = true,
+                                            )
+                                        discoveryDialogOpen = false
+                                    },
                             shape = RoundedCornerShape(12.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(server.name, fontWeight = FontWeight.Medium)
@@ -429,7 +442,7 @@ fun RemoteConnectionScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -441,22 +454,26 @@ fun RemoteConnectionScreen(
                 TextButton(onClick = { discoveryDialogOpen = false }) {
                     Text(stringResource(R.string.cancel))
                 }
-            }
+            },
         )
     }
 }
 
 @Composable
-private fun CompactStepRow(number: Int, title: String, description: String) {
+private fun CompactStepRow(
+    number: Int,
+    title: String,
+    description: String,
+) {
     Row(
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Surface(
             modifier = Modifier.size(28.dp),
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.primary
+            contentColor = MaterialTheme.colorScheme.primary,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(number.toString(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
@@ -467,7 +484,7 @@ private fun CompactStepRow(number: Int, title: String, description: String) {
             Text(
                 description,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -477,19 +494,20 @@ private fun CompactStepRow(number: Int, title: String, description: String) {
 private fun RemoteConnectionBottomBar(
     form: ConnectionFormState,
     onTest: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.background,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
     ) {
         Button(
             onClick = if (form.testSucceeded) onSave else onTest,
             enabled = if (form.testSucceeded) true else form.canSave && !form.isTesting,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-                .height(48.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .height(48.dp),
         ) {
             if (form.isTesting) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -503,7 +521,7 @@ private fun RemoteConnectionBottomBar(
                 } else {
                     stringResource(R.string.remote_test_connection_button)
                 },
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
@@ -517,7 +535,7 @@ private fun RemoteConnectionScreenPreview() {
             onTestConnection = { Result.success(OpenCodeHealth(true, "1.0.0")) },
             onSaveConnection = {},
             onBack = {},
-            onConnected = {}
+            onConnected = {},
         )
     }
 }

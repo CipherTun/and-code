@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class ProviderAuthWhen(
     val key: String,
     val op: String,
-    val value: String
+    val value: String,
 ) {
     fun matches(inputs: Map<String, String>): Boolean {
         val actual = inputs[key] ?: return false
@@ -23,7 +23,7 @@ data class ProviderAuthWhen(
 data class ProviderAuthOption(
     val label: String,
     val value: String,
-    val hint: String? = null
+    val hint: String? = null,
 )
 
 @Serializable
@@ -33,7 +33,7 @@ data class ProviderAuthPrompt(
     val message: String,
     val placeholder: String? = null,
     val options: List<ProviderAuthOption> = emptyList(),
-    @SerialName("when") val whenCondition: ProviderAuthWhen? = null
+    @SerialName("when") val whenCondition: ProviderAuthWhen? = null,
 ) {
     fun isVisible(inputs: Map<String, String>): Boolean = whenCondition?.matches(inputs) ?: true
 }
@@ -42,12 +42,12 @@ data class ProviderAuthPrompt(
 data class ProviderAuthMethod(
     val type: String,
     val label: String,
-    val prompts: List<ProviderAuthPrompt> = emptyList()
+    val prompts: List<ProviderAuthPrompt> = emptyList(),
 )
 
 @Serializable
 data class ProviderAuthAuthorization(
     val url: String,
     val method: String,
-    val instructions: String
+    val instructions: String,
 )

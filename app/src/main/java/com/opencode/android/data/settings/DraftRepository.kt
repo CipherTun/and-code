@@ -11,25 +11,34 @@ data class Draft(
     val text: String,
     val attachments: List<String> = emptyList(),
     val model: String? = null,
-    val agent: String? = null
+    val agent: String? = null,
 )
 
 class DraftRepository(context: Context) {
     private val preferences: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+            encodeDefaults = true
+        }
 
     @Synchronized
-    fun save(sessionId: String, draft: Draft) {
+    fun save(
+        sessionId: String,
+        draft: Draft,
+    ) {
         preferences.edit()
             .putString(key(sessionId), json.encodeToString(draft))
             .apply()
     }
 
     @Synchronized
-    fun load(sessionId: String): Draft? = runCatching {
-        preferences.getString(key(sessionId), null)?.let { json.decodeFromString<Draft>(it) }
-    }.getOrNull()
+    fun load(sessionId: String): Draft? =
+        runCatching {
+            preferences.getString(key(sessionId), null)?.let { json.decodeFromString<Draft>(it) }
+        }.getOrNull()
 
     @Synchronized
     fun clear(sessionId: String) {

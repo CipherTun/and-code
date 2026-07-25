@@ -31,17 +31,18 @@ import com.opencode.android.ui.theme.ZincTheme
 fun ThemePickerDialog(
     currentTheme: String,
     onThemeChange: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
-    val themes = listOf(
-        "dark" to DarkTheme,
-        "light" to LightTheme,
-        "zinc" to ZincTheme,
-        "midnight" to MidnightTheme,
-        "claude" to ClaudeTheme,
-        "ghostty" to GhosttyTheme,
-        "auto" to DarkTheme
-    )
+    val themes =
+        listOf(
+            "dark" to DarkTheme,
+            "light" to LightTheme,
+            "zinc" to ZincTheme,
+            "midnight" to MidnightTheme,
+            "claude" to ClaudeTheme,
+            "ghostty" to GhosttyTheme,
+            "auto" to DarkTheme,
+        )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -50,21 +51,23 @@ fun ThemePickerDialog(
             Column {
                 themes.forEach { (key, colors) ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onThemeChange(key) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onThemeChange(key) }
+                                .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(
                             selected = currentTheme == key,
-                            onClick = { onThemeChange(key) }
+                            onClick = { onThemeChange(key) },
                         )
                         Text(
                             text = key.replaceFirstChar { it.uppercase() },
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 8.dp)
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .padding(start = 8.dp),
                         )
                         ThemeColorPreview(colors)
                     }
@@ -80,7 +83,7 @@ fun ThemePickerDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
     )
 }
 
@@ -89,10 +92,11 @@ private fun ThemeColorPreview(colors: ThemeColors) {
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf(colors.surface0, colors.accent, colors.foreground).forEach { color ->
             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(color)
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(color),
             )
         }
     }

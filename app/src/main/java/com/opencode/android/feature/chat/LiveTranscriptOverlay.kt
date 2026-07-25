@@ -39,64 +39,70 @@ fun LiveTranscriptOverlay(
     onAccept: () -> Unit,
     onCancel: () -> Unit,
     onAcceptAndSend: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     AnimatedVisibility(
         visible = isRecording,
         enter = slideInVertically(initialOffsetY = { it }),
         exit = slideOutVertically(targetOffsetY = { it }),
-        modifier = modifier
+        modifier = modifier,
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 VolumeMeter(amplitude = amplitude)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = transcript.ifBlank { "Listening..." },
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 120.dp)
-                        .verticalScroll(rememberScrollState())
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 120.dp)
+                            .verticalScroll(rememberScrollState()),
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     FilledIconButton(
                         onClick = onCancel,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
+                        colors =
+                            IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                            ),
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null)
                     }
                     FilledIconButton(
                         onClick = onAccept,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
+                        colors =
+                            IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary,
+                            ),
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null)
                     }
                     FilledIconButton(
                         onClick = onAcceptAndSend,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
+                        colors =
+                            IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                            ),
                     ) {
                         Icon(Icons.Default.Send, contentDescription = null)
                     }

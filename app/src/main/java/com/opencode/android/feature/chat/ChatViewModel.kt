@@ -22,16 +22,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import java.util.UUID
 
 enum class ToolStatus { PENDING, RUNNING, COMPLETED, ERROR, UNKNOWN }
@@ -40,7 +40,9 @@ sealed interface ChatPart {
     val id: String
 
     data class Text(override val id: String, val text: String) : ChatPart
+
     data class Reasoning(override val id: String, val text: String) : ChatPart
+
     data class Tool(
         override val id: String,
         val name: String,
@@ -49,8 +51,9 @@ sealed interface ChatPart {
         val input: String? = null,
         val output: String? = null,
         val outputTruncated: Boolean = false,
-        val error: String? = null
+        val error: String? = null,
     ) : ChatPart
+
     data class Patch(override val id: String, val files: List<String>) : ChatPart
 }
 
@@ -61,7 +64,7 @@ data class ChatMessage(
     val attachments: List<PromptAttachment> = emptyList(),
     val imagePreviews: List<Bitmap> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
-    val isStreaming: Boolean = false
+    val isStreaming: Boolean = false,
 ) {
     val text: String
         get() = parts.filterIsInstance<ChatPart.Text>().joinToString("") { it.text }
@@ -71,22 +74,24 @@ data class PendingQuestionUi(
     val request: QuestionRequest,
     val selectedAnswers: List<List<String>>,
     val isSubmitting: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 ) {
     val canSubmit: Boolean
-        get() = request.questions.indices.all { index ->
-            sanitizeQuestionAnswer(
-                prompt = request.questions[index],
-                answers = selectedAnswers.getOrElse(index) { emptyList() },
-                multiple = request.multiple
-            ).isNotEmpty()
-        }
+        get() =
+            request.questions.indices.all { index ->
+                sanitizeQuestionAnswer(
+                    prompt = request.questions[index],
+                    answers = selectedAnswers.getOrElse(index) { emptyList() },
+                    multiple = request.multiple,
+                ).isNotEmpty()
+            }
 
     companion object {
-        fun from(request: QuestionRequest) = PendingQuestionUi(
-            request = request,
-            selectedAnswers = request.questions.map { emptyList() }
-        )
+        fun from(request: QuestionRequest) =
+            PendingQuestionUi(
+                request = request,
+                selectedAnswers = request.questions.map { emptyList() },
+            )
     }
 }
 
@@ -96,6 +101,7 @@ private const val RESPONSE_POLL_TIMEOUT_MS = 120_000L
 private const val TRANSIENT_RECOVERY_DELAY_MS = 5000L
 private const val HEALTH_CHECK_ATTEMPTS = 15
 private const val HEALTH_CHECK_DELAY_MS = 2000L
+
 private fun OpenCodePart.toChatPart(): ChatPart? {
     val partId = id ?: return null
     val stateMap = state.orEmpty()
@@ -110,12 +116,13 @@ private fun OpenCodePart.toChatPart(): ChatPart? {
                 id = partId,
                 name = tool ?: "tool",
                 status = parseToolStatus(stateMap["status"]?.jsonPrimitiveOrNull()),
-                title = stateMap["title"]?.jsonPrimitiveOrNull()?.takeIf { it.isNotBlank() }
-                    ?: inputText?.lineSequence()?.firstOrNull(),
+                title =
+                    stateMap["title"]?.jsonPrimitiveOrNull()?.takeIf { it.isNotBlank() }
+                        ?: inputText?.lineSequence()?.firstOrNull(),
                 input = inputText,
                 output = if (truncated) rawOutput?.takeLast(MAX_TOOL_OUTPUT_CHARS) else rawOutput,
                 outputTruncated = truncated,
-                error = stateMap["error"]?.jsonPrimitiveOrNull()
+                error = stateMap["error"]?.jsonPrimitiveOrNull(),
             )
         }
         "patch" -> ChatPart.Patch(partId, extractPatchFiles(stateMap))
@@ -123,16 +130,16 @@ private fun OpenCodePart.toChatPart(): ChatPart? {
     }
 }
 
-private fun JsonElement.jsonPrimitiveOrNull(): String? =
-    (this as? JsonPrimitive)?.contentOrNull ?: (this as? JsonPrimitive)?.content
+private fun JsonElement.jsonPrimitiveOrNull(): String? = (this as? JsonPrimitive)?.contentOrNull ?: (this as? JsonPrimitive)?.content
 
-private fun parseToolStatus(value: String?): ToolStatus = when (value) {
-    "pending" -> ToolStatus.PENDING
-    "running" -> ToolStatus.RUNNING
-    "completed" -> ToolStatus.COMPLETED
-    "error" -> ToolStatus.ERROR
-    else -> ToolStatus.UNKNOWN
-}
+private fun parseToolStatus(value: String?): ToolStatus =
+    when (value) {
+        "pending" -> ToolStatus.PENDING
+        "running" -> ToolStatus.RUNNING
+        "completed" -> ToolStatus.COMPLETED
+        "error" -> ToolStatus.ERROR
+        else -> ToolStatus.UNKNOWN
+    }
 
 private fun formatToolInput(input: JsonElement?): String? {
     val obj = input as? JsonObject ?: return null
@@ -151,15 +158,17 @@ private fun formatToolInput(input: JsonElement?): String? {
 
 private fun extractPatchFiles(state: Map<String, JsonElement>): List<String> {
     return when (val files = state["files"]) {
-        is JsonArray -> files.mapNotNull { entry ->
-            when (entry) {
-                is JsonPrimitive -> entry.content
-                is JsonObject -> entry["path"]?.jsonPrimitiveOrNull()
-                    ?: entry["file"]?.jsonPrimitiveOrNull()
-                    ?: entry["filename"]?.jsonPrimitiveOrNull()
-                else -> null
+        is JsonArray ->
+            files.mapNotNull { entry ->
+                when (entry) {
+                    is JsonPrimitive -> entry.content
+                    is JsonObject ->
+                        entry["path"]?.jsonPrimitiveOrNull()
+                            ?: entry["file"]?.jsonPrimitiveOrNull()
+                            ?: entry["filename"]?.jsonPrimitiveOrNull()
+                    else -> null
+                }
             }
-        }
         is Map<*, *> -> files.keys.mapNotNull { it?.toString() }
         else -> emptyList()
     }
@@ -192,7 +201,7 @@ data class ChatUiState(
     val offlineQueue: List<String> = emptyList(),
     val isOfflineQueued: Boolean = false,
     val connectionQuality: ConnectionQuality? = null,
-    val error: String? = null
+    val error: String? = null,
 )
 
 class ChatViewModel(
@@ -200,11 +209,12 @@ class ChatViewModel(
     private val eventFlow: Flow<OpenCodeEvent>? = null,
     private val onPermissionResolved: (String) -> Unit = {},
     private val onSessionCreated: () -> Unit = {},
-    private val draftRepo: DraftRepository? = null
+    private val draftRepo: DraftRepository? = null,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(
-        ChatUiState(backendName = backend?.displayName.orEmpty())
-    )
+    private val _uiState =
+        MutableStateFlow(
+            ChatUiState(backendName = backend?.displayName.orEmpty()),
+        )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private val _sendBehavior = MutableStateFlow("interrupt")
@@ -227,11 +237,12 @@ class ChatViewModel(
 
     init {
         if (backend != null) {
-            eventJob = viewModelScope.launch {
-                (eventFlow ?: backend.events())
-                    .catch { error -> reportError(error) }
-                    .collect(::handleEvent)
-            }
+            eventJob =
+                viewModelScope.launch {
+                    (eventFlow ?: backend.events())
+                        .catch { error -> reportError(error) }
+                        .collect(::handleEvent)
+                }
             viewModelScope.launch {
                 var lastError: String? = null
                 repeat(HEALTH_CHECK_ATTEMPTS) {
@@ -241,7 +252,7 @@ class ChatViewModel(
                                 it.copy(
                                     isConnected = health.healthy,
                                     backendName = "${backend.displayName} · ${health.version}",
-                                    error = null
+                                    error = null,
                                 )
                             }
                             return@launch
@@ -265,13 +276,18 @@ class ChatViewModel(
         _uiState.update { it.copy(selectedWorkspacePath = path) }
     }
 
-    fun selectConfiguration(providerId: String?, modelId: String?, agentId: String?, contextLimit: Long = 0L) {
+    fun selectConfiguration(
+        providerId: String?,
+        modelId: String?,
+        agentId: String?,
+        contextLimit: Long = 0L,
+    ) {
         this.contextLimit = contextLimit
         _uiState.update {
             it.copy(
                 selectedProviderId = providerId,
                 selectedModelId = modelId,
-                selectedAgentId = agentId
+                selectedAgentId = agentId,
             )
         }
     }
@@ -292,7 +308,12 @@ class ChatViewModel(
         _workspaceTitleSource.value = source
     }
 
-    fun saveDraft(sessionId: String, text: String, model: String?, agent: String?) {
+    fun saveDraft(
+        sessionId: String,
+        text: String,
+        model: String?,
+        agent: String?,
+    ) {
         draftRepo?.save(sessionId, Draft(text, emptyList(), model, agent))
     }
 
@@ -310,11 +331,14 @@ class ChatViewModel(
         _uiState.update { it.copy(attachments = it.attachments + attachment) }
     }
 
-    fun addImageAttachment(attachment: PromptAttachment, preview: Bitmap) {
+    fun addImageAttachment(
+        attachment: PromptAttachment,
+        preview: Bitmap,
+    ) {
         _uiState.update {
             it.copy(
                 attachments = it.attachments + attachment,
-                imagePreviews = it.imagePreviews + preview
+                imagePreviews = it.imagePreviews + preview,
             )
         }
     }
@@ -323,7 +347,7 @@ class ChatViewModel(
         _uiState.update { state ->
             state.copy(
                 attachments = state.attachments.filterIndexed { i, _ -> i != index },
-                imagePreviews = state.imagePreviews.filterIndexed { i, _ -> i != index }
+                imagePreviews = state.imagePreviews.filterIndexed { i, _ -> i != index },
             )
         }
     }
@@ -333,11 +357,12 @@ class ChatViewModel(
         viewModelScope.launch {
             runCatching {
                 val messages = currentBackend.listMessages(sessionId)
-                val latestMessageTokens = messages.asReversed()
-                    .firstNotNullOfOrNull { message ->
-                        message.info.tokens?.contextUsed
-                            ?.takeIf { !message.info.role.equals("user", ignoreCase = true) }
-                    }
+                val latestMessageTokens =
+                    messages.asReversed()
+                        .firstNotNullOfOrNull { message ->
+                            message.info.tokens?.contextUsed
+                                ?.takeIf { !message.info.role.equals("user", ignoreCase = true) }
+                        }
                 latestMessageTokens ?: currentBackend.session(sessionId).tokens?.contextUsed ?: 0L
             }.onSuccess { used ->
                 _uiState.update { it.copy(contextTokensUsed = used) }
@@ -345,7 +370,10 @@ class ChatViewModel(
         }
     }
 
-    fun openSession(sessionId: String, title: String = "") {
+    fun openSession(
+        sessionId: String,
+        title: String = "",
+    ) {
         val currentBackend = backend ?: return
         // Switching away from whatever chat was previously loaded here must drop its running
         // state too — otherwise the composer opens the new chat already stuck on the stop button
@@ -362,20 +390,21 @@ class ChatViewModel(
                 pendingQuestions = emptyList(),
                 isRunning = if (switchingSession) false else it.isRunning,
                 isThinking = if (switchingSession) false else it.isThinking,
-                error = null
+                error = null,
             )
         }
         viewModelScope.launch {
             runCatching { currentBackend.listMessages(sessionId) }
                 .onSuccess { messages ->
-                    val selectedModel = messages.asReversed()
-                        .firstNotNullOfOrNull { it.info.model }
+                    val selectedModel =
+                        messages.asReversed()
+                            .firstNotNullOfOrNull { it.info.model }
                     _uiState.update {
                         it.copy(
                             isLoadingHistory = false,
                             messages = messages.mapNotNull(::toUiMessage),
                             selectedProviderId = selectedModel?.providerId ?: it.selectedProviderId,
-                            selectedModelId = selectedModel?.modelId ?: it.selectedModelId
+                            selectedModelId = selectedModel?.modelId ?: it.selectedModelId,
                         )
                     }
                     refreshContextUsage(sessionId)
@@ -403,7 +432,7 @@ class ChatViewModel(
                 isSpeechProcessing = false,
                 partialText = "",
                 imagePreviews = emptyList(),
-                error = null
+                error = null,
             )
         }
     }
@@ -412,9 +441,10 @@ class ChatViewModel(
         val normalized = text.trim()
         val pendingAttachments = _uiState.value.attachments
         val messageIdsBeforeSend = _uiState.value.messages.map { it.id }.toSet()
-        val pendingPreviewsByFilename = pendingAttachments.mapIndexedNotNull { index, attachment ->
-            _uiState.value.imagePreviews.getOrNull(index)?.let { attachment.filename to it }
-        }.toMap()
+        val pendingPreviewsByFilename =
+            pendingAttachments.mapIndexedNotNull { index, attachment ->
+                _uiState.value.imagePreviews.getOrNull(index)?.let { attachment.filename to it }
+            }.toMap()
         if (normalized.isEmpty() && pendingAttachments.isEmpty()) return
         val currentBackend = backend
         if (currentBackend == null) {
@@ -424,15 +454,16 @@ class ChatViewModel(
 
         if (!_uiState.value.isConnected) {
             offlineMessageQueue.update { it + normalized }
-            val userMessage = ChatMessage(
-                isUser = true,
-                parts = listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = normalized))
-            )
+            val userMessage =
+                ChatMessage(
+                    isUser = true,
+                    parts = listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = normalized)),
+                )
             _uiState.update {
                 it.copy(
                     messages = it.messages + userMessage,
                     offlineQueue = it.offlineQueue + normalized,
-                    isOfflineQueued = true
+                    isOfflineQueued = true,
                 )
             }
             return
@@ -443,21 +474,23 @@ class ChatViewModel(
             return
         }
 
-        val userMessage = ChatMessage(
-            isUser = true,
-            parts = normalized.takeIf { it.isNotEmpty() }?.let {
-                listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = it))
-            }.orEmpty(),
-            attachments = pendingAttachments,
-            imagePreviews = _uiState.value.imagePreviews
-        )
+        val userMessage =
+            ChatMessage(
+                isUser = true,
+                parts =
+                    normalized.takeIf { it.isNotEmpty() }?.let {
+                        listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = it))
+                    }.orEmpty(),
+                attachments = pendingAttachments,
+                imagePreviews = _uiState.value.imagePreviews,
+            )
         _uiState.update {
             it.copy(
                 messages = it.messages + userMessage,
                 isRunning = true,
                 isThinking = true,
                 partialText = "",
-                error = null
+                error = null,
             )
         }
 
@@ -467,14 +500,15 @@ class ChatViewModel(
             var capturedSessionId: String? = null
             runCatching {
                 val existingSessionId = _uiState.value.sessionId
-                val session = if (existingSessionId == null) {
-                    currentBackend.createSession(
-                        title = normalized.take(60).ifBlank { "Attachment" },
-                        directory = _uiState.value.selectedWorkspacePath
-                    )
-                } else {
-                    null
-                }
+                val session =
+                    if (existingSessionId == null) {
+                        currentBackend.createSession(
+                            title = normalized.take(60).ifBlank { "Attachment" },
+                            directory = _uiState.value.selectedWorkspacePath,
+                        )
+                    } else {
+                        null
+                    }
                 val targetSessionId = existingSessionId ?: requireNotNull(session).id
                 capturedSessionId = targetSessionId
                 if (session != null) {
@@ -488,7 +522,7 @@ class ChatViewModel(
                         currentBackend.summarizeSession(
                             sessionId = targetSessionId,
                             providerId = requireNotNull(_uiState.value.selectedProviderId),
-                            modelId = requireNotNull(_uiState.value.selectedModelId)
+                            modelId = requireNotNull(_uiState.value.selectedModelId),
                         )
                     }
                     refreshContextUsage(targetSessionId)
@@ -501,64 +535,70 @@ class ChatViewModel(
                         modelId = _uiState.value.selectedModelId,
                         agent = _uiState.value.selectedAgentId,
                         variant = _uiState.value.selectedVariant,
-                        attachments = pendingAttachments
-                    )
+                        attachments = pendingAttachments,
+                    ),
                 )
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
+
                 // Every update below is guarded on the chat still being on screen: if the user
                 // switches to another session, this poll must not keep overwriting its transcript
                 // or clearing its running state with data that belongs to the old one.
                 fun isStillActive() = _uiState.value.sessionId == targetSessionId
-                val pollFinished = withTimeoutOrNull(RESPONSE_POLL_TIMEOUT_MS) {
-                    while (isStillActive() && _uiState.value.isRunning) {
-                        kotlinx.coroutines.delay(RESPONSE_POLL_INTERVAL_MS)
-                        if (!isStillActive()) return@withTimeoutOrNull
-                        runCatching { currentBackend.listMessages(targetSessionId) }
-                            .onSuccess { serverMessages ->
-                                if (!isStillActive()) return@onSuccess
-                                val previewsById = _uiState.value.messages
-                                    .associate { it.id to it.imagePreviews }
-                                val uiMessages = serverMessages.mapNotNull(::toUiMessage).map { message ->
-                                    val previews = previewsById[message.id].orEmpty().ifEmpty {
-                                        message.attachments
-                                            .mapNotNull { pendingPreviewsByFilename[it.filename] }
-                                    }
-                                    message.copy(imagePreviews = previews)
-                                }
-                                if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
-                                    _uiState.update { it.copy(messages = uiMessages) }
-                                }
-                            }
-                        if (!isStillActive()) return@withTimeoutOrNull
-                        runCatching { currentBackend.session(targetSessionId) }
-                            .onSuccess { sessionInfo ->
-                                if (sessionInfo.time.completed != null) {
-                                    sessionCompleted = true
-                                    if (isStillActive()) {
-                                        _uiState.update { it.copy(isRunning = false, isThinking = false) }
+                val pollFinished =
+                    withTimeoutOrNull(RESPONSE_POLL_TIMEOUT_MS) {
+                        while (isStillActive() && _uiState.value.isRunning) {
+                            kotlinx.coroutines.delay(RESPONSE_POLL_INTERVAL_MS)
+                            if (!isStillActive()) return@withTimeoutOrNull
+                            runCatching { currentBackend.listMessages(targetSessionId) }
+                                .onSuccess { serverMessages ->
+                                    if (!isStillActive()) return@onSuccess
+                                    val previewsById =
+                                        _uiState.value.messages
+                                            .associate { it.id to it.imagePreviews }
+                                    val uiMessages =
+                                        serverMessages.mapNotNull(::toUiMessage).map { message ->
+                                            val previews =
+                                                previewsById[message.id].orEmpty().ifEmpty {
+                                                    message.attachments
+                                                        .mapNotNull { pendingPreviewsByFilename[it.filename] }
+                                                }
+                                            message.copy(imagePreviews = previews)
+                                        }
+                                    if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
+                                        _uiState.update { it.copy(messages = uiMessages) }
                                     }
                                 }
-                            }
+                            if (!isStillActive()) return@withTimeoutOrNull
+                            runCatching { currentBackend.session(targetSessionId) }
+                                .onSuccess { sessionInfo ->
+                                    if (sessionInfo.time.completed != null) {
+                                        sessionCompleted = true
+                                        if (isStillActive()) {
+                                            _uiState.update { it.copy(isRunning = false, isThinking = false) }
+                                        }
+                                    }
+                                }
+                        }
                     }
-                }
                 // Some runtimes deliver the final message but drop session.idle. Do not
                 // leave the UI in the running state when the bounded fallback poll ends.
                 if (isStillActive() && (sessionCompleted || pollFinished == null)) {
                     runCatching { currentBackend.listMessages(targetSessionId) }
                         .onSuccess { serverMessages ->
                             if (!isStillActive()) return@onSuccess
-                            val hasResponse = serverMessages.any { message ->
-                                message.info.role == "assistant" && message.info.id !in messageIdsBeforeSend
-                            }
+                            val hasResponse =
+                                serverMessages.any { message ->
+                                    message.info.role == "assistant" && message.info.id !in messageIdsBeforeSend
+                                }
                             if (!sessionCompleted && !hasResponse) return@onSuccess
                             streamedParts.clear()
                             _uiState.update {
                                 it.copy(
                                     messages = serverMessages.mapNotNull(::toUiMessage),
                                     isRunning = false,
-                                    isThinking = false
+                                    isThinking = false,
                                 )
                             }
                             // Refresh after the final assistant message is persisted. The
@@ -571,7 +611,7 @@ class ChatViewModel(
                     _uiState.update {
                         it.copy(
                             isRunning = false,
-                            isThinking = false
+                            isThinking = false,
                         )
                     }
                 }
@@ -587,7 +627,7 @@ class ChatViewModel(
     fun respondToPermission(
         permissionId: String,
         response: PermissionResponse,
-        remember: Boolean
+        remember: Boolean,
     ) {
         val currentBackend = backend ?: return
         val permission = _uiState.value.permissions.firstOrNull { it.id == permissionId } ?: return
@@ -597,7 +637,7 @@ class ChatViewModel(
                     permission.sessionId,
                     permission.id,
                     response,
-                    remember
+                    remember,
                 )
             }.onSuccess { accepted ->
                 if (accepted) {
@@ -612,21 +652,27 @@ class ChatViewModel(
         }
     }
 
-    fun selectQuestionAnswer(questionId: String, questionIndex: Int, answer: String) {
+    fun selectQuestionAnswer(
+        questionId: String,
+        questionIndex: Int,
+        answer: String,
+    ) {
         _uiState.update { state ->
             state.copy(
-                pendingQuestions = state.pendingQuestions.map { pending ->
-                    if (pending.request.id != questionId) return@map pending
-                    val prompt = pending.request.questions.getOrNull(questionIndex) ?: return@map pending
-                    val updatedAnswers = pending.selectedAnswers.toMutableList()
-                    updatedAnswers[questionIndex] = updateQuestionAnswerSelection(
-                        prompt = prompt,
-                        current = pending.selectedAnswers.getOrElse(questionIndex) { emptyList() },
-                        answer = answer,
-                        multiple = pending.request.multiple
-                    )
-                    pending.copy(selectedAnswers = updatedAnswers, error = null)
-                }
+                pendingQuestions =
+                    state.pendingQuestions.map { pending ->
+                        if (pending.request.id != questionId) return@map pending
+                        val prompt = pending.request.questions.getOrNull(questionIndex) ?: return@map pending
+                        val updatedAnswers = pending.selectedAnswers.toMutableList()
+                        updatedAnswers[questionIndex] =
+                            updateQuestionAnswerSelection(
+                                prompt = prompt,
+                                current = pending.selectedAnswers.getOrElse(questionIndex) { emptyList() },
+                                answer = answer,
+                                multiple = pending.request.multiple,
+                            )
+                        pending.copy(selectedAnswers = updatedAnswers, error = null)
+                    },
             )
         }
     }
@@ -635,23 +681,25 @@ class ChatViewModel(
         val currentBackend = backend ?: return
         val sessionId = _uiState.value.sessionId ?: return
         val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return
-        val answers = pendingQuestion.request.questions.indices.map { index ->
-            sanitizeQuestionAnswer(
-                prompt = pendingQuestion.request.questions[index],
-                answers = pendingQuestion.selectedAnswers.getOrElse(index) { emptyList() },
-                multiple = pendingQuestion.request.multiple
-            )
-        }
+        val answers =
+            pendingQuestion.request.questions.indices.map { index ->
+                sanitizeQuestionAnswer(
+                    prompt = pendingQuestion.request.questions[index],
+                    answers = pendingQuestion.selectedAnswers.getOrElse(index) { emptyList() },
+                    multiple = pendingQuestion.request.multiple,
+                )
+            }
         if (answers.any { it.isEmpty() }) {
             _uiState.update { state ->
                 state.copy(
-                    pendingQuestions = state.pendingQuestions.map { pending ->
-                        if (pending.request.id == questionId) {
-                            pending.copy(error = "Answer required")
-                        } else {
-                            pending
-                        }
-                    }
+                    pendingQuestions =
+                        state.pendingQuestions.map { pending ->
+                            if (pending.request.id == questionId) {
+                                pending.copy(error = "Answer required")
+                            } else {
+                                pending
+                            }
+                        },
                 )
             }
             return
@@ -659,13 +707,14 @@ class ChatViewModel(
 
         _uiState.update { state ->
             state.copy(
-                pendingQuestions = state.pendingQuestions.map { pending ->
-                    if (pending.request.id == questionId) {
-                        pending.copy(isSubmitting = true, error = null)
-                    } else {
-                        pending
-                    }
-                }
+                pendingQuestions =
+                    state.pendingQuestions.map { pending ->
+                        if (pending.request.id == questionId) {
+                            pending.copy(isSubmitting = true, error = null)
+                        } else {
+                            pending
+                        }
+                    },
             )
         }
 
@@ -674,36 +723,38 @@ class ChatViewModel(
                 currentBackend.answerQuestion(
                     sessionId = sessionId,
                     requestId = questionId,
-                    answers = answers
+                    answers = answers,
                 )
             }.onSuccess { accepted ->
                 _uiState.update { state ->
                     if (accepted) {
                         state.copy(
-                            pendingQuestions = state.pendingQuestions.filterNot { it.request.id == questionId }
+                            pendingQuestions = state.pendingQuestions.filterNot { it.request.id == questionId },
                         )
                     } else {
                         state.copy(
-                            pendingQuestions = state.pendingQuestions.map { pending ->
-                                if (pending.request.id == questionId) {
-                                    pending.copy(isSubmitting = false, error = "OpenCode question failed")
-                                } else {
-                                    pending
-                                }
-                            }
+                            pendingQuestions =
+                                state.pendingQuestions.map { pending ->
+                                    if (pending.request.id == questionId) {
+                                        pending.copy(isSubmitting = false, error = "OpenCode question failed")
+                                    } else {
+                                        pending
+                                    }
+                                },
                         )
                     }
                 }
             }.onFailure { error ->
                 _uiState.update { state ->
                     state.copy(
-                        pendingQuestions = state.pendingQuestions.map { pending ->
-                            if (pending.request.id == questionId) {
-                                pending.copy(isSubmitting = false, error = error.safeMessage())
-                            } else {
-                                pending
-                            }
-                        }
+                        pendingQuestions =
+                            state.pendingQuestions.map { pending ->
+                                if (pending.request.id == questionId) {
+                                    pending.copy(isSubmitting = false, error = error.safeMessage())
+                                } else {
+                                    pending
+                                }
+                            },
                     )
                 }
             }
@@ -740,7 +791,7 @@ class ChatViewModel(
                                 streamedParts.clear()
                                 _uiState.update {
                                     it.copy(
-                                        messages = messages.mapNotNull(::toUiMessage)
+                                        messages = messages.mapNotNull(::toUiMessage),
                                     )
                                 }
                             }
@@ -762,14 +813,15 @@ class ChatViewModel(
                 if (event.sessionId != activeSession || event.field != "text") return
                 connectionMonitor.recordStreamToken()
                 val messageParts = streamedParts.getOrPut(event.messageId) { linkedMapOf() }
-                val updatedPart = when (val existing = messageParts[event.partId]) {
-                    is ChatPart.Text -> existing.copy(text = existing.text + event.delta)
-                    is ChatPart.Reasoning -> existing.copy(text = existing.text + event.delta)
-                    // A delta can outrun the part event that introduces it; start the part here
-                    // rather than dropping the text on the floor.
-                    null -> ChatPart.Text(event.partId, event.delta)
-                    else -> return
-                }
+                val updatedPart =
+                    when (val existing = messageParts[event.partId]) {
+                        is ChatPart.Text -> existing.copy(text = existing.text + event.delta)
+                        is ChatPart.Reasoning -> existing.copy(text = existing.text + event.delta)
+                        // A delta can outrun the part event that introduces it; start the part here
+                        // rather than dropping the text on the floor.
+                        null -> ChatPart.Text(event.partId, event.delta)
+                        else -> return
+                    }
                 messageParts[event.partId] = updatedPart
                 updateStreamingMessage(event.messageId, messageParts.values.toList())
             }
@@ -784,7 +836,7 @@ class ChatViewModel(
                                 request.sessionId,
                                 request.id,
                                 PermissionResponse.ONCE,
-                                false
+                                false,
                             )
                         }.onSuccess { accepted ->
                             if (accepted) onPermissionResolved(request.id)
@@ -795,7 +847,7 @@ class ChatViewModel(
                 _uiState.update { state ->
                     state.copy(
                         permissions = state.permissions.filterNot { it.id == event.request.id } + event.request,
-                        isThinking = false
+                        isThinking = false,
                     )
                 }
             }
@@ -803,9 +855,10 @@ class ChatViewModel(
                 if (event.request.sessionId != activeSession) return
                 _uiState.update { state ->
                     state.copy(
-                        pendingQuestions = state.pendingQuestions
-                            .filterNot { it.request.id == event.request.id } + PendingQuestionUi.from(event.request),
-                        isThinking = false
+                        pendingQuestions =
+                            state.pendingQuestions
+                                .filterNot { it.request.id == event.request.id } + PendingQuestionUi.from(event.request),
+                        isThinking = false,
                     )
                 }
             }
@@ -814,11 +867,12 @@ class ChatViewModel(
                 streamedParts.clear()
                 _uiState.update { state ->
                     state.copy(
-                        messages = state.messages.map { message ->
-                            if (message.isStreaming) message.copy(isStreaming = false) else message
-                        },
+                        messages =
+                            state.messages.map { message ->
+                                if (message.isStreaming) message.copy(isStreaming = false) else message
+                            },
                         isRunning = false,
-                        isThinking = false
+                        isThinking = false,
                     )
                 }
                 refreshContextUsage(event.sessionId)
@@ -832,7 +886,7 @@ class ChatViewModel(
                     it.copy(
                         isRunning = false,
                         isThinking = false,
-                        error = event.message ?: "OpenCode session failed"
+                        error = event.message ?: "OpenCode session failed",
                     )
                 }
             }
@@ -853,52 +907,61 @@ class ChatViewModel(
         }
     }
 
-    private fun updateStreamingMessage(messageId: String, parts: List<ChatPart>) {
+    private fun updateStreamingMessage(
+        messageId: String,
+        parts: List<ChatPart>,
+    ) {
         _uiState.update { state ->
             val index = state.messages.indexOfFirst { it.id == messageId }
             if (index >= 0) {
                 val existing = state.messages[index]
-                val updated = state.messages.toMutableList().apply {
-                    this[index] = existing.copy(
-                        parts = parts,
-                        isStreaming = !existing.isUser
-                    )
-                }
+                val updated =
+                    state.messages.toMutableList().apply {
+                        this[index] =
+                            existing.copy(
+                                parts = parts,
+                                isStreaming = !existing.isUser,
+                            )
+                    }
                 return@update state.copy(messages = updated, isRunning = true, isThinking = false)
             }
 
             val incomingText = parts.filterIsInstance<ChatPart.Text>().joinToString("") { it.text }
             val userEchoIndex = state.messages.indexOfLast { it.isUser && it.text == incomingText }
             if (incomingText.isNotBlank() && userEchoIndex >= 0) {
-                val updated = state.messages.toMutableList().apply {
-                    this[userEchoIndex] = this[userEchoIndex].copy(id = messageId)
-                }
+                val updated =
+                    state.messages.toMutableList().apply {
+                        this[userEchoIndex] = this[userEchoIndex].copy(id = messageId)
+                    }
                 return@update state.copy(messages = updated)
             }
 
             state.copy(
-                messages = state.messages + ChatMessage(
-                    id = messageId,
-                    isUser = false,
-                    parts = parts,
-                    isStreaming = true
-                ),
+                messages =
+                    state.messages +
+                        ChatMessage(
+                            id = messageId,
+                            isUser = false,
+                            parts = parts,
+                            isStreaming = true,
+                        ),
                 isRunning = true,
-                isThinking = false
+                isThinking = false,
             )
         }
     }
 
     private fun toUiMessage(message: OpenCodeMessage): ChatMessage? {
         val parts = message.parts.mapNotNull { it.toChatPart() }
-        val attachments = message.parts.mapNotNull { part ->
-            if (part.type != "file") return@mapNotNull null
-            PromptAttachment(
-                filename = part.filename ?: "attachment",
-                mime = part.mime ?: "application/octet-stream",
-                url = part.url ?: ""
-            )
-        }
+        val attachments =
+            message.parts.mapNotNull { part ->
+                if (part.type != "file") return@mapNotNull null
+                PromptAttachment(
+                    filename = part.filename ?: "attachment",
+                    mime = part.mime ?: "application/octet-stream",
+                    url = part.url ?: "",
+                )
+            }
         if (parts.isEmpty() && attachments.isEmpty()) return null
         return ChatMessage(
             id = message.info.id,
@@ -906,7 +969,7 @@ class ChatViewModel(
             parts = parts,
             attachments = attachments,
             timestamp = message.info.time.created,
-            isStreaming = false
+            isStreaming = false,
         )
     }
 
@@ -920,7 +983,7 @@ class ChatViewModel(
                 isListening = true,
                 isSpeechProcessing = false,
                 partialText = "",
-                error = null
+                error = null,
             )
         }
     }
@@ -930,7 +993,7 @@ class ChatViewModel(
             it.copy(
                 isListening = true,
                 isSpeechProcessing = false,
-                partialText = text
+                partialText = text,
             )
         }
     }
@@ -940,7 +1003,7 @@ class ChatViewModel(
             it.copy(
                 isListening = false,
                 isSpeechProcessing = true,
-                partialText = it.partialText
+                partialText = it.partialText,
             )
         }
     }
@@ -950,7 +1013,7 @@ class ChatViewModel(
             it.copy(
                 isListening = false,
                 isSpeechProcessing = false,
-                error = message
+                error = message,
             )
         }
     }
@@ -960,7 +1023,7 @@ class ChatViewModel(
             it.copy(
                 isListening = false,
                 isSpeechProcessing = false,
-                partialText = it.partialText
+                partialText = it.partialText,
             )
         }
     }
@@ -996,8 +1059,7 @@ class ChatViewModel(
         super.onCleared()
     }
 
-    private fun Throwable.safeMessage(): String =
-        message?.takeIf { it.isNotBlank() } ?: "OpenCode operation failed"
+    private fun Throwable.safeMessage(): String = message?.takeIf { it.isNotBlank() } ?: "OpenCode operation failed"
 
     private fun reportError(throwable: Throwable) {
         _uiState.update { it.copy(error = throwable.safeMessage()) }
@@ -1030,7 +1092,7 @@ class ChatViewModel(
                                         it.copy(
                                             messages = messages.mapNotNull(::toUiMessage),
                                             error = null,
-                                            isConnected = true
+                                            isConnected = true,
                                         )
                                     }
                                 }
@@ -1049,7 +1111,7 @@ private fun updateQuestionAnswerSelection(
     prompt: QuestionPrompt,
     current: List<String>,
     answer: String,
-    multiple: Boolean
+    multiple: Boolean,
 ): List<String> {
     val normalized = answer.trim()
     val optionLabels = prompt.options.map { it.label }.toSet()
@@ -1061,11 +1123,12 @@ private fun updateQuestionAnswerSelection(
     val fallback = current.lastOrNull { it !in optionLabels }
     if (normalized in optionLabels) {
         return if (multiple) {
-            val toggled = if (normalized in optionAnswers) {
-                optionAnswers.filterNot { it == normalized }
-            } else {
-                optionAnswers + normalized
-            }
+            val toggled =
+                if (normalized in optionAnswers) {
+                    optionAnswers.filterNot { it == normalized }
+                } else {
+                    optionAnswers + normalized
+                }
             toggled + listOfNotNull(fallback?.takeIf { it.isNotBlank() })
         } else {
             listOf(normalized)
@@ -1083,7 +1146,7 @@ private fun updateQuestionAnswerSelection(
 private fun sanitizeQuestionAnswer(
     prompt: QuestionPrompt,
     answers: List<String>,
-    multiple: Boolean
+    multiple: Boolean,
 ): List<String> {
     val normalizedAnswers = answers.map(String::trim).filter { it.isNotEmpty() }
     if (prompt.options.isEmpty()) {

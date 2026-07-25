@@ -25,25 +25,32 @@ enum class AppTheme(val key: String) {
     MIDNIGHT("midnight"),
     CLAUDE("claude"),
     GHOSTTY("ghostty"),
-    AUTO("auto");
+    AUTO("auto"),
+    ;
 
     companion object {
-        fun fromKey(key: String?): AppTheme =
-            entries.firstOrNull { it.key == key } ?: DARK
+        fun fromKey(key: String?): AppTheme = entries.firstOrNull { it.key == key } ?: DARK
     }
 }
 
-fun themeColorsFor(theme: AppTheme, systemDark: Boolean): ThemeColors = when (theme) {
-    AppTheme.DARK -> DarkTheme
-    AppTheme.LIGHT -> LightTheme
-    AppTheme.ZINC -> ZincTheme
-    AppTheme.MIDNIGHT -> MidnightTheme
-    AppTheme.CLAUDE -> ClaudeTheme
-    AppTheme.GHOSTTY -> GhosttyTheme
-    AppTheme.AUTO -> if (systemDark) DarkTheme else LightTheme
-}
+fun themeColorsFor(
+    theme: AppTheme,
+    systemDark: Boolean,
+): ThemeColors =
+    when (theme) {
+        AppTheme.DARK -> DarkTheme
+        AppTheme.LIGHT -> LightTheme
+        AppTheme.ZINC -> ZincTheme
+        AppTheme.MIDNIGHT -> MidnightTheme
+        AppTheme.CLAUDE -> ClaudeTheme
+        AppTheme.GHOSTTY -> GhosttyTheme
+        AppTheme.AUTO -> if (systemDark) DarkTheme else LightTheme
+    }
 
-private fun buildColorScheme(tc: ThemeColors, isDark: Boolean) = if (isDark) {
+private fun buildColorScheme(
+    tc: ThemeColors,
+    isDark: Boolean,
+) = if (isDark) {
     darkColorScheme(
         primary = tc.accent,
         onPrimary = tc.accentForeground,
@@ -66,7 +73,7 @@ private fun buildColorScheme(tc: ThemeColors, isDark: Boolean) = if (isDark) {
         onErrorContainer = tc.destructive,
         inverseSurface = tc.surface4,
         inverseOnSurface = tc.foreground,
-        scrim = tc.surface0.copy(alpha = 0.6f)
+        scrim = tc.surface0.copy(alpha = 0.6f),
     )
 } else {
     lightColorScheme(
@@ -91,11 +98,14 @@ private fun buildColorScheme(tc: ThemeColors, isDark: Boolean) = if (isDark) {
         onErrorContainer = tc.destructive,
         inverseSurface = tc.surface4,
         inverseOnSurface = tc.foreground,
-        scrim = tc.surface0.copy(alpha = 0.6f)
+        scrim = tc.surface0.copy(alpha = 0.6f),
     )
 }
 
-fun buildTypography(uiFontSize: Int = 16, codeFontSize: Int = 12): Typography {
+fun buildTypography(
+    uiFontSize: Int = 16,
+    codeFontSize: Int = 12,
+): Typography {
     val scale = uiFontSize / 16f
     return Typography(
         displayLarge = Typography().displayLarge.copy(fontSize = (57 * scale).sp),
@@ -112,7 +122,7 @@ fun buildTypography(uiFontSize: Int = 16, codeFontSize: Int = 12): Typography {
         bodySmall = Typography().bodySmall.copy(fontSize = (12 * scale).sp),
         labelLarge = Typography().labelLarge.copy(fontSize = (14 * scale).sp),
         labelMedium = Typography().labelMedium.copy(fontSize = (12 * scale).sp),
-        labelSmall = Typography().labelSmall.copy(fontSize = (11 * scale).sp)
+        labelSmall = Typography().labelSmall.copy(fontSize = (11 * scale).sp),
     )
 }
 
@@ -120,7 +130,7 @@ fun buildTypography(uiFontSize: Int = 16, codeFontSize: Int = 12): Typography {
 fun OpenCodeAndroidTheme(
     appTheme: AppTheme = AppTheme.DARK,
     uiFontSize: Int = 16,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val systemDark = isSystemInDarkTheme()
     val tc = themeColorsFor(appTheme, systemDark)
@@ -143,12 +153,12 @@ fun OpenCodeAndroidTheme(
 
     CompositionLocalProvider(
         LocalThemeColors provides tc,
-        LocalContentColor provides colorScheme.onSurface
+        LocalContentColor provides colorScheme.onSurface,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = typography,
-            content = content
+            content = content,
         )
     }
 }

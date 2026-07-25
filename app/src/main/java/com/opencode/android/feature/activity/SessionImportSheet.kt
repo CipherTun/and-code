@@ -24,20 +24,21 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SessionImportSheet(
     onDismiss: () -> Unit,
-    onImport: (String) -> Unit
+    onImport: (String) -> Unit,
 ) {
     var sessionId by remember { mutableStateOf("") }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
         ) {
             Text(
                 text = "Import Session",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
@@ -45,19 +46,19 @@ fun SessionImportSheet(
                 onValueChange = { sessionId = it },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("Session ID") }
+                label = { Text("Session ID") },
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "Enter the session ID or resume command from another OpenCode client",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = { onImport(sessionId) },
                 enabled = sessionId.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Import")
             }

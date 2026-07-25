@@ -29,7 +29,7 @@ fun NavGraphBuilder.settingsNavGraph(
     runtimeRegistry: RuntimeRegistry,
     context: Context,
     hasMicrophonePermission: () -> Boolean,
-    onRequestWakeWordPermission: () -> Unit
+    onRequestWakeWordPermission: () -> Unit,
 ) {
     composable(ROUTE_SETTINGS) {
         SettingsScreenV2(
@@ -47,7 +47,6 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenDiagnostics = onShowDiagnostics,
             onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
             onOpenServerInfo = { navController.navigate(ROUTE_SETTINGS_SERVER_INFO) },
-
             currentTheme = preferences.theme,
             onThemeChange = { appPreferences.setTheme(it) },
             uiFontSize = preferences.uiFontSize,
@@ -61,7 +60,7 @@ fun NavGraphBuilder.settingsNavGraph(
             autoExpandReasoning = preferences.autoExpandReasoning,
             onAutoExpandReasoningChange = { appPreferences.setAutoExpandReasoning(it) },
             sendBehavior = preferences.sendBehavior,
-            onSendBehaviorChange = { appPreferences.setSendBehavior(it) }
+            onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
         )
     }
 
@@ -84,7 +83,7 @@ fun NavGraphBuilder.settingsNavGraph(
                     com.opencode.android.feature.wakeword.WakeWordService.stop(context)
                 }
             },
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 
@@ -101,7 +100,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onLaunchOAuthBrowser = { url ->
                 runCatching {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)),
                     )
                 }.onFailure { error ->
                     settingsViewModel.reportOAuthError(error.message.orEmpty())
@@ -115,21 +114,21 @@ fun NavGraphBuilder.settingsNavGraph(
                     context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
                 }.onFailure { error -> settingsViewModel.reportOAuthError(error.message.orEmpty()) }
             },
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 
     composable(ROUTE_SETTINGS_MCP) {
         com.opencode.android.feature.settings.McpScreen(
             registry = runtimeRegistry,
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 
     composable(ROUTE_SETTINGS_SERVER_INFO) {
         com.opencode.android.feature.settings.ServerInfoScreen(
             registry = runtimeRegistry,
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 }

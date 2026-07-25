@@ -3,7 +3,6 @@ package com.opencode.android.feature.onboarding
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,30 +47,32 @@ private enum class OnboardingOption { ANDROID, REMOTE }
 fun OnboardingChoiceScreen(
     onSelectAndroid: () -> Unit,
     onSelectRemote: () -> Unit,
-    onAddRemoteLater: () -> Unit
+    onAddRemoteLater: () -> Unit,
 ) {
     var selected by remember { mutableStateOf(OnboardingOption.ANDROID) }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(18.dp))
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         ) {
             Icon(
                 imageVector = Icons.Default.Terminal,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(14.dp)
-                    .size(30.dp)
+                modifier =
+                    Modifier
+                        .padding(14.dp)
+                        .size(30.dp),
             )
         }
         Spacer(Modifier.height(18.dp))
@@ -79,14 +80,14 @@ fun OnboardingChoiceScreen(
             text = stringResource(R.string.onboarding_welcome_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.onboarding_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(24.dp))
 
@@ -96,7 +97,7 @@ fun OnboardingChoiceScreen(
             description = stringResource(R.string.onboarding_android_desc),
             badge = stringResource(R.string.onboarding_recommended_badge),
             selected = selected == OnboardingOption.ANDROID,
-            onClick = { selected = OnboardingOption.ANDROID }
+            onClick = { selected = OnboardingOption.ANDROID },
         )
         Spacer(Modifier.height(10.dp))
         OnboardingCard(
@@ -105,7 +106,7 @@ fun OnboardingChoiceScreen(
             description = stringResource(R.string.onboarding_remote_desc),
             badge = null,
             selected = selected == OnboardingOption.REMOTE,
-            onClick = { selected = OnboardingOption.REMOTE }
+            onClick = { selected = OnboardingOption.REMOTE },
         )
 
         Spacer(Modifier.height(14.dp))
@@ -113,7 +114,7 @@ fun OnboardingChoiceScreen(
             text = stringResource(R.string.onboarding_switch_note),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
 
         Spacer(Modifier.height(24.dp))
@@ -121,22 +122,25 @@ fun OnboardingChoiceScreen(
             onClick = {
                 if (selected == OnboardingOption.ANDROID) onSelectAndroid() else onSelectRemote()
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
             shape = RoundedCornerShape(100.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            )
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
         ) {
             Text(
-                text = if (selected == OnboardingOption.ANDROID) {
-                    stringResource(R.string.onboarding_primary_button_android)
-                } else {
-                    stringResource(R.string.onboarding_primary_button_remote)
-                },
-                fontWeight = FontWeight.SemiBold
+                text =
+                    if (selected == OnboardingOption.ANDROID) {
+                        stringResource(R.string.onboarding_primary_button_android)
+                    } else {
+                        stringResource(R.string.onboarding_primary_button_remote)
+                    },
+                fontWeight = FontWeight.SemiBold,
             )
         }
         Spacer(Modifier.height(16.dp))
@@ -150,33 +154,36 @@ private fun OnboardingCard(
     description: String,
     badge: String?,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-        )
+        color =
+            if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
+        border =
+            BorderStroke(
+                width = 1.dp,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            ),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(13.dp)
+            horizontalArrangement = Arrangement.spacedBy(13.dp),
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -184,19 +191,19 @@ private fun OnboardingCard(
                         title,
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     if (badge != null) {
                         Surface(
                             shape = RoundedCornerShape(100.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
                         ) {
                             Text(
                                 text = badge,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
                             )
                         }
                     }
@@ -205,7 +212,7 @@ private fun OnboardingCard(
                 Text(
                     description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

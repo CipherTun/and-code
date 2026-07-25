@@ -16,20 +16,20 @@ data class GitHubReference(
     val type: String,
     val number: Int,
     val title: String,
-    val url: String
+    val url: String,
 )
 
 @Composable
 fun GitHubAutoAttachChips(
     references: List<GitHubReference>,
     onAttach: (GitHubReference) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (references.isEmpty()) return
 
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         references.forEach { reference ->
             SuggestionChip(
@@ -39,9 +39,9 @@ fun GitHubAutoAttachChips(
                         "\uD83D\uDCCE ${reference.type} #${reference.number}: ${reference.title}",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
                     )
-                }
+                },
             )
         }
     }

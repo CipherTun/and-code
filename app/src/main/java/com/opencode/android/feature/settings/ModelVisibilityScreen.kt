@@ -40,7 +40,7 @@ fun ModelVisibilityScreen(
     providers: List<OpenCodeProvider>,
     hiddenModelKeys: Set<String>,
     onToggleModelVisibility: (String, String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
 
@@ -52,26 +52,27 @@ fun ModelVisibilityScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             item {
                 Text(
                     text = stringResource(R.string.model_visibility_caption),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
             }
             item {
@@ -81,15 +82,16 @@ fun ModelVisibilityScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    label = { Text(stringResource(R.string.picker_search)) }
+                    label = { Text(stringResource(R.string.picker_search)) },
                 )
             }
 
             providers.forEach { provider ->
-                val models = provider.models.values
-                    .filter { it.status == null || it.status == "active" }
-                    .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
-                    .sortedBy { it.name.lowercase() }
+                val models =
+                    provider.models.values
+                        .filter { it.status == null || it.status == "active" }
+                        .filter { query.isBlank() || it.name.contains(query, true) || it.id.contains(query, true) }
+                        .sortedBy { it.name.lowercase() }
 
                 if (models.isNotEmpty()) {
                     item {
@@ -98,23 +100,24 @@ fun ModelVisibilityScreen(
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
                         )
                     }
                     items(models, key = { "vis-${provider.id}-${it.id}" }) { model ->
                         val key = "${provider.id}/${model.id}"
                         val visible = key !in hiddenModelKeys
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onToggleModelVisibility(provider.id, model.id) }
-                                .padding(vertical = 4.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onToggleModelVisibility(provider.id, model.id) }
+                                    .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Checkbox(
                                 checked = visible,
-                                onCheckedChange = { onToggleModelVisibility(provider.id, model.id) }
+                                onCheckedChange = { onToggleModelVisibility(provider.id, model.id) },
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(model.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
@@ -122,7 +125,7 @@ fun ModelVisibilityScreen(
                                     model.id,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1
+                                    maxLines = 1,
                                 )
                             }
                         }

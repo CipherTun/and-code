@@ -14,40 +14,59 @@ data class ForgeReference(
     val number: Int,
     val title: String,
     val url: String,
-    val forge: String
+    val forge: String,
 )
 
 enum class ForgeType {
-    GITHUB, GITLAB, GITEA, FORGEJO, CODEBERG
+    GITHUB,
+    GITLAB,
+    GITEA,
+    FORGEJO,
+    CODEBERG,
 }
 
-fun detectForgeType(remoteUrl: String): ForgeType = when {
-    remoteUrl.contains("github.com") -> ForgeType.GITHUB
-    remoteUrl.contains("gitlab.com") -> ForgeType.GITLAB
-    remoteUrl.contains("codeberg.org") -> ForgeType.CODEBERG
-    remoteUrl.contains("forgejo") -> ForgeType.FORGEJO
-    remoteUrl.contains("gitea") -> ForgeType.GITEA
-    else -> ForgeType.GITEA
-}
+fun detectForgeType(remoteUrl: String): ForgeType =
+    when {
+        remoteUrl.contains("github.com") -> ForgeType.GITHUB
+        remoteUrl.contains("gitlab.com") -> ForgeType.GITLAB
+        remoteUrl.contains("codeberg.org") -> ForgeType.CODEBERG
+        remoteUrl.contains("forgejo") -> ForgeType.FORGEJO
+        remoteUrl.contains("gitea") -> ForgeType.GITEA
+        else -> ForgeType.GITEA
+    }
 
 interface ForgeClient {
-    suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference>
-    suspend fun getIssues(repo: String, query: String): List<ForgeReference>
+    suspend fun getPullRequests(
+        repo: String,
+        branch: String,
+    ): List<ForgeReference>
+
+    suspend fun getIssues(
+        repo: String,
+        query: String,
+    ): List<ForgeReference>
 }
 
 class GitHubForgeClient(private val token: String?) : ForgeClient {
-
     private val client: OkHttpClient = OkHttpClient()
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
-    override suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference> =
+    override suspend fun getPullRequests(
+        repo: String,
+        branch: String,
+    ): List<ForgeReference> =
         withContext(Dispatchers.IO) {
             try {
-                val request = buildRequest(
-                    "https://api.github.com/repos/$repo/pulls".toHttpUrl().newBuilder()
-                        .addQueryParameter("head", branch)
-                        .build().toString()
-                )
+                val request =
+                    buildRequest(
+                        "https://api.github.com/repos/$repo/pulls".toHttpUrl().newBuilder()
+                            .addQueryParameter("head", branch)
+                            .build().toString(),
+                    )
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
@@ -58,7 +77,7 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
                             number = pull.number,
                             title = pull.title,
                             url = pull.htmlUrl,
-                            forge = "github"
+                            forge = "github",
                         )
                     }
                 }
@@ -67,14 +86,18 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
             }
         }
 
-    override suspend fun getIssues(repo: String, query: String): List<ForgeReference> =
+    override suspend fun getIssues(
+        repo: String,
+        query: String,
+    ): List<ForgeReference> =
         withContext(Dispatchers.IO) {
             try {
-                val request = buildRequest(
-                    "https://api.github.com/search/issues".toHttpUrl().newBuilder()
-                        .addQueryParameter("q", "repo:$repo $query")
-                        .build().toString()
-                )
+                val request =
+                    buildRequest(
+                        "https://api.github.com/search/issues".toHttpUrl().newBuilder()
+                            .addQueryParameter("q", "repo:$repo $query")
+                            .build().toString(),
+                    )
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
@@ -85,7 +108,7 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
                             number = item.number,
                             title = item.title,
                             url = item.htmlUrl,
-                            forge = "github"
+                            forge = "github",
                         )
                     }
                 }
@@ -94,48 +117,56 @@ class GitHubForgeClient(private val token: String?) : ForgeClient {
             }
         }
 
-    private fun buildRequest(url: String): Request = Request.Builder()
-        .url(url)
-        .header("Accept", "application/vnd.github+json")
-        .apply {
-            token?.takeIf { it.isNotBlank() }?.let {
-                header("Authorization", "Bearer $it")
+    private fun buildRequest(url: String): Request =
+        Request.Builder()
+            .url(url)
+            .header("Accept", "application/vnd.github+json")
+            .apply {
+                token?.takeIf { it.isNotBlank() }?.let {
+                    header("Authorization", "Bearer $it")
+                }
             }
-        }
-        .build()
+            .build()
 
     @Serializable
     private data class GitHubPull(
         val number: Int = 0,
         val title: String = "",
-        @SerialName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = "",
     )
 
     @Serializable
     private data class GitHubSearchResult(
-        val items: List<GitHubIssue> = emptyList()
+        val items: List<GitHubIssue> = emptyList(),
     )
 
     @Serializable
     private data class GitHubIssue(
         val number: Int = 0,
         val title: String = "",
-        @SerialName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = "",
     )
 }
 
 class GitLabForgeClient(private val token: String?) : ForgeClient {
-
     private val client: OkHttpClient = OkHttpClient()
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
-    override suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference> =
+    override suspend fun getPullRequests(
+        repo: String,
+        branch: String,
+    ): List<ForgeReference> =
         withContext(Dispatchers.IO) {
             try {
                 val encodedRepo = repo.replace("/", "%2F")
-                val request = buildRequest(
-                    "https://gitlab.com/api/v4/projects/$encodedRepo/merge_requests?source_branch=$branch"
-                )
+                val request =
+                    buildRequest(
+                        "https://gitlab.com/api/v4/projects/$encodedRepo/merge_requests?source_branch=$branch",
+                    )
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
@@ -146,7 +177,7 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
                             number = mr.iid,
                             title = mr.title,
                             url = mr.webUrl,
-                            forge = "gitlab"
+                            forge = "gitlab",
                         )
                     }
                 }
@@ -155,13 +186,17 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
             }
         }
 
-    override suspend fun getIssues(repo: String, query: String): List<ForgeReference> =
+    override suspend fun getIssues(
+        repo: String,
+        query: String,
+    ): List<ForgeReference> =
         withContext(Dispatchers.IO) {
             try {
                 val encodedRepo = repo.replace("/", "%2F")
-                val request = buildRequest(
-                    "https://gitlab.com/api/v4/projects/$encodedRepo/issues?search=$query"
-                )
+                val request =
+                    buildRequest(
+                        "https://gitlab.com/api/v4/projects/$encodedRepo/issues?search=$query",
+                    )
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext emptyList()
                     val body = response.body?.string().orEmpty()
@@ -172,7 +207,7 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
                             number = issue.iid,
                             title = issue.title,
                             url = issue.webUrl,
-                            forge = "gitlab"
+                            forge = "gitlab",
                         )
                     }
                 }
@@ -181,36 +216,43 @@ class GitLabForgeClient(private val token: String?) : ForgeClient {
             }
         }
 
-    private fun buildRequest(url: String): Request = Request.Builder()
-        .url(url)
-        .apply {
-            token?.takeIf { it.isNotBlank() }?.let {
-                header("PRIVATE-TOKEN", it)
+    private fun buildRequest(url: String): Request =
+        Request.Builder()
+            .url(url)
+            .apply {
+                token?.takeIf { it.isNotBlank() }?.let {
+                    header("PRIVATE-TOKEN", it)
+                }
             }
-        }
-        .build()
+            .build()
 
     @Serializable
     private data class GitLabMR(
         val iid: Int = 0,
         val title: String = "",
-        @SerialName("web_url") val webUrl: String = ""
+        @SerialName("web_url") val webUrl: String = "",
     )
 
     @Serializable
     private data class GitLabIssue(
         val iid: Int = 0,
         val title: String = "",
-        @SerialName("web_url") val webUrl: String = ""
+        @SerialName("web_url") val webUrl: String = "",
     )
 }
 
 class GiteaForgeClient(private val baseUrl: String, private val token: String?) : ForgeClient {
-
     private val client: OkHttpClient = OkHttpClient()
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        }
 
-    override suspend fun getPullRequests(repo: String, branch: String): List<ForgeReference> =
+    override suspend fun getPullRequests(
+        repo: String,
+        branch: String,
+    ): List<ForgeReference> =
         withContext(Dispatchers.IO) {
             try {
                 val request = buildRequest("$baseUrl/api/v1/repos/$repo/pulls?head=$branch")
@@ -224,7 +266,7 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
                             number = pull.number,
                             title = pull.title,
                             url = pull.htmlUrl,
-                            forge = "gitea"
+                            forge = "gitea",
                         )
                     }
                 }
@@ -233,7 +275,10 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
             }
         }
 
-    override suspend fun getIssues(repo: String, query: String): List<ForgeReference> =
+    override suspend fun getIssues(
+        repo: String,
+        query: String,
+    ): List<ForgeReference> =
         withContext(Dispatchers.IO) {
             try {
                 val request = buildRequest("$baseUrl/api/v1/repos/$repo/issues?q=$query&type=issues")
@@ -247,7 +292,7 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
                             number = issue.number,
                             title = issue.title,
                             url = issue.htmlUrl,
-                            forge = "gitea"
+                            forge = "gitea",
                         )
                     }
                 }
@@ -256,26 +301,27 @@ class GiteaForgeClient(private val baseUrl: String, private val token: String?) 
             }
         }
 
-    private fun buildRequest(url: String): Request = Request.Builder()
-        .url(url)
-        .apply {
-            token?.takeIf { it.isNotBlank() }?.let {
-                header("Authorization", "token $it")
+    private fun buildRequest(url: String): Request =
+        Request.Builder()
+            .url(url)
+            .apply {
+                token?.takeIf { it.isNotBlank() }?.let {
+                    header("Authorization", "token $it")
+                }
             }
-        }
-        .build()
+            .build()
 
     @Serializable
     private data class GiteaPull(
         val number: Int = 0,
         val title: String = "",
-        @SerialName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = "",
     )
 
     @Serializable
     private data class GiteaIssue(
         val number: Int = 0,
         val title: String = "",
-        @SerialName("html_url") val htmlUrl: String = ""
+        @SerialName("html_url") val htmlUrl: String = "",
     )
 }
