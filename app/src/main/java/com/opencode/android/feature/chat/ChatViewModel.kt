@@ -659,14 +659,11 @@ class ChatViewModel(
                         attachments = pendingAttachments,
                     ),
                 )
-<<<<<<< HEAD
                 runCatching { currentBackend.session(targetSessionId).title }
                     .onSuccess { title ->
                         if (title.isNotBlank()) _uiState.update { it.copy(sessionTitle = title) }
                     }
-=======
                 _uiState.value.imagePreviews.forEach { bmp -> if (!bmp.isRecycled) bmp.recycle() }
->>>>>>> quality-improvements
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
@@ -967,7 +964,6 @@ class ChatViewModel(
         }
         val currentBackend = backend ?: return
         viewModelScope.launch {
-<<<<<<< HEAD
             runCatching {
                 currentBackend.rejectQuestion(
                     requestId = questionId,
@@ -976,15 +972,6 @@ class ChatViewModel(
             }.onFailure { error ->
                 _uiState.update { it.copy(error = error.safeMessage()) }
             }
-=======
-            runCatching { currentBackend.abortSession(pendingQuestion.request.sessionId) }
-                .onSuccess {
-                    _uiState.update { it.copy(isRunning = false, isThinking = false) }
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(error = error.safeMessage("OpenCode operation failed")) }
-                }
->>>>>>> quality-improvements
         }
     }
 
