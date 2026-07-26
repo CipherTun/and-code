@@ -241,6 +241,8 @@ class RuntimeActivityRepository(
                 mutableState.update { current ->
                     current.copy(permissions = current.permissions.filterNot { it.id == event.requestId })
                 }
+                mutableResolvedPermissions.tryEmit(event.requestId)
+                onPermissionResolved?.invoke(event.requestId)
             }
             is OpenCodeEvent.SessionStatusChanged -> {
                 // Completion notifications stay driven by session.idle so a finished run is

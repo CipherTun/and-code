@@ -98,8 +98,8 @@ android {
         applicationId = "com.opencode.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.4.7"
+        versionCode = 12
+        versionName = "0.4.8"
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"$githubClientId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
