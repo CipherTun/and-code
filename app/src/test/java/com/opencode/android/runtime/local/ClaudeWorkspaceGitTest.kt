@@ -51,6 +51,24 @@ class ClaudeWorkspaceGitTest {
     }
 
     @Test
+    fun `carries per-file line counts into the status list`() {
+        val counts = ClaudeWorkspaceGit.parseNumstat("2\t1\tNOTES.md\n-\t-\timage.png\n")
+        val changes = ClaudeWorkspaceGit.parseStatus(" M NOTES.md\n M image.png\n M other.txt", counts)
+
+        assertEquals(listOf(2, 0, 0), changes.map { it.added })
+        assertEquals(listOf(1, 0, 0), changes.map { it.removed })
+        // Binary files report "-" rather than a number and must not be read as a change count.
+        assertEquals(0, counts["image.png"]?.first)
+    }
+
+    @Test
+    fun `reads the new name of a renamed file from numstat`() {
+        val counts = ClaudeWorkspaceGit.parseNumstat("1\t1\told.kt => new.kt\n")
+
+        assertEquals(1 to 1, counts["new.kt"])
+    }
+
+    @Test
     fun `ignores blank and truncated status lines`() {
         assertTrue(ClaudeWorkspaceGit.parseStatus("\n M \n").isEmpty())
     }
@@ -81,6 +99,9 @@ class ClaudeWorkspaceGitTest {
         // The +++/--- header lines must not be counted as content changes.
         assertEquals(listOf(2, 0), changes.map { it.added })
         assertEquals(listOf(1, 1), changes.map { it.removed })
+        // The changes list reads the decimal pair; leaving it unset showed every file as +0/-0.
+        assertEquals(listOf(2.0, 0.0), changes.map { it.additions })
+        assertEquals(listOf(1.0, 1.0), changes.map { it.deletions })
         assertTrue(changes[0].patch.orEmpty().startsWith("diff --git a/one.txt"))
     }
 

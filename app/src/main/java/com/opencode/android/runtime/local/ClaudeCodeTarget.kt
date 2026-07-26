@@ -76,6 +76,7 @@ class ClaudeCodeTarget(
         const val DEFAULT_TITLE = "Claude Code"
         const val TITLE_LENGTH = 40
         const val MCP_TIMEOUT_SECONDS = 120L
+        const val WORKSPACE_ROOT = "/workspace"
     }
 
     private val sessionsFile = File(runtime.runtimeDirectory, "claude-sessions.json")
@@ -324,7 +325,12 @@ class ClaudeCodeTarget(
 
     override suspend fun vcsStatus(directory: String): List<OpenCodeFileChange> =
         withContext(Dispatchers.IO) {
-            ClaudeWorkspaceGit.parseStatus(runtime.runInWorkspace(directory, ClaudeWorkspaceGit.STATUS_SCRIPT).orEmpty())
+            val status = runtime.runInWorkspace(directory, ClaudeWorkspaceGit.STATUS_SCRIPT).orEmpty()
+            // Counts come from a second command because `git status` does not carry them; a
+            // repository with no commits has nothing to diff against, hence the empty fallback.
+            val counts =
+                ClaudeWorkspaceGit.parseNumstat(runtime.runInWorkspace(directory, ClaudeWorkspaceGit.NUMSTAT_SCRIPT).orEmpty())
+            ClaudeWorkspaceGit.parseStatus(status, counts)
         }
 
     override suspend fun vcsDiff(
@@ -404,21 +410,36 @@ class ClaudeCodeTarget(
         }
 
     /** Where workspace-scoped questions are asked when the caller names no session. */
-    private fun defaultDirectory(): String = records.values.lastOrNull()?.session?.directory ?: "/workspace"
+    private fun defaultDirectory(): String = records.values.lastOrNull()?.session?.directory ?: WORKSPACE_ROOT
 
     private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
-    override suspend fun listWorkspaces(): List<WorkspaceRef> =
-        records.values
-            .mapNotNull { it.session.directory }
-            .distinct()
-            .map { path ->
-                WorkspaceRef(
-                    id = path,
-                    name = path.trimEnd('/').substringAfterLast('/').ifBlank { path },
-                    path = path,
-                )
+    /**
+     * Folders the agent can be pointed at.
+     *
+     * Past sessions are not the whole answer: a project cloned into the workspace but never opened
+     * in a Claude chat would be missing from the picker, which is exactly when the user wants to
+     * select it. The directories actually on disk are listed too.
+     */
+    override suspend fun listWorkspaces(): List<WorkspaceRef> {
+        val fromSessions = records.values.mapNotNull { it.session.directory }
+        val onDisk =
+            withContext(Dispatchers.IO) {
+                val root = File(runtime.runtimeDirectory, "workspace")
+                listOf(WORKSPACE_ROOT) +
+                    root.listFiles().orEmpty()
+                        .filter { it.isDirectory && !it.isHidden }
+                        .sortedBy { it.name.lowercase() }
+                        .map { "$WORKSPACE_ROOT/${it.name}" }
             }
+        return (fromSessions + onDisk).distinct().map { path ->
+            WorkspaceRef(
+                id = path,
+                name = path.trimEnd('/').substringAfterLast('/').ifBlank { path },
+                path = path,
+            )
+        }
+    }
 
     private fun titleFromPrompt(prompt: String): String? {
         val firstLine = prompt.lineSequence().map(String::trim).firstOrNull(String::isNotEmpty) ?: return null

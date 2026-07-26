@@ -839,9 +839,9 @@ fun OpenCodeApp(
                 workspaceNavGraph(
                     navController = navController,
                     workspaceViewModel = workspaceViewModel,
-                    selectedWorkspace = selectedWorkspace,
+                    selectedWorkspace = { selectedWorkspace },
                     onSelectWorkspace = { selectedWorkspace = it },
-                    selectedRuntime = selectedRuntime,
+                    selectedRuntime = { selectedRuntime },
                     app = app,
                     onImportFolder = { workspaceImportLauncher.launch(null) },
                     onShowCloneDialog = { showCloneDialog = true },

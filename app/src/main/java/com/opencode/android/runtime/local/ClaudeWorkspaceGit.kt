@@ -25,6 +25,28 @@ object ClaudeWorkspaceGit {
     const val STATUS_SCRIPT = "git status --porcelain=v1"
 
     /**
+     * Lines added and removed per file, which `git status` does not report.
+     *
+     * Without it the changes list shows every file as `+0 / -0`, which reads as "nothing changed"
+     * next to a file the user was told is modified.
+     */
+    const val NUMSTAT_SCRIPT = "git --no-pager diff --numstat HEAD"
+
+    /** Path to its added/removed counts. Binary files report `-` and are left at zero. */
+    fun parseNumstat(output: String): Map<String, Pair<Int, Int>> =
+        output.lineSequence()
+            .mapNotNull { line ->
+                val fields = line.split('\t')
+                if (fields.size < 3) return@mapNotNull null
+                val path = fields[2].substringAfterLast(" => ").trim('"', '{', '}')
+                if (path.isEmpty()) return@mapNotNull null
+                path to (fields[0].toIntOrNull().orZero() to fields[1].toIntOrNull().orZero())
+            }
+            .toMap()
+
+    private fun Int?.orZero(): Int = this ?: 0
+
+    /**
      * Working-tree changes, staged and unstaged, as one patch.
      *
      * Nothing here writes to the repository: a viewer that quietly staged the user's files would be
@@ -53,14 +75,26 @@ object ClaudeWorkspaceGit {
      * The two status characters are index and worktree state; renames carry `old -> new` and only
      * the new path is of interest to the UI.
      */
-    fun parseStatus(output: String): List<OpenCodeFileChange> =
+    fun parseStatus(
+        output: String,
+        counts: Map<String, Pair<Int, Int>> = emptyMap(),
+    ): List<OpenCodeFileChange> =
         output.lineSequence()
             .filter { it.length > 3 }
             .mapNotNull { line ->
                 val code = line.take(2).trim().ifEmpty { return@mapNotNull null }
                 val path = line.drop(3).trim().substringAfterLast(" -> ").trim('"')
                 if (path.isEmpty()) return@mapNotNull null
-                OpenCodeFileChange(file = path, path = path, status = statusName(code))
+                val (added, removed) = counts[path] ?: (0 to 0)
+                OpenCodeFileChange(
+                    file = path,
+                    path = path,
+                    added = added,
+                    removed = removed,
+                    additions = added.toDouble(),
+                    deletions = removed.toDouble(),
+                    status = statusName(code),
+                )
             }
             .toList()
 
@@ -78,13 +112,19 @@ object ClaudeWorkspaceGit {
         fun flush() {
             val current = path ?: return
             val text = patch.toString()
+            val added = text.lineSequence().count { it.startsWith("+") && !it.startsWith("+++") }
+            val removed = text.lineSequence().count { it.startsWith("-") && !it.startsWith("---") }
             changes +=
                 OpenCodeFileChange(
                     file = current,
                     path = current,
                     patch = text,
-                    added = text.lineSequence().count { it.startsWith("+") && !it.startsWith("+++") },
-                    removed = text.lineSequence().count { it.startsWith("-") && !it.startsWith("---") },
+                    added = added,
+                    removed = removed,
+                    // Both spellings: the API carries the counts twice and the changes list reads
+                    // the decimal pair, so filling only the integers renders every file as +0/-0.
+                    additions = added.toDouble(),
+                    deletions = removed.toDouble(),
                     status = "modified",
                 )
             patch.setLength(0)
