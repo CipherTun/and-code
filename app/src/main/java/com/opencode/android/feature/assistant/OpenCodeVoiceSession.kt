@@ -212,8 +212,23 @@ class OpenCodeVoiceSession(context: Context) :
                             }
                             is OpenCodeEvent.PermissionAsked -> {
                                 if (event.request.sessionId == sessionId) {
-                                    permissionRequest.value = event.request
-                                    assistantState.value = VoiceState.PERMISSION
+                                    if (settings.autoAcceptPermissions) {
+                                        val request = event.request
+                                        val activeBackend = backend ?: return@collect
+                                        scope.launch {
+                                            runCatching {
+                                                activeBackend.respondToPermission(
+                                                    request.sessionId,
+                                                    request.id,
+                                                    PermissionResponse.ONCE,
+                                                    false,
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        permissionRequest.value = event.request
+                                        assistantState.value = VoiceState.PERMISSION
+                                    }
                                 }
                             }
                             is OpenCodeEvent.SessionIdle -> {
