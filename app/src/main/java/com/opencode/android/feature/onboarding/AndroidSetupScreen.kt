@@ -492,7 +492,7 @@ private fun RuntimeDownloadStep(
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
             title = stringResource(R.string.setup_step_download),
-            description = stringResource(R.string.setup_download_description),
+            description = stringResource(R.string.setup_download_agents_description),
         )
         if (openCodeSelected) {
             SetupPanel {

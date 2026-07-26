@@ -593,7 +593,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="runtime_local_device_name">Cet appareil Android</string>
     <string name="runtime_error_install_failed">Impossible d’installer l’environnement local</string>
     <string name="runtime_error_reinstall_failed">Impossible de réinstaller l’environnement local</string>
     <string name="runtime_error_start_failed">Impossible de démarrer OpenCode local</string>
@@ -649,7 +648,7 @@
     <string name="setup_step_sign_in">Connexion</string>
     <string name="setup_sign_in_description">Connectez les comptes qu’utiliseront vos agents.</string>
     <string name="setup_runtime_shared_note">Les deux agents partagent un même environnement Linux : ce téléchargement n’a lieu qu’une fois.</string>
-    <string name="local_agent_on_device">%1$s · Cet appareil Android</string>
+    <string name="local_agent_on_device">%1$s · Local</string>
     <string name="runtime_status_stopped_reason">L’environnement local est arrêté</string>
     <string name="runtime_status_connecting_reason">Connexion à l’environnement local</string>
     <string name="claude_error_runtime_missing">L’environnement Linux n’est pas encore installé</string>
@@ -659,4 +658,6 @@
     <string name="claude_error_submit_code">Impossible d’envoyer le code</string>
     <string name="claude_error_install_failed">L’installation de Claude Code a échoué</string>
     <string name="claude_error_update_failed">La mise à jour de Claude Code a échoué</string>
+    <string name="message_agent_hint">Envoyer un message à %1$s…</string>
+    <string name="setup_download_agents_description">Prépare l’environnement Linux partagé et les agents que vous avez choisis.</string>
 </resources>

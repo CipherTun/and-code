@@ -185,6 +185,8 @@ data class ParentSessionRef(
 
 data class ChatUiState(
     val backendName: String = "",
+    /** Agent name without the version suffix, for prompts that address the agent directly. */
+    val agentName: String = "",
     val sessionId: String? = null,
     val sessionTitle: String = "",
     /** Non-null while the open session is a subagent session spawned by [ParentSessionRef.id]. */
@@ -235,7 +237,10 @@ class ChatViewModel(
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
-            ChatUiState(backendName = backend?.displayName.orEmpty()),
+            ChatUiState(
+                backendName = backend?.displayName.orEmpty(),
+                agentName = backend?.displayName.orEmpty(),
+            ),
         )
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
@@ -317,6 +322,7 @@ class ChatViewModel(
                                 it.copy(
                                     isConnected = health.healthy,
                                     backendName = "${backend.displayName} · ${health.version}",
+                                    agentName = backend.displayName,
                                     error = null,
                                 )
                             }

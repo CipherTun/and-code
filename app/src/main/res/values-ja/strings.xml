@@ -607,7 +607,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="runtime_local_device_name">このAndroid端末</string>
     <string name="runtime_error_install_failed">ローカルランタイムの導入に失敗しました</string>
     <string name="runtime_error_reinstall_failed">ローカルランタイムの再導入に失敗しました</string>
     <string name="runtime_error_start_failed">ローカルOpenCodeを起動できません</string>
@@ -663,7 +662,7 @@
     <string name="setup_step_sign_in">サインイン</string>
     <string name="setup_sign_in_description">エージェントが使用するアカウントを接続します。</string>
     <string name="setup_runtime_shared_note">両方のエージェントは1つのLinux環境を共有するため、このダウンロードは一度だけです。</string>
-    <string name="local_agent_on_device">%1$s・このAndroid端末</string>
+    <string name="local_agent_on_device">%1$s・ローカル</string>
     <string name="runtime_status_stopped_reason">ローカルランタイムは停止しています</string>
     <string name="runtime_status_connecting_reason">ローカルランタイムへ接続しています</string>
     <string name="claude_error_runtime_missing">Linux環境がまだ導入されていません</string>
@@ -673,4 +672,6 @@
     <string name="claude_error_submit_code">コードを送信できませんでした</string>
     <string name="claude_error_install_failed">Claude Codeのインストールに失敗しました</string>
     <string name="claude_error_update_failed">Claude Codeの更新に失敗しました</string>
+    <string name="message_agent_hint">%1$sにメッセージを送る…</string>
+    <string name="setup_download_agents_description">共有のLinux環境と、選んだエージェントを準備します。</string>
 </resources>

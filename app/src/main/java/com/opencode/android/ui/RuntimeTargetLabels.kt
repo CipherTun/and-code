@@ -10,17 +10,10 @@ import com.opencode.android.runtime.RuntimeTarget
  *
  * Android-local targets used to be labelled by their device ("this Android"), which made OpenCode
  * and Claude Code indistinguishable in every picker. Local targets are now named by their agent and
- * qualified by the device; remote connections keep the name the user gave them.
+ * marked as local; remote connections keep the name the user gave them.
  */
 @Composable
 fun runtimeTargetLabel(target: RuntimeTarget): String {
     val agent = target.agent ?: return target.displayName
     return stringResource(R.string.local_agent_on_device, stringResource(agent.displayNameRes))
-}
-
-/** The agent name on its own, for places that already say the runtime is local. */
-@Composable
-fun runtimeTargetShortLabel(target: RuntimeTarget): String {
-    val agent = target.agent ?: return target.displayName
-    return stringResource(agent.displayNameRes)
 }

@@ -1,6 +1,5 @@
 package com.opencode.android.runtime.local
 
-import com.opencode.android.R
 import com.opencode.android.core.api.OpenCodeAgent
 import com.opencode.android.core.api.OpenCodeEvent
 import com.opencode.android.core.api.OpenCodeHealth
@@ -43,7 +42,6 @@ class ClaudeCodeTarget(
 ) : RuntimeTarget {
     override val id = LocalAgent.CLAUDE_CODE.targetId
     override val displayName = "Claude Code"
-    override val displayNameRes = R.string.agent_claude_code_name
     override val agent = LocalAgent.CLAUDE_CODE
     override val kind = BackendKind.LOCAL
     override val type = RuntimeType.LOCAL

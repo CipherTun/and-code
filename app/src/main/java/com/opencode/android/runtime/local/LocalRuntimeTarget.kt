@@ -1,6 +1,5 @@
 package com.opencode.android.runtime.local
 
-import com.opencode.android.R
 import com.opencode.android.core.api.OpenCodeAgent
 import com.opencode.android.core.api.OpenCodeEvent
 import com.opencode.android.core.api.OpenCodeFileChange
@@ -46,7 +45,6 @@ class LocalRuntimeTarget(
 ) : RuntimeTarget {
     override val id: String = LocalAgent.OPEN_CODE.targetId
     override val displayName: String = "OpenCode"
-    override val displayNameRes: Int = R.string.runtime_local_device_name
     override val agent: LocalAgent = LocalAgent.OPEN_CODE
     override val type: RuntimeType = RuntimeType.LOCAL
     override val kind: BackendKind = BackendKind.LOCAL

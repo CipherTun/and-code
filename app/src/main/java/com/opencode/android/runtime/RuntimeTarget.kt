@@ -95,13 +95,6 @@ interface RuntimeTarget : OpenCodeBackend {
     val agent: LocalAgent?
         get() = null
 
-    /**
-     * String resource for [displayName], when the name is a localised label rather than a
-     * user-supplied one. Remote connections keep using [displayName] because the user named them.
-     */
-    val displayNameRes: Int?
-        get() = null
-
     suspend fun connect(): Result<OpenCodeHealth>
 
     fun disconnect()

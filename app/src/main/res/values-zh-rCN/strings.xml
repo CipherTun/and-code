@@ -593,7 +593,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="runtime_local_device_name">此 Android 设备</string>
     <string name="runtime_error_install_failed">无法安装本地运行时</string>
     <string name="runtime_error_reinstall_failed">无法重新安装本地运行时</string>
     <string name="runtime_error_start_failed">无法启动本地 OpenCode</string>
@@ -649,7 +648,7 @@
     <string name="setup_step_sign_in">登录</string>
     <string name="setup_sign_in_description">连接智能体将使用的账号。</string>
     <string name="setup_runtime_shared_note">两个智能体共用一个 Linux 环境，因此只需下载一次。</string>
-    <string name="local_agent_on_device">%1$s · 此 Android 设备</string>
+    <string name="local_agent_on_device">%1$s · 本地</string>
     <string name="runtime_status_stopped_reason">本地运行时已停止</string>
     <string name="runtime_status_connecting_reason">正在连接本地运行时</string>
     <string name="claude_error_runtime_missing">尚未安装 Linux 环境</string>
@@ -659,4 +658,6 @@
     <string name="claude_error_submit_code">无法提交代码</string>
     <string name="claude_error_install_failed">Claude Code 安装失败</string>
     <string name="claude_error_update_failed">Claude Code 更新失败</string>
+    <string name="message_agent_hint">给 %1$s 发消息…</string>
+    <string name="setup_download_agents_description">准备共享的 Linux 环境以及你选择的智能体。</string>
 </resources>
