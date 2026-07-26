@@ -1,7 +1,6 @@
 package com.opencode.android.feature.support
 
 import com.opencode.android.data.connection.SecureSettingsRepository
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,6 +15,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val REPOSITORY_PATH = "/repos/yuga-hashimoto/opencode-android"
 private const val STAR_STATUS_PATH = "/user/starred/yuga-hashimoto/opencode-android"
