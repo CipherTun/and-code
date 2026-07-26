@@ -1253,8 +1253,9 @@ private fun ModeChip(
 ) {
     var expanded by remember { mutableStateOf(false) }
     // The selection is remembered across runtimes, so an id this runtime does not offer would
-    // otherwise label the chip with another agent's name.
-    val label = selectedAgentId?.takeIf { id -> agents.isEmpty() || agents.any { it.name == id } } ?: "build"
+    // otherwise label the chip with another agent's name. An empty list is not a licence to trust
+    // it either: that is exactly the state a stopped runtime is in.
+    val label = selectedAgentId?.takeIf { id -> agents.any { it.name == id } } ?: "build"
     Box {
         Surface(
             modifier =

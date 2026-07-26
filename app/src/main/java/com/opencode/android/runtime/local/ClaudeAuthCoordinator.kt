@@ -71,6 +71,7 @@ class ClaudeAuthCoordinator(
             mutableState.value = State.Failed(messages.runtimeMissing, "")
             return
         }
+        ClaudeCodeInstaller.ensureDnsPreload(runtime.rootfs)
         val started =
             runCatching {
                 ProcessBuilder(

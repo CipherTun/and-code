@@ -63,6 +63,7 @@ object ClaudeSandboxLauncher {
                 // unless it is told it is sandboxed. The rootfs is exactly that: app-private
                 // storage reachable only through the bind mounts declared above.
                 "IS_SANDBOX" to "1",
+                "BUN_OPTIONS" to "--preload ${ClaudeCodeInstaller.DNS_PRELOAD}",
                 "TERM" to "xterm-256color",
                 "CI" to "1",
             )

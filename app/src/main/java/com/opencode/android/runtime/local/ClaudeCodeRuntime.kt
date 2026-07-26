@@ -63,12 +63,17 @@ class ClaudeCodeRuntime(
     /** Claude Code's own session ids, so a relaunched process resumes rather than starts over. */
     private val resumeIds = mutableMapOf<String, String>()
 
-    /** Alias to the model id Claude reported for it, so the picker can name models truthfully. */
+    /**
+     * Alias to the model id Claude reported for it, so the picker can name models truthfully.
+     *
+     * Anthropic re-points these aliases over time, so a cached name is only trustworthy for as long
+     * as the alias means what it did when it was recorded. Two things keep it honest: every run
+     * overwrites the entry for the alias it used, and the whole cache is dropped when the CLI
+     * version changes, which is when a re-point is most likely. An alias the user has not sent to
+     * since a server-side re-point can still lag until the next message on it.
+     */
     private val resolvedModelsFile = File(runtimeDirectory, "claude-resolved-models.json")
-    private val resolvedModels =
-        MutableStateFlow(
-            runCatching { json.decodeFromString<Map<String, String>>(resolvedModelsFile.readText()) }.getOrDefault(emptyMap()),
-        )
+    private val resolvedModels = MutableStateFlow<Map<String, String>>(emptyMap())
 
     val auth = ClaudeAuthCoordinator(runtimeDirectory, installedRuntimeProvider, accessCoordinator, messages)
 
@@ -175,6 +180,7 @@ class ClaudeCodeRuntime(
 
         val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
         require(ClaudeCodeInstaller.isInstalledIn(runtime.rootfs)) { "Claude Code is not installed" }
+        ClaudeCodeInstaller.ensureDnsPreload(runtime.rootfs)
 
         val stderrLog = File(runtimeDirectory, "logs/claude-stderr.log").also { it.parentFile?.mkdirs() }
         val process =
@@ -292,6 +298,25 @@ class ClaudeCodeRuntime(
         if (parsed.turnFinished) messageStore.flush()
     }
 
+    /**
+     * Loads the cache, discarding it when the CLI version has moved on.
+     *
+     * Deliberately not done in the constructor: the version check runs the CLI, which is far too
+     * slow for whatever thread builds this object.
+     */
+    fun loadResolvedModels() {
+        resolvedModels.value = readResolvedModels()
+    }
+
+    private fun readResolvedModels(): Map<String, String> {
+        val stored =
+            runCatching {
+                json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), resolvedModelsFile.readText())
+            }.getOrNull() ?: return emptyMap()
+        // A CLI upgrade is the most likely moment for an alias to start meaning a different model.
+        return if (stored[CLI_VERSION_KEY] == version()) stored - CLI_VERSION_KEY else emptyMap()
+    }
+
     private fun rememberResolvedModel(
         alias: String,
         resolved: String,
@@ -301,7 +326,10 @@ class ClaudeCodeRuntime(
         resolvedModels.value = updated
         runCatching {
             resolvedModelsFile.parentFile?.mkdirs()
-            resolvedModelsFile.writeText(json.encodeToString(MapSerializer(String.serializer(), String.serializer()), updated))
+            val persisted = updated + (CLI_VERSION_KEY to version().orEmpty())
+            resolvedModelsFile.writeText(
+                json.encodeToString(MapSerializer(String.serializer(), String.serializer()), persisted),
+            )
         }
     }
 
@@ -339,5 +367,8 @@ class ClaudeCodeRuntime(
 
     private companion object {
         val VERSION = Regex("\\d+\\.\\d+\\.\\d+")
+
+        /** Reserved key; no model alias can collide with it. */
+        const val CLI_VERSION_KEY = "@cliVersion"
     }
 }
