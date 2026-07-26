@@ -1029,7 +1029,6 @@ class ChatViewModel(
                 updateStreamingMessage(event.messageId, messageParts.values.toList())
             }
             is OpenCodeEvent.PermissionAsked -> {
-                if (event.request.sessionId != activeSession) return
                 if (_uiState.value.autoAcceptPermissions) {
                     val request = event.request
                     val autoBackend = backend ?: return
@@ -1047,6 +1046,7 @@ class ChatViewModel(
                     }
                     return
                 }
+                if (event.request.sessionId != activeSession) return
                 _uiState.update { state ->
                     state.copy(
                         permissions = state.permissions.filterNot { it.id == event.request.id } + event.request,

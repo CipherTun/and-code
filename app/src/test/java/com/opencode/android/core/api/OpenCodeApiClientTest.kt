@@ -149,6 +149,17 @@ class OpenCodeApiClientTest {
         }
 
     @Test
+    fun `permission response succeeds with empty body`() =
+        runBlocking {
+            server.enqueue(MockResponse())
+            val client = client()
+
+            val result = client.respondPermission("s1", "perm1", "once")
+
+            assertTrue(result)
+        }
+
+    @Test
     fun `remember once maps to always response`() =
         runBlocking {
             server.enqueue(MockResponse().setBody("true"))

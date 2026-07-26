@@ -152,6 +152,35 @@ class ChatViewModelTest {
         }
 
     @Test
+    fun `auto accept approves subagent permissions from a different session`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.setAutoAcceptPermissions(true)
+            viewModel.sendMessage("Delegate work")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.PermissionAsked(
+                    PermissionRequest(
+                        id = "perm-sub",
+                        sessionId = "subagent-session-42",
+                        permission = "bash",
+                        patterns = listOf("ls"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.permissions.isEmpty())
+            val record = backend.permissionResponses.single()
+            assertEquals("subagent-session-42", record.sessionId)
+            assertEquals("perm-sub", record.permissionId)
+            assertEquals(PermissionResponse.ONCE, record.third)
+        }
+
+    @Test
     fun `streamed text is finalized when session becomes idle`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
