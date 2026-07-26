@@ -2,8 +2,11 @@ package com.opencode.android.runtime.local
 
 import com.opencode.android.core.api.OpenCodeAgent
 import com.opencode.android.core.api.OpenCodeEvent
+import com.opencode.android.core.api.OpenCodeFileContent
+import com.opencode.android.core.api.OpenCodeFileNode
 import com.opencode.android.core.api.OpenCodeHealth
 import com.opencode.android.core.api.OpenCodeMessage
+import com.opencode.android.core.api.OpenCodeSearchMatch
 import com.opencode.android.core.api.OpenCodeSession
 import com.opencode.android.core.api.OpenCodeTime
 import com.opencode.android.core.api.PromptRequest
@@ -108,6 +111,7 @@ class ClaudeCodeTarget(
     }
 
     private val titleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val files = ClaudeWorkspaceFiles(File(runtime.runtimeDirectory, "workspace"))
 
     val auth: ClaudeAuthCoordinator get() = runtime.auth
 
@@ -273,6 +277,31 @@ class ClaudeCodeTarget(
     ): Boolean = false
 
     override fun events(): Flow<OpenCodeEvent> = runtime.events()
+
+    // OpenCode answers these over HTTP. Claude Code has no server, but /workspace is a real
+    // directory on the device, so they are read from disk instead of throwing "unsupported".
+    override suspend fun listFiles(
+        directory: String,
+        path: String,
+    ): List<OpenCodeFileNode> = withContext(Dispatchers.IO) { files.list(directory, path) }
+
+    override suspend fun readFile(
+        directory: String,
+        path: String,
+    ): OpenCodeFileContent = withContext(Dispatchers.IO) { files.read(directory, path) }
+
+    override suspend fun findFiles(
+        directory: String,
+        query: String,
+        includeDirectories: Boolean?,
+        type: String?,
+        limit: Int?,
+    ): List<String> = withContext(Dispatchers.IO) { files.find(directory, query, includeDirectories, limit) }
+
+    override suspend fun searchText(
+        directory: String,
+        pattern: String,
+    ): List<OpenCodeSearchMatch> = withContext(Dispatchers.IO) { files.search(directory, pattern) }
 
     override suspend fun listWorkspaces(): List<WorkspaceRef> =
         records.values
