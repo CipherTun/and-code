@@ -282,15 +282,23 @@ class ChatViewModel(
                     .distinctUntilChanged()
                     .collect { (sessionId, running) ->
                         if (sessionId == null) return@collect
-                        when {
-                            running && runningSession != sessionId -> {
-                                runningSession = sessionId
-                                onRunStateChanged(sessionId, true)
-                            }
-                            !running && runningSession == sessionId -> {
+                        // The run we last reported as active is over the moment the open chat
+                        // stops running OR the client moves to another chat (it can no longer
+                        // track the old one's isRunning). The previous logic keyed on the
+                        // (sessionId, isRunning) pair, so a mid-turn navigation produced the
+                        // transition (oldSession, true) -> (newSession, false) and matched neither
+                        // branch: the old session was never reported finished and its drawer dot
+                        // stayed on the spinner forever. Clear the stale run explicitly here so the
+                        // drawer only reflects chats the runtime itself still reports as active.
+                        runningSession?.let { previous ->
+                            if (previous != sessionId || !running) {
+                                onRunStateChanged(previous, false)
                                 runningSession = null
-                                onRunStateChanged(sessionId, false)
                             }
+                        }
+                        if (running && runningSession != sessionId) {
+                            runningSession = sessionId
+                            onRunStateChanged(sessionId, true)
                         }
                     }
             }
