@@ -172,8 +172,17 @@ fun OpenCodeApp(
                                 app.localRuntimeManager.installAndStart().getOrThrow()
                             }
                             reportStep("Installing Claude Code package...")
-                            check(app.claudeCodeRuntime.install().exitCode == 0) {
-                                "Claude Code installation failed"
+                            val result = app.claudeCodeRuntime.install()
+                            check(result.exitCode == 0) {
+                                buildString {
+                                    append("Claude Code installation failed (exit ")
+                                    append(result.exitCode)
+                                    append(")")
+                                    result.output.trim().takeIf { it.isNotEmpty() }?.let {
+                                        append(": ")
+                                        append(it.takeLast(1200))
+                                    }
+                                }
                             }
                         },
                     )
