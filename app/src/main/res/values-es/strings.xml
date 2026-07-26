@@ -188,6 +188,7 @@
     <string name="todo_status_in_progress">En progreso</string>
     <string name="todo_status_cancelled">Cancelado</string>
     <string name="todo_status_pending">No iniciado</string>
+    <string name="todo_timeline_progress">%1$d de %2$d Todo completado</string>
     <string name="priority_high">Alta</string>
     <string name="priority_medium">Media</string>
     <string name="priority_low">Baja</string>

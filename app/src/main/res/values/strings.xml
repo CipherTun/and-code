@@ -188,6 +188,7 @@
     <string name="todo_status_in_progress">In progress</string>
     <string name="todo_status_cancelled">Cancelled</string>
     <string name="todo_status_pending">Not started</string>
+    <string name="todo_timeline_progress">%1$d of %2$d Todo completed</string>
     <string name="priority_high">High</string>
     <string name="priority_medium">Medium</string>
     <string name="priority_low">Low</string>

@@ -188,6 +188,7 @@
     <string name="todo_status_in_progress">В процессе</string>
     <string name="todo_status_cancelled">Отменено</string>
     <string name="todo_status_pending">Не начато</string>
+    <string name="todo_timeline_progress">Выполнено %1$d из %2$d Todo</string>
     <string name="priority_high">Высокий</string>
     <string name="priority_medium">Средний</string>
     <string name="priority_low">Низкий</string>

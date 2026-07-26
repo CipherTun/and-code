@@ -188,6 +188,7 @@
     <string name="todo_status_in_progress">进行中</string>
     <string name="todo_status_cancelled">已取消</string>
     <string name="todo_status_pending">未开始</string>
+    <string name="todo_timeline_progress">%2$d 个中 %1$d 个 Todo 已完成</string>
     <string name="priority_high">高</string>
     <string name="priority_medium">中</string>
     <string name="priority_low">低</string>
