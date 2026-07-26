@@ -285,13 +285,20 @@ fun WorkspacesScreen(
                     }
                     if (target.id == "claude-code-local") {
                         Spacer(Modifier.height(12.dp))
-                        Text("Claude Code runs locally in the shared Linux environment.", style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(8.dp))
                         if (target.state is RuntimeState.Connected) {
-                            Text("Installed: ${(target.state as RuntimeState.Connected).version}")
+                            Text(
+                                "Installed: ${(target.state as RuntimeState.Connected).version}",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(onClick = onAuthenticateClaude, modifier = Modifier.fillMaxWidth()) {
                                 Text("Sign in to Claude")
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = onStopLocal, modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Stop, contentDescription = null)
+                                Spacer(Modifier.padding(horizontal = 4.dp))
+                                Text(stringResource(R.string.stop_local_runtime_button))
                             }
                         } else {
                             when (val claudeStatus = state.claudeInstallStatus) {
@@ -308,11 +315,15 @@ fun WorkspacesScreen(
                                     )
                                     Spacer(Modifier.height(8.dp))
                                     Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
+                                        Icon(Icons.Default.Build, contentDescription = null)
+                                        Spacer(Modifier.padding(horizontal = 4.dp))
                                         Text("Install Claude Code")
                                     }
                                 }
                                 else -> {
                                     Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
+                                        Icon(Icons.Default.Build, contentDescription = null)
+                                        Spacer(Modifier.padding(horizontal = 4.dp))
                                         Text("Install Claude Code")
                                     }
                                 }
@@ -505,14 +516,6 @@ fun WorkspacesScreen(
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            state.claudeError?.let { error ->
-                item {
-                    SectionCard {
-                        Text("Claude Code installation failed", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
                         Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
