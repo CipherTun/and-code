@@ -95,6 +95,7 @@ import com.opencode.android.ui.theme.AppTheme
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -241,7 +242,7 @@ fun OpenCodeApp(
     settingsViewModel.onLocalRuntimeRestartNeeded = {
         voiceScope.launch {
             workspaceViewModel.stopLocalRuntime()
-            kotlinx.coroutines.delay(2000)
+            delay(2000)
             workspaceViewModel.startLocalRuntime()
         }
     }
@@ -604,7 +605,6 @@ fun OpenCodeApp(
                     OnboardingChoiceScreen(
                         onSelectAndroid = { navController.navigate(ROUTE_ANDROID_SETUP) },
                         onSelectRemote = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
-                        onAddRemoteLater = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
                     )
                 }
 
@@ -670,7 +670,6 @@ fun OpenCodeApp(
                         state = chatState,
                         providers = settingsState.providers,
                         agents = settingsState.agents,
-                        workspaces = workspaceState.workspaces,
                         selectedProviderId = chatState.selectedProviderId ?: settingsState.providerId,
                         selectedModelId = chatState.selectedModelId ?: settingsState.modelId,
                         selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
@@ -687,7 +686,6 @@ fun OpenCodeApp(
                         },
                         onSelectModel = settingsViewModel::selectModel,
                         onSelectAgent = settingsViewModel::selectAgent,
-                        onSelectWorkspace = chatViewModel::selectWorkspace,
                         selectedVariant = chatState.selectedVariant,
                         onSelectVariant = chatViewModel::selectVariant,
                         onAttach = { attachmentLauncher.launch("*/*") },
@@ -719,9 +717,6 @@ fun OpenCodeApp(
                         onNewChat = {
                             pendingSession = null
                             chatViewModel.newSession()
-                        },
-                        onOpenHistory = {
-                            navController.navigate(ROUTE_ACTIVITY) { launchSingleTop = true }
                         },
                         onOpenLocalSetup = {
                             navController.navigate(ROUTE_ANDROID_SETUP) { launchSingleTop = true }
@@ -1104,7 +1099,7 @@ private fun RepoRow(
         ) {
             Icon(
                 if (repo.isPrivate) Icons.Default.Lock else Icons.Default.Folder,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_repository),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

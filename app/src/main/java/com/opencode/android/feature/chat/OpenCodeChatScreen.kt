@@ -354,7 +354,7 @@ private fun ChatHeader(
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text("Copy resume command") },
+                        text = { Text(stringResource(R.string.copy_resume_command)) },
                         enabled = state.sessionId != null,
                         onClick = {
                             menuExpanded = false
@@ -442,7 +442,7 @@ private fun WorkspaceSelector(
             enabled = enabled && workspaces.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(Icons.Default.Folder, contentDescription = null)
+            Icon(Icons.Default.Folder, contentDescription = stringResource(R.string.cd_folder))
             Spacer(Modifier.padding(horizontal = 4.dp))
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                 Text(stringResource(R.string.workspace_folder_label), style = MaterialTheme.typography.labelSmall)
@@ -452,7 +452,7 @@ private fun WorkspaceSelector(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_expand_dropdown))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
@@ -508,9 +508,9 @@ private fun ModelSelector(
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                 Text(stringResource(R.string.model), style = MaterialTheme.typography.labelSmall)
-                Text(modelId ?: "Default", maxLines = 1, style = MaterialTheme.typography.bodySmall)
+                Text(modelId ?: stringResource(R.string.model_default), maxLines = 1, style = MaterialTheme.typography.bodySmall)
             }
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_expand_dropdown))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             providers.forEach { itemProvider ->
@@ -548,7 +548,7 @@ private fun ModelSelector(
                 }
             }
             if (provider == null && providers.isEmpty()) {
-                DropdownMenuItem(text = { Text("No connected providers") }, onClick = { expanded = false })
+                DropdownMenuItem(text = { Text(stringResource(R.string.no_connected_providers)) }, onClick = { expanded = false })
             }
         }
     }
@@ -568,7 +568,7 @@ private fun AgentSelector(
                 Text(stringResource(R.string.agent), style = MaterialTheme.typography.labelSmall)
                 Text(selectedAgentId ?: "build", maxLines = 1, style = MaterialTheme.typography.bodySmall)
             }
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_expand_dropdown))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             agents.forEach { agent ->
@@ -619,7 +619,7 @@ fun MessageBubble(message: ChatMessage) {
                 message.imagePreviews.forEach { preview ->
                     Image(
                         bitmap = preview.asImageBitmap(),
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.cd_image_preview),
                         modifier =
                             Modifier
                                 .widthIn(max = 280.dp)
@@ -635,7 +635,7 @@ fun MessageBubble(message: ChatMessage) {
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.padding(bottom = 8.dp),
                     ) {
-                        Icon(Icons.Default.Description, contentDescription = null)
+                        Icon(Icons.Default.Description, contentDescription = stringResource(R.string.cd_attachment))
                         Text(
                             text = attachment.filename,
                             style = MaterialTheme.typography.labelMedium,
@@ -931,7 +931,7 @@ fun ReasoningCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Psychology,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_reasoning),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.padding(horizontal = 4.dp))
@@ -943,7 +943,7 @@ fun ReasoningCard(
                 )
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_expand_collapse),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -975,7 +975,7 @@ fun ToolCard(part: ChatPart.Tool) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(
                     toolCategoryIcon(part.name.toToolCategory()),
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_tool),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(15.dp),
                 )
@@ -999,7 +999,7 @@ fun ToolCard(part: ChatPart.Tool) {
                 ToolStatusChip(part.status)
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_expand_collapse),
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -1100,7 +1100,7 @@ fun PatchCard(part: ChatPart.Patch) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Description,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_file_changes),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(15.dp),
                 )
@@ -1142,7 +1142,7 @@ fun PermissionCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Security, contentDescription = null, tint = OpenCodeWarning)
+                Icon(Icons.Default.Security, contentDescription = stringResource(R.string.cd_permission), tint = OpenCodeWarning)
                 Spacer(Modifier.padding(horizontal = 5.dp))
                 Text(stringResource(R.string.permission_required), fontWeight = FontWeight.SemiBold)
             }
@@ -1232,14 +1232,14 @@ fun ToolCallSummaryCard(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "🔧 ${toolNames.size} tool calls",
+                text = stringResource(R.string.tool_call_count, toolNames.size),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
             )
             Spacer(Modifier.weight(1f))
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_expand_collapse),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -1278,12 +1278,12 @@ fun CompactionMarker(modifier: Modifier = Modifier) {
         )
         Icon(
             Icons.Default.Compress,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.cd_compacted),
             modifier = Modifier.padding(horizontal = 4.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "context compacted",
+            text = stringResource(R.string.context_compacted_marker),
             modifier = Modifier.padding(horizontal = 4.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 12.sp,
@@ -1311,19 +1311,19 @@ fun PlanCard(
         ) {
             Icon(
                 Icons.Default.Checklist,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_plan),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.padding(horizontal = 4.dp))
             Text(
-                text = "Plan",
+                text = stringResource(R.string.plan_card_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_expand_collapse),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -1350,13 +1350,13 @@ fun TodoListCard(
     SectionCard(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Tasks",
+                text = stringResource(R.string.tasks_card_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = "$completedCount/${todos.size} done",
+                text = stringResource(R.string.tasks_progress, completedCount, todos.size),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1372,19 +1372,19 @@ fun TodoListCard(
                         "completed" ->
                             Icon(
                                 Icons.Default.CheckCircle,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.cd_task_completed),
                                 tint = OpenCodeSuccess,
                             )
                         "in_progress" ->
                             Icon(
                                 Icons.Default.Pending,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.cd_task_in_progress),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         else ->
                             Icon(
                                 Icons.Default.CheckCircle,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.cd_task_pending),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             )
                     }

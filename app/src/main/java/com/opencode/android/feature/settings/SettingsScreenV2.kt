@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
@@ -61,7 +61,6 @@ import com.opencode.android.R
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 
 /** Compact settings landing screen backed only by real destinations and state. */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun SettingsScreenV2(
     assistantConfigured: Boolean,
@@ -77,6 +76,7 @@ fun SettingsScreenV2(
     onOpenRemoteConnection: () -> Unit,
     onOpenWorkspaces: () -> Unit,
     onOpenDiagnostics: () -> Unit,
+    onOpenSupport: () -> Unit = {},
     onOpenMcp: () -> Unit = {},
     onOpenServerInfo: () -> Unit = {},
     onOpenModelVisibility: () -> Unit = {},
@@ -96,7 +96,6 @@ fun SettingsScreenV2(
     sendBehavior: String = "interrupt",
     onSendBehaviorChange: (String) -> Unit = {},
 ) {
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showUiFontDialog by remember { mutableStateOf(false) }
     var showCodeFontDialog by remember { mutableStateOf(false) }
@@ -293,9 +292,9 @@ fun SettingsScreenV2(
                 )
                 SettingsDivider()
                 SettingsRow(
-                    icon = Icons.Default.Info,
-                    title = stringResource(R.string.app_info_row),
-                    onClick = { showAboutDialog = true },
+                    icon = Icons.Default.Star,
+                    title = stringResource(R.string.github_support_button),
+                    onClick = onOpenSupport,
                 )
             }
         }
@@ -323,24 +322,6 @@ fun SettingsScreenV2(
                 item { settingsListContent() }
             }
         }
-    }
-
-    if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            title = { Text(stringResource(R.string.app_info_row)) },
-            text = {
-                Text(
-                    "${stringResource(R.string.app_name)} $appVersion\n" +
-                        stringResource(R.string.unofficial_client),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text(stringResource(R.string.close_description))
-                }
-            },
-        )
     }
 
     if (showThemeDialog) {
@@ -528,7 +509,7 @@ private fun SettingsRow(
     ) {
         Icon(
             icon,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.cd_setting),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
         )
@@ -547,7 +528,7 @@ private fun SettingsRow(
         trailing?.invoke()
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.cd_navigate),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
         )
@@ -571,7 +552,7 @@ private fun SettingsToggleRow(
     ) {
         Icon(
             icon,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.cd_setting),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
         )

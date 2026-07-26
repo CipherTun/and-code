@@ -267,7 +267,7 @@ private fun RuntimeRow(
     ) {
         Icon(
             imageVector = if (target.type == RuntimeType.LOCAL) Icons.Default.Android else Icons.Default.Computer,
-            contentDescription = null,
+            contentDescription = stringResource(R.string.cd_runtime_type),
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
@@ -299,7 +299,7 @@ private fun ModelRow(
         IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_favorite),
                 tint =
                     if (isFavorite) {
                         MaterialTheme.colorScheme.primary

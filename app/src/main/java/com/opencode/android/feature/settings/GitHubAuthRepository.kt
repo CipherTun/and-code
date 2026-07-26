@@ -2,6 +2,7 @@ package com.opencode.android.feature.settings
 
 import com.opencode.android.data.connection.SecureSettingsRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -101,7 +102,7 @@ class GitHubAuthRepository(
                 delaySeconds =
                     (responseJson["interval"]?.jsonPrimitive?.content?.toLongOrNull() ?: delaySeconds)
                         .coerceAtLeast(1L)
-                kotlinx.coroutines.delay(delaySeconds * 1000L)
+                delay(delaySeconds * 1000L)
             }
             error("GitHub authorization timed out")
         }
@@ -139,12 +140,20 @@ class GitHubAuthRepository(
         }
 
     fun saveToken(value: String) {
-        settings.githubToken = value.trim().takeIf { it.isNotEmpty() }
+        val normalized = value.trim().takeIf { it.isNotEmpty() }
+        if (normalized != settings.githubToken) invalidateStarVerification()
+        settings.githubToken = normalized
     }
 
     fun disconnect() {
         settings.githubToken = null
         settings.githubLogin = null
+        invalidateStarVerification()
+    }
+
+    private fun invalidateStarVerification() {
+        settings.githubStarredCache = null
+        settings.githubStarStatusCheckedAt = 0L
     }
 
     private inline fun <reified T> executeJson(

@@ -12,6 +12,8 @@ import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.di.appModule
 import com.opencode.android.di.viewModelModule
+import com.opencode.android.feature.support.GitHubStarCoordinator
+import com.opencode.android.feature.support.GitHubStarService
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.local.AndroidClaudeMessages
 import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
@@ -95,6 +97,9 @@ class OpenCodeApplication : Application() {
     lateinit var runtimeMessages: LocalRuntimeMessages
         private set
 
+    lateinit var githubStarCoordinator: GitHubStarCoordinator
+        private set
+
     override fun onCreate() {
         super.onCreate()
         startKoin {
@@ -105,6 +110,13 @@ class OpenCodeApplication : Application() {
         preferences = AppPreferencesRepository(settings)
         notifications = RuntimeNotificationHelper(this)
         providerCredentials = LocalProviderCredentialStore(settings)
+        val httpClient = OkHttpClient()
+        githubStarCoordinator =
+            GitHubStarCoordinator(
+                settings = settings,
+                service = GitHubStarService(client = httpClient, tokenProvider = { settings.githubToken }),
+                scope = applicationScope,
+            )
         val runtimeDirectory = File(filesDir, "runtime")
         val abi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
         val accessCoordinator = LocalRuntimeAccessCoordinator()
@@ -147,7 +159,6 @@ class OpenCodeApplication : Application() {
                 accessCoordinator = accessCoordinator,
                 githubToken = { settings.githubToken },
             )
-        val httpClient = OkHttpClient()
         val verifiedDownloader = VerifiedRuntimeDownloader(httpClient)
         val updater =
             LocalRuntimeUpdater(
@@ -222,10 +233,14 @@ class OpenCodeApplication : Application() {
                     notifications.notifyPermission(request, title, runtimeId)
                 },
                 onPermissionResolved = notifications::cancelPermission,
-                onSessionIdle = notifications::notifySessionComplete,
+                onSessionIdle = { sessionId, title ->
+                    notifications.notifySessionComplete(sessionId, title)
+                    githubStarCoordinator.onSessionCompleted()
+                },
                 onSessionError = notifications::notifySessionError,
                 unreadStore = settings,
             )
+        githubStarCoordinator.refresh()
         scheduleDeferredInitialization()
     }
 

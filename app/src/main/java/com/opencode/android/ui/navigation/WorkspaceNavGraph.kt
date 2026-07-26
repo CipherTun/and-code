@@ -112,6 +112,7 @@ fun NavGraphBuilder.workspaceNavGraph(
                             updateAction = app.localRuntimeController::update,
                             rollbackAction = app.localRuntimeController::rollback,
                             deleteAction = app.localRuntimeController::delete,
+                            getString = { app.getString(it) },
                         )
                     },
             )

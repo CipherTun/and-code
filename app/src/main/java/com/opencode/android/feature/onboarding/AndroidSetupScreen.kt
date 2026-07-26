@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -70,6 +71,7 @@ import com.opencode.android.runtime.local.ClaudeCodeUiState
 import com.opencode.android.runtime.local.ClaudeInstallStatus
 import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
+import kotlinx.coroutines.delay
 
 private const val TOTAL_STEPS = 4
 
@@ -140,7 +142,7 @@ fun AndroidSetupScreen(
     LaunchedEffect(openCodeReady, openCodeSelected, settingsState.availableProviders, settingsState.providerAuthMethods) {
         if (!openCodeSelected || !openCodeReady) return@LaunchedEffect
         if (settingsState.availableProviders.isNotEmpty() && settingsState.providerAuthMethods.isNotEmpty()) return@LaunchedEffect
-        kotlinx.coroutines.delay(2000)
+        delay(2000)
         onRefreshCatalog()
         onRefreshProviderAuth()
     }
@@ -358,7 +360,11 @@ private fun SetupProgress(currentStep: Int) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (completed) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = stringResource(R.string.cd_step_completed),
+                                modifier = Modifier.size(17.dp),
+                            )
                         } else {
                             Text(step.toString(), style = MaterialTheme.typography.labelMedium)
                         }
@@ -535,7 +541,11 @@ private fun ClaudeInstallProgress(claude: ClaudeCodeUiState) {
         is ClaudeInstallStatus.Ready -> ReadyAgentRow(stringResource(R.string.claude_installed_version, install.version))
         is ClaudeInstallStatus.Failed ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error,
+                )
                 Text(install.message, color = MaterialTheme.colorScheme.error)
             }
         ClaudeInstallStatus.Idle ->
@@ -591,7 +601,11 @@ private fun OpenCodeRuntimeProgress(runtimeStatus: LocalRuntimeStatus) {
         is LocalRuntimeStatus.Stopped -> ReadyAgentRow("OpenCode ${runtimeStatus.version}")
         is LocalRuntimeStatus.Broken -> {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(Icons.Default.Error, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error,
+                )
                 Text(runtimeStatus.reason, color = MaterialTheme.colorScheme.error)
             }
         }
@@ -610,7 +624,11 @@ private fun ReadyAgentRow(detail: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            Icons.Default.CheckCircle,
+            contentDescription = stringResource(R.string.cd_runtime_ready),
+            tint = MaterialTheme.colorScheme.primary,
+        )
         Column {
             Text(stringResource(R.string.setup_runtime_ready), fontWeight = FontWeight.Medium)
             Text(
@@ -706,11 +724,11 @@ private fun ProviderConnectionStep(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text(stringResource(R.string.setup_provider_search_hint)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search)) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear_search))
                         }
                     }
                 },
@@ -855,6 +873,7 @@ private fun SetupBottomBar(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
