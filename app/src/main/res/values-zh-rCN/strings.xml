@@ -31,11 +31,11 @@
     <string name="refresh">刷新</string>
 
     <string name="new_chat">新建聊天</string>
-    <string name="message_hint">向 OpenCode 发送消息…</string>
+    <string name="message_hint">发送消息…</string>
     <string name="send_description">发送消息</string>
     <string name="stop_run">停止</string>
     <string name="thinking">思考中…</string>
-    <string name="chat_reconnecting">与 OpenCode 的连接已中断。正在重新连接…</string>
+    <string name="chat_reconnecting">与运行时的连接已中断，正在重新连接…</string>
     <string name="processing">处理中…</string>
     <string name="no_connection_chat">请先添加并选择一个电脑连接，然后再开始聊天。</string>
     <string name="model">模型</string>
@@ -96,7 +96,7 @@
     <string name="remote_runtime">电脑远程运行时</string>
     <string name="local_runtime">Android 本地运行时</string>
     <string name="experimental_not_installed">托管本地运行时</string>
-    <string name="local_runtime_note">在工作区中安装、启动、停止和修复 Android 本地 OpenCode 运行时。</string>
+    <string name="local_runtime_note">可在“工作区”中安装、启动、停止和修复 Android 本地运行时。</string>
 
     <string name="home_assistant">主屏幕助手</string>
     <string name="set_default_assistant">设为默认数字助手</string>
@@ -112,12 +112,12 @@
 
     <string name="notification_channel_approvals">批准</string>
     <string name="notification_channel_status">任务状态</string>
-    <string name="notification_approval_title">OpenCode 需要批准</string>
-    <string name="notification_complete_title">OpenCode 已完成</string>
+    <string name="notification_approval_title">需要批准</string>
+    <string name="notification_complete_title">运行已完成</string>
     <string name="notification_complete_body">聊天 %1$s 处于空闲状态</string>
-    <string name="permission_chat_confirmation">此聊天正在等待你的批准。请选择允许 OpenCode 执行的操作：</string>
-    <string name="permission_response_failed">OpenCode 无法应用此权限响应。</string>
-    <string name="notification_error_title">OpenCode 错误</string>
+    <string name="permission_chat_confirmation">此对话正在等待你的批准。请选择允许该智能体执行的操作：</string>
+    <string name="permission_response_failed">该智能体无法应用此权限响应。</string>
+    <string name="notification_error_title">运行错误</string>
     <string name="notification_error_body">会话失败</string>
     <string name="notification_permission_failed">无法发送授权。请打开应用后重试。</string>
     <string name="provider_credentials">提供商连接</string>
@@ -179,7 +179,7 @@
     <string name="tab_approvals">批准</string>
     <string name="tab_logs">日志</string>
     <string name="activity_screen_title">活动</string>
-    <string name="activity_screen_subtitle">OpenCode 的运行状态和历史记录</string>
+    <string name="activity_screen_subtitle">运行状态与历史</string>
     <string name="no_running_tasks">没有正在运行的任务</string>
     <string name="open_chat_button">打开聊天</string>
     <string name="no_pending_approvals">没有待处理的批准</string>
@@ -233,7 +233,7 @@
     <string name="rollback_confirm_body">本地 OpenCode 将停止并切换到已保存的先前版本，然后重新启动。如果无法启动，将回退到当前版本。</string>
     <string name="rollback_button">回退</string>
     <string name="delete_runtime_confirm_title">删除本地运行时？</string>
-    <string name="delete_runtime_confirm_body">OpenCode、Linux 环境、缓存、日志和应用内本地工作区将被删除。电脑连接设置将保留。</string>
+    <string name="delete_runtime_confirm_body">已安装的智能体、Linux 环境、缓存、日志以及应用内本地工作区都会被删除。PC 连接设置将保留。</string>
     <string name="delete_completely">完全删除</string>
     <string name="runtime_version_transition">OpenCode %1$s → %2$s</string>
     <string name="version_transition">%1$s → %2$s</string>
@@ -291,7 +291,7 @@
 
     <string name="add_pc_connection_description">添加电脑连接</string>
     <string name="workspaces_title">工作区</string>
-    <string name="workspaces_subtitle">选择 OpenCode 将运行的设备和文件夹。</string>
+    <string name="workspaces_subtitle">选择运行智能体的设备和文件夹。</string>
     <string name="runtime_targets_title">运行时</string>
     <string name="in_use_label">使用中</string>
     <string name="edit_description">编辑</string>
@@ -302,7 +302,7 @@
     <string name="diagnostics_and_management_button">诊断和管理</string>
     <string name="workspace_folders_title">工作区文件夹</string>
     <string name="no_workspaces_title">暂无工作区文件夹</string>
-    <string name="no_workspaces_body">OpenCode 使用的文件夹将在您开始会话后显示在此处。</string>
+    <string name="no_workspaces_body">开始会话后，智能体使用过的文件夹会显示在这里。</string>
     <string name="status_fetch_failed">获取状态失败</string>
     <string name="connected_at_url">OpenCode %1$s · %2$s</string>
     <string name="connecting_at">正在连接 · %1$s</string>
@@ -317,21 +317,21 @@
     <string name="disconnected_label">未连接</string>
     <string name="current_configuration">当前配置</string>
     <string name="not_selected">未选择</string>
-    <string name="opencode_default_value">OpenCode 默认值</string>
+    <string name="opencode_default_value">运行时默认</string>
     <string name="no_ai_service_selected">未选择 AI 服务</string>
     <string name="connection_or_fetch_failed">连接或获取失败</string>
     <string name="checking_connection_status">正在检查连接和状态</string>
     <string name="choose_local_or_pc_runtime">选择 Android 本地或电脑运行时</string>
-    <string name="not_connected_to_opencode">未连接到 OpenCode</string>
+    <string name="not_connected_to_opencode">未连接到运行时</string>
 
-    <string name="voice_no_runtime_configured">请设置 OpenCode 运行时。</string>
-    <string name="voice_event_connection_failed">无法连接到 OpenCode 事件</string>
-    <string name="voice_processing_failed">OpenCode 处理请求失败</string>
-    <string name="voice_send_failed">无法发送到 OpenCode</string>
-    <string name="voice_no_answer_text">无法从 OpenCode 获取回答</string>
+    <string name="voice_no_runtime_configured">请先设置运行时。</string>
+    <string name="voice_event_connection_failed">无法连接到运行时事件</string>
+    <string name="voice_processing_failed">该智能体无法处理此请求</string>
+    <string name="voice_send_failed">无法发送给该智能体</string>
+    <string name="voice_no_answer_text">无法从该智能体获得回答</string>
     <string name="voice_permission_send_failed">无法发送批准响应</string>
     <string name="voice_state_listening">正在聆听…</string>
-    <string name="voice_state_thinking">OpenCode 正在处理</string>
+    <string name="voice_state_thinking">处理中</string>
     <string name="voice_state_speaking">正在朗读回答</string>
     <string name="voice_state_done">完成</string>
     <string name="voice_state_error">错误</string>
@@ -393,7 +393,7 @@
     <string name="chat_home_title">聊天</string>
     <string name="chat_build_headline">使用 OpenCode 构建</string>
     <string name="chat_build_subtitle">随便问什么——一起实现、修复和审查代码。</string>
-    <string name="chat_message_placeholder">向 OpenCode 发送消息…</string>
+    <string name="chat_message_placeholder">发送消息…</string>
     <string name="chat_attach">附加文件</string>
     <string name="chat_remove_attachment">移除附件</string>
     <string name="chat_thinking_default">思考中</string>
@@ -436,7 +436,7 @@
     <string name="onboarding_subtitle">编写、修复和理解代码。要开始使用，只需选择一种执行路径。</string>
     <string name="onboarding_recommended_badge">推荐</string>
     <string name="onboarding_android_title">从此 Android 开始</string>
-    <string name="onboarding_android_desc">直接在此设备上运行 OpenCode。</string>
+    <string name="onboarding_android_desc">在此设备上直接运行编码智能体。</string>
     <string name="onboarding_remote_title">连接到电脑或 Mac</string>
     <string name="onboarding_remote_desc">连接到现有的 OpenCode 服务器。</string>
     <string name="onboarding_switch_note">无论哪种方式，您都可以稍后添加其他选项并随时切换。</string>
@@ -580,7 +580,7 @@
     <string name="syntax_theme_dialog_title">选择语法主题</string>
     <string name="usage_row">用量</string>
     <string name="font_size_dialog_title">字体大小</string>
-    <string name="widget_quick_input_hint">向 OpenCode 发送消息…</string>
+    <string name="widget_quick_input_hint">发送消息…</string>
     <string name="model_visibility_row">显示的模型</string>
     <string name="model_visibility_title">显示的模型</string>
     <string name="model_visibility_caption">取消勾选的模型将不会出现在模型选择器中。</string>
@@ -749,12 +749,12 @@
     <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
-    <string name="error_opencode_operation">OpenCode operation failed</string>
-    <string name="error_no_connection">OpenCode connection is not configured</string>
+    <string name="error_opencode_operation">操作失败</string>
+    <string name="error_no_connection">尚未配置运行时连接</string>
     <string name="session_title_attachment">Attachment</string>
     <string name="error_answer_required">Answer required</string>
-    <string name="error_question_failed">OpenCode question failed</string>
-    <string name="error_session_failed">OpenCode session failed</string>
+    <string name="error_question_failed">提问失败</string>
+    <string name="error_session_failed">会话出错</string>
 
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
@@ -823,7 +823,7 @@
 
     <!-- Session detail -->
     <string name="session_info_id">ID</string>
-    <string name="session_info_opencode">OpenCode</string>
+    <string name="session_info_opencode">运行时</string>
     <string name="session_todo_title">Todo</string>
 
     <string name="runtime_diagnostics_failed">Failed to diagnose the local runtime</string>
@@ -833,4 +833,75 @@
     <string name="runtime_rollback_start_failed">Cannot start OpenCode rollback</string>
     <string name="runtime_delete_failed">Cannot delete the local runtime</string>
     <string name="runtime_delete_timeout">Runtime deletion timed out</string>
+
+    <!-- Claude Code agent and agent selection -->
+    <string name="agent_opencode_name">OpenCode</string>
+    <string name="agent_claude_code_name">Claude Code</string>
+    <string name="runtime_error_install_failed">无法安装本地运行时</string>
+    <string name="runtime_error_reinstall_failed">无法重新安装本地运行时</string>
+    <string name="runtime_error_start_failed">无法启动本地 OpenCode</string>
+    <string name="runtime_error_stop_failed">无法停止本地 OpenCode</string>
+    <string name="runtime_error_delete_failed">无法删除本地运行时</string>
+    <string name="runtime_error_delete_incomplete">本地运行时未能完全删除</string>
+    <string name="runtime_error_missing_files">本地运行时文件缺失</string>
+    <string name="runtime_error_update_check_failed">无法检查 OpenCode 更新</string>
+    <string name="runtime_error_update_prepare_failed">无法准备 OpenCode 更新</string>
+    <string name="runtime_error_rollback_check_failed">无法确定可回退的版本</string>
+    <string name="runtime_error_restore_failed">无法恢复 OpenCode 运行时</string>
+    <string name="runtime_error_start_after_update_failed">更新后无法启动 OpenCode</string>
+    <string name="runtime_error_start_after_rollback_failed">回退后无法启动 OpenCode</string>
+    <string name="runtime_error_command_timed_out">检查超时</string>
+    <string name="runtime_error_restored_but_cannot_start">已恢复 OpenCode %1$s，但无法启动：%2$s</string>
+    <string name="runtime_step_preparing_update">正在准备更新</string>
+    <string name="runtime_step_rolling_back_to">正在回退到 OpenCode %1$s</string>
+    <string name="install_step_installing_claude_code">正在安装 Claude Code</string>
+    <string name="claude_permission_plan">仅制定计划</string>
+    <string name="claude_permission_plan_desc">Claude 只读取和规划，不会修改文件或执行命令。</string>
+    <string name="claude_permission_accept_edits">允许编辑</string>
+    <string name="claude_permission_accept_edits_desc">Claude 可以修改工作区中的文件。推荐。</string>
+    <string name="claude_permission_full_access">完全访问</string>
+    <string name="claude_permission_full_access_desc">Claude 可在不询问的情况下执行任何命令。请谨慎使用。</string>
+    <string name="claude_permission_mode_label">权限模式</string>
+    <string name="claude_install_button">安装 Claude Code</string>
+    <string name="claude_retry_install_button">重试安装</string>
+    <string name="claude_update_button">更新 Claude Code</string>
+    <string name="claude_step_preparing_runtime">正在准备 Linux 环境</string>
+    <string name="claude_step_adding_repository">正在添加 Claude Code 软件源</string>
+    <string name="claude_step_downloading_package">正在下载 Claude Code（约 80 MB）</string>
+    <string name="claude_step_verifying">正在验证安装</string>
+    <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="claude_status_not_installed">未安装</string>
+    <string name="claude_status_installing">安装中</string>
+    <string name="claude_status_ready">可用</string>
+    <string name="claude_status_signed_out">未登录</string>
+    <string name="claude_sign_in_button">登录 Claude</string>
+    <string name="claude_sign_out_button">退出登录</string>
+    <string name="claude_signed_in_as">已登录：%1$s</string>
+    <string name="claude_auth_starting">正在开始登录…</string>
+    <string name="claude_auth_open_browser">打开登录页面</string>
+    <string name="claude_auth_instructions">请在浏览器中批准，然后将显示的代码粘贴到这里。</string>
+    <string name="claude_auth_code_hint">授权码</string>
+    <string name="claude_auth_submit_code">提交代码</string>
+    <string name="claude_auth_verifying">正在验证…</string>
+    <string name="claude_auth_cancel">取消登录</string>
+    <string name="setup_step_agents">选择智能体</string>
+    <string name="setup_agents_description">选择要安装在此设备上的编码智能体。两者运行在同一个 Linux 环境中，之后也可以再添加另一个。</string>
+    <string name="setup_agent_claude_code_desc">在浏览器中使用 Claude 账号登录。下载约 80 MB。</string>
+    <string name="setup_agent_opencode_desc">使用你自己的模型提供方密钥。下载约 120 MB。</string>
+    <string name="setup_agents_required">请至少选择一个智能体以继续。</string>
+    <string name="setup_step_sign_in">登录</string>
+    <string name="setup_sign_in_description">连接智能体将使用的账号。</string>
+    <string name="setup_runtime_shared_note">两个智能体共用一个 Linux 环境，因此只需下载一次。</string>
+    <string name="local_agent_on_device">%1$s · 本地</string>
+    <string name="runtime_status_stopped_reason">本地运行时已停止</string>
+    <string name="runtime_status_connecting_reason">正在连接本地运行时</string>
+    <string name="claude_error_runtime_missing">尚未安装 Linux 环境</string>
+    <string name="claude_error_sign_in_start">无法开始 Claude Code 登录</string>
+    <string name="claude_error_sign_in_incomplete">登录未完成</string>
+    <string name="claude_error_sign_in_exit">Claude Code 登录已中止（退出码 %1$d）</string>
+    <string name="claude_error_submit_code">无法提交代码</string>
+    <string name="claude_error_install_failed">Claude Code 安装失败</string>
+    <string name="claude_error_update_failed">Claude Code 更新失败</string>
+    <string name="setup_download_agents_description">准备共享的 Linux 环境以及你选择的智能体。</string>
+    <string name="claude_model_account_default">账号默认</string>
 </resources>

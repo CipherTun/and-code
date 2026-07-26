@@ -31,11 +31,11 @@
     <string name="refresh">Refresh</string>
 
     <string name="new_chat">New chat</string>
-    <string name="message_hint">Message OpenCode…</string>
+    <string name="message_hint">Message…</string>
     <string name="send_description">Send message</string>
     <string name="stop_run">Stop</string>
     <string name="thinking">Thinking…</string>
-    <string name="chat_reconnecting">Connection to OpenCode was interrupted. Reconnecting…</string>
+    <string name="chat_reconnecting">The connection to the runtime was interrupted. Reconnecting…</string>
     <string name="processing">Processing…</string>
     <string name="no_connection_chat">Add and select a PC connection before starting a chat.</string>
     <string name="model">Model</string>
@@ -96,7 +96,7 @@
     <string name="remote_runtime">PC remote runtime</string>
     <string name="local_runtime">Android local runtime</string>
     <string name="experimental_not_installed">Managed local runtime</string>
-    <string name="local_runtime_note">Install, start, stop, and repair the Android-local OpenCode runtime from Workspaces.</string>
+    <string name="local_runtime_note">Install, start, stop, and repair the Android-local runtime from Workspaces.</string>
 
     <string name="home_assistant">Home assistant</string>
     <string name="set_default_assistant">Set as default digital assistant</string>
@@ -112,12 +112,12 @@
 
     <string name="notification_channel_approvals">Approvals</string>
     <string name="notification_channel_status">Task status</string>
-    <string name="notification_approval_title">OpenCode needs approval</string>
-    <string name="notification_complete_title">OpenCode finished</string>
+    <string name="notification_approval_title">Approval needed</string>
+    <string name="notification_complete_title">Run finished</string>
     <string name="notification_complete_body">Chat %1$s is idle</string>
-    <string name="permission_chat_confirmation">This chat is waiting for your approval. Choose what OpenCode may do:</string>
-    <string name="permission_response_failed">OpenCode could not apply that permission response.</string>
-    <string name="notification_error_title">OpenCode error</string>
+    <string name="permission_chat_confirmation">This chat is waiting for your approval. Choose what the agent may do:</string>
+    <string name="permission_response_failed">The agent could not apply that permission response.</string>
+    <string name="notification_error_title">Run error</string>
     <string name="notification_error_body">A session failed</string>
     <string name="notification_permission_failed">Could not send the approval. Open the app and try again.</string>
     <string name="provider_credentials">Provider connections</string>
@@ -179,7 +179,7 @@
     <string name="tab_approvals">Approvals</string>
     <string name="tab_logs">Logs</string>
     <string name="activity_screen_title">Activity</string>
-    <string name="activity_screen_subtitle">OpenCode\'s run status and history</string>
+    <string name="activity_screen_subtitle">Run status and history</string>
     <string name="no_running_tasks">No running tasks</string>
     <string name="open_chat_button">Open chat</string>
     <string name="no_pending_approvals">No pending approvals</string>
@@ -233,7 +233,7 @@
     <string name="rollback_confirm_body">Local OpenCode will stop and switch to the saved previous version, then restart. If it can\'t start, it reverts to the current version.</string>
     <string name="rollback_button">Rollback</string>
     <string name="delete_runtime_confirm_title">Delete the local runtime?</string>
-    <string name="delete_runtime_confirm_body">OpenCode, the Linux environment, cache, logs, and the in-app local workspace will be deleted. PC connection settings are kept.</string>
+    <string name="delete_runtime_confirm_body">The installed agents, the Linux environment, cache, logs, and the in-app local workspace will be deleted. PC connection settings are kept.</string>
     <string name="delete_completely">Delete completely</string>
     <string name="runtime_version_transition">OpenCode %1$s → %2$s</string>
     <string name="version_transition">%1$s → %2$s</string>
@@ -291,7 +291,7 @@
 
     <string name="add_pc_connection_description">Add a PC connection</string>
     <string name="workspaces_title">Workspaces</string>
-    <string name="workspaces_subtitle">Choose the device and folder OpenCode will run in.</string>
+    <string name="workspaces_subtitle">Choose the device and folder your agent runs in.</string>
     <string name="runtime_targets_title">Runtimes</string>
     <string name="in_use_label">In use</string>
     <string name="edit_description">Edit</string>
@@ -302,7 +302,7 @@
     <string name="diagnostics_and_management_button">Diagnostics &amp; management</string>
     <string name="workspace_folders_title">Workspace folders</string>
     <string name="no_workspaces_title">No workspace folders yet</string>
-    <string name="no_workspaces_body">Folders OpenCode uses will show up here once you start a session.</string>
+    <string name="no_workspaces_body">Folders your agent uses will show up here once you start a session.</string>
     <string name="status_fetch_failed">Failed to fetch status</string>
     <string name="connected_at_url">OpenCode %1$s · %2$s</string>
     <string name="connecting_at">Connecting · %1$s</string>
@@ -317,21 +317,21 @@
     <string name="disconnected_label">Not connected</string>
     <string name="current_configuration">Current configuration</string>
     <string name="not_selected">Not selected</string>
-    <string name="opencode_default_value">OpenCode default</string>
+    <string name="opencode_default_value">Runtime default</string>
     <string name="no_ai_service_selected">No AI service selected</string>
     <string name="connection_or_fetch_failed">Failed to connect or fetch</string>
     <string name="checking_connection_status">Checking connection and status</string>
     <string name="choose_local_or_pc_runtime">Choose an Android local or PC runtime</string>
-    <string name="not_connected_to_opencode">Not connected to OpenCode</string>
+    <string name="not_connected_to_opencode">Not connected to a runtime</string>
 
-    <string name="voice_no_runtime_configured">Please set up an OpenCode runtime.</string>
-    <string name="voice_event_connection_failed">Failed to connect to OpenCode events</string>
-    <string name="voice_processing_failed">OpenCode failed to process the request</string>
-    <string name="voice_send_failed">Could not send to OpenCode</string>
-    <string name="voice_no_answer_text">Could not get an answer from OpenCode</string>
+    <string name="voice_no_runtime_configured">Please set up a runtime.</string>
+    <string name="voice_event_connection_failed">Failed to connect to runtime events</string>
+    <string name="voice_processing_failed">The agent could not process the request</string>
+    <string name="voice_send_failed">Could not send to the agent</string>
+    <string name="voice_no_answer_text">Could not get an answer from the agent</string>
     <string name="voice_permission_send_failed">Could not send the approval response</string>
     <string name="voice_state_listening">Listening…</string>
-    <string name="voice_state_thinking">OpenCode is processing</string>
+    <string name="voice_state_thinking">Processing</string>
     <string name="voice_state_speaking">Reading the answer aloud</string>
     <string name="voice_state_done">Done</string>
     <string name="voice_state_error">Error</string>
@@ -395,7 +395,7 @@
     <string name="chat_home_title">Chat</string>
     <string name="chat_build_headline">Build with OpenCode</string>
     <string name="chat_build_subtitle">Ask anything — implement, fix, and review code together.</string>
-    <string name="chat_message_placeholder">Message OpenCode…</string>
+    <string name="chat_message_placeholder">Message…</string>
     <string name="chat_attach">Attach file</string>
     <string name="chat_remove_attachment">Remove attachment</string>
     <string name="chat_thinking_default">Thinking</string>
@@ -445,7 +445,7 @@
     <string name="onboarding_subtitle">Write, fix, and understand code. To get started, just choose one execution path.</string>
     <string name="onboarding_recommended_badge">Recommended</string>
     <string name="onboarding_android_title">Start with this Android</string>
-    <string name="onboarding_android_desc">Run OpenCode directly on this device.</string>
+    <string name="onboarding_android_desc">Run a coding agent directly on this device.</string>
     <string name="onboarding_remote_title">Connect to a PC or Mac</string>
     <string name="onboarding_remote_desc">Connect to an existing OpenCode server.</string>
     <string name="onboarding_switch_note">Either way, you can add the other option later and switch anytime.</string>
@@ -597,7 +597,7 @@
     <string name="unified_view">Unified</string>
     <string name="split_view">Split</string>
     <string name="diff_stat">+%1$d / -%2$d</string>
-    <string name="widget_quick_input_hint">Message OpenCode…</string>
+    <string name="widget_quick_input_hint">Message…</string>
 
     <!-- Subagent sessions -->
     <string name="subagent_session_label">Subagent session</string>
@@ -764,12 +764,12 @@
     <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
-    <string name="error_opencode_operation">OpenCode operation failed</string>
-    <string name="error_no_connection">OpenCode connection is not configured</string>
+    <string name="error_opencode_operation">The operation failed</string>
+    <string name="error_no_connection">No runtime connection is configured</string>
     <string name="session_title_attachment">Attachment</string>
     <string name="error_answer_required">Answer required</string>
-    <string name="error_question_failed">OpenCode question failed</string>
-    <string name="error_session_failed">OpenCode session failed</string>
+    <string name="error_question_failed">The question failed</string>
+    <string name="error_session_failed">The session failed</string>
 
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
@@ -838,7 +838,7 @@
 
     <!-- Session detail -->
     <string name="session_info_id">ID</string>
-    <string name="session_info_opencode">OpenCode</string>
+    <string name="session_info_opencode">Runtime</string>
     <string name="session_todo_title">Todo</string>
 
     <string name="runtime_diagnostics_failed">Failed to diagnose the local runtime</string>
@@ -848,4 +848,74 @@
     <string name="runtime_rollback_start_failed">Cannot start OpenCode rollback</string>
     <string name="runtime_delete_failed">Cannot delete the local runtime</string>
     <string name="runtime_delete_timeout">Runtime deletion timed out</string>
+    <!-- Claude Code agent and agent selection -->
+    <string name="agent_opencode_name">OpenCode</string>
+    <string name="agent_claude_code_name">Claude Code</string>
+    <string name="runtime_error_install_failed">Could not install the local runtime</string>
+    <string name="runtime_error_reinstall_failed">Could not reinstall the local runtime</string>
+    <string name="runtime_error_start_failed">Could not start local OpenCode</string>
+    <string name="runtime_error_stop_failed">Could not stop local OpenCode</string>
+    <string name="runtime_error_delete_failed">Could not delete the local runtime</string>
+    <string name="runtime_error_delete_incomplete">The local runtime could not be fully deleted</string>
+    <string name="runtime_error_missing_files">Local runtime files are missing</string>
+    <string name="runtime_error_update_check_failed">Could not check for OpenCode updates</string>
+    <string name="runtime_error_update_prepare_failed">Could not prepare the OpenCode update</string>
+    <string name="runtime_error_rollback_check_failed">Could not determine a version to revert to</string>
+    <string name="runtime_error_restore_failed">Could not restore the OpenCode runtime</string>
+    <string name="runtime_error_start_after_update_failed">Could not start OpenCode after the update</string>
+    <string name="runtime_error_start_after_rollback_failed">Could not start OpenCode after reverting</string>
+    <string name="runtime_error_command_timed_out">The check timed out</string>
+    <string name="runtime_error_restored_but_cannot_start">Restored OpenCode %1$s but it will not start: %2$s</string>
+    <string name="runtime_step_preparing_update">Preparing the update</string>
+    <string name="runtime_step_rolling_back_to">Reverting to OpenCode %1$s</string>
+    <string name="install_step_installing_claude_code">Installing Claude Code</string>
+    <string name="claude_permission_plan">Plan only</string>
+    <string name="claude_permission_plan_desc">Claude reads and plans but never edits files or runs commands.</string>
+    <string name="claude_permission_accept_edits">Accept edits</string>
+    <string name="claude_permission_accept_edits_desc">Claude may edit files in the workspace. Recommended.</string>
+    <string name="claude_permission_full_access">Full access</string>
+    <string name="claude_permission_full_access_desc">Claude may run any command without asking. Use with care.</string>
+    <string name="claude_permission_mode_label">Permission mode</string>
+    <string name="claude_install_button">Install Claude Code</string>
+    <string name="claude_retry_install_button">Retry installation</string>
+    <string name="claude_update_button">Update Claude Code</string>
+    <string name="claude_step_preparing_runtime">Preparing the Linux environment</string>
+    <string name="claude_step_adding_repository">Adding the Claude Code package repository</string>
+    <string name="claude_step_downloading_package">Downloading Claude Code (about 80 MB)</string>
+    <string name="claude_step_verifying">Verifying the installation</string>
+    <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="claude_status_not_installed">Not installed</string>
+    <string name="claude_status_installing">Installing</string>
+    <string name="claude_status_ready">Ready</string>
+    <string name="claude_status_signed_out">Signed out</string>
+    <string name="claude_sign_in_button">Sign in to Claude</string>
+    <string name="claude_sign_out_button">Sign out</string>
+    <string name="claude_signed_in_as">Signed in: %1$s</string>
+    <string name="claude_auth_starting">Starting sign-in…</string>
+    <string name="claude_auth_open_browser">Open the sign-in page</string>
+    <string name="claude_auth_instructions">Approve the request in your browser, then paste the code it shows back here.</string>
+    <string name="claude_auth_code_hint">Authorization code</string>
+    <string name="claude_auth_submit_code">Submit code</string>
+    <string name="claude_auth_verifying">Verifying…</string>
+    <string name="claude_auth_cancel">Cancel sign-in</string>
+    <string name="setup_step_agents">Choose your agent</string>
+    <string name="setup_agents_description">Pick the coding agents to install on this device. Both run in the same Linux environment, and you can add the other one later.</string>
+    <string name="setup_agent_claude_code_desc">Sign in with your Claude account in the browser. Downloads about 80 MB.</string>
+    <string name="setup_agent_opencode_desc">Bring your own model provider keys. Downloads about 120 MB.</string>
+    <string name="setup_agents_required">Select at least one agent to continue.</string>
+    <string name="setup_step_sign_in">Sign in</string>
+    <string name="setup_sign_in_description">Connect the accounts your agents will use.</string>
+    <string name="setup_runtime_shared_note">Both agents share one Linux environment, so this download happens only once.</string>
+    <string name="local_agent_on_device">%1$s · Local</string>
+    <string name="runtime_status_stopped_reason">The local runtime is stopped</string>
+    <string name="runtime_status_connecting_reason">Connecting to the local runtime</string>
+    <string name="claude_error_runtime_missing">The Linux environment is not installed yet</string>
+    <string name="claude_error_sign_in_start">Could not start Claude Code sign-in</string>
+    <string name="claude_error_sign_in_incomplete">Sign-in did not complete</string>
+    <string name="claude_error_sign_in_exit">Claude Code sign-in stopped (exit code %1$d)</string>
+    <string name="claude_error_submit_code">Could not submit the code</string>
+    <string name="claude_error_install_failed">Claude Code installation failed</string>
+    <string name="claude_error_update_failed">Claude Code update failed</string>
+    <string name="setup_download_agents_description">Prepare the shared Linux environment and the agents you picked.</string>
+    <string name="claude_model_account_default">Account default</string>
 </resources>

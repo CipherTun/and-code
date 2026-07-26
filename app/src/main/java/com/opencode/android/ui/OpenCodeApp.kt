@@ -167,6 +167,7 @@ fun OpenCodeApp(
                         app.localRuntimeController,
                         app.settings,
                         java.io.File(context.filesDir, "runtime/workspace"),
+                        claudeCode = app.claudeCodeController,
                     )
                 },
         )
@@ -611,7 +612,27 @@ fun OpenCodeApp(
                     val localRuntimeStatus by app.localRuntimeManager.state.collectAsState()
                     AndroidSetupScreen(
                         runtimeStatus = localRuntimeStatus,
-                        onStartRuntimeSetup = workspaceViewModel::setupLocalRuntime,
+                        claude = workspaceState.claude,
+                        onStartSetup = { agents ->
+                            if (com.opencode.android.runtime.LocalAgent.OPEN_CODE in agents) {
+                                workspaceViewModel.setupLocalRuntime()
+                            }
+                            if (com.opencode.android.runtime.LocalAgent.CLAUDE_CODE in agents &&
+                                com.opencode.android.runtime.LocalAgent.OPEN_CODE !in agents
+                            ) {
+                                workspaceViewModel.installClaudeCode()
+                            }
+                        },
+                        onSelectClaudePermissionMode = { mode ->
+                            workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                        },
+                        onBeginClaudeSignIn = workspaceViewModel::beginClaudeSignIn,
+                        onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
+                        onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
+                        onSignOutClaude = workspaceViewModel::signOutClaude,
+                        onOpenUrl = { url ->
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                        },
                         settingsState = settingsState,
                         onOpenProviderAuth = settingsViewModel::openProviderAuth,
                         onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,
@@ -656,6 +677,13 @@ fun OpenCodeApp(
                         selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
                         runtimeTargets = runtimeTargets,
                         selectedRuntimeId = selectedRuntime?.id,
+                        claudePermissionMode =
+                            workspaceState.claude
+                                .takeIf { selectedRuntime?.agent == com.opencode.android.runtime.LocalAgent.CLAUDE_CODE }
+                                ?.permissionMode,
+                        onSelectClaudePermissionMode = { mode ->
+                            workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                        },
                         onSelectRuntime = { id ->
                             if (id != selectedRuntime?.id) {
                                 if (chatState.messages.isNotEmpty()) {
@@ -778,7 +806,6 @@ fun OpenCodeApp(
                 workspaceNavGraph(
                     navController = navController,
                     workspaceViewModel = workspaceViewModel,
-                    workspaceState = workspaceState,
                     selectedWorkspace = selectedWorkspace,
                     onSelectWorkspace = { selectedWorkspace = it },
                     selectedRuntime = selectedRuntime,

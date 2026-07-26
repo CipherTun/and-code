@@ -19,6 +19,7 @@ import com.opencode.android.core.api.ProviderAuthMethod
 import com.opencode.android.core.api.ProviderCatalog
 import com.opencode.android.core.api.QuestionRequest
 import com.opencode.android.runtime.BackendKind
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.runtime.PermissionResponse
 import com.opencode.android.runtime.RuntimeState
@@ -40,9 +41,11 @@ import kotlinx.coroutines.launch
 class LocalRuntimeTarget(
     private val runtimeManager: LocalRuntimeManager,
     private val backend: LocalOpenCodeBackend = LocalOpenCodeBackend(runtimeManager),
+    private val messages: LocalRuntimeMessages = LocalRuntimeMessages,
 ) : RuntimeTarget {
-    override val id: String = "local-android"
-    override val displayName: String = "このAndroid端末"
+    override val id: String = LocalAgent.OPEN_CODE.targetId
+    override val displayName: String = "OpenCode"
+    override val agent: LocalAgent = LocalAgent.OPEN_CODE
     override val type: RuntimeType = RuntimeType.LOCAL
     override val kind: BackendKind = BackendKind.LOCAL
 
@@ -294,8 +297,8 @@ class LocalRuntimeTarget(
 
     private fun mapStatus(status: LocalRuntimeStatus): RuntimeState =
         when (status) {
-            LocalRuntimeStatus.NotInstalled -> RuntimeState.Unavailable("ローカルランタイムは未インストールです")
-            is LocalRuntimeStatus.UnsupportedAbi -> RuntimeState.Unavailable("未対応ABI: ${status.abi}")
+            LocalRuntimeStatus.NotInstalled -> RuntimeState.Unavailable(messages.notInstalled)
+            is LocalRuntimeStatus.UnsupportedAbi -> RuntimeState.Unavailable(messages.unsupportedAbi(status.abi))
             is LocalRuntimeStatus.Installing -> RuntimeState.Connecting
             is LocalRuntimeStatus.Starting -> RuntimeState.Connecting
             is LocalRuntimeStatus.Updating -> RuntimeState.Connecting
@@ -306,8 +309,8 @@ class LocalRuntimeTarget(
 
     private fun RuntimeState.describe(): String =
         when (this) {
-            RuntimeState.Disconnected -> "ローカルランタイムは停止しています"
-            RuntimeState.Connecting -> "ローカルランタイムへ接続中です"
+            RuntimeState.Disconnected -> messages.runtimeStopped
+            RuntimeState.Connecting -> messages.runtimeConnecting
             is RuntimeState.Connected -> "OpenCode $version"
             is RuntimeState.Unavailable -> reason
             is RuntimeState.Failed -> message

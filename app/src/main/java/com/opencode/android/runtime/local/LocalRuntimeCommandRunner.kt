@@ -9,6 +9,7 @@ class LocalRuntimeCommandRunner(
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator(),
     private val timeoutSeconds: Long = 15L,
     private val maxOutputCharacters: Int = 4_000,
+    private val messages: LocalRuntimeMessages = LocalRuntimeMessages,
 ) {
     init {
         require(timeoutSeconds > 0)
@@ -26,7 +27,7 @@ class LocalRuntimeCommandRunner(
             require(timeoutSeconds > 0L)
             val runtime =
                 installedRuntimeProvider()
-                    ?: return@read LocalRuntimeCommandResult(127, "未インストール")
+                    ?: return@read LocalRuntimeCommandResult(127, messages.notInstalled)
             val prootTmp = File(runtimeDirectory, "proot-tmp").apply { mkdirs() }
             val outputFile = File.createTempFile("diagnostic-", ".log", File(runtimeDirectory, "logs").apply { mkdirs() })
             try {
@@ -65,7 +66,7 @@ class LocalRuntimeCommandRunner(
                 if (!completed) {
                     process.destroyForcibly()
                     process.waitFor(2, TimeUnit.SECONDS)
-                    LocalRuntimeCommandResult(124, "確認がタイムアウトしました")
+                    LocalRuntimeCommandResult(124, messages.commandTimedOut)
                 } else {
                     LocalRuntimeCommandResult(
                         exitCode = process.exitValue(),

@@ -2,6 +2,7 @@ package com.opencode.android.runtime.local
 
 import android.content.Context
 import com.opencode.android.R
+import com.opencode.android.runtime.LocalAgent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -29,13 +30,32 @@ class LocalRuntimeInstaller(
         val metadata: LocalRuntimeMetadata,
         val commandSuite: EmbeddedCommandSuite.Paths,
         val rootfs: File,
-        val openCode: File,
+        /** Null when the sandbox was provisioned without the OpenCode agent. */
+        val openCode: File?,
     )
 
-    suspend fun install(onProgress: (Float?, String) -> Unit = { _, _ -> }): InstalledRuntime =
+    /**
+     * Provisions the shared Alpine sandbox and the requested [agents].
+     *
+     * Agents already recorded in the current install are carried over, so adding one never silently
+     * removes another. The OpenCode binary — by far the largest download — is fetched only when
+     * OpenCode is actually among the resulting agents.
+     */
+    suspend fun install(
+        agents: Set<LocalAgent> = setOf(LocalAgent.OPEN_CODE),
+        onProgress: (Float?, String) -> Unit = { _, _ -> },
+    ): InstalledRuntime =
         withContext(Dispatchers.IO) {
             runtimeDirectory.mkdirs()
             onProgress(0.02f, context.getString(R.string.install_step_preparing_command_env))
+            val requestedAgents =
+                agents + (
+                    installedMetadata()?.let {
+                            existing ->
+                        LocalAgent.entries.filter(existing::has)
+                    } ?: emptyList()
+                )
+            require(requestedAgents.isNotEmpty()) { "At least one agent must be selected" }
             val commandSuite = EmbeddedCommandSuite(context, runtimeDirectory, abi).ensureInstalled()
             val manifest = manifestReader.read()
             val architecture = manifest.architecture(abi)
@@ -64,46 +84,49 @@ class LocalRuntimeInstaller(
                     context.getString(R.string.install_step_downloading_alpine),
                     onProgress,
                 )
-                val openCodeArchive = File(cache, "opencode-${manifest.openCodeVersion}-$abi.tar.gz")
-                download(
-                    architecture.openCodeUrl,
-                    openCodeArchive,
-                    architecture.openCodeSha256,
-                    0.24f,
-                    0.72f,
-                    context.getString(R.string.install_step_downloading_opencode),
-                    onProgress,
-                )
+                val withOpenCode = LocalAgent.OPEN_CODE in requestedAgents
+                val openCodeArchive =
+                    File(cache, "opencode-${manifest.openCodeVersion}-$abi.tar.gz").takeIf { withOpenCode }?.also { archive ->
+                        download(
+                            architecture.openCodeUrl,
+                            archive,
+                            architecture.openCodeSha256,
+                            0.24f,
+                            0.72f,
+                            context.getString(R.string.install_step_downloading_opencode),
+                            onProgress,
+                        )
+                    }
 
                 val rootfs = File(staging, "rootfs").apply { mkdirs() }
                 onProgress(0.75f, context.getString(R.string.install_step_extracting_linux_env))
                 alpineArchive.inputStream().use { RuntimeArchive.extractTarGz(it, rootfs) }
 
-                val openCodeExtract = File(staging, "opencode-extract").apply { mkdirs() }
-                onProgress(0.85f, context.getString(R.string.install_step_extracting_opencode))
-                openCodeArchive.inputStream().use { RuntimeArchive.extractTarGz(it, openCodeExtract) }
-                val sourceBinary =
-                    openCodeExtract.walkTopDown()
-                        .firstOrNull { it.isFile && it.name == "opencode" }
-                        ?: error("OpenCode archive did not contain the opencode binary")
-                val openCodeBinary = File(rootfs, "usr/local/bin/opencode")
-                openCodeBinary.parentFile?.mkdirs()
-                sourceBinary.copyTo(openCodeBinary, overwrite = true)
-                require(openCodeBinary.setExecutable(true, false) || openCodeBinary.canExecute()) {
-                    "Unable to mark OpenCode executable"
-                }
-                openCodeExtract.deleteRecursively()
+                val openCodeBinary =
+                    openCodeArchive?.let { archive ->
+                        onProgress(0.85f, context.getString(R.string.install_step_extracting_opencode))
+                        extractOpenCode(archive, staging, rootfs)
+                    }
                 configureRootfs(rootfs, commandSuite)
+                // Credentials and agent config live under /root inside the rootfs. Activation swaps
+                // the whole environment directory, so without this the user is signed out of every
+                // agent whenever another one is added or the runtime is reinstalled.
+                carryOverHomeDirectory(File(active, "rootfs"), rootfs)
                 onProgress(0.91f, context.getString(R.string.install_step_installing_dev_tools))
                 installDevelopmentTools(rootfs, commandSuite)
+                if (LocalAgent.CLAUDE_CODE in requestedAgents) {
+                    onProgress(0.93f, context.getString(R.string.install_step_installing_claude_code))
+                    ClaudeCodeInstaller.installInto(rootfs, commandSuite, runtimeDirectory)
+                }
 
                 val metadata =
                     LocalRuntimeMetadata(
-                        version = manifest.openCodeVersion,
+                        version = if (withOpenCode) manifest.openCodeVersion else "",
                         port = manifest.port,
                         installedAt = System.currentTimeMillis(),
                         runtimeVersion = manifest.runtimeVersion,
                         abi = abi,
+                        components = requestedAgents.map(LocalAgent::id).toSet(),
                     )
                 File(staging, METADATA_FILE).writeText(json.encodeToString(metadata))
                 onProgress(0.96f, context.getString(R.string.install_step_activating_runtime))
@@ -121,7 +144,12 @@ class LocalRuntimeInstaller(
                     )
                 }
                 onProgress(1f, context.getString(R.string.install_step_done))
-                InstalledRuntime(metadata, commandSuite, File(active, "rootfs"), File(active, "rootfs/usr/local/bin/opencode"))
+                InstalledRuntime(
+                    metadata,
+                    commandSuite,
+                    File(active, "rootfs"),
+                    openCodeBinary?.let { File(active, "rootfs/usr/local/bin/opencode") },
+                )
             } catch (error: Throwable) {
                 staging.deleteRecursively()
                 throw error
@@ -137,13 +165,18 @@ class LocalRuntimeInstaller(
             )
         }
 
+    /**
+     * The provisioned sandbox, or null when no usable Linux environment exists yet.
+     *
+     * The OpenCode binary is no longer part of the liveness check: a Claude Code-only sandbox is a
+     * complete, usable runtime and callers that need OpenCode check [InstalledRuntime.openCode].
+     */
     fun installedRuntime(): InstalledRuntime? =
         accessCoordinator.read {
             val active = File(runtimeDirectory, "environment")
             val metadataFile = File(runtimeDirectory, METADATA_FILE)
             val rootfs = File(active, "rootfs")
-            val openCode = File(rootfs, "usr/local/bin/opencode")
-            if (!metadataFile.isFile || !openCode.isFile) return@read null
+            if (!metadataFile.isFile || !rootfs.isDirectory) return@read null
             val metadata =
                 runCatching {
                     json.decodeFromString<LocalRuntimeMetadata>(metadataFile.readText())
@@ -152,10 +185,62 @@ class LocalRuntimeInstaller(
                 runCatching {
                     EmbeddedCommandSuite(context, runtimeDirectory, abi).ensureInstalled()
                 }.getOrNull() ?: return@read null
-            InstalledRuntime(metadata, commandSuite, rootfs, openCode)
+            InstalledRuntime(metadata, commandSuite, rootfs, File(rootfs, "usr/local/bin/opencode").takeIf { it.isFile })
         }
 
+    /** Metadata of the active install, without requiring the command suite to be extractable. */
+    fun installedMetadata(): LocalRuntimeMetadata? =
+        accessCoordinator.read {
+            val metadataFile = File(runtimeDirectory, METADATA_FILE)
+            if (!metadataFile.isFile) return@read null
+            runCatching { json.decodeFromString<LocalRuntimeMetadata>(metadataFile.readText()) }.getOrNull()
+        }
+
+    /** Records [agent] as provisioned, so a later reinstall keeps it. */
+    fun recordAgent(agent: LocalAgent) {
+        accessCoordinator.write {
+            val metadataFile = File(runtimeDirectory, METADATA_FILE)
+            val metadata =
+                runCatching { json.decodeFromString<LocalRuntimeMetadata>(metadataFile.readText()) }.getOrNull()
+                    ?: return@write
+            metadataFile.writeText(json.encodeToString(metadata.with(agent)))
+        }
+    }
+
     fun bundledOpenCodeVersion(): String = manifestReader.read().openCodeVersion
+
+    private fun extractOpenCode(
+        archive: File,
+        staging: File,
+        rootfs: File,
+    ): File {
+        val extractDir = File(staging, "opencode-extract").apply { mkdirs() }
+        try {
+            archive.inputStream().use { RuntimeArchive.extractTarGz(it, extractDir) }
+            val sourceBinary =
+                extractDir.walkTopDown()
+                    .firstOrNull { it.isFile && it.name == "opencode" }
+                    ?: error("OpenCode archive did not contain the opencode binary")
+            val binary = File(rootfs, "usr/local/bin/opencode")
+            binary.parentFile?.mkdirs()
+            sourceBinary.copyTo(binary, overwrite = true)
+            require(binary.setExecutable(true, false) || binary.canExecute()) {
+                "Unable to mark OpenCode executable"
+            }
+            return binary
+        } finally {
+            extractDir.deleteRecursively()
+        }
+    }
+
+    private fun carryOverHomeDirectory(
+        currentRootfs: File,
+        stagingRootfs: File,
+    ) {
+        val currentHome = File(currentRootfs, "root")
+        if (!currentHome.isDirectory) return
+        runCatching { currentHome.copyRecursively(File(stagingRootfs, "root"), overwrite = true) }
+    }
 
     private suspend fun download(
         url: String,
