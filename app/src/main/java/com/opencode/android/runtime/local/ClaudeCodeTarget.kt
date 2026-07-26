@@ -14,11 +14,14 @@ import com.opencode.android.runtime.RuntimeState
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -56,6 +59,12 @@ class ClaudeCodeTarget(
             isLenient = true
             encodeDefaults = true
         }
+
+    private companion object {
+        const val DEFAULT_TITLE = "Claude Code"
+        const val TITLE_LENGTH = 40
+    }
+
     private val sessionsFile = File(runtime.runtimeDirectory, "claude-sessions.json")
     private val modeFile = File(runtime.runtimeDirectory, "claude-permission-mode")
     private val records =
@@ -97,6 +106,8 @@ class ClaudeCodeTarget(
         records[sessionId] = record.copy(permissionMode = mode.cliValue)
         persist()
     }
+
+    private val titleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val auth: ClaudeAuthCoordinator get() = runtime.auth
 
@@ -165,7 +176,7 @@ class ClaudeCodeTarget(
             OpenCodeSession(
                 id = UUID.randomUUID().toString(),
                 directory = directory ?: "/workspace",
-                title = title ?: "Claude Code",
+                title = title ?: DEFAULT_TITLE,
                 time = OpenCodeTime(now, now),
             )
         records[session.id] = ClaudeSessionRecord(session, mutableDefaultPermissionMode.value.cliValue)
@@ -184,6 +195,17 @@ class ClaudeCodeTarget(
         request: PromptRequest,
     ) {
         val record = records[sessionId] ?: error("Claude Code session not found")
+        // Claude Code does not name sessions, so every chat would sit in the drawer as
+        // "Claude Code". The first prompt stands in, the way OpenCode summarises its own.
+        if (record.session.title == DEFAULT_TITLE) {
+            // The prompt stands in immediately so the drawer is never left saying "Claude Code";
+            // the summarised name replaces it once Claude answers.
+            titleFromPrompt(request.text)?.let { renameSession(sessionId, it) }
+            titleScope.launch {
+                val summary = withContext(Dispatchers.IO) { runtime.summarizeTitle(request.text) }
+                if (summary != null && records[sessionId] != null) renameSession(sessionId, summary)
+            }
+        }
         val model = request.modelId ?: record.model
         val effort = request.variant ?: record.effort
         // Remembered so reopening the chat keeps what the user last picked.
@@ -263,6 +285,11 @@ class ClaudeCodeTarget(
                     path = path,
                 )
             }
+
+    private fun titleFromPrompt(prompt: String): String? {
+        val firstLine = prompt.lineSequence().map(String::trim).firstOrNull(String::isNotEmpty) ?: return null
+        return if (firstLine.length <= TITLE_LENGTH) firstLine else firstLine.take(TITLE_LENGTH).trimEnd() + "…"
+    }
 
     private fun persist() {
         runCatching {

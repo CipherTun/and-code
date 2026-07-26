@@ -81,6 +81,7 @@ import com.opencode.android.feature.workspace.WorkspaceViewModel
 import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.runtime.local.GitCloneResult
 import com.opencode.android.ui.components.SessionStatus
+import com.opencode.android.ui.navigation.ClaudeSettingsActions
 import com.opencode.android.ui.navigation.DRAWER_ROOT_ROUTES
 import com.opencode.android.ui.navigation.ROUTE_ACTIVITY
 import com.opencode.android.ui.navigation.ROUTE_ANDROID_SETUP
@@ -816,6 +817,19 @@ fun OpenCodeApp(
                     runtimeRegistry = app.runtimeRegistry,
                     context = context,
                     hasMicrophonePermission = { hasMicrophonePermission() },
+                    claude = workspaceState.claude,
+                    claudeActions =
+                        ClaudeSettingsActions(
+                            onInstall = workspaceViewModel::installClaudeCode,
+                            onUpdate = workspaceViewModel::updateClaudeCode,
+                            onSelectPermissionMode = { mode ->
+                                workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                            },
+                            onSignIn = workspaceViewModel::beginClaudeSignIn,
+                            onSubmitCode = workspaceViewModel::submitClaudeSignInCode,
+                            onCancelSignIn = workspaceViewModel::cancelClaudeSignIn,
+                            onSignOut = workspaceViewModel::signOutClaude,
+                        ),
                     onRequestWakeWordPermission = {
                         startWakeWordAfterPermission = true
                         microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)

@@ -369,6 +369,54 @@ class ClaudeCodeRuntime(
         )
     }
 
+    /**
+     * Asks Claude for a short title for a new chat.
+     *
+     * OpenCode's server names its own sessions from the first prompt, and Claude Code does not, so
+     * this mirrors it with one cheap call on the fastest model. Arguments are passed directly rather
+     * than through a shell, so the prompt needs no quoting. Returns null on any failure; the caller
+     * falls back to the prompt itself.
+     */
+    fun summarizeTitle(prompt: String): String? {
+        val runtime = installedRuntimeProvider() ?: return null
+        if (!ClaudeCodeInstaller.isInstalledIn(runtime.rootfs)) return null
+        val instruction =
+            "Reply with a title of at most 6 words for a chat that starts with the following " +
+                "message. Reply with the title only, no quotes, no punctuation at the end, in the " +
+                "same language as the message.\n\n" + prompt.take(TITLE_PROMPT_LIMIT)
+        val process =
+            runCatching {
+                ProcessBuilder(
+                    ClaudeSandboxLauncher.command(
+                        runtime = runtime,
+                        workspaceHostDir = File(runtimeDirectory, "workspace").apply { mkdirs() },
+                        workingDirectory = "/workspace",
+                        arguments = listOf("--print", "--model", "haiku", "--tools", "", instruction),
+                        pty = false,
+                    ),
+                ).directory(runtimeDirectory)
+                    .redirectErrorStream(false)
+                    .apply {
+                        environment().clear()
+                        environment().putAll(
+                            ClaudeSandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                        )
+                    }
+                    .start()
+            }.getOrNull() ?: return null
+        val output = runCatching { process.inputStream.bufferedReader().readText() }.getOrNull()
+        if (!process.waitFor(TITLE_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return null
+        }
+        if (process.exitValue() != 0) return null
+        return output
+            ?.lineSequence()
+            ?.map { it.trim().trim('"') }
+            ?.firstOrNull { it.isNotEmpty() }
+            ?.takeIf { it.length <= TITLE_MAX_LENGTH }
+    }
+
     private fun runCommand(
         command: String,
         timeoutSeconds: Long = 30,
@@ -385,5 +433,8 @@ class ClaudeCodeRuntime(
 
         /** Reserved key; no model alias can collide with it. */
         const val CLI_VERSION_KEY = "@cliVersion"
+        const val TITLE_PROMPT_LIMIT = 500
+        const val TITLE_MAX_LENGTH = 60
+        const val TITLE_TIMEOUT_SECONDS = 45L
     }
 }

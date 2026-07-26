@@ -11,7 +11,10 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.opencode.android.data.settings.AppPreferences
 import com.opencode.android.data.settings.AppPreferencesRepository
+import com.opencode.android.feature.settings.AgentSettingsScreen
+import com.opencode.android.feature.settings.ClaudeCodeAgentSettingsScreen
 import com.opencode.android.feature.settings.GitHubSettingsScreen
+import com.opencode.android.feature.settings.OpenCodeAgentSettingsScreen
 import com.opencode.android.feature.settings.ProviderSettingsScreen
 import com.opencode.android.feature.settings.SettingsScreenV2
 import com.opencode.android.feature.settings.SettingsUiState
@@ -35,6 +38,8 @@ fun NavGraphBuilder.settingsNavGraph(
     runtimeRegistry: RuntimeRegistry,
     context: Context,
     hasMicrophonePermission: () -> Boolean,
+    claude: com.opencode.android.runtime.local.ClaudeCodeUiState,
+    claudeActions: ClaudeSettingsActions,
     onRequestWakeWordPermission: () -> Unit,
 ) {
     composable(ROUTE_SETTINGS) {
@@ -49,6 +54,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenAssistantSettings = onOpenAssistantSettings,
             onOpenVoiceSettings = { navController.navigate(ROUTE_SETTINGS_VOICE) },
             onOpenProviderSettings = { navController.navigate(ROUTE_SETTINGS_PROVIDERS) },
+            onOpenAgentSettings = { navController.navigate(ROUTE_SETTINGS_AGENTS) },
             onOpenGitHubSettings = { navController.navigate(ROUTE_SETTINGS_GITHUB) },
             onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
             onOpenRemoteConnection = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
@@ -99,6 +105,40 @@ fun NavGraphBuilder.settingsNavGraph(
                 } else {
                     com.opencode.android.feature.wakeword.WakeWordService.stop(context)
                 }
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENTS) {
+        AgentSettingsScreen(
+            onOpenOpenCode = { navController.navigate(ROUTE_SETTINGS_AGENT_OPENCODE) },
+            onOpenClaudeCode = { navController.navigate(ROUTE_SETTINGS_AGENT_CLAUDE) },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENT_OPENCODE) {
+        OpenCodeAgentSettingsScreen(
+            onOpenProviderSettings = { navController.navigate(ROUTE_SETTINGS_PROVIDERS) },
+            onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
+            onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENT_CLAUDE) {
+        ClaudeCodeAgentSettingsScreen(
+            claude = claude,
+            onInstall = claudeActions.onInstall,
+            onUpdate = claudeActions.onUpdate,
+            onSelectPermissionMode = claudeActions.onSelectPermissionMode,
+            onSignIn = claudeActions.onSignIn,
+            onSubmitCode = claudeActions.onSubmitCode,
+            onCancelSignIn = claudeActions.onCancelSignIn,
+            onSignOut = claudeActions.onSignOut,
+            onOpenUrl = { url ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
             },
             onBack = { navController.popBackStack() },
         )
@@ -155,3 +195,14 @@ fun NavGraphBuilder.settingsNavGraph(
         )
     }
 }
+
+/** Claude Code actions the settings graph forwards to its agent screen. */
+data class ClaudeSettingsActions(
+    val onInstall: () -> Unit,
+    val onUpdate: () -> Unit,
+    val onSelectPermissionMode: (com.opencode.android.runtime.local.ClaudePermissionMode) -> Unit,
+    val onSignIn: () -> Unit,
+    val onSubmitCode: (String) -> Unit,
+    val onCancelSignIn: () -> Unit,
+    val onSignOut: () -> Unit,
+)

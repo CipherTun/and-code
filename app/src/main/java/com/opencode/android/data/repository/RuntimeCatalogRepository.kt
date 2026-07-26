@@ -9,6 +9,7 @@ import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.WorkspaceRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +34,7 @@ data class RuntimeCatalogState(
 class RuntimeCatalogRepository(
     private val registry: RuntimeRegistry,
     private val scope: CoroutineScope,
+    private val providerCache: ProviderCatalogCache? = null,
 ) {
     private val mutableState = MutableStateFlow(RuntimeCatalogState(runtime = registry.selected.value))
     val state: StateFlow<RuntimeCatalogState> = mutableState.asStateFlow()
@@ -70,9 +72,14 @@ class RuntimeCatalogRepository(
         scope.launch {
             runCatching { target.listProviders() }
                 .onSuccess { providers ->
-                    if (registry.selected.value?.id == target.id) {
-                        mutableState.update { it.copy(providers = providers) }
-                    }
+                    if (registry.selected.value?.id != target.id) return@onSuccess
+                    mutableState.update { it.copy(providers = providers) }
+                    // The version keys the cache, and it is often still unknown here: the first
+                    // load runs before the runtime has finished starting, so its connect failed.
+                    val version =
+                        mutableState.value.health?.version
+                            ?: runCatching { target.health() }.getOrNull()?.version.orEmpty()
+                    if (version.isNotBlank()) providerCache?.write(target.id, version, providers)
                 }
         }
     }
@@ -84,7 +91,15 @@ class RuntimeCatalogRepository(
                 current.copy(runtime = target, isRefreshing = true, error = null)
             }
 
-            val connection = target.connect()
+            // The local runtime is usually still starting when the app opens, so a single attempt
+            // fails and nothing ever retried: the catalogue stayed empty until something else asked
+            // for it, which is what made the model picker look slow.
+            var connection = target.connect()
+            repeat(CONNECT_RETRIES) {
+                if (connection.isSuccess || registry.selected.value?.id != target.id) return@repeat
+                delay(CONNECT_RETRY_DELAY_MILLIS)
+                connection = target.connect()
+            }
             if (connection.isFailure) {
                 mutableState.value =
                     RuntimeCatalogState(
@@ -93,6 +108,14 @@ class RuntimeCatalogRepository(
                         error = connection.exceptionOrNull().safeMessage(),
                     )
                 return
+            }
+
+            val cachedProviders =
+                connection.getOrNull()?.version?.let { version ->
+                    providerCache?.read(target.id, version)
+                }
+            if (cachedProviders != null && registry.selected.value?.id == target.id) {
+                mutableState.update { it.copy(runtime = target, providers = cachedProviders) }
             }
 
             val catalog =
@@ -110,6 +133,13 @@ class RuntimeCatalogRepository(
                 }
 
             if (registry.selected.value?.id != target.id) return
+            connection.getOrNull()?.version?.let { version ->
+                catalog.providers.getOrNull()?.let { providers ->
+                    if (providerCache?.isStale(target.id, version, providers) != false) {
+                        providerCache?.write(target.id, version, providers)
+                    }
+                }
+            }
             val errors = catalog.failures()
             mutableState.value =
                 RuntimeCatalogState(
@@ -138,6 +168,11 @@ class RuntimeCatalogRepository(
                 agents.exceptionOrNull()?.let { "エージェント: ${it.safeMessage()}" },
                 workspaces.exceptionOrNull()?.let { "作業フォルダ: ${it.safeMessage()}" },
             )
+    }
+
+    private companion object {
+        const val CONNECT_RETRIES = 6
+        const val CONNECT_RETRY_DELAY_MILLIS = 2_500L
     }
 }
 
