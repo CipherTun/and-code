@@ -22,6 +22,7 @@ class PermissionActionReceiver : BroadcastReceiver() {
         if (intent?.action != RuntimeNotificationHelper.ACTION_PERMISSION_RESPONSE) return
         val sessionId = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_SESSION_ID) ?: return
         val permissionId = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_PERMISSION_ID) ?: return
+        val runtimeId = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_RUNTIME_ID)
         val responseValue = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_PERMISSION_RESPONSE) ?: return
         val remember = intent.getBooleanExtra(RuntimeNotificationHelper.EXTRA_PERMISSION_REMEMBER, false)
 
@@ -41,7 +42,9 @@ class PermissionActionReceiver : BroadcastReceiver() {
                         // request must not outlive it.
                         withTimeout(RESPONSE_TIMEOUT_MS) {
                             val backend =
-                                app.runtimeRegistry.selected.value
+                                runtimeId
+                                    ?.let(app.runtimeRegistry::target)
+                                    ?: app.runtimeRegistry.selected.value
                                     ?: error("No OpenCode runtime is selected")
                             backend.respondToPermission(sessionId, permissionId, response, remember)
                         }

@@ -104,7 +104,9 @@
     <string name="notification_channel_status">Статус задачи</string>
     <string name="notification_approval_title">OpenCode требует одобрения</string>
     <string name="notification_complete_title">OpenCode завершил работу</string>
-    <string name="notification_complete_body">Сессия %1$s бездействует</string>
+    <string name="notification_complete_body">Чат %1$s бездействует</string>
+    <string name="permission_chat_confirmation">Этот чат ожидает вашего разрешения. Выберите, что может сделать OpenCode:</string>
+    <string name="permission_response_failed">OpenCode не удалось применить этот ответ на запрос разрешения.</string>
     <string name="notification_error_title">Ошибка OpenCode</string>
     <string name="notification_error_body">Сессия завершилась с ошибкой</string>
     <string name="notification_permission_failed">Не удалось отправить подтверждение. Откройте приложение и попробуйте снова.</string>

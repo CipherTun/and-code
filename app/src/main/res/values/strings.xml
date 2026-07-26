@@ -104,7 +104,9 @@
     <string name="notification_channel_status">Task status</string>
     <string name="notification_approval_title">OpenCode needs approval</string>
     <string name="notification_complete_title">OpenCode finished</string>
-    <string name="notification_complete_body">Session %1$s is idle</string>
+    <string name="notification_complete_body">Chat %1$s is idle</string>
+    <string name="permission_chat_confirmation">This chat is waiting for your approval. Choose what OpenCode may do:</string>
+    <string name="permission_response_failed">OpenCode could not apply that permission response.</string>
     <string name="notification_error_title">OpenCode error</string>
     <string name="notification_error_body">A session failed</string>
     <string name="notification_permission_failed">Could not send the approval. Open the app and try again.</string>

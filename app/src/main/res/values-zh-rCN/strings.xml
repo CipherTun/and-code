@@ -104,7 +104,9 @@
     <string name="notification_channel_status">任务状态</string>
     <string name="notification_approval_title">OpenCode 需要批准</string>
     <string name="notification_complete_title">OpenCode 已完成</string>
-    <string name="notification_complete_body">会话 %1$s 处于空闲状态</string>
+    <string name="notification_complete_body">聊天 %1$s 处于空闲状态</string>
+    <string name="permission_chat_confirmation">此聊天正在等待你的批准。请选择允许 OpenCode 执行的操作：</string>
+    <string name="permission_response_failed">OpenCode 无法应用此权限响应。</string>
     <string name="notification_error_title">OpenCode 错误</string>
     <string name="notification_error_body">会话失败</string>
     <string name="notification_permission_failed">无法发送授权。请打开应用后重试。</string>

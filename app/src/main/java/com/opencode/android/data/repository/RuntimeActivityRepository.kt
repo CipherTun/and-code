@@ -46,9 +46,9 @@ class RuntimeActivityRepository(
     scope: CoroutineScope,
     private val retryDelayMillis: Long = 2_000L,
     private val maxRetryDelayMillis: Long = 30_000L,
-    private val onPermissionAsked: ((PermissionRequest) -> Unit)? = null,
+    private val onPermissionAsked: ((PermissionRequest, String?, String) -> Unit)? = null,
     private val onPermissionResolved: ((String) -> Unit)? = null,
-    private val onSessionIdle: ((String) -> Unit)? = null,
+    private val onSessionIdle: ((String, String?) -> Unit)? = null,
     private val onSessionError: ((String?, String?) -> Unit)? = null,
     private val unreadStore: UnreadSessionStore? = null,
 ) {
@@ -126,7 +126,7 @@ class RuntimeActivityRepository(
             .collect { event ->
                 mutableState.update { it.copy(streamError = null) }
                 mutableEvents.emit(event)
-                handle(event)
+                handle(target, event)
             }
     }
 
@@ -187,7 +187,10 @@ class RuntimeActivityRepository(
         unreadStore?.unreadSessionIds = mutableState.value.completedSessionIds
     }
 
-    private fun handle(event: OpenCodeEvent) {
+    private suspend fun handle(
+        target: RuntimeTarget,
+        event: OpenCodeEvent,
+    ) {
         when (event) {
             OpenCodeEvent.ServerConnected -> appendLog("イベント接続", "OpenCodeのリアルタイムイベントへ接続しました")
             is OpenCodeEvent.MessagePartUpdated -> {
@@ -213,7 +216,11 @@ class RuntimeActivityRepository(
                     )
                 }
                 appendLog("承認待ち", event.request.permission, event.request.sessionId)
-                onPermissionAsked?.invoke(event.request)
+                onPermissionAsked?.invoke(
+                    event.request,
+                    sessionTitle(target, event.request.sessionId),
+                    target.id,
+                )
             }
             is OpenCodeEvent.SessionIdle -> {
                 mutableState.update { current ->
@@ -223,7 +230,7 @@ class RuntimeActivityRepository(
                     )
                 }
                 appendLog("実行完了", null, event.sessionId)
-                onSessionIdle?.invoke(event.sessionId)
+                onSessionIdle?.invoke(event.sessionId, sessionTitle(target, event.sessionId))
             }
             is OpenCodeEvent.SessionError -> {
                 event.sessionId?.let { sessionId ->
@@ -243,6 +250,13 @@ class RuntimeActivityRepository(
             is OpenCodeEvent.Unknown -> appendLog("未対応イベント", event.type)
         }
     }
+
+    private suspend fun sessionTitle(
+        target: RuntimeTarget,
+        sessionId: String,
+    ): String? =
+        runCatching { target.session(sessionId).title.trim().takeIf(String::isNotEmpty) }
+            .getOrNull()
 
     private fun appendLog(
         title: String,

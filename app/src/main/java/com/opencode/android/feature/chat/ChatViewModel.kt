@@ -550,7 +550,8 @@ class ChatViewModel(
                 val session =
                     if (existingSessionId == null) {
                         currentBackend.createSession(
-                            title = normalized.take(60).ifBlank { "Attachment" },
+                            // Let OpenCode generate the concise chat summary from the first prompt.
+                            title = null,
                             directory = _uiState.value.selectedWorkspacePath,
                         )
                     } else {
@@ -585,6 +586,10 @@ class ChatViewModel(
                         attachments = pendingAttachments,
                     ),
                 )
+                runCatching { currentBackend.session(targetSessionId).title }
+                    .onSuccess { title ->
+                        if (title.isNotBlank()) _uiState.update { it.copy(sessionTitle = title) }
+                    }
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
@@ -708,6 +713,8 @@ class ChatViewModel(
                         state.copy(permissions = state.permissions.filterNot { it.id == permissionId })
                     }
                     onPermissionResolved(permissionId)
+                } else {
+                    _uiState.update { it.copy(error = "OpenCode could not apply that permission response") }
                 }
             }.onFailure { error ->
                 _uiState.update { it.copy(error = error.safeMessage()) }

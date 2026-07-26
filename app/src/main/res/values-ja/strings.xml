@@ -104,7 +104,9 @@
     <string name="notification_channel_status">タスク状態</string>
     <string name="notification_approval_title">OpenCodeの承認が必要です</string>
     <string name="notification_complete_title">OpenCodeが完了しました</string>
-    <string name="notification_complete_body">セッション %1$s が待機中です</string>
+    <string name="notification_complete_body">チャット「%1$s」が待機中です</string>
+    <string name="permission_chat_confirmation">このチャットは承認待ちです。OpenCodeに許可する操作を選択してください。</string>
+    <string name="permission_response_failed">許可の応答をOpenCodeに送信できませんでした。もう一度お試しください。</string>
     <string name="notification_error_title">OpenCodeエラー</string>
     <string name="notification_error_body">セッションが失敗しました</string>
     <string name="notification_permission_failed">承認を送信できませんでした。アプリを開いてもう一度お試しください。</string>

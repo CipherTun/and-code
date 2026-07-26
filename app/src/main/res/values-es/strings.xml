@@ -104,7 +104,9 @@
     <string name="notification_channel_status">Estado de la tarea</string>
     <string name="notification_approval_title">OpenCode necesita aprobación</string>
     <string name="notification_complete_title">OpenCode ha terminado</string>
-    <string name="notification_complete_body">La sesión %1$s está inactiva</string>
+    <string name="notification_complete_body">El chat %1$s está inactivo</string>
+    <string name="permission_chat_confirmation">Este chat está esperando tu aprobación. Elige qué puede hacer OpenCode:</string>
+    <string name="permission_response_failed">OpenCode no pudo aplicar esa respuesta de permiso.</string>
     <string name="notification_error_title">Error de OpenCode</string>
     <string name="notification_error_body">Una sesión falló</string>
     <string name="notification_permission_failed">No se pudo enviar la aprobación. Abre la app e inténtalo de nuevo.</string>

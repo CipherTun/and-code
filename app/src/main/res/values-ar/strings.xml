@@ -104,7 +104,9 @@
     <string name="notification_channel_status">حالة المهمة</string>
     <string name="notification_approval_title">OpenCode يحتاج إلى موافقة</string>
     <string name="notification_complete_title">انتهى OpenCode</string>
-    <string name="notification_complete_body">الجلسة %1$s خاملة</string>
+    <string name="notification_complete_body">المحادثة %1$s خاملة</string>
+    <string name="permission_chat_confirmation">تنتظر هذه المحادثة موافقتك. اختر ما يمكن لـ OpenCode فعله:</string>
+    <string name="permission_response_failed">تعذر على OpenCode تطبيق رد الإذن.</string>
     <string name="notification_error_title">خطأ في OpenCode</string>
     <string name="notification_error_body">فشلت جلسة</string>
     <string name="notification_permission_failed">تعذّر إرسال الموافقة. افتح التطبيق وحاول مرة أخرى.</string>

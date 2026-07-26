@@ -1124,6 +1124,10 @@ fun PermissionCard(
                 Text(stringResource(R.string.permission_required), fontWeight = FontWeight.SemiBold)
             }
             Text(
+                text = stringResource(R.string.permission_chat_confirmation),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
                 text = permission.permission,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.primary,
