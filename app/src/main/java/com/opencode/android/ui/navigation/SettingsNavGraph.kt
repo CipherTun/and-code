@@ -7,8 +7,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.opencode.android.data.settings.AppPreferences
 import com.opencode.android.data.settings.AppPreferencesRepository
-import com.opencode.android.feature.settings.ProviderSettingsScreen
 import com.opencode.android.feature.settings.GitHubSettingsScreen
+import com.opencode.android.feature.settings.ProviderSettingsScreen
 import com.opencode.android.feature.settings.SettingsScreenV2
 import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.settings.SettingsViewModel

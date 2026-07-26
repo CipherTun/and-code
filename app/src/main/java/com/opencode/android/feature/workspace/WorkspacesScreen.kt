@@ -246,9 +246,10 @@ fun WorkspacesScreen(
                 SectionCard(
                     modifier =
                         Modifier.clickable(
-                            enabled = target.type == RuntimeType.REMOTE ||
-                                target.id == "claude-code-local" ||
-                                state.localStatus is LocalRuntimeStatus.Ready,
+                            enabled =
+                                target.type == RuntimeType.REMOTE ||
+                                    target.id == "claude-code-local" ||
+                                    state.localStatus is LocalRuntimeStatus.Ready,
                         ) {
                             onSelectRuntime(target.id)
                         },
@@ -661,32 +662,34 @@ private fun targetSubtitle(
             RuntimeState.Connecting -> "Installing or starting"
             RuntimeState.Disconnected -> "Not installed"
         }
-    } else when (target.type) {
-        RuntimeType.REMOTE ->
-            when (val runtimeState = target.state) {
-                is RuntimeState.Connected -> stringResource(R.string.connected_at_url, runtimeState.version, remoteUrl.orEmpty())
-                RuntimeState.Connecting -> stringResource(R.string.connecting_at, remoteUrl.orEmpty())
-                is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
-                is RuntimeState.Unavailable -> runtimeState.reason
-                RuntimeState.Disconnected -> remoteUrl.orEmpty()
-            }
-        RuntimeType.LOCAL ->
-            when (localStatus) {
-                LocalRuntimeStatus.NotInstalled -> stringResource(R.string.runtime_status_not_installed)
-                is LocalRuntimeStatus.Installing -> stringResource(R.string.setting_up_with_step, localStatus.step)
-                is LocalRuntimeStatus.Starting -> stringResource(R.string.starting_opencode_version, localStatus.version)
-                is LocalRuntimeStatus.Updating ->
-                    stringResource(
-                        R.string.updating_with_step,
-                        localStatus.currentVersion,
-                        localStatus.targetVersion,
-                        localStatus.step,
-                    )
-                is LocalRuntimeStatus.Stopped -> stringResource(R.string.installed_stopped, localStatus.version)
-                is LocalRuntimeStatus.Ready -> stringResource(R.string.ready_running, localStatus.version)
-                is LocalRuntimeStatus.Broken -> compactRuntimeError(localStatus.reason)
-                is LocalRuntimeStatus.UnsupportedAbi -> stringResource(R.string.unsupported_abi, localStatus.abi)
-            }
+    } else {
+        when (target.type) {
+            RuntimeType.REMOTE ->
+                when (val runtimeState = target.state) {
+                    is RuntimeState.Connected -> stringResource(R.string.connected_at_url, runtimeState.version, remoteUrl.orEmpty())
+                    RuntimeState.Connecting -> stringResource(R.string.connecting_at, remoteUrl.orEmpty())
+                    is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
+                    is RuntimeState.Unavailable -> runtimeState.reason
+                    RuntimeState.Disconnected -> remoteUrl.orEmpty()
+                }
+            RuntimeType.LOCAL ->
+                when (localStatus) {
+                    LocalRuntimeStatus.NotInstalled -> stringResource(R.string.runtime_status_not_installed)
+                    is LocalRuntimeStatus.Installing -> stringResource(R.string.setting_up_with_step, localStatus.step)
+                    is LocalRuntimeStatus.Starting -> stringResource(R.string.starting_opencode_version, localStatus.version)
+                    is LocalRuntimeStatus.Updating ->
+                        stringResource(
+                            R.string.updating_with_step,
+                            localStatus.currentVersion,
+                            localStatus.targetVersion,
+                            localStatus.step,
+                        )
+                    is LocalRuntimeStatus.Stopped -> stringResource(R.string.installed_stopped, localStatus.version)
+                    is LocalRuntimeStatus.Ready -> stringResource(R.string.ready_running, localStatus.version)
+                    is LocalRuntimeStatus.Broken -> compactRuntimeError(localStatus.reason)
+                    is LocalRuntimeStatus.UnsupportedAbi -> stringResource(R.string.unsupported_abi, localStatus.abi)
+                }
+        }
     }
 
 @Composable

@@ -57,7 +57,15 @@ fun GitHubSettingsScreen(
                 GithubDeviceCodeCard(code, state.githubVerificationUrl, onOpenVerification)
             } ?: if (state.githubLogin == null) {
                 Button(onClick = onConnect, enabled = state.githubConfigured && !state.githubPolling, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (state.githubPolling) stringResource(R.string.github_waiting_for_authorization) else stringResource(R.string.github_connect))
+                    Text(
+                        if (state.githubPolling) {
+                            stringResource(
+                                R.string.github_waiting_for_authorization,
+                            )
+                        } else {
+                            stringResource(R.string.github_connect)
+                        },
+                    )
                 }
             } else {
                 OutlinedButton(onClick = onDisconnect, modifier = Modifier.fillMaxWidth()) {

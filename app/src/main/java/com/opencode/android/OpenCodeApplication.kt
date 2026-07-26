@@ -13,6 +13,8 @@ import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.di.appModule
 import com.opencode.android.di.viewModelModule
 import com.opencode.android.runtime.RuntimeRegistry
+import com.opencode.android.runtime.local.ClaudeCodeRuntime
+import com.opencode.android.runtime.local.ClaudeCodeTarget
 import com.opencode.android.runtime.local.DefaultLocalRuntimeUpdateEngine
 import com.opencode.android.runtime.local.GitCloneRepository
 import com.opencode.android.runtime.local.GitCredentialHelper
@@ -28,8 +30,6 @@ import com.opencode.android.runtime.local.LocalRuntimeServiceController
 import com.opencode.android.runtime.local.LocalRuntimeTarget
 import com.opencode.android.runtime.local.LocalRuntimeUpdater
 import com.opencode.android.runtime.local.VerifiedRuntimeDownloader
-import com.opencode.android.runtime.local.ClaudeCodeRuntime
-import com.opencode.android.runtime.local.ClaudeCodeTarget
 import com.opencode.android.startup.CatalogReconcileInitializer
 import com.opencode.android.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope

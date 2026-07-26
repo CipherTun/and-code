@@ -2,7 +2,7 @@ name: Comment APK Artifact
 
 on:
   workflow_run:
-    workflows: [PR APK Build]
+    workflows: [Android CI]
     types: [completed]
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
                 per_page: 100,
               },
             );
-            const apk = artifacts.find((artifact) => artifact.name === 'opencode-debug-apk');
+            const apk = artifacts.find((artifact) => artifact.name === 'opencode-android-debug');
             if (!apk) {
               core.setFailed('The APK artifact was not found.');
               return;

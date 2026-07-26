@@ -196,8 +196,9 @@ class WorkspaceViewModel(
         }
 
     fun authenticateClaudeCode() {
-        val target = registry.targets.value.firstOrNull { it.id == "claude-code-local" } as? com.opencode.android.runtime.local.ClaudeCodeTarget
-            ?: return
+        val target =
+            registry.targets.value.firstOrNull { it.id == "claude-code-local" } as? com.opencode.android.runtime.local.ClaudeCodeTarget
+                ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             target.authLogin()
             refresh()

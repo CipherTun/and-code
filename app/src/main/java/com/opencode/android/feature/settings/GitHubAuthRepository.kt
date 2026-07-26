@@ -57,7 +57,7 @@ class GitHubAuthRepository(
                 FormBody.Builder().add(
                     "client_id",
                     clientId,
-            ).add("scope", "read:user read:org repo workflow gist notifications").build()
+                ).add("scope", "read:user read:org repo workflow gist notifications").build()
             executeJson("https://github.com/login/device/code", body)
         }
 
