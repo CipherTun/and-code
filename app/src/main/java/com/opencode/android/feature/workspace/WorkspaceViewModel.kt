@@ -43,6 +43,7 @@ data class WorkspaceUiState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val claudeError: String? = null,
+    val claudeInstalling: Boolean = false,
 )
 
 class WorkspaceViewModel(
@@ -56,7 +57,8 @@ class WorkspaceViewModel(
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
     private val claudeError = MutableStateFlow<String?>(null)
-    private val installState = combine(registeredTick, claudeError) { _, error -> error }
+    private val claudeInstalling = MutableStateFlow(false)
+    private val installState = combine(registeredTick, claudeError, claudeInstalling) { _, error, installing -> error to installing }
 
     val state: StateFlow<WorkspaceUiState> =
         combine(
@@ -65,7 +67,7 @@ class WorkspaceViewModel(
             catalog.state,
             localRuntimeManager.state,
             installState,
-        ) { targets, selected, runtime, localStatus, installError ->
+        ) { targets, selected, runtime, localStatus, installState ->
             val profiles = registry.remoteProfiles()
             // Read imperatively: the registry recomputes this set while building the target list, so
             // it is already up to date by the time `targets` emits.
@@ -88,7 +90,8 @@ class WorkspaceViewModel(
                 localStatus = localStatus,
                 isRefreshing = runtime.isRefreshing,
                 error = runtime.error,
-                claudeError = installError,
+                claudeError = installState.first,
+                claudeInstalling = installState.second,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
 
@@ -197,11 +200,13 @@ class WorkspaceViewModel(
     fun installClaudeCode() {
         val installer = claudeCodeInstaller ?: return
         claudeError.value = null
+        claudeInstalling.value = true
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             runCatching { installer() }
                 .onFailure { error ->
                     claudeError.value = error.message ?: "Claude Code installation failed"
                 }
+                .also { claudeInstalling.value = false }
         }
     }
 
