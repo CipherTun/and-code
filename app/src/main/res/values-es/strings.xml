@@ -54,6 +54,16 @@
     <string name="tool_input_label">Entrada</string>
     <string name="tool_output_label">Salida</string>
     <string name="tool_output_truncated">…salida truncada</string>
+    <string name="activity_summary_commands">Se ejecutaron %1$d comando(s)</string>
+    <string name="activity_summary_reads">Se leyeron %1$d archivo(s)</string>
+    <string name="activity_summary_edits">Se editaron %1$d archivo(s)</string>
+    <string name="activity_summary_subagents">Se ejecutaron %1$d subagente(s)</string>
+    <string name="activity_summary_tools">Se usaron %1$d herramienta(s)</string>
+    <string name="activity_summary_reasoning">%1$d razonamiento(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Actividad</string>
+    <string name="activity_details_open">Mostrar detalles de la actividad</string>
+    <string name="activity_details_close">Cerrar</string>
     <string name="file_changes_title">Cambios en archivos</string>
     <string name="file_changes_generic">Se han modificado archivos</string>
     <string name="workspace_folder_label">Carpeta de trabajo</string>
@@ -134,7 +144,7 @@
     <string name="provider_auth_failed">La autenticación del proveedor falló. Inténtalo de nuevo.</string>
     <string name="continue_label">Continuar</string>
     <string name="question_free_text_label">Otro (escribe tu respuesta)</string>
-    <string name="question_cancel">Responder después (detener)</string>
+    <string name="question_cancel">No responder</string>
     <string name="question_dismiss">Cerrar la pregunta</string>
     <string name="assistant_runtime">Entorno de ejecución del asistente</string>
     <string name="assistant_workspace">Ruta del espacio de trabajo del asistente</string>
@@ -574,4 +584,9 @@
     <string name="model_visibility_row">Modelos visibles</string>
     <string name="model_visibility_title">Modelos visibles</string>
     <string name="model_visibility_caption">Desmarca los modelos para ocultarlos del selector de modelos.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Sesión de subagente</string>
+    <string name="subagent_return_to_parent">Volver al agente principal: %1$s</string>
+    <string name="subagent_parent_untitled">Sesión principal</string>
 </resources>

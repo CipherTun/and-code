@@ -105,7 +105,7 @@ fun QuestionCard(
                                     .clickable { onAnswerSelected(question.request.id, index, option.label) },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            if (question.request.multiple) {
+                            if (prompt.multiple) {
                                 Checkbox(
                                     checked = selected,
                                     onCheckedChange = { onAnswerSelected(question.request.id, index, option.label) },
@@ -129,27 +129,30 @@ fun QuestionCard(
                         }
                     }
 
-                    // Always offered, including alongside options: the presented choices are not
-                    // always exhaustive, and there was previously no way to answer anything else.
-                    if (prompt.options.isNotEmpty()) {
-                        Text(
-                            text = stringResource(R.string.question_free_text_label),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Offered alongside the options too, because the presented choices are not
+                    // always exhaustive. `custom` is how OpenCode says a prompt only accepts its
+                    // own options, so a typed answer is dropped when it is off.
+                    if (prompt.options.isEmpty() || prompt.custom) {
+                        if (prompt.options.isNotEmpty()) {
+                            Text(
+                                text = stringResource(R.string.question_free_text_label),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        OutlinedTextField(
+                            value = fallbackText,
+                            onValueChange = { onAnswerSelected(question.request.id, index, it) },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .testTag("question-free-text-${question.request.id}-$index"),
+                            placeholder = {
+                                Text(prompt.placeholder ?: stringResource(R.string.message_hint))
+                            },
+                            singleLine = !prompt.multiple,
                         )
                     }
-                    OutlinedTextField(
-                        value = fallbackText,
-                        onValueChange = { onAnswerSelected(question.request.id, index, it) },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .testTag("question-free-text-${question.request.id}-$index"),
-                        placeholder = {
-                            Text(prompt.placeholder ?: stringResource(R.string.message_hint))
-                        },
-                        singleLine = !question.request.multiple,
-                    )
                 }
             }
 

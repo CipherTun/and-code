@@ -106,7 +106,7 @@ class OpenCodeApiClientTest {
                 "s1",
                 PromptRequest(
                     text = "",
-                    attachments = listOf(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg")),
+                    attachments = listOf(PromptAttachment("photo.jpg", "image/jpeg", "data:image/jpeg;base64,/9j/4AAQ")),
                 ),
             )
 
@@ -114,7 +114,7 @@ class OpenCodeApiClientTest {
                 Json.parseToJsonElement(server.takeRequest().body.readUtf8())
                     .jsonObject["parts"]!!.jsonArray
             assertEquals("file", parts[0].jsonObject["type"]!!.jsonPrimitive.content)
-            assertEquals("file:///workspace/photo.jpg", parts[0].jsonObject["url"]!!.jsonPrimitive.content)
+            assertEquals("data:image/jpeg;base64,/9j/4AAQ", parts[0].jsonObject["url"]!!.jsonPrimitive.content)
         }
 
     @Test
@@ -149,6 +149,17 @@ class OpenCodeApiClientTest {
         }
 
     @Test
+    fun `permission response succeeds with empty body`() =
+        runBlocking {
+            server.enqueue(MockResponse())
+            val client = client()
+
+            val result = client.respondPermission("s1", "perm1", "once")
+
+            assertTrue(result)
+        }
+
+    @Test
     fun `remember once maps to always response`() =
         runBlocking {
             server.enqueue(MockResponse().setBody("true"))
@@ -162,20 +173,51 @@ class OpenCodeApiClientTest {
         }
 
     @Test
-    fun `answers question request`() =
+    fun `answers question request on the workspace it was asked in`() =
         runBlocking {
             server.enqueue(MockResponse().setBody("true"))
             val client = client()
 
-            val result = client.answerQuestion("s1", "q-1", listOf(listOf("src"), listOf("docs", "tests")))
+            val result = client.answerQuestion("q-1", listOf(listOf("src"), listOf("docs", "tests")), "/workspace/repo")
 
             assertTrue(result)
             val request = server.takeRequest()
-            assertEquals("/session/s1/question/q-1", request.path)
+            // Questions are answered on the request, and the route resolves one OpenCode instance:
+            // without the directory the server looks in its own and reports the request as missing.
+            assertEquals("/question/q-1/reply?directory=%2Fworkspace%2Frepo", request.path)
             val answers = Json.parseToJsonElement(request.body.readUtf8()).jsonObject["answers"]!!.jsonArray
             assertEquals("src", answers[0].jsonArray[0].jsonPrimitive.content)
             assertEquals("docs", answers[1].jsonArray[0].jsonPrimitive.content)
             assertEquals("tests", answers[1].jsonArray[1].jsonPrimitive.content)
+        }
+
+    @Test
+    fun `rejects question request`() =
+        runBlocking {
+            server.enqueue(MockResponse().setBody("true"))
+            val client = client()
+
+            assertTrue(client.rejectQuestion("q-1", "/workspace/repo"))
+            assertEquals("/question/q-1/reject?directory=%2Fworkspace%2Frepo", server.takeRequest().path)
+        }
+
+    @Test
+    fun `lists pending questions and tags them with the workspace`() =
+        runBlocking {
+            server.enqueue(
+                MockResponse().setBody(
+                    """[{"id":"q-1","sessionID":"s1","questions":[{"question":"Run it?","options":[{"label":"Yes"}]}]}]""",
+                ),
+            )
+            val client = client()
+
+            val pending = client.pendingQuestions("/workspace/repo")
+
+            assertEquals("/question?directory=%2Fworkspace%2Frepo", server.takeRequest().path)
+            assertEquals("q-1", pending.single().id)
+            assertEquals("s1", pending.single().sessionId)
+            // The listing does not echo the directory back, but answering still needs it.
+            assertEquals("/workspace/repo", pending.single().directory)
         }
 
     @Test
@@ -324,7 +366,30 @@ class OpenCodeApiClientTest {
 
             assertTrue(events[0] is OpenCodeEvent.ServerConnected)
             assertEquals("s1", (events[1] as OpenCodeEvent.SessionIdle).sessionId)
-            assertEquals("/event", server.takeRequest().path)
+            // The cross-instance stream is required: `/event` only carries events for the
+            // instance rooted at the server's own working directory, so a session created in
+            // any other workspace would emit nothing there.
+            assertEquals("/global/event", server.takeRequest().path)
+            assertEquals("/global/event", server.takeRequest().path)
+        }
+
+    @Test
+    fun `event stream falls back to the instance route on older servers`() =
+        runBlocking {
+            server.enqueue(MockResponse().setResponseCode(404).setBody("not found"))
+            server.enqueue(
+                MockResponse()
+                    .setHeader("Content-Type", "text/event-stream")
+                    .setBody("data: {\"type\":\"session.idle\",\"properties\":{\"sessionID\":\"s1\"}}\n\n"),
+            )
+
+            val events =
+                withTimeout(3_000) {
+                    client().events().take(1).toList()
+                }
+
+            assertEquals("s1", (events.single() as OpenCodeEvent.SessionIdle).sessionId)
+            assertEquals("/global/event", server.takeRequest().path)
             assertEquals("/event", server.takeRequest().path)
         }
 

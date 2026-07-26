@@ -54,6 +54,16 @@
     <string name="tool_input_label">入力</string>
     <string name="tool_output_label">出力</string>
     <string name="tool_output_truncated">…出力を省略しました</string>
+    <string name="activity_summary_commands">%1$d件のコマンドを実行しました</string>
+    <string name="activity_summary_reads">%1$d件のファイルを読み取りました</string>
+    <string name="activity_summary_edits">%1$d件のファイルを編集しました</string>
+    <string name="activity_summary_subagents">%1$d件のサブエージェントを実行しました</string>
+    <string name="activity_summary_tools">%1$d件のツールを使用しました</string>
+    <string name="activity_summary_reasoning">%1$d件の思考</string>
+    <string name="activity_summary_separator">、</string>
+    <string name="activity_details_title">実行内容</string>
+    <string name="activity_details_open">実行内容の詳細を表示</string>
+    <string name="activity_details_close">閉じる</string>
     <string name="file_changes_title">ファイル変更</string>
     <string name="file_changes_generic">ファイルが変更されました</string>
     <string name="workspace_folder_label">作業フォルダ</string>
@@ -134,7 +144,7 @@
     <string name="provider_auth_failed">プロバイダー認証に失敗しました。もう一度お試しください。</string>
     <string name="continue_label">続ける</string>
     <string name="question_free_text_label">その他（自由入力）</string>
-    <string name="question_cancel">回答せず中断</string>
+    <string name="question_cancel">回答しない</string>
     <string name="question_dismiss">質問を閉じる</string>
     <string name="assistant_runtime">アシスト実行先</string>
     <string name="assistant_workspace">アシスト作業フォルダ</string>
@@ -588,4 +598,9 @@
     <string name="usage_row">使用量</string>
     <string name="font_size_dialog_title">フォントサイズ</string>
     <string name="widget_quick_input_hint">OpenCodeにメッセージを送る…</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">サブエージェントのセッション</string>
+    <string name="subagent_return_to_parent">メインエージェントに戻る: %1$s</string>
+    <string name="subagent_parent_untitled">メインのセッション</string>
 </resources>

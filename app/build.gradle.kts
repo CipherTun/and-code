@@ -5,7 +5,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("androidx.baselineprofile")
-    id("jacoco")
 }
 
 val repoRoot = rootProject.projectDir
@@ -99,8 +98,8 @@ android {
         applicationId = "com.opencode.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.4.3"
+        versionCode = 10
+        versionName = "0.4.6"
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"$githubClientId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -172,6 +171,9 @@ android {
             useLegacyPackaging = true
         }
     }
+    androidResources {
+        noCompress += "tflite"
+    }
 }
 
 tasks.named("preBuild").configure {
@@ -241,42 +243,4 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
-}
-
-// The base jacoco plugin only wires a report task to the JVM `test` task, which an Android module
-// does not have — so `:app:jacocoTestReport` did not exist and CI's coverage step failed outright.
-tasks.register<JacocoReport>("jacocoTestReport") {
-    dependsOn("testDebugUnitTest")
-    group = "verification"
-    description = "Generates a coverage report for the debug unit tests."
-
-    reports {
-        html.required.set(true)
-        xml.required.set(true)
-    }
-
-    val generated =
-        listOf(
-            "**/R.class",
-            "**/R$*.class",
-            "**/BuildConfig.*",
-            "**/Manifest*.*",
-            "**/*Test*.*",
-            "**/*_Factory*.*",
-            "**/*Composable*.*",
-            "**/*\$\$serializer.*",
-        )
-    classDirectories.setFrom(
-        fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) { exclude(generated) },
-    )
-    sourceDirectories.setFrom(files("src/main/java"))
-    // Only the unit test coverage directories, never the whole build directory: scanning that
-    // makes Gradle treat every other task's output as an undeclared input of this one, which fails
-    // the build as soon as a release variant is assembled in the same invocation.
-    executionData.setFrom(
-        fileTree(layout.buildDirectory.dir("jacoco")) { include("*.exec") },
-        fileTree(layout.buildDirectory.dir("outputs/unit_test_code_coverage")) {
-            include("**/*.exec")
-        },
-    )
 }

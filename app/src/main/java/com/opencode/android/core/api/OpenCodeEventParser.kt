@@ -4,7 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -16,15 +16,26 @@ class OpenCodeEventParser(
         },
 ) {
     fun parse(raw: String): OpenCodeEvent {
-        val root =
+        val envelope =
             runCatching { json.parseToJsonElement(raw).jsonObject }.getOrNull()
                 ?: return OpenCodeEvent.Unknown("invalid", raw)
+        // `/global/event` wraps each instance event as {directory, project, workspace, payload};
+        // the per-instance `/event` stream emits the event object directly.
+        val root = envelope["payload"] as? JsonObject ?: envelope
         val type = root["type"]?.jsonPrimitive?.content ?: return OpenCodeEvent.Unknown("missing-type", raw)
-        val properties = root["properties"]?.jsonObject ?: JsonObject(emptyMap())
+        val properties = root["properties"] as? JsonObject ?: JsonObject(emptyMap())
 
         return runCatching {
             when (type) {
                 "server.connected" -> OpenCodeEvent.ServerConnected
+                "message.updated" -> {
+                    val info =
+                        json.decodeFromJsonElement(
+                            OpenCodeMessageInfo.serializer(),
+                            properties["info"]!!.jsonObject,
+                        )
+                    OpenCodeEvent.MessageUpdated(info)
+                }
                 "message.part.updated" -> {
                     val part = json.decodeFromJsonElement(OpenCodePart.serializer(), properties["part"]!!.jsonObject)
                     OpenCodeEvent.MessagePartUpdated(part)
@@ -66,19 +77,52 @@ class OpenCodeEventParser(
                             id = properties["id"]!!.jsonPrimitive.content,
                             sessionId = properties["sessionID"]!!.jsonPrimitive.content,
                             questions = questions,
-                            multiple = (properties["multiple"] as? JsonPrimitive)?.boolean ?: false,
+                            // Only `/global/event` carries the workspace, and answering needs it.
+                            directory = (envelope["directory"] as? JsonPrimitive)?.content,
                         ),
                     )
                 }
+                "permission.replied" ->
+                    OpenCodeEvent.PermissionReplied(
+                        sessionId = properties["sessionID"]!!.jsonPrimitive.content,
+                        requestId = properties["requestID"]!!.jsonPrimitive.content,
+                    )
                 "session.idle" -> OpenCodeEvent.SessionIdle(properties["sessionID"]!!.jsonPrimitive.content)
+                "session.status" ->
+                    OpenCodeEvent.SessionStatusChanged(
+                        sessionId = properties["sessionID"]!!.jsonPrimitive.content,
+                        status = properties["status"]!!.jsonObject["type"]!!.jsonPrimitive.content,
+                    )
                 "session.error" ->
                     OpenCodeEvent.SessionError(
                         sessionId = (properties["sessionID"] as? JsonPrimitive)?.content,
-                        message = properties["error"]?.toString(),
+                        message = describeError(properties["error"]),
                     )
                 else -> OpenCodeEvent.Unknown(type, raw)
             }
         }.getOrElse { OpenCodeEvent.Unknown(type, raw) }
+    }
+
+    /**
+     * OpenCode reports session failures as a named error object, e.g.
+     * `{"name":"ProviderAuthError","data":{"message":"..."}}`. Prefer the human-readable message
+     * over dumping the raw JSON into the chat.
+     */
+    private fun describeError(element: kotlinx.serialization.json.JsonElement?): String? {
+        if (element == null) return null
+        (element as? JsonPrimitive)?.let { return it.content }
+        val error = element as? JsonObject ?: return element.toString()
+        val message =
+            ((error["data"] as? JsonObject)?.get("message") as? JsonPrimitive)
+                ?.content
+                ?.takeIf { it.isNotBlank() }
+        val name = (error["name"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+        return when {
+            message != null && name != null -> "$name: $message"
+            message != null -> message
+            name != null -> name
+            else -> error.toString()
+        }
     }
 
     private fun parseQuestionPrompt(element: kotlinx.serialization.json.JsonElement): QuestionPrompt? =
@@ -96,6 +140,9 @@ class OpenCodeEventParser(
                                 ?.mapNotNull { option -> parseQuestionOption(option) }
                                 .orEmpty(),
                         placeholder = (prompt["placeholder"] as? JsonPrimitive)?.content,
+                        // Both flags belong to the individual prompt, not to the request.
+                        multiple = (prompt["multiple"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        custom = (prompt["custom"] as? JsonPrimitive)?.booleanOrNull ?: true,
                     )
                 }
             }

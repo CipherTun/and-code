@@ -193,7 +193,7 @@ class ChatViewModelQuestionTest {
         }
 
     @Test
-    fun `cancelling a question drops the card and stops the waiting turn`() =
+    fun `cancelling a question declines it instead of killing the turn`() =
         runTest(dispatcher) {
             val backend = FakeBackend()
             val viewModel = ChatViewModel(backend)
@@ -201,7 +201,7 @@ class ChatViewModelQuestionTest {
             viewModel.openSession("session-1")
             advanceUntilIdle()
             backend.events.emit(
-                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1")),
+                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1", directory = "/workspace/repo")),
             )
             advanceUntilIdle()
             assertEquals("q-1", viewModel.uiState.value.pendingQuestions.single().request.id)
@@ -210,9 +210,116 @@ class ChatViewModelQuestionTest {
             advanceUntilIdle()
 
             assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
-            assertEquals(listOf("session-1"), backend.abortedSessions)
+            assertEquals(listOf("q-1" to "/workspace/repo"), backend.rejectedQuestions)
+            assertTrue(backend.abortedSessions.isEmpty())
             assertTrue(backend.answeredQuestions.isEmpty())
-            assertFalse(viewModel.uiState.value.isRunning)
+        }
+
+    @Test
+    fun `answering is scoped to the workspace the question came from`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1", directory = "/workspace/repo")),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals("/workspace/repo", backend.answeredQuestions.single().directory)
+        }
+
+    @Test
+    fun `multi select prompts keep every chosen option`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(
+                    request(
+                        id = "q-1",
+                        sessionId = "session-1",
+                        options = listOf("src", "docs"),
+                        multiple = true,
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.selectQuestionAnswer("q-1", 0, "docs")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf(listOf("src", "docs")), backend.answeredQuestions.single().answers)
+        }
+
+    @Test
+    fun `a prompt that refuses custom answers submits only its own options`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(
+                    request(id = "q-1", sessionId = "session-1", options = listOf("src"), custom = false),
+                ),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "somewhere else")
+            assertFalse(viewModel.uiState.value.pendingQuestions.single().canSubmit)
+
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf(listOf("src")), backend.answeredQuestions.single().answers)
+        }
+
+    @Test
+    fun `a question asked before the session was open is recovered`() =
+        runTest(dispatcher) {
+            val backend =
+                FakeBackend(
+                    pending =
+                        listOf(
+                            request(id = "q-1", sessionId = "session-1"),
+                            request(id = "q-2", sessionId = "session-2"),
+                        ),
+                )
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+
+            // Only the open session's question, and only because it was fetched: no event carried it.
+            assertEquals(listOf("q-1"), viewModel.uiState.value.pendingQuestions.map { it.request.id })
+        }
+
+    @Test
+    fun `a recovered question is not duplicated by its event`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend(pending = listOf(request(id = "q-1", sessionId = "session-1")))
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1")))
+            advanceUntilIdle()
+
+            assertEquals(listOf("q-1"), viewModel.uiState.value.pendingQuestions.map { it.request.id })
         }
 
     private fun request(
@@ -221,10 +328,13 @@ class ChatViewModelQuestionTest {
         question: String = "Pick a folder",
         options: List<String> = listOf("src"),
         placeholder: String? = null,
+        multiple: Boolean = false,
+        custom: Boolean = true,
+        directory: String? = null,
     ) = QuestionRequest(
         id = id,
         sessionId = sessionId,
-        multiple = false,
+        directory = directory,
         questions =
             listOf(
                 QuestionPrompt(
@@ -232,18 +342,22 @@ class ChatViewModelQuestionTest {
                     header = "Folder",
                     options = options.map(::QuestionOption),
                     placeholder = placeholder,
+                    multiple = multiple,
+                    custom = custom,
                 ),
             ),
     )
 
     private class FakeBackend(
         private val answerResult: Boolean = true,
+        private val pending: List<QuestionRequest> = emptyList(),
     ) : OpenCodeBackend {
         override val id: String = "fake"
         override val displayName: String = "Fake"
         override val kind: BackendKind = BackendKind.REMOTE
         val events = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 20)
         val answeredQuestions = mutableListOf<AnswerRecord>()
+        val rejectedQuestions = mutableListOf<Pair<String, String?>>()
         val abortedSessions = mutableListOf<String>()
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
@@ -285,20 +399,30 @@ class ChatViewModelQuestionTest {
         ): Boolean = true
 
         override suspend fun answerQuestion(
-            sessionId: String,
             requestId: String,
             answers: List<List<String>>,
+            directory: String?,
         ): Boolean {
-            answeredQuestions += AnswerRecord(sessionId, requestId, answers)
+            answeredQuestions += AnswerRecord(requestId, answers, directory)
             return answerResult
         }
+
+        override suspend fun rejectQuestion(
+            requestId: String,
+            directory: String?,
+        ): Boolean {
+            rejectedQuestions += requestId to directory
+            return true
+        }
+
+        override suspend fun pendingQuestions(directory: String?): List<QuestionRequest> = pending
 
         override fun events(): Flow<OpenCodeEvent> = events
     }
 
     private data class AnswerRecord(
-        val sessionId: String,
         val requestId: String,
         val answers: List<List<String>>,
+        val directory: String?,
     )
 }

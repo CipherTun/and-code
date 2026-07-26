@@ -224,7 +224,19 @@ class OpenCodeVoiceSession(context: Context) :
                                     showError(event.message ?: context.getString(R.string.voice_processing_failed))
                                 }
                             }
+                            is OpenCodeEvent.PermissionReplied -> {
+                                if (
+                                    event.sessionId == sessionId &&
+                                    permissionRequest.value?.id == event.requestId
+                                ) {
+                                    permissionRequest.value = null
+                                }
+                            }
+                            // session.idle above is the single completion signal for voice;
+                            // handling session.status too would finish the same turn twice.
                             OpenCodeEvent.ServerConnected,
+                            is OpenCodeEvent.MessageUpdated,
+                            is OpenCodeEvent.SessionStatusChanged,
                             is OpenCodeEvent.QuestionAsked,
                             is OpenCodeEvent.Unknown,
                             -> Unit

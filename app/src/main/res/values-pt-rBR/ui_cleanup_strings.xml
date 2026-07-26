@@ -35,9 +35,9 @@
     <string name="voice_response_description">Ler as respostas do OpenCode em voz alta.</string>
     <string name="wake_word_section_title">Invocação</string>
     <string name="wake_word_pack_required">O pacote opcional de palavra de ativação ainda não está instalado.</string>
-    <string name="wake_word_description">Ouça \"Hey Mycroft\" para iniciar o assistente em modo mãos livres.</string>
+    <string name="wake_word_description">Ouça \"hey opencode\" para iniciar o assistente em modo mãos livres.</string>
     <string name="wake_word_notification_channel">Detecção de palavra de ativação</string>
     <string name="wake_word_notification_title">Palavra de ativação ativa</string>
-    <string name="wake_word_notification_text">Ouvindo \"Hey Mycroft\"…</string>
+    <string name="wake_word_notification_text">Ouvindo \"hey opencode\"…</string>
     <string name="wake_word_notification_stop">Parar</string>
 </resources>

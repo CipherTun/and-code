@@ -9,6 +9,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -44,6 +46,10 @@ class OpenCodeApiClient(
     // connection is saved, so an endpoint the current rules reject has to surface as a failed
     // request rather than as an exception escaping into a UI callback.
     private val baseUrl: HttpUrl by lazy { OpenCodeUrl.normalize(profile.baseUrl).getOrThrow() }
+
+    @Volatile
+    private var eventPath: String = GLOBAL_EVENT_PATH
+
     private val providerAuthHttpClient: OkHttpClient =
         httpClient.newBuilder()
             .readTimeout(PROVIDER_AUTH_TIMEOUT_MINUTES, TimeUnit.MINUTES)
@@ -396,16 +402,24 @@ class OpenCodeApiClient(
             buildJsonObject {
                 put("response", apiResponse)
             }
-        return post(
+        postWithoutResponse(
             "session/${encodePath(sessionId)}/permissions/${encodePath(permissionId)}",
             body,
         )
+        return true
     }
 
+    /**
+     * Questions are answered on the request itself, not through the session that asked. Like
+     * `/event`, the question routes resolve to a single OpenCode instance — the one rooted at
+     * [directory], defaulting to the server's own working directory — so a request raised in any
+     * other workspace is invisible without it and the reply comes back as
+     * `QuestionNotFoundError`. Pass the directory the question was asked in.
+     */
     suspend fun answerQuestion(
-        sessionId: String,
         requestId: String,
         answers: List<List<String>>,
+        directory: String? = null,
     ): Boolean {
         val body =
             buildJsonObject {
@@ -418,14 +432,54 @@ class OpenCodeApiClient(
                     },
                 )
             }
-        return post(
-            "session/${encodePath(sessionId)}/question/${encodePath(requestId)}",
+        postWithoutResponse(
+            "question/${encodePath(requestId)}/reply",
             body,
+            query("directory" to directory),
         )
+        return true
     }
 
+    /** Declines a question outright, which fails the waiting tool call without killing the turn. */
+    suspend fun rejectQuestion(
+        requestId: String,
+        directory: String? = null,
+    ): Boolean =
+        post(
+            "question/${encodePath(requestId)}/reject",
+            JsonObject(emptyMap()),
+            query("directory" to directory),
+        )
+
+    /**
+     * Questions that are still waiting for an answer. They reach a client only through the event
+     * stream, so anything asked while this client was away — a reconnect, a restart, a session
+     * opened after the fact — has to be recovered here or the turn stays blocked with nothing on
+     * screen to unblock it.
+     */
+    suspend fun pendingQuestions(directory: String? = null): List<QuestionRequest> =
+        getList<QuestionRequest>("question", query("directory" to directory))
+            .map { request -> request.copy(directory = request.directory ?: directory) }
+
+    /**
+     * `GET /event` is scoped to a single OpenCode instance: the one rooted at the request's
+     * `directory` query parameter, which falls back to the server's own working directory. A
+     * session created in any other workspace therefore emits nothing on that stream — no reply
+     * text, no tool output, and no permission request, so a run that needs approval waits
+     * forever on a request that never reaches the client. Subscribe to the cross-instance
+     * `/global/event` stream instead, and fall back only for servers that predate it.
+     */
     fun events(): Flow<OpenCodeEvent> =
-        singleEventStream().retryWhen { cause, attempt ->
+        flow { emitAll(singleEventStream(eventPath)) }.retryWhen { cause, attempt ->
+            if (
+                eventPath == GLOBAL_EVENT_PATH &&
+                cause is OpenCodeApiException &&
+                cause.statusCode in GLOBAL_EVENT_UNSUPPORTED_CODES
+            ) {
+                eventPath = INSTANCE_EVENT_PATH
+                return@retryWhen true
+            }
+
             val retryable = cause !is OpenCodeApiException || cause.statusCode >= 500
             if (!retryable) return@retryWhen false
 
@@ -436,14 +490,14 @@ class OpenCodeApiClient(
             true
         }
 
-    private fun singleEventStream(): Flow<OpenCodeEvent> =
+    private fun singleEventStream(path: String): Flow<OpenCodeEvent> =
         channelFlow {
             val eventClient =
                 httpClient.newBuilder()
                     .readTimeout(0, TimeUnit.MILLISECONDS)
                     .build()
             val request =
-                requestBuilder("event")
+                requestBuilder(path)
                     .header("Accept", "text/event-stream")
                     .header("Cache-Control", "no-cache")
                     .get()
@@ -565,9 +619,10 @@ class OpenCodeApiClient(
     private suspend fun postWithoutResponse(
         path: String,
         body: JsonObject,
+        queryParameters: List<Pair<String, String>> = emptyList(),
     ) = withContext(Dispatchers.IO) {
         val request =
-            requestBuilder(path)
+            requestBuilder(path, queryParameters)
                 .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         execute(request) { Unit }
@@ -658,6 +713,9 @@ class OpenCodeApiClient(
         private const val MAX_ERROR_BODY_CHARS = 240
         private const val EVENT_BUFFER_CAPACITY = 512
         private const val PROVIDER_AUTH_TIMEOUT_MINUTES = 6L
+        private const val GLOBAL_EVENT_PATH = "global/event"
+        private const val INSTANCE_EVENT_PATH = "event"
+        private val GLOBAL_EVENT_UNSUPPORTED_CODES = setOf(400, 404, 405, 501)
 
         val defaultJson: Json =
             Json {

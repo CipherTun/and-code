@@ -1,8 +1,12 @@
 package com.opencode.android.feature.chat
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -40,6 +44,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
@@ -165,6 +170,7 @@ fun ChatHomeScreen(
     contextUsageFraction: Float = 0f,
     subagents: List<SubagentInfo> = emptyList(),
     onSubagentClick: (String) -> Unit = {},
+    onReturnToParentSession: () -> Unit = {},
     githubRefs: List<GitHubReference> = emptyList(),
     onImageAttachment: (Bitmap) -> Unit = {},
 ) {
@@ -176,6 +182,8 @@ fun ChatHomeScreen(
     val runtimeNotReady = errorKind == ChatErrorKind.RUNTIME_NOT_READY && state.messages.isEmpty()
     val isAtBottom = remember { mutableStateOf(true) }
     var showActionSheet by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var activityGroupId by remember { mutableStateOf<String?>(null) }
+    val timelineEntries = remember(state.messages) { groupConversationTimeline(state.messages) }
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     var showSlashCommands by remember { mutableStateOf(false) }
@@ -191,6 +199,14 @@ fun ChatHomeScreen(
             if (bitmap != null) {
                 attachedImages.add(bitmap)
                 onImageAttachment(bitmap)
+            }
+        }
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) {
+                cameraLauncher.launch(null)
             }
         }
     val galleryLauncher =
@@ -221,8 +237,8 @@ fun ChatHomeScreen(
         }.collect { atBottom -> isAtBottom.value = atBottom }
     }
 
-    LaunchedEffect(state.messages.size, state.permissions.size, state.pendingQuestions.size) {
-        val totalItems = state.messages.size + state.permissions.size + state.pendingQuestions.size
+    LaunchedEffect(timelineEntries.size, state.permissions.size, state.pendingQuestions.size) {
+        val totalItems = timelineEntries.size + state.permissions.size + state.pendingQuestions.size
         if (totalItems > 0 && isAtBottom.value) listState.animateScrollToItem(totalItems - 1)
     }
 
@@ -231,6 +247,10 @@ fun ChatHomeScreen(
             input = state.partialText
         }
     }
+
+    // A subagent session is a detour, not a destination: the system back gesture returns to the
+    // main agent instead of leaving the chat, matching the in-chat return banner.
+    BackHandler(enabled = state.parentSession != null) { onReturnToParentSession() }
 
     LaunchedEffect(state.attachments) {
         if (state.attachments.isEmpty()) {
@@ -294,6 +314,13 @@ fun ChatHomeScreen(
                     ),
             )
 
+            state.parentSession?.let { parent ->
+                SubagentSessionBanner(
+                    parentTitle = parent.title,
+                    onReturn = onReturnToParentSession,
+                )
+            }
+
             Box(modifier = Modifier.weight(1f)) {
                 when {
                     state.isLoadingHistory -> LoadingState()
@@ -303,29 +330,40 @@ fun ChatHomeScreen(
                             onOpenRemoteSetup = onOpenRemoteSetup,
                         )
                     else -> {
-                        val lastAssistantId = state.messages.lastOrNull { !it.isUser }?.id
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            items(state.messages, key = { it.id }) { message ->
+                            items(timelineEntries, key = { it.id }) { entry ->
+                                val copyable =
+                                    when (entry) {
+                                        is TimelineEntry.UserMessage -> entry.message.id to entry.message.text
+                                        is TimelineEntry.Body -> entry.messageId to entry.part.text
+                                        is TimelineEntry.Activity -> null
+                                    }
                                 Box(
                                     modifier =
-                                        Modifier.combinedClickable(
-                                            onClick = {},
-                                            onLongClick = { showActionSheet = message.id to message.text },
-                                        ),
+                                        if (copyable == null) {
+                                            Modifier
+                                        } else {
+                                            Modifier.combinedClickable(
+                                                onClick = {},
+                                                onLongClick = { showActionSheet = copyable },
+                                            )
+                                        },
                                 ) {
-                                    if (message.isUser) {
-                                        MessageBubble(message)
-                                    } else {
-                                        AssistantTimeline(
-                                            message,
-                                            showProcessing = state.isRunning && message.id == lastAssistantId,
-                                        )
-                                    }
+                                    TimelineEntryRow(entry, onOpenActivity = { activityGroupId = it })
+                                }
+                            }
+                            if (state.isRunning && timelineEntries.isNotEmpty()) {
+                                item(key = "processing") {
+                                    Text(
+                                        text = stringResource(R.string.processing),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                             }
                             items(state.permissions, key = { "permission-${it.id}" }) { permission ->
@@ -362,7 +400,7 @@ fun ChatHomeScreen(
                         onClick = {
                             isAtBottom.value = true
                             coroutineScope.launch {
-                                val totalItems = state.messages.size + state.permissions.size + state.pendingQuestions.size
+                                val totalItems = timelineEntries.size + state.permissions.size + state.pendingQuestions.size
                                 if (totalItems > 0) listState.animateScrollToItem(totalItems - 1)
                             }
                         },
@@ -432,7 +470,15 @@ fun ChatHomeScreen(
                         attachedImages.removeAt(it)
                         onRemoveAttachment(it)
                     },
-                    onCameraLaunch = { cameraLauncher.launch(null) },
+                    onCameraLaunch = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                            == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            cameraLauncher.launch(null)
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
                     onGalleryLaunch = {
                         galleryLauncher.launch(
                             androidx.activity.result.PickVisualMediaRequest(
@@ -506,6 +552,13 @@ fun ChatHomeScreen(
         )
     }
 
+    activityGroupId?.let { groupId ->
+        val parts = findActivityParts(state.messages, groupId)
+        if (parts.isNotEmpty()) {
+            AssistantActivitySheet(parts = parts, onDismiss = { activityGroupId = null })
+        }
+    }
+
     showActionSheet?.let { (_, content) ->
         ModalBottomSheet(onDismissRequest = { showActionSheet = null }) {
             Column(modifier = Modifier.padding(bottom = 32.dp)) {
@@ -522,6 +575,57 @@ fun ChatHomeScreen(
                         clipboardManager.setText(AnnotatedString(content))
                         showActionSheet = null
                     },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Shown while a subagent session is open. Subagent chats are opened from the parent conversation,
+ * so they need an explicit way back to the main agent.
+ */
+@Composable
+private fun SubagentSessionBanner(
+    parentTitle: String,
+    onReturn: () -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 2.dp)
+                .clickable(onClick = onReturn),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.subagent_session_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text =
+                        stringResource(
+                            R.string.subagent_return_to_parent,
+                            parentTitle.ifBlank { stringResource(R.string.subagent_parent_untitled) },
+                        ),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

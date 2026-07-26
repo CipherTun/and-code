@@ -54,6 +54,16 @@
     <string name="tool_input_label">Entrée</string>
     <string name="tool_output_label">Sortie</string>
     <string name="tool_output_truncated">…sortie tronquée</string>
+    <string name="activity_summary_commands">%1$d commande(s) exécutée(s)</string>
+    <string name="activity_summary_reads">%1$d fichier(s) lu(s)</string>
+    <string name="activity_summary_edits">%1$d fichier(s) modifié(s)</string>
+    <string name="activity_summary_subagents">%1$d sous-agent(s) exécuté(s)</string>
+    <string name="activity_summary_tools">%1$d outil(s) utilisé(s)</string>
+    <string name="activity_summary_reasoning">%1$d raisonnement(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Activité</string>
+    <string name="activity_details_open">Afficher les détails de l\'activité</string>
+    <string name="activity_details_close">Fermer</string>
     <string name="file_changes_title">Modifications de fichiers</string>
     <string name="file_changes_generic">Des fichiers ont été modifiés</string>
     <string name="workspace_folder_label">Dossier de travail</string>
@@ -134,7 +144,7 @@
     <string name="provider_auth_failed">L\'authentification du fournisseur a échoué. Réessayez.</string>
     <string name="continue_label">Continuer</string>
     <string name="question_free_text_label">Autre (saisissez votre réponse)</string>
-    <string name="question_cancel">Répondre plus tard (arrêter)</string>
+    <string name="question_cancel">Ne pas répondre</string>
     <string name="question_dismiss">Fermer la question</string>
     <string name="assistant_runtime">Environnement d\'exécution de l\'assistant</string>
     <string name="assistant_workspace">Chemin de l\'espace de travail de l\'assistant</string>
@@ -574,4 +584,9 @@
     <string name="model_visibility_row">Modèles visibles</string>
     <string name="model_visibility_title">Modèles visibles</string>
     <string name="model_visibility_caption">Décochez les modèles pour les masquer dans le sélecteur de modèles.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Session de sous-agent</string>
+    <string name="subagent_return_to_parent">Retour à l’agent principal : %1$s</string>
+    <string name="subagent_parent_untitled">Session principale</string>
 </resources>
