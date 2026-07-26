@@ -15,18 +15,12 @@ jobs:
     steps:
       - name: Check out pull request
         uses: actions/checkout@v4
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
-<<<<<<< HEAD
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
@@ -44,21 +38,6 @@ jobs:
 
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon
-
-=======
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses >/dev/null || true
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-      - name: Make Gradle wrapper executable
-        run: chmod +x ./gradlew
-      - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest --no-daemon
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon
->>>>>>> origin/main
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
