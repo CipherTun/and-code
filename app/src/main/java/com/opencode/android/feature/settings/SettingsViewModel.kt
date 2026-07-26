@@ -11,6 +11,7 @@ import com.opencode.android.data.repository.RuntimeCatalogState
 import com.opencode.android.data.settings.AppPreferences
 import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.runtime.BackendKind
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.local.LocalProviderCredentialStore
@@ -209,6 +210,15 @@ class SettingsViewModel(
         settingsTick.update { it + 1 }
     }
 
+    /**
+     * Runtime that owns provider credentials.
+     *
+     * Providers are an OpenCode concept: Claude Code authenticates as itself and has no catalogue.
+     * With Claude selected, every one of these calls used to go to a runtime that cannot answer, so
+     * the connect button simply did nothing.
+     */
+    private fun providerTarget(): RuntimeTarget? = registry.targetFor(LocalAgent.OPEN_CODE)
+
     fun openProviderAuth(providerId: String) {
         val methods = oauthState.value.methods[providerId].orEmpty()
         val effectiveMethods =
@@ -287,7 +297,7 @@ class SettingsViewModel(
     }
 
     private fun submitProviderApiKey(dialog: ProviderAuthDialogState) {
-        val target = registry.selected.value ?: return
+        val target = providerTarget() ?: return
         val apiKey = dialog.apiKey.trim()
         if (apiKey.isEmpty()) return
         providerAuthJob =
@@ -314,7 +324,7 @@ class SettingsViewModel(
         dialog: ProviderAuthDialogState,
         methodIndex: Int,
     ) {
-        val target = registry.selected.value ?: return
+        val target = providerTarget() ?: return
         providerAuthJob =
             viewModelScope.launch {
                 android.util.Log.w(TAG, "beginProviderOAuth: provider=${dialog.providerId} method=$methodIndex")
@@ -391,7 +401,7 @@ class SettingsViewModel(
     }
 
     fun disconnectProvider(providerId: String) {
-        val target = registry.selected.value ?: return
+        val target = providerTarget() ?: return
         if (providerAuthJob?.isActive == true) return
         providerAuthJob =
             viewModelScope.launch {
@@ -478,7 +488,7 @@ class SettingsViewModel(
 
     fun refreshProviderAuth() {
         val target =
-            registry.selected.value ?: run {
+            providerTarget() ?: run {
                 oauthState.value = OAuthState()
                 return
             }

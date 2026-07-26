@@ -1,14 +1,20 @@
 package com.opencode.android.runtime.local
 
+import com.opencode.android.core.api.McpServer
 import com.opencode.android.core.api.OpenCodeAgent
+import com.opencode.android.core.api.OpenCodeCommand
 import com.opencode.android.core.api.OpenCodeEvent
+import com.opencode.android.core.api.OpenCodeFileChange
 import com.opencode.android.core.api.OpenCodeFileContent
 import com.opencode.android.core.api.OpenCodeFileNode
 import com.opencode.android.core.api.OpenCodeHealth
 import com.opencode.android.core.api.OpenCodeMessage
 import com.opencode.android.core.api.OpenCodeSearchMatch
 import com.opencode.android.core.api.OpenCodeSession
+import com.opencode.android.core.api.OpenCodeSkill
 import com.opencode.android.core.api.OpenCodeTime
+import com.opencode.android.core.api.OpenCodeTodo
+import com.opencode.android.core.api.OpenCodeVcsInfo
 import com.opencode.android.core.api.PromptRequest
 import com.opencode.android.runtime.BackendKind
 import com.opencode.android.runtime.LocalAgent
@@ -30,6 +36,9 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import java.io.File
 import java.util.UUID
 
@@ -66,6 +75,7 @@ class ClaudeCodeTarget(
     private companion object {
         const val DEFAULT_TITLE = "Claude Code"
         const val TITLE_LENGTH = 40
+        const val MCP_TIMEOUT_SECONDS = 120L
     }
 
     private val sessionsFile = File(runtime.runtimeDirectory, "claude-sessions.json")
@@ -302,6 +312,101 @@ class ClaudeCodeTarget(
         directory: String,
         pattern: String,
     ): List<OpenCodeSearchMatch> = withContext(Dispatchers.IO) { files.search(directory, pattern) }
+
+    // Claude Code has no VCS protocol, but the sandbox has git and the workspace is mounted into it.
+    override suspend fun vcsInfo(directory: String): OpenCodeVcsInfo =
+        withContext(Dispatchers.IO) {
+            val output =
+                runtime.runInWorkspace(directory, ClaudeWorkspaceGit.INFO_SCRIPT)
+                    ?: error("$directory is not a git repository")
+            ClaudeWorkspaceGit.parseInfo(output)
+        }
+
+    override suspend fun vcsStatus(directory: String): List<OpenCodeFileChange> =
+        withContext(Dispatchers.IO) {
+            ClaudeWorkspaceGit.parseStatus(runtime.runInWorkspace(directory, ClaudeWorkspaceGit.STATUS_SCRIPT).orEmpty())
+        }
+
+    override suspend fun vcsDiff(
+        directory: String,
+        mode: String,
+        context: Int?,
+    ): List<OpenCodeFileChange> =
+        withContext(Dispatchers.IO) {
+            ClaudeWorkspaceGit.parseDiff(runtime.runInWorkspace(directory, ClaudeWorkspaceGit.diffScript(context)).orEmpty())
+        }
+
+    override suspend fun fileStatus(directory: String): List<OpenCodeFileChange> = vcsStatus(directory)
+
+    /**
+     * The plan Claude is working to, from its own TodoWrite calls.
+     *
+     * [directory] is ignored: a Claude Code todo list belongs to the session, not the workspace.
+     */
+    override suspend fun sessionTodo(
+        sessionId: String,
+        directory: String?,
+    ): List<OpenCodeTodo> = runtime.todos(sessionId)
+
+    /**
+     * Slash commands from the workspace and the sandbox home.
+     *
+     * The CLI also announces its own list when a session starts; anything it named that has no file
+     * behind it — built-ins, or a plugin's — is added so the list is not narrower than reality.
+     */
+    override suspend fun commands(): List<OpenCodeCommand> =
+        withContext(Dispatchers.IO) {
+            val fromDisk = ClaudeCommandCatalog.commands(runtime.catalogRoots(defaultDirectory()))
+            val known = fromDisk.map(OpenCodeCommand::name).toSet()
+            fromDisk + runtime.announcedCommands().filterNot { it.trimStart('/') in known }.map { OpenCodeCommand(it.trimStart('/')) }
+        }
+
+    override suspend fun skills(): List<OpenCodeSkill> =
+        withContext(Dispatchers.IO) {
+            val fromDisk = ClaudeCommandCatalog.skills(runtime.catalogRoots(defaultDirectory()))
+            val known = fromDisk.map(OpenCodeSkill::name).toSet()
+            fromDisk + runtime.announcedSkills().filterNot { it in known }.map { OpenCodeSkill(it) }
+        }
+
+    override suspend fun mcpServers(): List<McpServer> =
+        withContext(Dispatchers.IO) {
+            ClaudeMcpParser.parseList(
+                runtime.runInWorkspace(defaultDirectory(), ClaudeMcpParser.LIST_SCRIPT, MCP_TIMEOUT_SECONDS).orEmpty(),
+            )
+        }
+
+    /**
+     * Adds a server through `claude mcp add`.
+     *
+     * The dialog collects the same fields for either runtime, so the OpenCode-shaped body is
+     * translated here rather than giving Claude Code its own dialog.
+     */
+    override suspend fun addMcpServer(body: JsonObject): McpServer {
+        val name = body.text("name")?.takeIf(String::isNotBlank) ?: error("An MCP server needs a name")
+        val script =
+            ClaudeMcpParser.addScript(name, body.text("url"), body.text("command"))
+                ?: error("An MCP server needs a command or a URL")
+        withContext(Dispatchers.IO) {
+            runtime.runInWorkspace(defaultDirectory(), script, MCP_TIMEOUT_SECONDS)
+                ?: error("Claude Code could not add the MCP server")
+        }
+        return mcpServers().firstOrNull { it.name == name } ?: McpServer(name = name)
+    }
+
+    override suspend fun disconnectMcpServer(name: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runtime.runInWorkspace(defaultDirectory(), ClaudeMcpParser.removeScript(name), MCP_TIMEOUT_SECONDS) != null
+        }
+
+    override suspend fun removeMcpAuth(name: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runtime.runInWorkspace(defaultDirectory(), ClaudeMcpParser.logoutScript(name), MCP_TIMEOUT_SECONDS) != null
+        }
+
+    /** Where workspace-scoped questions are asked when the caller names no session. */
+    private fun defaultDirectory(): String = records.values.lastOrNull()?.session?.directory ?: "/workspace"
+
+    private fun JsonObject.text(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
 
     override suspend fun listWorkspaces(): List<WorkspaceRef> =
         records.values

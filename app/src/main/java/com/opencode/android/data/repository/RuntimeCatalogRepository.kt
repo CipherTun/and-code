@@ -91,6 +91,12 @@ class RuntimeCatalogRepository(
                 current.copy(runtime = target, isRefreshing = true, error = null)
             }
 
+            // Show whatever was cached before even trying to connect: the runtime takes seconds to
+            // start, and an empty picker for that whole window is what made this feel slow.
+            providerCache?.readAny(target.id)?.let { cached ->
+                mutableState.update { it.copy(runtime = target, providers = cached) }
+            }
+
             // The local runtime is usually still starting when the app opens, so a single attempt
             // fails and nothing ever retried: the catalogue stayed empty until something else asked
             // for it, which is what made the model picker look slow.
@@ -108,14 +114,6 @@ class RuntimeCatalogRepository(
                         error = connection.exceptionOrNull().safeMessage(),
                     )
                 return
-            }
-
-            val cachedProviders =
-                connection.getOrNull()?.version?.let { version ->
-                    providerCache?.read(target.id, version)
-                }
-            if (cachedProviders != null && registry.selected.value?.id == target.id) {
-                mutableState.update { it.copy(runtime = target, providers = cachedProviders) }
             }
 
             val catalog =
@@ -146,7 +144,7 @@ class RuntimeCatalogRepository(
                     runtime = target,
                     health = connection.getOrNull(),
                     sessions = catalog.sessions.getOrDefault(emptyList()),
-                    providers = catalog.providers.getOrDefault(ProviderCatalog()),
+                    providers = catalog.providers.getOrDefault(mutableState.value.providers),
                     agents = catalog.agents.getOrDefault(emptyList()),
                     workspaces = catalog.workspaces.getOrDefault(emptyList()),
                     isRefreshing = false,

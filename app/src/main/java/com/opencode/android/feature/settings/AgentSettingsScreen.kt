@@ -96,6 +96,7 @@ fun ClaudeCodeAgentSettingsScreen(
     onSubmitCode: (String) -> Unit,
     onCancelSignIn: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenMcp: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -114,6 +115,12 @@ fun ClaudeCodeAgentSettingsScreen(
                     onOpenUrl = onOpenUrl,
                 )
             }
+            SettingsDivider()
+            SettingsRow(
+                icon = Icons.Default.Extension,
+                title = stringResource(R.string.mcp_settings_row),
+                onClick = onOpenMcp,
+            )
         }
     }
 }

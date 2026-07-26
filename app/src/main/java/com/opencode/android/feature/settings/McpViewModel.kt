@@ -3,6 +3,7 @@ package com.opencode.android.feature.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.opencode.android.core.api.McpServer
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeRegistry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,8 +24,15 @@ data class McpUiState(
     val isAdding: Boolean = false,
 )
 
+/**
+ * MCP servers for one agent.
+ *
+ * Each agent keeps its own server list, so this deliberately does not follow the chat's selected
+ * runtime: the screen is reached from that agent's settings and must configure that agent.
+ */
 class McpViewModel(
     private val registry: RuntimeRegistry,
+    private val agent: LocalAgent = LocalAgent.OPEN_CODE,
 ) : ViewModel() {
     private val _state = MutableStateFlow(McpUiState())
     val state: StateFlow<McpUiState> = _state.asStateFlow()
@@ -34,7 +42,7 @@ class McpViewModel(
     }
 
     fun refresh() {
-        val backend = registry.selected.value ?: return
+        val backend = registry.targetFor(agent) ?: return
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             runCatching { backend.mcpServers() }
@@ -48,7 +56,7 @@ class McpViewModel(
     }
 
     fun connect(name: String) {
-        val backend = registry.selected.value ?: return
+        val backend = registry.targetFor(agent) ?: return
         viewModelScope.launch {
             runCatching { backend.connectMcpServer(name) }
                 .onSuccess { refresh() }
@@ -57,7 +65,7 @@ class McpViewModel(
     }
 
     fun disconnect(name: String) {
-        val backend = registry.selected.value ?: return
+        val backend = registry.targetFor(agent) ?: return
         viewModelScope.launch {
             runCatching { backend.disconnectMcpServer(name) }
                 .onSuccess { refresh() }
@@ -66,7 +74,7 @@ class McpViewModel(
     }
 
     fun removeAuth(name: String) {
-        val backend = registry.selected.value ?: return
+        val backend = registry.targetFor(agent) ?: return
         viewModelScope.launch {
             runCatching { backend.removeMcpAuth(name) }
                 .onSuccess { refresh() }
@@ -95,7 +103,7 @@ class McpViewModel(
     }
 
     fun addServer() {
-        val backend = registry.selected.value ?: return
+        val backend = registry.targetFor(agent) ?: return
         val current = _state.value
         if (current.addName.isBlank()) return
         viewModelScope.launch {

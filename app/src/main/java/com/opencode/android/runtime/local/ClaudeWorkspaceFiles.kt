@@ -19,7 +19,9 @@ class ClaudeWorkspaceFiles(private val workspaceHostDir: File) {
         directory: String,
         path: String,
     ): List<OpenCodeFileNode> {
-        val root = resolveRoot(directory)
+        // Canonical throughout: listFiles() returns children of the resolved directory, and a
+        // relative path taken against an unresolved root climbs back out through every symlink.
+        val root = canonical(resolveRoot(directory)) ?: return emptyList()
         val target = resolve(root, path) ?: return emptyList()
         val children = target.listFiles()?.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() })).orEmpty()
         return children.map { child ->
@@ -37,8 +39,8 @@ class ClaudeWorkspaceFiles(private val workspaceHostDir: File) {
         directory: String,
         path: String,
     ): OpenCodeFileContent {
-        val root = resolveRoot(directory)
-        val file = resolve(root, path)
+        val root = canonical(resolveRoot(directory))
+        val file = root?.let { resolve(it, path) }
         require(file != null && file.isFile) { "File not found: $path" }
         require(file.length() <= MAX_READ_BYTES) { "File is too large to open" }
         val bytes = file.readBytes()
@@ -56,7 +58,7 @@ class ClaudeWorkspaceFiles(private val workspaceHostDir: File) {
         includeDirectories: Boolean?,
         limit: Int?,
     ): List<String> {
-        val root = resolveRoot(directory)
+        val root = canonical(resolveRoot(directory)) ?: return emptyList()
         if (query.isBlank()) return emptyList()
         return walk(root)
             .filter { includeDirectories == true || it.isFile }
@@ -70,7 +72,7 @@ class ClaudeWorkspaceFiles(private val workspaceHostDir: File) {
         directory: String,
         pattern: String,
     ): List<OpenCodeSearchMatch> {
-        val root = resolveRoot(directory)
+        val root = canonical(resolveRoot(directory)) ?: return emptyList()
         if (pattern.isBlank()) return emptyList()
         val matches = mutableListOf<OpenCodeSearchMatch>()
         for (file in walk(root).filter { it.isFile && it.length() <= MAX_READ_BYTES }) {
@@ -118,15 +120,16 @@ class ClaudeWorkspaceFiles(private val workspaceHostDir: File) {
         relative: String,
     ): String = directory.trimEnd('/') + "/" + relative
 
+    private fun canonical(file: File): File? = runCatching { file.canonicalFile }.getOrNull()
+
     /** Null when [path] escapes [root]; the explorer must not reach outside the workspace. */
     private fun resolve(
         root: File,
         path: String,
     ): File? {
         val candidate = if (path.isBlank() || path == ".") root else File(root, path)
-        val canonicalRoot = runCatching { root.canonicalFile }.getOrNull() ?: return null
-        val canonical = runCatching { candidate.canonicalFile }.getOrNull() ?: return null
-        return canonical.takeIf { it == canonicalRoot || it.path.startsWith(canonicalRoot.path + File.separator) }
+        val resolved = canonical(candidate) ?: return null
+        return resolved.takeIf { it == root || it.path.startsWith(root.path + File.separator) }
     }
 
     private companion object {

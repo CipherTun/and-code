@@ -5,6 +5,7 @@ import com.opencode.android.core.api.OpenCodeMessage
 import com.opencode.android.core.api.OpenCodeMessageInfo
 import com.opencode.android.core.api.OpenCodePart
 import com.opencode.android.core.api.OpenCodeTime
+import com.opencode.android.core.api.OpenCodeTodo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -62,6 +63,39 @@ class ClaudeCodeRuntime(
 
     /** Claude Code's own session ids, so a relaunched process resumes rather than starts over. */
     private val resumeIds = mutableMapOf<String, String>()
+
+    /**
+     * The plan Claude is working to, per session.
+     *
+     * Claude Code has no endpoint for this, but every TodoWrite call carries the whole list, so the
+     * newest one seen is the current state. Kept in memory only: a plan belongs to the turn that
+     * produced it, and a restarted app has no turn in flight.
+     */
+    private val todos = mutableMapOf<String, List<OpenCodeTodo>>()
+
+    /** Slash commands and skills as the CLI announced them at the last session start. */
+    private var announcedCommands: List<String> = emptyList()
+    private var announcedSkills: List<String> = emptyList()
+
+    @Synchronized
+    fun todos(sessionId: String): List<OpenCodeTodo> = todos[sessionId].orEmpty()
+
+    @Synchronized
+    fun announcedCommands(): List<String> = announcedCommands
+
+    @Synchronized
+    fun announcedSkills(): List<String> = announcedSkills
+
+    /** Directories Claude Code reads commands and skills from, personal first then per-project. */
+    fun catalogRoots(directory: String): List<File> {
+        val rootfs = installedRuntimeProvider()?.rootfs ?: return emptyList()
+        val workspaceRoot = File(runtimeDirectory, "workspace")
+        val project = directory.removePrefix("/workspace").trim('/')
+        return listOfNotNull(
+            File(rootfs, "root/.claude"),
+            File(if (project.isEmpty()) workspaceRoot else File(workspaceRoot, project), ".claude"),
+        ).filter(File::isDirectory)
+    }
 
     /**
      * Alias to the model id Claude reported for it, so the picker can name models truthfully.
@@ -169,6 +203,7 @@ class ClaudeCodeRuntime(
     fun deleteSessionData(sessionId: String) {
         stop(sessionId)
         resumeIds.remove(sessionId)
+        todos.remove(sessionId)
         messageStore.remove(sessionId)
     }
 
@@ -308,6 +343,9 @@ class ClaudeCodeRuntime(
             synchronized(this) { resumeIds[sessionId] = claudeSessionId }
         }
         if (requestedModel != null) parsed.resolvedModel?.let { rememberResolvedModel(requestedModel, it) }
+        parsed.todos?.let { synchronized(this) { todos[sessionId] = it } }
+        parsed.slashCommands?.let { synchronized(this) { announcedCommands = it } }
+        parsed.skills?.let { synchronized(this) { announcedSkills = it } }
         parsed.messages.forEach { message -> messageStore.upsert(sessionId, message) }
         parsed.events.forEach(events::tryEmit)
         if (parsed.turnFinished) messageStore.flush()
@@ -417,6 +455,61 @@ class ClaudeCodeRuntime(
             ?.takeIf { it.length <= TITLE_MAX_LENGTH }
     }
 
+    /**
+     * Runs [script] in the sandbox with the workspace mounted, and returns its output.
+     *
+     * The questions the explorer and the MCP screen ask have no place in Claude Code's streaming
+     * protocol, but the sandbox already contains the tools that answer them. Unlike
+     * [LocalRuntimeCommandRunner] this mounts `/workspace` and keeps the whole output, which a diff
+     * needs. A non-zero exit yields null rather than an error: every caller has a sensible empty
+     * answer, and a workspace that is not a git repository is normal, not a failure.
+     */
+    fun runInWorkspace(
+        directory: String,
+        script: String,
+        timeoutSeconds: Long = WORKSPACE_COMMAND_TIMEOUT_SECONDS,
+    ): String? {
+        val runtime = installedRuntimeProvider() ?: return null
+        val outputFile =
+            runCatching {
+                File.createTempFile("claude-cmd-", ".log", File(runtimeDirectory, "logs").apply { mkdirs() })
+            }.getOrNull() ?: return null
+        return try {
+            val process =
+                runCatching {
+                    ProcessBuilder(
+                        ClaudeSandboxLauncher.shellCommand(
+                            runtime = runtime,
+                            workspaceHostDir = File(runtimeDirectory, "workspace").apply { mkdirs() },
+                            workingDirectory = directory.ifBlank { "/workspace" },
+                            script = script,
+                        ),
+                    ).directory(runtimeDirectory)
+                        .redirectErrorStream(false)
+                        .redirectOutput(ProcessBuilder.Redirect.to(outputFile))
+                        .apply {
+                            environment().clear()
+                            environment().putAll(
+                                ClaudeSandboxLauncher.environment(
+                                    runtime,
+                                    File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                ),
+                            )
+                        }
+                        .start()
+                }.getOrNull() ?: return null
+            if (!process.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                return null
+            }
+            if (process.exitValue() != 0) null else outputFile.readText()
+        } catch (error: java.io.IOException) {
+            null
+        } finally {
+            outputFile.delete()
+        }
+    }
+
     private fun runCommand(
         command: String,
         timeoutSeconds: Long = 30,
@@ -436,5 +529,6 @@ class ClaudeCodeRuntime(
         const val TITLE_PROMPT_LIMIT = 500
         const val TITLE_MAX_LENGTH = 60
         const val TITLE_TIMEOUT_SECONDS = 45L
+        const val WORKSPACE_COMMAND_TIMEOUT_SECONDS = 60L
     }
 }

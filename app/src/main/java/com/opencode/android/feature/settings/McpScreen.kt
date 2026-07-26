@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.opencode.android.R
 import com.opencode.android.core.api.McpServer
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.ui.ViewModelFactory
 import com.opencode.android.ui.components.StatusChip
@@ -52,12 +53,13 @@ import com.opencode.android.ui.components.StatusChip
 @Composable
 fun McpScreen(
     registry: RuntimeRegistry,
+    agent: LocalAgent = LocalAgent.OPEN_CODE,
     onBack: () -> Unit,
 ) {
     val viewModel: McpViewModel =
         viewModel(
-            key = "mcp",
-            factory = ViewModelFactory { McpViewModel(registry) },
+            key = "mcp-${agent.id}",
+            factory = ViewModelFactory { McpViewModel(registry, agent) },
         )
     val state by viewModel.state.collectAsState()
 

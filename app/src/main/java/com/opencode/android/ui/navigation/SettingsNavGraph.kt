@@ -137,6 +137,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onSubmitCode = claudeActions.onSubmitCode,
             onCancelSignIn = claudeActions.onCancelSignIn,
             onSignOut = claudeActions.onSignOut,
+            onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP_CLAUDE) },
             onOpenUrl = { url ->
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
             },
@@ -184,6 +185,15 @@ fun NavGraphBuilder.settingsNavGraph(
     composable(ROUTE_SETTINGS_MCP) {
         com.opencode.android.feature.settings.McpScreen(
             registry = runtimeRegistry,
+            agent = com.opencode.android.runtime.LocalAgent.OPEN_CODE,
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_MCP_CLAUDE) {
+        com.opencode.android.feature.settings.McpScreen(
+            registry = runtimeRegistry,
+            agent = com.opencode.android.runtime.LocalAgent.CLAUDE_CODE,
             onBack = { navController.popBackStack() },
         )
     }

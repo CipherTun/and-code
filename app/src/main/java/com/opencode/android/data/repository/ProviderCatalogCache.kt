@@ -25,10 +25,18 @@ class ProviderCatalogCache(
     fun read(
         runtimeId: String,
         version: String,
-    ): ProviderCatalog? {
-        val stored = runCatching { json.decodeFromString<Entry>(file(runtimeId).readText()) }.getOrNull() ?: return null
-        return stored.catalog.takeIf { stored.version == version }
-    }
+    ): ProviderCatalog? = entry(runtimeId)?.takeIf { it.version == version }?.catalog
+
+    /**
+     * The stored catalogue whatever version wrote it.
+     *
+     * Used to fill the picker before the runtime has been reached at all: the version cannot be
+     * known yet, and a slightly stale list beats an empty one for the seconds the runtime takes to
+     * start. The verified copy replaces it as soon as the fetch lands.
+     */
+    fun readAny(runtimeId: String): ProviderCatalog? = entry(runtimeId)?.catalog
+
+    private fun entry(runtimeId: String): Entry? = runCatching { json.decodeFromString<Entry>(file(runtimeId).readText()) }.getOrNull()
 
     fun write(
         runtimeId: String,

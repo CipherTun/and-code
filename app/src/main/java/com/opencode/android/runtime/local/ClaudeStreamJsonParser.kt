@@ -5,6 +5,7 @@ import com.opencode.android.core.api.OpenCodeMessage
 import com.opencode.android.core.api.OpenCodeMessageInfo
 import com.opencode.android.core.api.OpenCodePart
 import com.opencode.android.core.api.OpenCodeTime
+import com.opencode.android.core.api.OpenCodeTodo
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -33,6 +34,11 @@ class ClaudeStreamJsonParser(
         val claudeSessionId: String? = null,
         /** Model id Claude reported for this run, e.g. "claude-sonnet-5". */
         val resolvedModel: String? = null,
+        /** Latest TodoWrite contents, when this line carried one. */
+        val todos: List<OpenCodeTodo>? = null,
+        /** Slash commands and skills the CLI reports at startup. */
+        val slashCommands: List<String>? = null,
+        val skills: List<String>? = null,
         val turnFinished: Boolean = false,
         val errorMessage: String? = null,
     )
@@ -42,7 +48,13 @@ class ClaudeStreamJsonParser(
     fun parse(line: String): Parsed {
         val root = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: return Parsed()
         return when (root.string("type")) {
-            "system" -> Parsed(claudeSessionId = root.string("session_id"), resolvedModel = root.string("model"))
+            "system" ->
+                Parsed(
+                    claudeSessionId = root.string("session_id"),
+                    resolvedModel = root.string("model"),
+                    slashCommands = root.stringList("slash_commands"),
+                    skills = root.stringList("skills"),
+                )
             "assistant" -> parseModelMessage(root, role = "assistant")
             "user" -> parseModelMessage(root, role = "user")
             "stream_event" -> parsePartialDelta(root)
@@ -89,6 +101,7 @@ class ClaudeStreamJsonParser(
                 ),
             claudeSessionId = root.string("session_id"),
             resolvedModel = message.string("model"),
+            todos = blocks.firstNotNullOfOrNull(::parseTodos),
         )
     }
 
@@ -170,6 +183,21 @@ class ClaudeStreamJsonParser(
         }
     }
 
+    /** TodoWrite carries the whole list each time, so the newest block is the current state. */
+    private fun parseTodos(block: JsonObject): List<OpenCodeTodo>? {
+        if (block.string("name") != "TodoWrite") return null
+        val todos = (block["input"] as? JsonObject)?.get("todos") as? JsonArray ?: return null
+        return todos.mapNotNull { entry ->
+            val item = entry as? JsonObject ?: return@mapNotNull null
+            val content = item.string("content") ?: item.string("activeForm") ?: return@mapNotNull null
+            OpenCodeTodo(
+                content = content,
+                status = item.string("status") ?: "pending",
+                priority = item.string("priority") ?: "medium",
+            )
+        }
+    }
+
     private fun newMessageId(): String = "claude-${UUID.randomUUID()}"
 
     private fun now(): OpenCodeTime {
@@ -179,6 +207,9 @@ class ClaudeStreamJsonParser(
 
     private companion object {
         fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
+
+        fun JsonObject.stringList(key: String): List<String>? =
+            (this[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
 
         /** Tool result payloads are either a string or a list of content blocks. */
         fun JsonObject.contentText(): String =
