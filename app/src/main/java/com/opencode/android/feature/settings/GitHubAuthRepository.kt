@@ -51,7 +51,9 @@ class GitHubAuthRepository(
     suspend fun requestDeviceCode(): GitHubDeviceCode =
         withContext(Dispatchers.IO) {
             require(isConfigured) { "GitHub client ID is not configured" }
-            val body = FormBody.Builder().add("client_id", clientId).add("scope", "read:user repo").build()
+            // The workflow scope is required when the app pushes or updates GitHub Actions
+            // workflow files, even when the account already has repository write access.
+            val body = FormBody.Builder().add("client_id", clientId).add("scope", "read:user repo workflow").build()
             executeJson("https://github.com/login/device/code", body)
         }
 
