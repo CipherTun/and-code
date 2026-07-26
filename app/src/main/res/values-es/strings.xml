@@ -903,5 +903,4 @@
     <string name="claude_error_install_failed">Falló la instalación de Claude Code</string>
     <string name="claude_error_update_failed">Falló la actualización de Claude Code</string>
     <string name="setup_download_agents_description">Prepara el entorno Linux compartido y los agentes que eligió.</string>
-    <string name="claude_model_account_default">Predeterminado de la cuenta</string>
 </resources>

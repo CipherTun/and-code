@@ -917,5 +917,4 @@
     <string name="claude_error_install_failed">Claude Codeのインストールに失敗しました</string>
     <string name="claude_error_update_failed">Claude Codeの更新に失敗しました</string>
     <string name="setup_download_agents_description">共有のLinux環境と、選んだエージェントを準備します。</string>
-    <string name="claude_model_account_default">アカウントの既定</string>
 </resources>

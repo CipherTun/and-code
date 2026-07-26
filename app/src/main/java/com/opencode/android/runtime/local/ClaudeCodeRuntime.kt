@@ -11,7 +11,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -57,9 +62,19 @@ class ClaudeCodeRuntime(
     /** Claude Code's own session ids, so a relaunched process resumes rather than starts over. */
     private val resumeIds = mutableMapOf<String, String>()
 
+    /** Alias to the model id Claude reported for it, so the picker can name models truthfully. */
+    private val resolvedModelsFile = File(runtimeDirectory, "claude-resolved-models.json")
+    private val resolvedModels =
+        MutableStateFlow(
+            runCatching { json.decodeFromString<Map<String, String>>(resolvedModelsFile.readText()) }.getOrDefault(emptyMap()),
+        )
+
     val auth = ClaudeAuthCoordinator(runtimeDirectory, installedRuntimeProvider, accessCoordinator, messages)
 
     fun events(): Flow<OpenCodeEvent> = events
+
+    /** Alias to resolved model id, learned from run output. */
+    fun resolvedModels(): StateFlow<Map<String, String>> = resolvedModels.asStateFlow()
 
     fun isInstalled(): Boolean = installedRuntimeProvider()?.rootfs?.let(ClaudeCodeInstaller::isInstalledIn) == true
 
@@ -178,10 +193,13 @@ class ClaudeCodeRuntime(
                 .start()
 
         val parser = ClaudeStreamJsonParser(sessionId, json)
+        val requestedModel = model
         val readerJob =
             scope.launch {
                 runCatching {
-                    process.inputStream.bufferedReader().forEachLine { line -> handleLine(sessionId, parser, line) }
+                    process.inputStream.bufferedReader().forEachLine { line ->
+                        handleLine(sessionId, parser, line, requestedModel)
+                    }
                 }
                 messageStore.flush()
                 // A CLI that exits mid-turn would otherwise leave the chat spinning forever.
@@ -251,15 +269,30 @@ class ClaudeCodeRuntime(
         sessionId: String,
         parser: ClaudeStreamJsonParser,
         line: String,
+        requestedModel: String?,
     ) {
         if (line.isBlank()) return
         val parsed = parser.parse(line)
         parsed.claudeSessionId?.let { claudeSessionId ->
             synchronized(this) { resumeIds[sessionId] = claudeSessionId }
         }
+        if (requestedModel != null) parsed.resolvedModel?.let { rememberResolvedModel(requestedModel, it) }
         parsed.messages.forEach { message -> messageStore.upsert(sessionId, message) }
         parsed.events.forEach(events::tryEmit)
         if (parsed.turnFinished) messageStore.flush()
+    }
+
+    private fun rememberResolvedModel(
+        alias: String,
+        resolved: String,
+    ) {
+        if (resolvedModels.value[alias] == resolved) return
+        val updated = resolvedModels.value + (alias to resolved)
+        resolvedModels.value = updated
+        runCatching {
+            resolvedModelsFile.parentFile?.mkdirs()
+            resolvedModelsFile.writeText(json.encodeToString(MapSerializer(String.serializer(), String.serializer()), updated))
+        }
     }
 
     private fun recordUserMessage(

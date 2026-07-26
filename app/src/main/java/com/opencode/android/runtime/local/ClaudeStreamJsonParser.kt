@@ -31,6 +31,8 @@ class ClaudeStreamJsonParser(
         val events: List<OpenCodeEvent> = emptyList(),
         val messages: List<OpenCodeMessage> = emptyList(),
         val claudeSessionId: String? = null,
+        /** Model id Claude reported for this run, e.g. "claude-sonnet-5". */
+        val resolvedModel: String? = null,
         val turnFinished: Boolean = false,
         val errorMessage: String? = null,
     )
@@ -40,7 +42,7 @@ class ClaudeStreamJsonParser(
     fun parse(line: String): Parsed {
         val root = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: return Parsed()
         return when (root.string("type")) {
-            "system" -> Parsed(claudeSessionId = root.string("session_id"))
+            "system" -> Parsed(claudeSessionId = root.string("session_id"), resolvedModel = root.string("model"))
             "assistant" -> parseModelMessage(root, role = "assistant")
             "user" -> parseModelMessage(root, role = "user")
             "stream_event" -> parsePartialDelta(root)
@@ -86,6 +88,7 @@ class ClaudeStreamJsonParser(
                     ),
                 ),
             claudeSessionId = root.string("session_id"),
+            resolvedModel = message.string("model"),
         )
     }
 

@@ -32,7 +32,7 @@ import java.util.UUID
 private data class ClaudeSessionRecord(
     @SerialName("session") val session: OpenCodeSession,
     @SerialName("permissionMode") val permissionMode: String = ClaudePermissionMode.DEFAULT.cliValue,
-    @SerialName("model") val model: String = ClaudeModels.DEFAULT_ALIAS,
+    @SerialName("model") val model: String = ClaudeModels.DEFAULT_MODEL,
 )
 
 /** Exposes the Android-local Claude Code agent as a selectable runtime. */
@@ -174,7 +174,7 @@ class ClaudeCodeTarget(
 
     override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = runtime.listMessages(sessionId)
 
-    override suspend fun listProviders() = ClaudeModels.catalog(messages.accountDefaultModel)
+    override suspend fun listProviders() = ClaudeModels.catalog(runtime.resolvedModels().value)
 
     override suspend fun listAgents() = listOf(OpenCodeAgent("claude", "Claude Code", "primary", true))
 

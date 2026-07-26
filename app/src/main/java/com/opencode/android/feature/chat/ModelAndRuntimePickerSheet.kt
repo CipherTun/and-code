@@ -41,7 +41,6 @@ import com.opencode.android.core.api.OpenCodeModel
 import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
-import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.runtimeTargetLabel
 
 private const val MAX_RECENT_MODELS = 3
@@ -66,9 +65,6 @@ fun ModelAndRuntimePickerSheet(
     recentModelKeys: List<String> = emptyList(),
     hiddenModelKeys: Set<String> = emptySet(),
     onToggleFavorite: (String, String) -> Unit = { _, _ -> },
-    /** Non-null only for runtimes that decide tool permissions per session, i.e. Claude Code. */
-    claudePermissionMode: ClaudePermissionMode? = null,
-    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
@@ -116,23 +112,6 @@ fun ModelAndRuntimePickerSheet(
                     selected = target.id == selectedRuntimeId,
                     onClick = { onSelectRuntime(target.id) },
                 )
-            }
-
-            if (claudePermissionMode != null) {
-                item {
-                    Column {
-                        Spacer(Modifier.height(8.dp))
-                        HorizontalDivider()
-                        SheetSectionHeader(stringResource(R.string.claude_permission_mode_label))
-                    }
-                }
-                items(ClaudePermissionMode.entries, key = { "permission-${it.cliValue}" }) { mode ->
-                    PermissionModeRow(
-                        mode = mode,
-                        selected = mode == claudePermissionMode,
-                        onClick = { onSelectClaudePermissionMode(mode) },
-                    )
-                }
             }
 
             item {
@@ -297,33 +276,6 @@ private fun RuntimeRow(
             style = MaterialTheme.typography.bodyMedium,
         )
         RadioButton(selected = selected, onClick = onClick)
-    }
-}
-
-@Composable
-private fun PermissionModeRow(
-    mode: ClaudePermissionMode,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        RadioButton(selected = selected, onClick = onClick)
-        Column(modifier = Modifier.weight(1f)) {
-            Text(stringResource(mode.labelRes), style = MaterialTheme.typography.bodyMedium)
-            Text(
-                text = stringResource(mode.descriptionRes),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

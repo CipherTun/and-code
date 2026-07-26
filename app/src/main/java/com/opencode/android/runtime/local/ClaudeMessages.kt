@@ -16,7 +16,6 @@ interface ClaudeMessages {
     val submitCodeFailed: String
     val installFailed: String
     val updateFailed: String
-    val accountDefaultModel: String
 
     fun signInExited(exitCode: Int): String
 
@@ -28,7 +27,6 @@ interface ClaudeMessages {
         override val submitCodeFailed = "Could not submit the code"
         override val installFailed = "Claude Code installation failed"
         override val updateFailed = "Claude Code update failed"
-        override val accountDefaultModel = "Account default"
 
         override fun signInExited(exitCode: Int) = "Claude Code sign-in stopped (exit code $exitCode)"
     }
@@ -41,7 +39,6 @@ class AndroidClaudeMessages(private val context: Context) : ClaudeMessages {
     override val submitCodeFailed get() = context.getString(R.string.claude_error_submit_code)
     override val installFailed get() = context.getString(R.string.claude_error_install_failed)
     override val updateFailed get() = context.getString(R.string.claude_error_update_failed)
-    override val accountDefaultModel get() = context.getString(R.string.claude_model_account_default)
 
     override fun signInExited(exitCode: Int): String = context.getString(R.string.claude_error_sign_in_exit, exitCode)
 }
