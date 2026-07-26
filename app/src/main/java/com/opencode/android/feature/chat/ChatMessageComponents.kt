@@ -127,6 +127,7 @@ fun TimelineEntryRow(
                 parts = entry.parts,
                 onClick = { onOpenActivity(entry.id) },
             )
+        is TimelineEntry.Todo -> TodoTimelineCard(entry.todos)
     }
 }
 

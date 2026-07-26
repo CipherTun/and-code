@@ -55,6 +55,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.opencode.android.R
 import com.opencode.android.ui.theme.OpenCodeSuccess
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.ui.text.style.TextDecoration
 
 /**
  * One collapsed line standing in for a whole run of reasoning/tool calls.
@@ -421,6 +425,89 @@ fun PatchCard(part: ChatPart.Patch) {
             } else {
                 part.files.forEach { file ->
                     Text(file, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TodoTimelineCard(todos: List<TodoItem>) {
+    if (todos.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    val completedCount = todos.count { it.status == "completed" }
+    val totalCount = todos.size
+
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(14.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = stringResource(R.string.cd_task_status),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.padding(horizontal = 4.dp))
+                Text(
+                    text = stringResource(R.string.todo_timeline_progress, completedCount, totalCount),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = stringResource(R.string.cd_expand_collapse),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                todos.forEach { todo ->
+                    val isCompleted = todo.status == "completed"
+                    val isInProgress = todo.status == "in_progress"
+                    Row(
+                        modifier = Modifier.padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector =
+                                when {
+                                    isCompleted -> Icons.Default.CheckCircle
+                                    isInProgress -> Icons.Default.PendingActions
+                                    else -> Icons.Default.RadioButtonUnchecked
+                                },
+                            contentDescription = stringResource(R.string.cd_task_status),
+                            tint =
+                                when {
+                                    isCompleted -> MaterialTheme.colorScheme.secondary
+                                    isInProgress -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = todo.content,
+                            style = MaterialTheme.typography.bodySmall,
+                            color =
+                                if (isCompleted) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                        )
+                    }
                 }
             }
         }

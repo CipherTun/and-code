@@ -188,6 +188,7 @@
     <string name="todo_status_in_progress">قيد التقدم</string>
     <string name="todo_status_cancelled">ملغى</string>
     <string name="todo_status_pending">لم يبدأ</string>
+    <string name="todo_timeline_progress">اكتمل %1$d من %2$d Todo</string>
     <string name="priority_high">عالية</string>
     <string name="priority_medium">متوسطة</string>
     <string name="priority_low">منخفضة</string>
