@@ -788,10 +788,7 @@ private fun MarkdownText(
                     }
                 is MarkdownBlock.Table ->
                     Surface(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -800,7 +797,7 @@ private fun MarkdownText(
                             modifier = Modifier.padding(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Row {
+                            Row(modifier = Modifier.fillMaxWidth()) {
                                 block.headers.forEach { header ->
                                     Text(
                                         text = header,
@@ -818,7 +815,7 @@ private fun MarkdownText(
                                 val padded =
                                     row.take(block.headers.size) +
                                         List((block.headers.size - row.size).coerceAtLeast(0)) { "" }
-                                Row {
+                                Row(modifier = Modifier.fillMaxWidth()) {
                                     padded.forEach { cell ->
                                         Text(
                                             text = cell,
