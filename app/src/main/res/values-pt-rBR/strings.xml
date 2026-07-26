@@ -23,7 +23,6 @@
     <string name="allow_lan_http">Permitir HTTP sem criptografia em LAN/Tailscale</string>
     <string name="test_connection">Testar conexão</string>
     <string name="select">Selecionar</string>
-    <string name="active">Ativo</string>
     <string name="not_set">Não definido</string>
     <string name="delete">Excluir</string>
     <string name="cancel">Cancelar</string>
@@ -37,15 +36,12 @@
     <string name="thinking">Pensando…</string>
     <string name="chat_reconnecting">A conexão com o OpenCode foi interrompida. Reconectando…</string>
     <string name="processing">Processando…</string>
-    <string name="no_connection_chat">Adicione e selecione uma conexão de PC antes de iniciar um chat.</string>
     <string name="model">Modelo</string>
     <string name="agent">Agente</string>
     <string name="permission_required">Aprovação necessária</string>
     <string name="allow_once">Permitir uma vez</string>
     <string name="always_allow">Sempre permitir</string>
     <string name="reject">Rejeitar</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">Você pode solicitar implementações, pesquisas e operações de arquivos aqui. Ações de ferramentas em execução e solicitações de aprovação são exibidas inline.</string>
     <string name="reasoning_card_title">Raciocínio</string>
     <string name="tool_status_pending">Pendente</string>
     <string name="tool_status_running">Em execução</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">Alterações de arquivos</string>
     <string name="file_changes_generic">Arquivos foram alterados</string>
     <string name="workspace_folder_label">Pasta de trabalho</string>
-    <string name="default_folder">Pasta padrão</string>
-    <string name="default_folder_description">Usar o local atual do servidor OpenCode</string>
     <string name="workspace_import_folder">Importar pasta…</string>
     <string name="workspace_clone_github">Clonar do GitHub…</string>
     <string name="workspace_clone_title">Clonar um repositório do GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">Remover da lista</string>
     <string name="workspace_delete_files">Excluir arquivos</string>
     <string name="workspace_delete_files_confirm">Excluir \"%1$s\" e todos os seus arquivos? Isso não pode ser desfeito.</string>
-    <string name="chat_options_description">Opções de chat</string>
-    <string name="continue_on_other_runtime">Continuar em outro ambiente de execução</string>
-    <string name="handoff_dialog_title">Escolher um ambiente de execução</string>
 
     <string name="recent_sessions">Sessões recentes</string>
     <string name="view_all">Ver tudo</string>
@@ -612,11 +603,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -739,14 +725,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">OpenCode operation failed</string>
@@ -779,7 +757,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>

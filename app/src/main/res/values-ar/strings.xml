@@ -23,7 +23,6 @@
     <string name="allow_lan_http">السماح بـ HTTP غير المشفر على LAN/Tailscale</string>
     <string name="test_connection">اختبار الاتصال</string>
     <string name="select">تحديد</string>
-    <string name="active">نشط</string>
     <string name="not_set">غير محدد</string>
     <string name="delete">حذف</string>
     <string name="cancel">إلغاء</string>
@@ -37,15 +36,12 @@
     <string name="thinking">جارٍ التفكير…</string>
     <string name="chat_reconnecting">انقطع الاتصال بـ OpenCode. جارٍ إعادة الاتصال…</string>
     <string name="processing">جارٍ المعالجة…</string>
-    <string name="no_connection_chat">أضف وحدد اتصال جهاز كمبيوتر قبل بدء الدردشة.</string>
     <string name="model">النموذج</string>
     <string name="agent">الوكيل</string>
     <string name="permission_required">الموافقة مطلوبة</string>
     <string name="allow_once">السماح مرة واحدة</string>
     <string name="always_allow">السماح دائمًا</string>
     <string name="reject">رفض</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">يمكنك طلب التنفيذ والبحث وعمليات الملفات هنا. تظهر إجراءات الأدوات الجارية وطلبات الموافقة ضمن السياق.</string>
     <string name="reasoning_card_title">الاستدلال</string>
     <string name="tool_status_pending">قيد الانتظار</string>
     <string name="tool_status_running">قيد التشغيل</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">تغييرات الملفات</string>
     <string name="file_changes_generic">تم تغيير الملفات</string>
     <string name="workspace_folder_label">مجلد العمل</string>
-    <string name="default_folder">المجلد الافتراضي</string>
-    <string name="default_folder_description">استخدام الموقع الحالي لخادم OpenCode</string>
     <string name="workspace_import_folder">استيراد مجلد…</string>
     <string name="workspace_clone_github">استنساخ من GitHub…</string>
     <string name="workspace_clone_title">استنساخ مستودع GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">إزالة من القائمة</string>
     <string name="workspace_delete_files">حذف الملفات</string>
     <string name="workspace_delete_files_confirm">حذف \"%1$s\" وجميع ملفاته؟ لا يمكن التراجع عن هذا.</string>
-    <string name="chat_options_description">خيارات الدردشة</string>
-    <string name="continue_on_other_runtime">المتابعة على بيئة تشغيل أخرى</string>
-    <string name="handoff_dialog_title">اختيار بيئة تشغيل</string>
 
     <string name="recent_sessions">الجلسات الأخيرة</string>
     <string name="view_all">عرض الكل</string>
@@ -612,11 +603,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -739,14 +725,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">OpenCode operation failed</string>
@@ -779,7 +757,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>

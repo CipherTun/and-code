@@ -23,7 +23,6 @@
     <string name="allow_lan_http">Permitir HTTP sin cifrar en LAN/Tailscale</string>
     <string name="test_connection">Probar conexión</string>
     <string name="select">Seleccionar</string>
-    <string name="active">Activo</string>
     <string name="not_set">No configurado</string>
     <string name="delete">Eliminar</string>
     <string name="cancel">Cancelar</string>
@@ -37,15 +36,12 @@
     <string name="thinking">Pensando…</string>
     <string name="chat_reconnecting">La conexión con OpenCode se interrumpió. Reconectando…</string>
     <string name="processing">Procesando…</string>
-    <string name="no_connection_chat">Añade y selecciona una conexión de PC antes de iniciar un chat.</string>
     <string name="model">Modelo</string>
     <string name="agent">Agente</string>
     <string name="permission_required">Se requiere aprobación</string>
     <string name="allow_once">Permitir una vez</string>
     <string name="always_allow">Permitir siempre</string>
     <string name="reject">Rechazar</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">Puedes solicitar implementaciones, investigaciones y operaciones de archivos aquí. Las acciones de herramientas en ejecución y las solicitudes de aprobación se muestran en línea.</string>
     <string name="reasoning_card_title">Razonamiento</string>
     <string name="tool_status_pending">Pendiente</string>
     <string name="tool_status_running">En ejecución</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">Cambios en archivos</string>
     <string name="file_changes_generic">Se han modificado archivos</string>
     <string name="workspace_folder_label">Carpeta de trabajo</string>
-    <string name="default_folder">Carpeta predeterminada</string>
-    <string name="default_folder_description">Usar la ubicación actual del servidor OpenCode</string>
     <string name="workspace_import_folder">Importar carpeta…</string>
     <string name="workspace_clone_github">Clonar desde GitHub…</string>
     <string name="workspace_clone_title">Clonar un repositorio de GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">Quitar de la lista</string>
     <string name="workspace_delete_files">Eliminar archivos</string>
     <string name="workspace_delete_files_confirm">¿Eliminar \"%1$s\" y todos sus archivos? Esta acción no se puede deshacer.</string>
-    <string name="chat_options_description">Opciones de chat</string>
-    <string name="continue_on_other_runtime">Continuar en otro entorno de ejecución</string>
-    <string name="handoff_dialog_title">Elegir un entorno de ejecución</string>
 
     <string name="recent_sessions">Sesiones recientes</string>
     <string name="view_all">Ver todo</string>
@@ -612,11 +603,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -739,14 +725,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">OpenCode operation failed</string>
@@ -779,7 +757,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>

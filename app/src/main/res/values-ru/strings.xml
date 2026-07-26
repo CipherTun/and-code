@@ -23,7 +23,6 @@
     <string name="allow_lan_http">Разрешить незашифрованный HTTP в LAN/Tailscale</string>
     <string name="test_connection">Проверить подключение</string>
     <string name="select">Выбрать</string>
-    <string name="active">Активно</string>
     <string name="not_set">Не задано</string>
     <string name="delete">Удалить</string>
     <string name="cancel">Отмена</string>
@@ -37,15 +36,12 @@
     <string name="thinking">Размышление…</string>
     <string name="chat_reconnecting">Соединение с OpenCode прервано. Переподключение…</string>
     <string name="processing">Обработка…</string>
-    <string name="no_connection_chat">Добавьте и выберите подключение к ПК перед началом чата.</string>
     <string name="model">Модель</string>
     <string name="agent">Агент</string>
     <string name="permission_required">Требуется одобрение</string>
     <string name="allow_once">Разрешить один раз</string>
     <string name="always_allow">Всегда разрешать</string>
     <string name="reject">Отклонить</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">Здесь можно запрашивать реализацию, исследование и операции с файлами. Выполняемые действия инструментов и запросы на одобрение отображаются встроенно.</string>
     <string name="reasoning_card_title">Рассуждение</string>
     <string name="tool_status_pending">Ожидание</string>
     <string name="tool_status_running">Выполняется</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">Изменения файлов</string>
     <string name="file_changes_generic">Файлы были изменены</string>
     <string name="workspace_folder_label">Рабочая папка</string>
-    <string name="default_folder">Папка по умолчанию</string>
-    <string name="default_folder_description">Использовать текущее расположение сервера OpenCode</string>
     <string name="workspace_import_folder">Импортировать папку…</string>
     <string name="workspace_clone_github">Клонировать из GitHub…</string>
     <string name="workspace_clone_title">Клонировать репозиторий GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">Удалить из списка</string>
     <string name="workspace_delete_files">Удалить файлы</string>
     <string name="workspace_delete_files_confirm">Удалить \"%1$s\" и все его файлы? Это действие нельзя отменить.</string>
-    <string name="chat_options_description">Параметры чата</string>
-    <string name="continue_on_other_runtime">Продолжить в другой среде выполнения</string>
-    <string name="handoff_dialog_title">Выберите среду выполнения</string>
 
     <string name="recent_sessions">Недавние сессии</string>
     <string name="view_all">Показать все</string>
@@ -612,11 +603,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -739,14 +725,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">OpenCode operation failed</string>
@@ -779,7 +757,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>
