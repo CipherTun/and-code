@@ -435,7 +435,13 @@ private fun AgentSelectionStep(
             selected = LocalAgent.OPEN_CODE in selectedAgents,
             onToggle = { onToggle(LocalAgent.OPEN_CODE) },
         )
-        if (selectedAgents.size == 2) {
+        AgentOption(
+            title = stringResource(R.string.agent_antigravity_name),
+            description = stringResource(R.string.setup_agent_antigravity_desc),
+            selected = LocalAgent.ANTIGRAVITY in selectedAgents,
+            onToggle = { onToggle(LocalAgent.ANTIGRAVITY) },
+        )
+        if (selectedAgents.size >= 2) {
             Text(
                 text = stringResource(R.string.setup_runtime_shared_note),
                 style = MaterialTheme.typography.labelSmall,

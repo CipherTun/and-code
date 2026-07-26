@@ -118,6 +118,12 @@ class LocalRuntimeInstaller(
                     onProgress(0.93f, context.getString(R.string.install_step_installing_claude_code))
                     ClaudeCodeInstaller.installInto(rootfs, commandSuite, runtimeDirectory)
                 }
+                if (LocalAgent.ANTIGRAVITY in requestedAgents) {
+                    onProgress(0.94f, "Downloading and verifying official Antigravity")
+                    AntigravityInstaller(runtimeDirectory, abi, downloader).installInto(rootfs) { progress ->
+                        onProgress(0.94f + progress * 0.04f, "Installing Antigravity")
+                    }
+                }
 
                 val metadata =
                     LocalRuntimeMetadata(
@@ -300,7 +306,7 @@ class LocalRuntimeInstaller(
                 "/root",
                 "/bin/sh",
                 "-lc",
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /sbin/apk add --no-cache bash git curl openssh-client ripgrep ca-certificates libstdc++ github-cli && /usr/sbin/update-ca-certificates",
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /sbin/apk add --no-cache bash git curl openssh-client ripgrep ca-certificates libstdc++ github-cli gcompat util-linux && /usr/sbin/update-ca-certificates",
             )
         val installLog =
             File(runtimeDirectory, "logs/tool-install.log").apply {

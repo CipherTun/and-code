@@ -837,6 +837,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity · Local</string>
     <string name="runtime_error_install_failed">Не удалось установить локальную среду</string>
     <string name="runtime_error_reinstall_failed">Не удалось переустановить локальную среду</string>
     <string name="runtime_error_start_failed">Не удалось запустить локальный OpenCode</string>
@@ -888,6 +889,7 @@
     <string name="setup_agents_description">Выберите агентов программирования для установки на это устройство. Оба работают в одной среде Linux, второго можно добавить позже.</string>
     <string name="setup_agent_claude_code_desc">Войдите в аккаунт Claude через браузер. Загрузка около 80 МБ.</string>
     <string name="setup_agent_opencode_desc">Используйте собственные ключи поставщиков моделей. Загрузка около 120 МБ.</string>
+    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">Выберите хотя бы одного агента, чтобы продолжить.</string>
     <string name="setup_step_sign_in">Вход</string>
     <string name="setup_sign_in_description">Подключите учётные записи для ваших агентов.</string>

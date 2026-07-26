@@ -258,6 +258,7 @@ fun WorkspacesScreen(
                                 when (target.agent) {
                                     LocalAgent.CLAUDE_CODE -> state.claude.installed
                                     LocalAgent.OPEN_CODE -> state.localStatus is LocalRuntimeStatus.Ready
+                                    LocalAgent.ANTIGRAVITY -> target.state is RuntimeState.Connected
                                     null -> true
                                 },
                         ) {

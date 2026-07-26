@@ -16,6 +16,7 @@ enum class LocalAgent(
 ) {
     OPEN_CODE("opencode", R.string.agent_opencode_name, "local-android"),
     CLAUDE_CODE("claude-code", R.string.agent_claude_code_name, "claude-code-local"),
+    ANTIGRAVITY("antigravity", R.string.agent_antigravity_name, "antigravity-local"),
     ;
 
     companion object {

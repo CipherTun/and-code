@@ -16,6 +16,9 @@ import com.opencode.android.feature.support.GitHubStarCoordinator
 import com.opencode.android.feature.support.GitHubStarService
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.local.AndroidClaudeMessages
+import com.opencode.android.runtime.local.AntigravityRuntime
+import com.opencode.android.runtime.local.AntigravityTarget
+import com.opencode.android.runtime.local.AntigravityController
 import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
 import com.opencode.android.runtime.local.ClaudeCodeController
 import com.opencode.android.runtime.local.ClaudeCodeRuntime
@@ -94,6 +97,15 @@ class OpenCodeApplication : Application() {
     lateinit var claudeCodeController: ClaudeCodeController
         private set
 
+    lateinit var antigravityRuntime: AntigravityRuntime
+        private set
+
+    lateinit var antigravityTarget: AntigravityTarget
+        private set
+
+    lateinit var antigravityController: AntigravityController
+        private set
+
     lateinit var runtimeMessages: LocalRuntimeMessages
         private set
 
@@ -151,6 +163,9 @@ class OpenCodeApplication : Application() {
         val claudeMessages = AndroidClaudeMessages(this)
         claudeCodeRuntime = ClaudeCodeRuntime(runtimeDirectory, installer::installedRuntime, accessCoordinator, claudeMessages)
         claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
+        antigravityRuntime = AntigravityRuntime(runtimeDirectory, installer::installedRuntime)
+        antigravityTarget = AntigravityTarget(antigravityRuntime)
+        antigravityController = AntigravityController(installer, antigravityTarget, applicationScope)
         runtimeMessages = AndroidLocalRuntimeMessages(this)
         gitCloneRepository =
             GitCloneRepository(
@@ -214,7 +229,7 @@ class OpenCodeApplication : Application() {
             RuntimeRegistry(
                 store = settings,
                 localTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages),
-                additionalTargets = listOf(claudeCodeTarget),
+                additionalTargets = listOf(claudeCodeTarget, antigravityTarget),
             )
         claudeCodeController =
             ClaudeCodeController(

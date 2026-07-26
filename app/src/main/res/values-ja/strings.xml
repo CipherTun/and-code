@@ -851,6 +851,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity · Local</string>
     <string name="runtime_error_install_failed">ローカルランタイムの導入に失敗しました</string>
     <string name="runtime_error_reinstall_failed">ローカルランタイムの再導入に失敗しました</string>
     <string name="runtime_error_start_failed">ローカルOpenCodeを起動できません</string>
@@ -902,6 +903,7 @@
     <string name="setup_agents_description">この端末に導入するコーディングエージェントを選んでください。どちらも同じLinux環境で動作し、後からもう一方を追加できます。</string>
     <string name="setup_agent_claude_code_desc">ブラウザでClaudeアカウントにサインインします。約80MBをダウンロードします。</string>
     <string name="setup_agent_opencode_desc">任意のモデルプロバイダーのキーを使います。約120MBをダウンロードします。</string>
+    <string name="setup_agent_antigravity_desc">公式Google CLIをブラウザOAuthで利用します。約50MBをダウンロードします。</string>
     <string name="setup_agents_required">続けるには少なくとも1つ選んでください。</string>
     <string name="setup_step_sign_in">サインイン</string>
     <string name="setup_sign_in_description">エージェントが使用するアカウントを接続します。</string>

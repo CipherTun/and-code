@@ -837,6 +837,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity · Local</string>
     <string name="runtime_error_install_failed">تعذّر تثبيت بيئة التشغيل المحلية</string>
     <string name="runtime_error_reinstall_failed">تعذّرت إعادة تثبيت بيئة التشغيل المحلية</string>
     <string name="runtime_error_start_failed">تعذّر تشغيل OpenCode المحلي</string>
@@ -888,6 +889,7 @@
     <string name="setup_agents_description">اختر وكلاء البرمجة المراد تثبيتهم على هذا الجهاز. كلاهما يعمل في بيئة Linux نفسها، ويمكنك إضافة الآخر لاحقًا.</string>
     <string name="setup_agent_claude_code_desc">سجّل الدخول بحساب Claude عبر المتصفح. يتم تنزيل حوالي 80 ميغابايت.</string>
     <string name="setup_agent_opencode_desc">استخدم مفاتيح مزوّدي النماذج الخاصة بك. يتم تنزيل حوالي 120 ميغابايت.</string>
+    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">اختر وكيلًا واحدًا على الأقل للمتابعة.</string>
     <string name="setup_step_sign_in">تسجيل الدخول</string>
     <string name="setup_sign_in_description">اربط الحسابات التي سيستخدمها وكلاؤك.</string>

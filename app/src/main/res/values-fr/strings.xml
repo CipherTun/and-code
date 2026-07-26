@@ -837,6 +837,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity · Local</string>
     <string name="runtime_error_install_failed">Impossible d’installer l’environnement local</string>
     <string name="runtime_error_reinstall_failed">Impossible de réinstaller l’environnement local</string>
     <string name="runtime_error_start_failed">Impossible de démarrer OpenCode local</string>
@@ -888,6 +889,7 @@
     <string name="setup_agents_description">Choisissez les agents de codage à installer sur cet appareil. Les deux s’exécutent dans le même environnement Linux et vous pourrez ajouter l’autre plus tard.</string>
     <string name="setup_agent_claude_code_desc">Connectez-vous avec votre compte Claude dans le navigateur. Télécharge environ 80 Mo.</string>
     <string name="setup_agent_opencode_desc">Utilisez vos propres clés de fournisseurs de modèles. Télécharge environ 120 Mo.</string>
+    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">Sélectionnez au moins un agent pour continuer.</string>
     <string name="setup_step_sign_in">Connexion</string>
     <string name="setup_sign_in_description">Connectez les comptes qu’utiliseront vos agents.</string>
