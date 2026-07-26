@@ -1,566 +1,291 @@
 package com.opencode.android.runtime.local
 
 import com.opencode.android.core.api.OpenCodeEvent
-import com.opencode.android.core.api.OpenCodeHealth
 import com.opencode.android.core.api.OpenCodeMessage
+import com.opencode.android.core.api.OpenCodeMessageInfo
 import com.opencode.android.core.api.OpenCodePart
-import com.opencode.android.core.api.OpenCodeSession
 import com.opencode.android.core.api.OpenCodeTime
-import com.opencode.android.core.api.PermissionRequest
-import com.opencode.android.core.api.PromptRequest
-import com.opencode.android.runtime.BackendKind
-import com.opencode.android.runtime.PermissionResponse
-import com.opencode.android.runtime.RuntimeState
-import com.opencode.android.runtime.RuntimeTarget
-import com.opencode.android.runtime.RuntimeType
-import com.opencode.android.runtime.WorkspaceRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonPrimitive
 import java.io.File
 import java.util.UUID
 
-/** Claude Code runs in the same Alpine/PRoot rootfs as OpenCode; no Claude binary is bundled. */
+/**
+ * Runs Claude Code inside the shared Alpine/PRoot sandbox.
+ *
+ * The CLI is driven in streaming-JSON mode (`--print --input-format stream-json --output-format
+ * stream-json`), which keeps one process alive per chat session and exchanges structured messages
+ * over stdin/stdout. Conversation state lives in Claude Code's own session store, so a process that
+ * dies is relaunched with `--resume` and the history is preserved.
+ */
 class ClaudeCodeRuntime(
     internal val runtimeDirectory: File,
     private val installedRuntimeProvider: () -> LocalRuntimeInstaller.InstalledRuntime?,
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator(),
+    private val messages: ClaudeMessages = ClaudeMessages,
 ) {
     private val json =
         Json {
             ignoreUnknownKeys = true
             isLenient = true
+            encodeDefaults = true
         }
-    private var process: Process? = null
-    private val startedSessions = mutableSetOf<String>()
-    private val events = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 128)
+    private val events = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 256)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var readerJob: Job? = null
-    private var idleJob: Job? = null
-    private var activeSessionId: String? = null
-    private var activeMessageId: String? = null
-    private var activeAssistantText = StringBuilder()
-    private var lastInput: String? = null
-    private var awaitingPermission: PermissionRequest? = null
-    private val messageFile = File(runtimeDirectory, "claude-messages.json")
-    private val messages = linkedMapOf<String, MutableList<OpenCodeMessage>>()
+    private val messageStore = ClaudeMessageStore(File(runtimeDirectory, "claude-messages.json"), json)
 
-    init {
-        runCatching {
-            json.decodeFromString<Map<String, List<OpenCodeMessage>>>(messageFile.readText())
-                .forEach { (id, value) -> messages[id] = value.toMutableList() }
-        }
-    }
+    /** One live CLI process, plus what is needed to decide whether it can be reused. */
+    private class SessionProcess(
+        val process: Process,
+        val readerJob: Job,
+        val permissionMode: ClaudePermissionMode,
+        val directory: String,
+    )
+
+    private val sessions = linkedMapOf<String, SessionProcess>()
+
+    /** Claude Code's own session ids, so a relaunched process resumes rather than starts over. */
+    private val resumeIds = mutableMapOf<String, String>()
+
+    val auth = ClaudeAuthCoordinator(runtimeDirectory, installedRuntimeProvider, accessCoordinator, messages)
 
     fun events(): Flow<OpenCodeEvent> = events
 
-    fun isInstalled(): Boolean = runCommand("command -v claude && claude --version").exitCode == 0
+    fun isInstalled(): Boolean = installedRuntimeProvider()?.rootfs?.let(ClaudeCodeInstaller::isInstalledIn) == true
 
-    fun version(): String? = runCommand("claude --version").output.lineSequence().firstOrNull { it.isNotBlank() }
+    fun version(): String? {
+        if (!isInstalled()) return null
+        val result = runCommand("${ClaudeCodeInstaller.CLAUDE_BINARY} --version", timeoutSeconds = 120)
+        if (result.exitCode != 0) return null
+        return result.output
+            .lineSequence()
+            .map(String::trim)
+            .firstOrNull { it.isNotEmpty() }
+            ?.let { line -> VERSION.find(line)?.value ?: line }
+    }
 
-    fun authStatus(): String = runCommand("claude auth status --text", timeoutSeconds = 30).output
+    /** Installs Claude Code into the already-provisioned sandbox. */
+    fun install(onStep: (ClaudeCodeInstaller.Step) -> Unit = {}) {
+        val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
+        accessCoordinator.write {
+            ClaudeCodeInstaller.installInto(runtime.rootfs, runtime.commandSuite, runtimeDirectory, onStep)
+        }
+    }
 
-    fun authLogin(): LocalRuntimeCommandResult =
-        // Authentication is interactive too; give the CLI a real terminal so its browser/device
-        // code flow is not downgraded to a pipe.
-        runCommand("script -qefc 'claude auth login' /dev/null", timeoutSeconds = 300)
-
-    fun install(): LocalRuntimeCommandResult =
-        runCommand(
-            """
-            wget -qO /etc/apk/keys/claude-code.rsa.pub https://downloads.claude.ai/keys/claude-code.rsa.pub &&
-            grep -q 'downloads.claude.ai/claude-code/apk' /etc/apk/repositories ||
-              echo 'https://downloads.claude.ai/claude-code/apk/stable' >> /etc/apk/repositories &&
-            apk add --no-cache claude-code util-linux && claude --version
-            """.trimIndent(),
-            timeoutSeconds = 300,
-        )
-
-    fun update(): LocalRuntimeCommandResult = runCommand("apk update && apk upgrade claude-code", timeoutSeconds = 300)
+    fun update() {
+        val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
+        accessCoordinator.write {
+            ClaudeCodeInstaller.updateIn(runtime.rootfs, runtime.commandSuite, runtimeDirectory)
+        }
+    }
 
     @Synchronized
     fun send(
         sessionId: String,
         directory: String,
         prompt: String,
+        permissionMode: ClaudePermissionMode,
     ): Result<Unit> =
         runCatching {
-            val runtime = installedRuntimeProvider() ?: error("OpenCode Linux runtime is not installed")
-            val hostWorkspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-            val cwd = directory.ifBlank { "/workspace" }
-            if (process == null || !process!!.isAlive || activeSessionId != sessionId) {
-                stop()
-                activeSessionId = sessionId
-                process =
-                    ProcessBuilder(
-                        runtime.commandSuite.proot.absolutePath,
-                        "--kill-on-exit",
-                        "--link2symlink",
-                        "-0",
-                        "-r",
-                        runtime.rootfs.absolutePath,
-                        "-b",
-                        "/dev",
-                        "-b",
-                        "/proc",
-                        "-b",
-                        "/sys",
-                        "-b",
-                        "${hostWorkspace.absolutePath}:/workspace",
-                        "-w",
-                        cwd,
-                        "/usr/bin/script",
-                        "-qefc",
-                        "/usr/local/bin/claude --ax-screen-reader",
-                        "/dev/null",
-                    ).directory(runtimeDirectory).redirectErrorStream(true).apply {
-                        environment().clear()
-                        environment().putAll(
-                            localRuntimeEnvironment(runtime.commandSuite.environment(), File(runtimeDirectory, "proot-tmp")),
-                        )
-                    }.start()
-                readerJob =
-                    scope.launch {
-                        process!!.inputStream.bufferedReader().useLines { lines -> lines.forEach { parseInteractiveOutput(sessionId, it) } }
-                        events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
-                    }
+            val session = ensureProcess(sessionId, directory.ifBlank { "/workspace" }, permissionMode)
+            recordUserMessage(sessionId, prompt)
+            session.process.outputStream.apply {
+                write((json.encodeToString(JsonObject.serializer(), userMessage(prompt)) + "\n").toByteArray())
+                flush()
             }
-            activeMessageId = "claude-${UUID.randomUUID()}"
-            activeAssistantText = StringBuilder()
-            appendMessage(
-                sessionId,
-                OpenCodeMessage(
-                    info =
-                        com.opencode.android.core.api.OpenCodeMessageInfo(
-                            id = "user-${UUID.randomUUID()}",
-                            sessionId = sessionId,
-                            role = "user",
-                            time = OpenCodeTime(System.currentTimeMillis(), System.currentTimeMillis()),
-                        ),
-                    parts =
-                        listOf(
-                            OpenCodePart(id = "user-text-${UUID.randomUUID()}", sessionId = sessionId, type = "text", text = prompt),
-                        ),
-                ),
-            )
-            writeInput(prompt)
+            Unit
+        }.onFailure { error ->
+            events.tryEmit(OpenCodeEvent.SessionError(sessionId, error.message))
+            events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
         }
 
-    @Synchronized fun writeInput(input: String) {
-        lastInput = input.trim()
-        process?.outputStream?.let { stream ->
-            stream.write((input.trimEnd() + "\n").toByteArray())
-            stream.flush()
+    /** Stops the process backing [sessionId]; the next send resumes the same Claude conversation. */
+    @Synchronized
+    fun stop(sessionId: String) {
+        sessions.remove(sessionId)?.let { session ->
+            session.readerJob.cancel()
+            if (session.process.isAlive) session.process.destroyForcibly()
         }
+        messageStore.flush()
     }
 
-    @Synchronized fun stop() {
-        idleJob?.cancel()
-        readerJob?.cancel()
-        process?.let { if (it.isAlive) it.destroyForcibly() }
-        process = null
-        activeSessionId = null
-        activeMessageId = null
-        activeAssistantText = StringBuilder()
-        lastInput = null
-        awaitingPermission = null
+    @Synchronized
+    fun stopAll() {
+        sessions.keys.toList().forEach(::stop)
+        auth.cancel()
     }
 
-    private fun parseInteractiveOutput(
+    fun listMessages(sessionId: String): List<OpenCodeMessage> = messageStore.list(sessionId)
+
+    @Synchronized
+    fun deleteSessionData(sessionId: String) {
+        stop(sessionId)
+        resumeIds.remove(sessionId)
+        messageStore.remove(sessionId)
+    }
+
+    private fun ensureProcess(
         sessionId: String,
-        rawLine: String,
-    ) {
-        val line = rawLine.replace(ANSI_ESCAPE, "").trim()
-        if (line.isBlank() || line == ">" || line == "❯" || line == lastInput) return
-        if (line.contains(
-                "permission",
-                ignoreCase = true,
-            ) || line.contains("allow", ignoreCase = true) || line.contains("approve", ignoreCase = true)
+        directory: String,
+        permissionMode: ClaudePermissionMode,
+    ): SessionProcess {
+        val existing = sessions[sessionId]
+        // Permission mode and working directory are read once at startup, so a change to either
+        // means the process has to be replaced rather than reused.
+        if (existing != null &&
+            existing.process.isAlive &&
+            existing.permissionMode == permissionMode &&
+            existing.directory == directory
         ) {
-            val request =
-                PermissionRequest(
-                    id = "claude-permission-${UUID.randomUUID()}",
-                    sessionId = sessionId,
-                    permission = line,
-                    patterns = emptyList(),
-                )
-            awaitingPermission = request
-            events.tryEmit(OpenCodeEvent.PermissionAsked(request))
-            return
+            return existing
         }
-        if (line == "1" || line == "2" || line == "3") return
-        val messageId = activeMessageId ?: "claude-${UUID.randomUUID()}".also { activeMessageId = it }
-        val delta = line + "\n"
-        activeAssistantText.append(delta)
-        events.tryEmit(OpenCodeEvent.MessagePartDelta(sessionId, messageId, "claude-text", "text", delta))
-        events.tryEmit(
-            OpenCodeEvent.MessagePartUpdated(
-                OpenCodePart("claude-text", sessionId, messageId, "text", text = activeAssistantText.toString()),
+        if (existing != null) stop(sessionId)
+
+        val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
+        require(ClaudeCodeInstaller.isInstalledIn(runtime.rootfs)) { "Claude Code is not installed" }
+
+        val stderrLog = File(runtimeDirectory, "logs/claude-stderr.log").also { it.parentFile?.mkdirs() }
+        val process =
+            ProcessBuilder(
+                ClaudeSandboxLauncher.command(
+                    runtime = runtime,
+                    workspaceHostDir = File(runtimeDirectory, "workspace").apply { mkdirs() },
+                    workingDirectory = directory,
+                    arguments = processArguments(sessionId, permissionMode),
+                    pty = false,
+                ),
+            ).directory(runtimeDirectory)
+                .redirectError(ProcessBuilder.Redirect.appendTo(stderrLog))
+                .apply {
+                    environment().clear()
+                    environment().putAll(
+                        ClaudeSandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                    )
+                }
+                .start()
+
+        val parser = ClaudeStreamJsonParser(sessionId, json)
+        val readerJob =
+            scope.launch {
+                runCatching {
+                    process.inputStream.bufferedReader().forEachLine { line -> handleLine(sessionId, parser, line) }
+                }
+                messageStore.flush()
+                // A CLI that exits mid-turn would otherwise leave the chat spinning forever.
+                events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
+                synchronized(this@ClaudeCodeRuntime) {
+                    if (sessions[sessionId]?.process === process) sessions.remove(sessionId)
+                }
+            }
+
+        return SessionProcess(process, readerJob, permissionMode, directory).also { sessions[sessionId] = it }
+    }
+
+    private fun processArguments(
+        sessionId: String,
+        permissionMode: ClaudePermissionMode,
+    ): List<String> =
+        buildList {
+            add("--print")
+            add("--input-format")
+            add("stream-json")
+            add("--output-format")
+            add("stream-json")
+            add("--verbose")
+            add("--include-partial-messages")
+            add("--permission-mode")
+            add(permissionMode.cliValue)
+            val resumeId = resumeIds[sessionId]
+            if (resumeId != null) {
+                add("--resume")
+                add(resumeId)
+            } else {
+                add("--session-id")
+                add(sessionId)
+            }
+        }
+
+    private fun userMessage(prompt: String): JsonObject =
+        JsonObject(
+            mapOf(
+                "type" to JsonPrimitive("user"),
+                "message" to
+                    JsonObject(
+                        mapOf(
+                            "role" to JsonPrimitive("user"),
+                            "content" to
+                                JsonArray(
+                                    listOf(
+                                        JsonObject(
+                                            mapOf(
+                                                "type" to JsonPrimitive("text"),
+                                                "text" to JsonPrimitive(prompt),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                        ),
+                    ),
             ),
         )
-        appendMessage(
+
+    private fun handleLine(
+        sessionId: String,
+        parser: ClaudeStreamJsonParser,
+        line: String,
+    ) {
+        if (line.isBlank()) return
+        val parsed = parser.parse(line)
+        parsed.claudeSessionId?.let { claudeSessionId ->
+            synchronized(this) { resumeIds[sessionId] = claudeSessionId }
+        }
+        parsed.messages.forEach { message -> messageStore.upsert(sessionId, message) }
+        parsed.events.forEach(events::tryEmit)
+        if (parsed.turnFinished) messageStore.flush()
+    }
+
+    private fun recordUserMessage(
+        sessionId: String,
+        prompt: String,
+    ) {
+        val timestamp = System.currentTimeMillis()
+        val messageId = "user-${UUID.randomUUID()}"
+        messageStore.upsert(
             sessionId,
             OpenCodeMessage(
                 info =
-                    com.opencode.android.core.api.OpenCodeMessageInfo(
-                        messageId,
-                        sessionId,
-                        "assistant",
-                        OpenCodeTime(System.currentTimeMillis(), System.currentTimeMillis()),
+                    OpenCodeMessageInfo(
+                        id = messageId,
+                        sessionId = sessionId,
+                        role = "user",
+                        time = OpenCodeTime(timestamp, timestamp),
                     ),
-                parts = listOf(OpenCodePart("claude-text", sessionId, messageId, "text", text = activeAssistantText.toString())),
+                parts = listOf(OpenCodePart("$messageId-text", sessionId, messageId, "text", text = prompt)),
             ),
         )
-        idleJob?.cancel()
-        idleJob =
-            scope.launch {
-                delay(1500)
-                if (awaitingPermission == null) events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
-            }
-    }
-
-    fun respondToPermission(
-        response: PermissionResponse,
-        remember: Boolean,
-    ) {
-        val answer =
-            when (response) {
-                PermissionResponse.ONCE -> "1"
-                PermissionResponse.ALWAYS -> "2"
-                PermissionResponse.REJECT -> "3"
-            }
-        awaitingPermission = null
-        writeInput(answer)
-    }
-
-    fun answerQuestion(answer: String) {
-        writeInput(answer)
-    }
-
-    private fun parseEvent(
-        sessionId: String,
-        line: String,
-    ) {
-        val root = runCatching { json.parseToJsonElement(line).jsonObject }.getOrNull() ?: return
-        val type = root["type"]?.jsonPrimitive?.content ?: return
-        val message = root["message"]?.jsonObject
-        val messageId =
-            runCatching { message?.get("id")?.jsonPrimitive?.content }
-                .getOrNull() ?: sessionId
-        val content = message?.get("content")
-        if ((type == "assistant" || type == "user") && content is kotlinx.serialization.json.JsonArray) {
-            val parts = content.mapNotNull { block -> parseContentBlock(sessionId, messageId, block.jsonObject) }
-            if (parts.isNotEmpty()) {
-                appendMessage(
-                    sessionId,
-                    OpenCodeMessage(
-                        info =
-                            com.opencode.android.core.api.OpenCodeMessageInfo(
-                                messageId,
-                                sessionId,
-                                if (type == "user") "assistant" else "assistant",
-                                OpenCodeTime(System.currentTimeMillis(), System.currentTimeMillis()),
-                            ),
-                        parts = parts,
-                    ),
-                )
-            }
-        }
-        val delta = root["event"]?.jsonObject?.get("delta")?.jsonObject?.get("text")?.jsonPrimitive?.content
-        if (delta != null) {
-            events.tryEmit(OpenCodeEvent.MessagePartDelta(sessionId, messageId, "claude-text", "text", delta))
-        }
-        if (type == "result") {
-            root["result"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() }?.let { result ->
-                val part =
-                    OpenCodePart(
-                        id = "claude-result-$messageId",
-                        sessionId = sessionId,
-                        messageId = messageId,
-                        type = "text",
-                        text = result,
-                    )
-                events.tryEmit(OpenCodeEvent.MessagePartUpdated(part))
-                appendMessage(
-                    sessionId,
-                    OpenCodeMessage(
-                        info =
-                            com.opencode.android.core.api.OpenCodeMessageInfo(
-                                messageId,
-                                sessionId,
-                                "assistant",
-                                OpenCodeTime(System.currentTimeMillis(), System.currentTimeMillis()),
-                            ),
-                        parts = listOf(part),
-                    ),
-                )
-            }
-        }
-    }
-
-    private fun parseContentBlock(
-        sessionId: String,
-        messageId: String,
-        block: JsonObject,
-    ): OpenCodePart? {
-        val blockType = block["type"]?.jsonPrimitive?.content ?: return null
-        val partId = block["id"]?.jsonPrimitive?.content ?: "claude-${UUID.randomUUID()}"
-        return when (blockType) {
-            "text" -> {
-                val text = block["text"]?.jsonPrimitive?.content.orEmpty()
-                events.tryEmit(OpenCodeEvent.MessagePartUpdated(OpenCodePart(partId, sessionId, messageId, "text", text = text)))
-                OpenCodePart(partId, sessionId, messageId, "text", text = text)
-            }
-            "thinking" ->
-                OpenCodePart(
-                    partId,
-                    sessionId,
-                    messageId,
-                    "reasoning",
-                    text = block["thinking"]?.jsonPrimitive?.content.orEmpty(),
-                )
-            "tool_use" -> {
-                val name = block["name"]?.jsonPrimitive?.content ?: "tool"
-                val input = block["input"] ?: kotlinx.serialization.json.JsonObject(emptyMap())
-                val part =
-                    OpenCodePart(
-                        partId,
-                        sessionId,
-                        messageId,
-                        "tool",
-                        tool = name,
-                        callID = partId,
-                        state = mapOf("status" to json.encodeToJsonElement("running"), "input" to input),
-                    )
-                events.tryEmit(OpenCodeEvent.MessagePartUpdated(part))
-                part
-            }
-            "tool_result" -> {
-                val output = block["content"]?.toString().orEmpty()
-                val callId = block["tool_use_id"]?.jsonPrimitive?.content ?: partId
-                val part =
-                    OpenCodePart(
-                        callId,
-                        sessionId,
-                        messageId,
-                        "tool",
-                        tool = "tool",
-                        callID = callId,
-                        state = mapOf("status" to json.encodeToJsonElement("completed"), "output" to json.encodeToJsonElement(output)),
-                    )
-                events.tryEmit(OpenCodeEvent.MessagePartUpdated(part))
-                part
-            }
-            else -> null
-        }
-    }
-
-    private fun appendMessage(
-        sessionId: String,
-        message: OpenCodeMessage,
-    ) {
-        val sessionMessages = messages.getOrPut(sessionId) { mutableListOf() }
-        val existing = sessionMessages.indexOfFirst { it.info.id == message.info.id }
-        if (existing >= 0) sessionMessages[existing] = message else sessionMessages += message
-        messageFile.parentFile?.mkdirs()
-        messageFile.writeText(json.encodeToString(messages.mapValues { it.value.toList() }))
-    }
-
-    private companion object {
-        val ANSI_ESCAPE = Regex("\\u001B\\[[;\\d]*[ -/]*[@-~]")
-    }
-
-    fun listMessages(sessionId: String): List<OpenCodeMessage> = messages[sessionId].orEmpty()
-
-    fun deleteSessionData(sessionId: String) {
-        messages.remove(sessionId)
-        File(runtimeDirectory, "sessions/$sessionId.started").delete()
-        messageFile.writeText(json.encodeToString(messages.mapValues { it.value.toList() }))
     }
 
     private fun runCommand(
         command: String,
         timeoutSeconds: Long = 30,
     ): LocalRuntimeCommandResult =
-        accessCoordinator.read {
-            val runtime = installedRuntimeProvider() ?: return@read LocalRuntimeCommandResult(127, "Runtime unavailable")
-            val result =
-                LocalRuntimeCommandRunner(
-                    runtimeDirectory,
-                    installedRuntimeProvider,
-                    accessCoordinator,
-                    timeoutSeconds,
-                ).runShell(command)
-            result
-        }
-}
+        LocalRuntimeCommandRunner(
+            runtimeDirectory = runtimeDirectory,
+            installedRuntimeProvider = installedRuntimeProvider,
+            accessCoordinator = accessCoordinator,
+            timeoutSeconds = timeoutSeconds,
+        ).runShell(command, timeoutSeconds)
 
-class ClaudeCodeTarget(private val runtime: ClaudeCodeRuntime) : RuntimeTarget {
-    override val id = "claude-code-local"
-    override val displayName = "Claude Code (Android local)"
-    override val kind = BackendKind.LOCAL
-    override val type = RuntimeType.LOCAL
-    private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
-    override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
-    private val json =
-        Json {
-            ignoreUnknownKeys = true
-            isLenient = true
-        }
-    private val sessionsFile = File(runtime.runtimeDirectory, "claude-sessions.json")
-    private val sessions =
-        linkedMapOf<String, OpenCodeSession>().apply {
-            runCatching {
-                json.decodeFromString<List<OpenCodeSession>>(sessionsFile.readText()).forEach { put(it.id, it) }
-            }
-        }
-
-    fun install(): LocalRuntimeCommandResult =
-        runtime.install().also { result ->
-            if (result.exitCode == 0) {
-                mutableState.value = RuntimeState.Connected(runtime.version().orEmpty())
-            } else {
-                mutableState.value = RuntimeState.Failed(result.output.takeLast(500))
-            }
-        }
-
-    fun update(): LocalRuntimeCommandResult =
-        runtime.update().also { result ->
-            if (result.exitCode == 0) mutableState.value = RuntimeState.Connected(runtime.version().orEmpty())
-        }
-
-    fun version(): String? = runtime.version()
-
-    fun authStatus(): String = runtime.authStatus()
-
-    fun authLogin(): LocalRuntimeCommandResult = runtime.authLogin()
-
-    override suspend fun connect(): Result<OpenCodeHealth> =
-        runCatching {
-            val version = runtime.version() ?: error("Claude Code is not installed")
-            mutableState.value = RuntimeState.Connected(version)
-            OpenCodeHealth(true, version)
-        }.onFailure { mutableState.value = RuntimeState.Failed(it.message ?: "Claude Code unavailable") }
-
-    override fun disconnect() {
-        runtime.stop()
-        mutableState.value = RuntimeState.Disconnected
-    }
-
-    override suspend fun health(): OpenCodeHealth {
-        val version = runtime.version().orEmpty()
-        val health = OpenCodeHealth(version.isNotBlank(), version)
-        mutableState.value =
-            if (health.healthy) {
-                RuntimeState.Connected(
-                    version,
-                )
-            } else {
-                RuntimeState.Unavailable("Claude Code is not installed")
-            }
-        return health
-    }
-
-    override suspend fun listSessions(directory: String?) = sessions.values.filter { directory == null || it.directory == directory }
-
-    override suspend fun createSession(
-        title: String?,
-        directory: String?,
-    ): OpenCodeSession {
-        val now = System.currentTimeMillis()
-        val id = UUID.randomUUID().toString()
-        return OpenCodeSession(
-            id = id,
-            directory = directory ?: "/workspace",
-            title = title ?: "Claude Code",
-            time = OpenCodeTime(now, now),
-        ).also {
-            sessions[id] = it
-            persistSessions()
-        }
-    }
-
-    override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = runtime.listMessages(sessionId)
-
-    override suspend fun listProviders() = com.opencode.android.core.api.ProviderCatalog()
-
-    override suspend fun listAgents() = listOf(com.opencode.android.core.api.OpenCodeAgent("claude", "Claude Code", "primary", true))
-
-    override suspend fun sendMessage(
-        sessionId: String,
-        request: PromptRequest,
-    ) {
-        val session = sessions[sessionId] ?: error("Claude session not found")
-        withContext(Dispatchers.IO) {
-            runtime.send(sessionId, session.directory ?: "/workspace", request.text).getOrThrow()
-        }
-    }
-
-    override suspend fun abortSession(sessionId: String): Boolean {
-        runtime.stop()
-        return true
-    }
-
-    override suspend fun renameSession(
-        sessionId: String,
-        title: String,
-    ): OpenCodeSession {
-        val session = sessions[sessionId] ?: error("Claude session not found")
-        return session.copy(title = title, time = session.time.copy(updated = System.currentTimeMillis())).also {
-            sessions[sessionId] = it
-            persistSessions()
-        }
-    }
-
-    override suspend fun deleteSession(sessionId: String): Boolean {
-        val removed = sessions.remove(sessionId) != null
-        if (removed) {
-            persistSessions()
-            runtime.deleteSessionData(sessionId)
-        }
-        return removed
-    }
-
-    override suspend fun respondToPermission(
-        sessionId: String,
-        permissionId: String,
-        response: PermissionResponse,
-        remember: Boolean,
-    ): Boolean {
-        runtime.respondToPermission(response, remember)
-        return true
-    }
-
-    override suspend fun answerQuestion(
-        requestId: String,
-        answers: List<List<String>>,
-        directory: String?,
-    ): Boolean {
-        runtime.answerQuestion(answers.flatten().joinToString(", "))
-        return true
-    }
-
-    override fun events(): Flow<OpenCodeEvent> = runtime.events()
-
-    override suspend fun listWorkspaces(): List<WorkspaceRef> = emptyList()
-
-    private fun persistSessions() {
-        sessionsFile.parentFile?.mkdirs()
-        sessionsFile.writeText(json.encodeToString(sessions.values.toList()))
+    private companion object {
+        val VERSION = Regex("\\d+\\.\\d+\\.\\d+")
     }
 }

@@ -66,10 +66,12 @@ import com.journeyapps.barcodescanner.ScanOptions
 import com.opencode.android.R
 import com.opencode.android.core.api.OpenCodeHealth
 import com.opencode.android.core.security.ConnectionQrPayload
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.runtime.RuntimeState
 import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
+import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.components.SectionCard
 import com.opencode.android.ui.components.StatusChip
 import kotlinx.coroutines.launch
@@ -92,7 +94,13 @@ fun WorkspacesScreen(
     onStopLocal: () -> Unit,
     onReinstallLocal: () -> Unit,
     onInstallClaude: () -> Unit = {},
-    onAuthenticateClaude: () -> Unit = {},
+    onUpdateClaude: () -> Unit = {},
+    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit = {},
+    onBeginClaudeSignIn: () -> Unit = {},
+    onSubmitClaudeSignInCode: (String) -> Unit = {},
+    onCancelClaudeSignIn: () -> Unit = {},
+    onSignOutClaude: () -> Unit = {},
+    onOpenUrl: (String) -> Unit = {},
     onOpenLocalManagement: () -> Unit,
     onImportFolder: () -> Unit = {},
     onCloneGithub: () -> Unit = {},
@@ -247,9 +255,11 @@ fun WorkspacesScreen(
                     modifier =
                         Modifier.clickable(
                             enabled =
-                                target.type == RuntimeType.REMOTE ||
-                                    target.id == "claude-code-local" ||
-                                    state.localStatus is LocalRuntimeStatus.Ready,
+                                when (target.agent) {
+                                    LocalAgent.CLAUDE_CODE -> state.claude.installed
+                                    LocalAgent.OPEN_CODE -> state.localStatus is LocalRuntimeStatus.Ready
+                                    null -> true
+                                },
                         ) {
                             onSelectRuntime(target.id)
                         },
@@ -265,7 +275,7 @@ fun WorkspacesScreen(
                             tint = MaterialTheme.colorScheme.primary,
                         )
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(target.name, fontWeight = FontWeight.SemiBold)
+                            Text(runtimeSummaryLabel(target), fontWeight = FontWeight.SemiBold)
                             Text(
                                 text = targetSubtitle(target, state.localStatus, remoteProfile?.baseUrl),
                                 style = MaterialTheme.typography.bodySmall,
@@ -283,52 +293,18 @@ fun WorkspacesScreen(
                             }
                         }
                     }
-                    if (target.id == "claude-code-local") {
-                        Spacer(Modifier.height(12.dp))
-                        if (target.state is RuntimeState.Connected) {
-                            Text(
-                                "Installed: ${(target.state as RuntimeState.Connected).version}",
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedButton(onClick = onAuthenticateClaude, modifier = Modifier.fillMaxWidth()) {
-                                Text("Sign in to Claude")
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedButton(onClick = onStopLocal, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Default.Stop, contentDescription = null)
-                                Spacer(Modifier.padding(horizontal = 4.dp))
-                                Text(stringResource(R.string.stop_local_runtime_button))
-                            }
-                        } else {
-                            when (val claudeStatus = state.claudeInstallStatus) {
-                                is ClaudeInstallStatus.Installing -> {
-                                    Text(claudeStatus.step, style = MaterialTheme.typography.bodySmall)
-                                    Spacer(Modifier.height(8.dp))
-                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                }
-                                is ClaudeInstallStatus.Failed -> {
-                                    Text(
-                                        claudeStatus.message,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.error,
-                                    )
-                                    Spacer(Modifier.height(8.dp))
-                                    Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
-                                        Icon(Icons.Default.Build, contentDescription = null)
-                                        Spacer(Modifier.padding(horizontal = 4.dp))
-                                        Text("Install Claude Code")
-                                    }
-                                }
-                                else -> {
-                                    Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
-                                        Icon(Icons.Default.Build, contentDescription = null)
-                                        Spacer(Modifier.padding(horizontal = 4.dp))
-                                        Text("Install Claude Code")
-                                    }
-                                }
-                            }
-                        }
+                    if (target.agent == LocalAgent.CLAUDE_CODE) {
+                        ClaudeCodeCard(
+                            claude = state.claude,
+                            onInstall = onInstallClaude,
+                            onUpdate = onUpdateClaude,
+                            onSelectPermissionMode = onSelectClaudePermissionMode,
+                            onSignIn = onBeginClaudeSignIn,
+                            onSubmitCode = onSubmitClaudeSignInCode,
+                            onCancelSignIn = onCancelClaudeSignIn,
+                            onSignOut = onSignOutClaude,
+                            onOpenUrl = onOpenUrl,
+                        )
                     } else if (target.type == RuntimeType.LOCAL) {
                         Spacer(Modifier.height(12.dp))
                         when (val local = state.localStatus) {
@@ -679,19 +655,26 @@ private fun WorkspaceProjectRow(
     }
 }
 
+/** Names a runtime the same way the chat picker does, so the two never disagree. */
+@Composable
+private fun runtimeSummaryLabel(target: RuntimeSummary): String {
+    val agent = target.agent ?: return target.name
+    return stringResource(R.string.local_agent_on_device, stringResource(agent.displayNameRes))
+}
+
 @Composable
 private fun targetSubtitle(
     target: RuntimeSummary,
     localStatus: LocalRuntimeStatus,
     remoteUrl: String?,
 ): String =
-    if (target.id == "claude-code-local") {
+    if (target.agent == LocalAgent.CLAUDE_CODE) {
         when (val runtimeState = target.state) {
-            is RuntimeState.Connected -> "Ready · ${runtimeState.version}"
-            is RuntimeState.Failed -> runtimeState.message
-            is RuntimeState.Unavailable -> runtimeState.reason
-            RuntimeState.Connecting -> "Installing or starting"
-            RuntimeState.Disconnected -> "Not installed"
+            is RuntimeState.Connected -> stringResource(R.string.claude_installed_version, runtimeState.version)
+            is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
+            is RuntimeState.Unavailable -> stringResource(R.string.claude_status_not_installed)
+            RuntimeState.Connecting -> stringResource(R.string.claude_status_installing)
+            RuntimeState.Disconnected -> stringResource(R.string.claude_status_not_installed)
         }
     } else {
         when (target.type) {

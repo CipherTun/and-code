@@ -100,6 +100,7 @@ import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.ui.components.SectionCard
 import com.opencode.android.ui.components.StatusChip
+import com.opencode.android.ui.runtimeTargetLabel
 import com.opencode.android.ui.theme.OpenCodeSuccess
 import com.opencode.android.ui.theme.OpenCodeWarning
 
@@ -404,7 +405,7 @@ private fun HandoffDialog(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 runtimes.forEach { runtime ->
                     Text(
-                        text = runtime.displayName,
+                        text = runtimeTargetLabel(runtime),
                         modifier =
                             Modifier
                                 .fillMaxWidth()

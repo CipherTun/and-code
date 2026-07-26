@@ -7,12 +7,16 @@ import com.opencode.android.core.api.OpenCodeHealth
 import com.opencode.android.data.connection.ConnectionProfile
 import com.opencode.android.data.connection.SecureSettingsRepository
 import com.opencode.android.data.repository.RuntimeCatalogRepository
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.RuntimeState
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
+import com.opencode.android.runtime.local.ClaudeCodeController
+import com.opencode.android.runtime.local.ClaudeCodeUiState
+import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.runtime.local.LocalRuntimeManager
 import com.opencode.android.runtime.local.LocalRuntimeServiceController
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,22 +28,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
-sealed interface ClaudeInstallStatus {
-    data object Idle : ClaudeInstallStatus
-
-    data class Installing(val step: String) : ClaudeInstallStatus
-
-    data object Ready : ClaudeInstallStatus
-
-    data class Failed(val message: String) : ClaudeInstallStatus
-}
-
 data class RuntimeSummary(
     val id: String,
     val name: String,
     val type: RuntimeType,
     val state: RuntimeState,
     val selected: Boolean,
+    /** Which local agent this target runs, or null for remote connections. */
+    val agent: LocalAgent?,
 )
 
 data class WorkspaceUiState(
@@ -52,8 +48,7 @@ data class WorkspaceUiState(
     val localStatus: LocalRuntimeStatus = LocalRuntimeStatus.NotInstalled,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val claudeError: String? = null,
-    val claudeInstallStatus: ClaudeInstallStatus = ClaudeInstallStatus.Idle,
+    val claude: ClaudeCodeUiState = ClaudeCodeUiState(),
 )
 
 class WorkspaceViewModel(
@@ -63,13 +58,11 @@ class WorkspaceViewModel(
     private val localRuntimeController: LocalRuntimeServiceController,
     private val settings: SecureSettingsRepository,
     private val workspaceHostDir: File,
-    private val claudeCodeInstaller: (suspend ((String) -> Unit) -> Unit)? = null,
+    private val claudeCode: ClaudeCodeController? = null,
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
-    private val claudeError = MutableStateFlow<String?>(null)
-    private val claudeInstallStatus = MutableStateFlow<ClaudeInstallStatus>(ClaudeInstallStatus.Idle)
-    private val installState =
-        combine(registeredTick, claudeError, claudeInstallStatus) { _, error, status -> error to status }
+    private val claudeState: StateFlow<ClaudeCodeUiState> =
+        claudeCode?.state ?: MutableStateFlow(ClaudeCodeUiState())
 
     val state: StateFlow<WorkspaceUiState> =
         combine(
@@ -77,8 +70,8 @@ class WorkspaceViewModel(
             registry.selected,
             catalog.state,
             localRuntimeManager.state,
-            installState,
-        ) { targets, selected, runtime, localStatus, installState ->
+            combine(registeredTick, claudeState) { _, claude -> claude },
+        ) { targets, selected, runtime, localStatus, claude ->
             val profiles = registry.remoteProfiles()
             // Read imperatively: the registry recomputes this set while building the target list, so
             // it is already up to date by the time `targets` emits.
@@ -92,6 +85,7 @@ class WorkspaceViewModel(
                             type = target.type,
                             state = target.state.value,
                             selected = target.id == selected?.id,
+                            agent = target.agent,
                         )
                     },
                 connections = profiles,
@@ -101,8 +95,7 @@ class WorkspaceViewModel(
                 localStatus = localStatus,
                 isRefreshing = runtime.isRefreshing,
                 error = runtime.error,
-                claudeError = installState.first,
-                claudeInstallStatus = installState.second,
+                claude = claude,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
 
@@ -208,36 +201,24 @@ class WorkspaceViewModel(
 
     fun reinstallLocalRuntime() = localRuntimeController.reinstall()
 
-    fun installClaudeCode() {
-        val installer = claudeCodeInstaller ?: return
-        claudeError.value = null
-        claudeInstallStatus.value = ClaudeInstallStatus.Installing("Starting...")
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { installer { step -> claudeInstallStatus.value = ClaudeInstallStatus.Installing(step) } }
-                .onSuccess {
-                    claudeInstallStatus.value = ClaudeInstallStatus.Ready
-                    refresh()
-                }
-                .onFailure { error ->
-                    claudeError.value = error.message ?: "Claude Code installation failed"
-                    claudeInstallStatus.value = ClaudeInstallStatus.Failed(error.message ?: "Claude Code installation failed")
-                }
-        }
-    }
+    fun installClaudeCode() = claudeCode?.install() ?: Unit
 
-    fun authenticateClaudeCode() {
-        val target =
-            registry.targets.value.firstOrNull { it.id == "claude-code-local" } as? com.opencode.android.runtime.local.ClaudeCodeTarget
-                ?: return
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            target.authLogin()
-            refresh()
-        }
-    }
+    fun updateClaudeCode() = claudeCode?.update() ?: Unit
+
+    fun setClaudePermissionMode(mode: ClaudePermissionMode) = claudeCode?.setPermissionMode(mode) ?: Unit
+
+    fun beginClaudeSignIn() = claudeCode?.beginSignIn() ?: Unit
+
+    fun submitClaudeSignInCode(code: String) = claudeCode?.submitSignInCode(code) ?: Unit
+
+    fun cancelClaudeSignIn() = claudeCode?.cancelSignIn() ?: Unit
+
+    fun signOutClaude() = claudeCode?.signOut() ?: Unit
 
     fun refresh() {
         registry.refresh()
         catalog.refresh()
+        claudeCode?.refresh()
     }
 
     private companion object {

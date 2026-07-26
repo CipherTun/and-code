@@ -166,25 +166,7 @@ fun OpenCodeApp(
                         app.localRuntimeController,
                         app.settings,
                         java.io.File(context.filesDir, "runtime/workspace"),
-                        claudeCodeInstaller = { reportStep ->
-                            if (app.localRuntimeManager.status() !is com.opencode.android.runtime.LocalRuntimeStatus.Ready) {
-                                reportStep("Starting OpenCode Linux runtime...")
-                                app.localRuntimeManager.installAndStart().getOrThrow()
-                            }
-                            reportStep("Installing Claude Code package...")
-                            val result = app.claudeCodeRuntime.install()
-                            check(result.exitCode == 0) {
-                                buildString {
-                                    append("Claude Code installation failed (exit ")
-                                    append(result.exitCode)
-                                    append(")")
-                                    result.output.trim().takeIf { it.isNotEmpty() }?.let {
-                                        append(": ")
-                                        append(it.takeLast(1200))
-                                    }
-                                }
-                            }
-                        },
+                        claudeCode = app.claudeCodeController,
                     )
                 },
         )
@@ -630,7 +612,25 @@ fun OpenCodeApp(
                     val localRuntimeStatus by app.localRuntimeManager.state.collectAsState()
                     AndroidSetupScreen(
                         runtimeStatus = localRuntimeStatus,
-                        onStartRuntimeSetup = workspaceViewModel::setupLocalRuntime,
+                        claude = workspaceState.claude,
+                        onStartSetup = { agents ->
+                            if (com.opencode.android.runtime.LocalAgent.OPEN_CODE in agents) {
+                                workspaceViewModel.setupLocalRuntime()
+                            }
+                            if (com.opencode.android.runtime.LocalAgent.CLAUDE_CODE in agents &&
+                                com.opencode.android.runtime.LocalAgent.OPEN_CODE !in agents
+                            ) {
+                                workspaceViewModel.installClaudeCode()
+                            }
+                        },
+                        onSelectClaudePermissionMode = workspaceViewModel::setClaudePermissionMode,
+                        onBeginClaudeSignIn = workspaceViewModel::beginClaudeSignIn,
+                        onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
+                        onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
+                        onSignOutClaude = workspaceViewModel::signOutClaude,
+                        onOpenUrl = { url ->
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                        },
                         settingsState = settingsState,
                         onOpenProviderAuth = settingsViewModel::openProviderAuth,
                         onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,

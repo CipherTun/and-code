@@ -16,7 +16,6 @@ class SessionCacheRepository(private val sessionDao: SessionDao) {
                     updatedAt = session.time.updated ?: session.time.created,
                     providerId = null,
                     modelId = null,
-                    agentType = "OPEN_CODE",
                 )
             },
         )

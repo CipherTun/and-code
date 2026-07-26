@@ -1,5 +1,7 @@
 package com.opencode.android.ui.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +51,7 @@ fun NavGraphBuilder.workspaceNavGraph(
     }
 
     composable(ROUTE_WORKSPACES) {
+        val context = androidx.compose.ui.platform.LocalContext.current
         WorkspacesScreen(
             state = workspaceState,
             onSelectRuntime = workspaceViewModel::selectRuntime,
@@ -67,7 +70,17 @@ fun NavGraphBuilder.workspaceNavGraph(
             onStopLocal = workspaceViewModel::stopLocalRuntime,
             onReinstallLocal = workspaceViewModel::reinstallLocalRuntime,
             onInstallClaude = workspaceViewModel::installClaudeCode,
-            onAuthenticateClaude = workspaceViewModel::authenticateClaudeCode,
+            onUpdateClaude = workspaceViewModel::updateClaudeCode,
+            onSelectClaudePermissionMode = workspaceViewModel::setClaudePermissionMode,
+            onBeginClaudeSignIn = workspaceViewModel::beginClaudeSignIn,
+            onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
+            onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
+            onSignOutClaude = workspaceViewModel::signOutClaude,
+            onOpenUrl = { url ->
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            },
             onOpenLocalManagement = {
                 navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE)
             },

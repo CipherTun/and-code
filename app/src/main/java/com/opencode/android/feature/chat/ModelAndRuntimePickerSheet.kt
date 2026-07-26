@@ -41,6 +41,7 @@ import com.opencode.android.core.api.OpenCodeModel
 import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
+import com.opencode.android.ui.runtimeTargetLabel
 
 private const val MAX_RECENT_MODELS = 3
 
@@ -270,12 +271,7 @@ private fun RuntimeRow(
             tint = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text =
-                if (target.type == RuntimeType.LOCAL) {
-                    stringResource(R.string.this_android)
-                } else {
-                    target.displayName
-                },
+            text = runtimeTargetLabel(target),
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyMedium,
         )

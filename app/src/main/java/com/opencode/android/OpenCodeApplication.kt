@@ -13,6 +13,9 @@ import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.di.appModule
 import com.opencode.android.di.viewModelModule
 import com.opencode.android.runtime.RuntimeRegistry
+import com.opencode.android.runtime.local.AndroidClaudeMessages
+import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
+import com.opencode.android.runtime.local.ClaudeCodeController
 import com.opencode.android.runtime.local.ClaudeCodeRuntime
 import com.opencode.android.runtime.local.ClaudeCodeTarget
 import com.opencode.android.runtime.local.DefaultLocalRuntimeUpdateEngine
@@ -24,6 +27,7 @@ import com.opencode.android.runtime.local.LocalRuntimeCommandRunner
 import com.opencode.android.runtime.local.LocalRuntimeDiagnosticsCollector
 import com.opencode.android.runtime.local.LocalRuntimeInstaller
 import com.opencode.android.runtime.local.LocalRuntimeManager
+import com.opencode.android.runtime.local.LocalRuntimeMessages
 import com.opencode.android.runtime.local.LocalRuntimeProcessLauncher
 import com.opencode.android.runtime.local.LocalRuntimeReleaseClient
 import com.opencode.android.runtime.local.LocalRuntimeServiceController
@@ -82,6 +86,15 @@ class OpenCodeApplication : Application() {
     lateinit var claudeCodeRuntime: ClaudeCodeRuntime
         private set
 
+    lateinit var claudeCodeTarget: ClaudeCodeTarget
+        private set
+
+    lateinit var claudeCodeController: ClaudeCodeController
+        private set
+
+    lateinit var runtimeMessages: LocalRuntimeMessages
+        private set
+
     override fun onCreate() {
         super.onCreate()
         startKoin {
@@ -121,8 +134,12 @@ class OpenCodeApplication : Application() {
                 runtimeDirectory = runtimeDirectory,
                 installedRuntimeProvider = installer::installedRuntime,
                 accessCoordinator = accessCoordinator,
+                messages = AndroidLocalRuntimeMessages(this),
             )
-        claudeCodeRuntime = ClaudeCodeRuntime(runtimeDirectory, installer::installedRuntime, accessCoordinator)
+        val claudeMessages = AndroidClaudeMessages(this)
+        claudeCodeRuntime = ClaudeCodeRuntime(runtimeDirectory, installer::installedRuntime, accessCoordinator, claudeMessages)
+        claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
+        runtimeMessages = AndroidLocalRuntimeMessages(this)
         gitCloneRepository =
             GitCloneRepository(
                 runtimeDirectory = runtimeDirectory,
@@ -171,6 +188,7 @@ class OpenCodeApplication : Application() {
                 installer = installer,
                 processLauncher = launcher,
                 updateEngine = updateEngine,
+                messages = runtimeMessages,
             )
         localRuntimeDiagnosticsCollector =
             LocalRuntimeDiagnosticsCollector(
@@ -184,8 +202,16 @@ class OpenCodeApplication : Application() {
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,
-                localTarget = LocalRuntimeTarget(localRuntimeManager),
-                additionalTargets = listOf(ClaudeCodeTarget(claudeCodeRuntime)),
+                localTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages),
+                additionalTargets = listOf(claudeCodeTarget),
+            )
+        claudeCodeController =
+            ClaudeCodeController(
+                target = claudeCodeTarget,
+                runtime = claudeCodeRuntime,
+                installer = installer,
+                scope = applicationScope,
+                messages = claudeMessages,
             )
         catalogRepository = RuntimeCatalogRepository(runtimeRegistry, applicationScope)
         activityRepository =

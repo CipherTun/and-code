@@ -1,42 +1,91 @@
 # Claude Code on Android
 
-Claude Code is an additional local runtime target. It reuses the installed Alpine Linux rootfs,
-PRoot launcher, `/workspace` bind mount, command environment, logs, and workspace registration used
-by the local OpenCode runtime. The APK does not contain or redistribute a Claude binary.
+Claude Code is a second local runtime target. It reuses the Alpine Linux rootfs, PRoot launcher,
+`/workspace` bind mount, command environment and logs that the local OpenCode runtime already
+installs. The APK does not contain or redistribute a Claude binary.
+
+## Agents are selectable
+
+The Alpine sandbox is shared, but the agents inside it are not. `LocalRuntimeMetadata.components`
+records which of `opencode` / `claude-code` is provisioned, and `LocalRuntimeInstaller.install`
+downloads the OpenCode binary only when OpenCode is among the requested agents — so a Claude
+Code-only setup skips a download it would never use. Installing one agent later never removes the
+other: requested agents are unioned with what is already recorded, and `/root` (which holds every
+agent's credentials) is carried across the staging swap.
+
+The setup guide asks for this choice in its first step; the Workspaces screen can add either agent
+afterwards.
 
 ## Installation
 
-From Workspaces, select `Claude Code (Android local)` and choose Install. The app adds Anthropic's
-official signed Alpine repository key and stable repository inside the existing rootfs, then runs:
+The app adds Anthropic's official signed Alpine repository key and stable repository inside the
+existing rootfs, then installs the package:
 
 ```sh
-apk add --no-cache claude-code
-claude --version
+wget -qO /etc/apk/keys/claude-code.rsa.pub https://downloads.claude.ai/keys/claude-code.rsa.pub
+# https://downloads.claude.ai/claude-code/apk/stable appended to /etc/apk/repositories, once
+/sbin/apk update
+/sbin/apk add --no-cache claude-code util-linux
 ```
 
-Updates use `apk update && apk upgrade claude-code`. The official Alpine package is used because
-Anthropic documents Alpine 3.19+ and Linux ARM64 support. `USE_BUILTIN_RIPGREP=0` is set because the
-shared rootfs already provides Alpine's ripgrep package.
+Two details are load-bearing and were wrong in earlier revisions:
+
+- **`apk` is invoked by absolute path.** The sandbox's `/etc/profile.d/opencode-android.sh` narrows
+  `PATH` to `/usr/local/bin:/usr/bin:/bin`, which excludes `/sbin` where `apk` lives. The install
+  script also runs under `sh -c` rather than `sh -lc` so that profile never applies.
+- **The package installs `claude` to `/usr/bin`, not `/usr/local/bin`** (where the OpenCode binary is
+  copied). `ClaudeCodeInstaller.CLAUDE_BINARY` is the single source of truth for the path.
+
+Updates use `apk add --no-cache --upgrade claude-code`. `USE_BUILTIN_RIPGREP=0` is set because the
+bundled ripgrep is a glibc build that cannot run on musl; the sandbox provides Alpine's ripgrep.
 
 ## Execution
 
-Prompts run in a long-lived interactive Claude process in the same PRoot environment and workspace mount as OpenCode. The process is attached to a pseudo-terminal provided by Alpine `util-linux`:
+Prompts run through Claude Code's streaming-JSON protocol rather than its terminal UI:
 
 ```text
-script -qefc /usr/local/bin/claude /dev/null
+claude --print --input-format stream-json --output-format stream-json --verbose \
+       --include-partial-messages --permission-mode <mode> \
+       (--session-id <uuid> | --resume <claude-session-id>)
 ```
 
-Prompts and permission/question answers are written to the PTY. The subprocess output is converted
-into the existing chat event model. The process is cancelled by destroying the managed process.
-Session metadata and normalized messages are additionally persisted by the Android runtime.
+One process stays alive per chat session and exchanges newline-delimited JSON over stdin/stdout.
+`system`, `assistant`, `user`, `stream_event` and `result` messages are mapped onto the existing chat
+event model, so assistant text, reasoning, tool calls, tool results and streaming deltas render in
+the normal UI. Conversation state lives in Claude Code's own session store, so a process that exits
+is relaunched with `--resume` and history survives.
 
-Authentication remains Claude Code's responsibility. The runtime exposes the official
-`claude auth status` command and does not create or handle OAuth tokens. The Workspaces screen invokes
-the official `claude auth login` command from the Sign in button; any browser/device-code flow is
-therefore owned by Claude Code rather than reimplemented in Android.
+The interactive TUI is deliberately not scraped: it is a full-screen renderer whose output has no
+stable line structure, and the heuristics needed to read it misfire on ordinary assistant prose.
+
+## Permissions
+
+Streaming-JSON mode has no channel for answering an individual tool prompt without hosting an MCP
+permission tool, so permissions are decided per session via `--permission-mode`:
+
+| Mode | CLI value | Effect |
+| --- | --- | --- |
+| Plan only | `plan` | Reads and plans; never edits or runs commands |
+| Accept edits (default) | `acceptEdits` | May edit files in the workspace |
+| Full access | `bypassPermissions` | Runs any command without asking |
+
+The CLI's own `default` mode is not offered: with no prompt channel it can only deny, which is
+indistinguishable from a hang. `ClaudeCodeTarget.respondToPermission` therefore returns false rather
+than pretending a prompt was answered.
+
+## Sign-in
+
+`claude auth login` is interactive: it prints an authorization URL, waits for browser approval, then
+reads back the code the browser shows. There is no browser inside PRoot, so the app plays that role.
+`ClaudeAuthCoordinator` runs the command under a pseudo-terminal (Alpine `util-linux`'s `script`,
+required because the CLI only prints a pasteable URL when it believes a human is watching), captures
+the URL, hands it to Android via `ACTION_VIEW`, and writes the pasted code back to the CLI's stdin.
+Success is confirmed against `claude auth status`, not inferred from the exit code.
+
+The app never creates, stores or handles OAuth tokens itself — credentials stay in Claude Code's own
+store under `/root` inside the sandbox.
 
 ## History and Events
 
 Session metadata and normalized Claude messages are stored in the app-private runtime directory.
-Assistant text, reasoning, tool use, tool results, and final results are converted to the existing
-chat event/part model, so the existing permission, tool, patch, and streaming UI can render them.
+Writes are coalesced to turn boundaries rather than issued per streamed line.
