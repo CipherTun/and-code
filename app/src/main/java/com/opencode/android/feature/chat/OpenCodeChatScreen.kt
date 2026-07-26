@@ -24,7 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -72,10 +73,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -676,18 +679,28 @@ private fun InlineText(
         remember(inlines, linkColor, codeBackground) {
             annotateFilePaths(renderInline(inlines, codeBackground, linkColor), linkColor)
         }
-    ClickableText(
-        text = annotated,
-        style = style,
-        onClick = { offset ->
-            annotated.getStringAnnotations("link", offset, offset).firstOrNull()?.let { ann ->
-                runCatching {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(ann.item)))
+    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    SelectionContainer {
+        Text(
+            text = annotated,
+            style = style,
+            modifier = Modifier.pointerInput(annotated) {
+                detectTapGestures { offset ->
+                    layoutResult?.let { layout ->
+                        val position = layout.getOffsetForPosition(offset)
+                        annotated.getStringAnnotations("link", position, position)
+                            .firstOrNull()?.let { ann ->
+                                runCatching {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(ann.item)))
+                                }
+                            } ?: annotated.getStringAnnotations("filepath", position, position)
+                            .firstOrNull()?.let { onFilePathClick(it.item) }
+                    }
                 }
-            } ?: annotated.getStringAnnotations("filepath", offset, offset).firstOrNull()
-                ?.let { onFilePathClick(it.item) }
-        },
-    )
+            },
+            onTextLayout = { layoutResult = it },
+        )
+    }
 }
 
 @Composable
