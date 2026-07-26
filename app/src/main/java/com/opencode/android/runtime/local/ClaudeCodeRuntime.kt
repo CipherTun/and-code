@@ -49,6 +49,7 @@ class ClaudeCodeRuntime(
         val readerJob: Job,
         val permissionMode: ClaudePermissionMode,
         val directory: String,
+        val model: String?,
     )
 
     private val sessions = linkedMapOf<String, SessionProcess>()
@@ -94,9 +95,10 @@ class ClaudeCodeRuntime(
         directory: String,
         prompt: String,
         permissionMode: ClaudePermissionMode,
+        model: String?,
     ): Result<Unit> =
         runCatching {
-            val session = ensureProcess(sessionId, directory.ifBlank { "/workspace" }, permissionMode)
+            val session = ensureProcess(sessionId, directory.ifBlank { "/workspace" }, permissionMode, model)
             recordUserMessage(sessionId, prompt)
             session.process.outputStream.apply {
                 write((json.encodeToString(JsonObject.serializer(), userMessage(prompt)) + "\n").toByteArray())
@@ -137,14 +139,16 @@ class ClaudeCodeRuntime(
         sessionId: String,
         directory: String,
         permissionMode: ClaudePermissionMode,
+        model: String?,
     ): SessionProcess {
         val existing = sessions[sessionId]
-        // Permission mode and working directory are read once at startup, so a change to either
-        // means the process has to be replaced rather than reused.
+        // Permission mode, working directory and model are read once at startup, so a change to any
+        // of them means the process has to be replaced rather than reused.
         if (existing != null &&
             existing.process.isAlive &&
             existing.permissionMode == permissionMode &&
-            existing.directory == directory
+            existing.directory == directory &&
+            existing.model == model
         ) {
             return existing
         }
@@ -160,7 +164,7 @@ class ClaudeCodeRuntime(
                     runtime = runtime,
                     workspaceHostDir = File(runtimeDirectory, "workspace").apply { mkdirs() },
                     workingDirectory = directory,
-                    arguments = processArguments(sessionId, permissionMode),
+                    arguments = processArguments(sessionId, permissionMode, model),
                     pty = false,
                 ),
             ).directory(runtimeDirectory)
@@ -187,12 +191,13 @@ class ClaudeCodeRuntime(
                 }
             }
 
-        return SessionProcess(process, readerJob, permissionMode, directory).also { sessions[sessionId] = it }
+        return SessionProcess(process, readerJob, permissionMode, directory, model).also { sessions[sessionId] = it }
     }
 
     private fun processArguments(
         sessionId: String,
         permissionMode: ClaudePermissionMode,
+        model: String?,
     ): List<String> =
         buildList {
             add("--print")
@@ -204,6 +209,10 @@ class ClaudeCodeRuntime(
             add("--include-partial-messages")
             add("--permission-mode")
             add(permissionMode.cliValue)
+            ClaudeModels.cliModel(model)?.let {
+                add("--model")
+                add(it)
+            }
             val resumeId = resumeIds[sessionId]
             if (resumeId != null) {
                 add("--resume")

@@ -245,13 +245,7 @@ fun OpenCodeChatScreen(
                 value = input,
                 onValueChange = { input = it },
                 modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text(
-                        state.agentName.takeIf(String::isNotBlank)
-                            ?.let { stringResource(R.string.message_agent_hint, it) }
-                            ?: stringResource(R.string.message_hint),
-                    )
-                },
+                placeholder = { Text(stringResource(R.string.message_hint)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions =
                     KeyboardActions(

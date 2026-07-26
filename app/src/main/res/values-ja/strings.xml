@@ -31,11 +31,11 @@
     <string name="refresh">更新</string>
 
     <string name="new_chat">新しいチャット</string>
-    <string name="message_hint">OpenCodeへメッセージ…</string>
+    <string name="message_hint">メッセージを送る…</string>
     <string name="send_description">メッセージを送信</string>
     <string name="stop_run">停止</string>
     <string name="thinking">考え中…</string>
-    <string name="chat_reconnecting">OpenCodeとの接続が切れました。再接続中…</string>
+    <string name="chat_reconnecting">ランタイムとの接続が切れました。再接続しています…</string>
     <string name="processing">処理中…</string>
     <string name="no_connection_chat">チャットを始める前にPC接続先を追加して選択してください。</string>
     <string name="model">モデル</string>
@@ -96,7 +96,7 @@
     <string name="remote_runtime">PCリモート実行</string>
     <string name="local_runtime">Androidローカル実行</string>
     <string name="experimental_not_installed">管理対象ローカルランタイム</string>
-    <string name="local_runtime_note">作業先画面からAndroidローカルOpenCodeのセットアップ、起動、停止、修復を操作できます。</string>
+    <string name="local_runtime_note">Android内のローカルランタイムの導入・起動・停止・修復はワークスペースから行えます。</string>
 
     <string name="home_assistant">ホームアシスト</string>
     <string name="set_default_assistant">既定のデジタルアシスタントに設定</string>
@@ -112,12 +112,12 @@
 
     <string name="notification_channel_approvals">承認</string>
     <string name="notification_channel_status">タスク状態</string>
-    <string name="notification_approval_title">OpenCodeの承認が必要です</string>
-    <string name="notification_complete_title">OpenCodeが完了しました</string>
+    <string name="notification_approval_title">承認が必要です</string>
+    <string name="notification_complete_title">実行が完了しました</string>
     <string name="notification_complete_body">チャット「%1$s」が待機中です</string>
-    <string name="permission_chat_confirmation">このチャットは承認待ちです。OpenCodeに許可する操作を選択してください。</string>
-    <string name="permission_response_failed">許可の応答をOpenCodeに送信できませんでした。もう一度お試しください。</string>
-    <string name="notification_error_title">OpenCodeエラー</string>
+    <string name="permission_chat_confirmation">このチャットは承認待ちです。エージェントに許可する操作を選んでください:</string>
+    <string name="permission_response_failed">エージェントがその権限の応答を適用できませんでした。</string>
+    <string name="notification_error_title">実行エラー</string>
     <string name="notification_error_body">セッションが失敗しました</string>
     <string name="notification_permission_failed">承認を送信できませんでした。アプリを開いてもう一度お試しください。</string>
     <string name="provider_credentials">プロバイダー接続</string>
@@ -179,7 +179,7 @@
     <string name="tab_approvals">承認</string>
     <string name="tab_logs">ログ</string>
     <string name="activity_screen_title">アクティビティ</string>
-    <string name="activity_screen_subtitle">OpenCodeの実行状況と履歴</string>
+    <string name="activity_screen_subtitle">実行状況と履歴</string>
     <string name="no_running_tasks">実行中のタスクはありません</string>
     <string name="open_chat_button">チャットを開く</string>
     <string name="no_pending_approvals">承認待ちはありません</string>
@@ -233,7 +233,7 @@
     <string name="rollback_confirm_body">現在のローカルOpenCodeを停止し、保存されている直前バージョンへ切り替えて再起動します。起動できない場合は現在のバージョンへ復旧します。</string>
     <string name="rollback_button">ロールバック</string>
     <string name="delete_runtime_confirm_title">ローカルランタイムを削除しますか？</string>
-    <string name="delete_runtime_confirm_body">OpenCode、Linux環境、キャッシュ、ログ、アプリ内のローカル作業領域が削除されます。PC接続設定は削除されません。</string>
+    <string name="delete_runtime_confirm_body">導入済みのエージェント、Linux環境、キャッシュ、ログ、アプリ内のローカル作業フォルダが削除されます。PC接続設定は保持されます。</string>
     <string name="delete_completely">完全削除</string>
     <string name="runtime_version_transition">OpenCode %1$s → %2$s</string>
     <string name="version_transition">%1$s → %2$s</string>
@@ -291,7 +291,7 @@
 
     <string name="add_pc_connection_description">PC接続を追加</string>
     <string name="workspaces_title">ワークスペース</string>
-    <string name="workspaces_subtitle">OpenCodeを動かす端末と作業フォルダを選びます。</string>
+    <string name="workspaces_subtitle">エージェントを動かす端末と作業フォルダを選びます。</string>
     <string name="runtime_targets_title">実行先</string>
     <string name="in_use_label">使用中</string>
     <string name="edit_description">編集</string>
@@ -302,7 +302,7 @@
     <string name="diagnostics_and_management_button">診断と管理</string>
     <string name="workspace_folders_title">作業フォルダ</string>
     <string name="no_workspaces_title">作業フォルダはまだありません</string>
-    <string name="no_workspaces_body">セッションを開始すると、OpenCodeが利用したフォルダがここに表示されます。</string>
+    <string name="no_workspaces_body">セッションを開始すると、エージェントが利用したフォルダがここに表示されます。</string>
     <string name="status_fetch_failed">状態の取得に失敗しました</string>
     <string name="connected_at_url">OpenCode %1$s · %2$s</string>
     <string name="connecting_at">接続中 · %1$s</string>
@@ -317,21 +317,21 @@
     <string name="disconnected_label">未接続</string>
     <string name="current_configuration">現在の構成</string>
     <string name="not_selected">未選択</string>
-    <string name="opencode_default_value">OpenCodeの既定値</string>
+    <string name="opencode_default_value">ランタイム既定</string>
     <string name="no_ai_service_selected">AIサービス未選択</string>
     <string name="connection_or_fetch_failed">接続または取得に失敗しました</string>
     <string name="checking_connection_status">接続と状態を確認しています</string>
     <string name="choose_local_or_pc_runtime">AndroidローカルまたはPCを選択できます</string>
-    <string name="not_connected_to_opencode">OpenCodeへ未接続</string>
+    <string name="not_connected_to_opencode">ランタイムに接続していません</string>
 
-    <string name="voice_no_runtime_configured">OpenCodeの実行先を設定してください。</string>
-    <string name="voice_event_connection_failed">OpenCodeイベント接続に失敗しました</string>
-    <string name="voice_processing_failed">OpenCodeの処理に失敗しました</string>
-    <string name="voice_send_failed">OpenCodeへ送信できませんでした</string>
-    <string name="voice_no_answer_text">OpenCodeから回答テキストを取得できませんでした</string>
+    <string name="voice_no_runtime_configured">ランタイムをセットアップしてください。</string>
+    <string name="voice_event_connection_failed">ランタイムのイベントに接続できませんでした</string>
+    <string name="voice_processing_failed">エージェントがリクエストを処理できませんでした</string>
+    <string name="voice_send_failed">エージェントに送信できませんでした</string>
+    <string name="voice_no_answer_text">エージェントから回答を取得できませんでした</string>
     <string name="voice_permission_send_failed">承認結果を送信できませんでした</string>
     <string name="voice_state_listening">話してください</string>
-    <string name="voice_state_thinking">OpenCodeが処理しています</string>
+    <string name="voice_state_thinking">処理しています</string>
     <string name="voice_state_speaking">回答を読み上げています</string>
     <string name="voice_state_done">完了</string>
     <string name="voice_state_error">エラー</string>
@@ -395,7 +395,7 @@
     <string name="chat_home_title">チャット</string>
     <string name="chat_build_headline">OpenCodeで開発を進める</string>
     <string name="chat_build_subtitle">コードの実装、修正、レビューまで、何でも聞いてください。</string>
-    <string name="chat_message_placeholder">OpenCodeにメッセージを送る…</string>
+    <string name="chat_message_placeholder">メッセージを送る…</string>
     <string name="chat_attach">ファイルを添付</string>
     <string name="chat_remove_attachment">添付を削除</string>
     <string name="chat_thinking_default">思考</string>
@@ -445,7 +445,7 @@
     <string name="onboarding_subtitle">コードを書く・修正する・理解する。はじめるには、いずれか1つの実行パスを選ぶだけです。</string>
     <string name="onboarding_recommended_badge">おすすめ</string>
     <string name="onboarding_android_title">このAndroidで始める</string>
-    <string name="onboarding_android_desc">端末内でOpenCodeを直接実行します。</string>
+    <string name="onboarding_android_desc">コーディングエージェントをこの端末で直接動かします。</string>
     <string name="onboarding_remote_title">PC・Macに接続する</string>
     <string name="onboarding_remote_desc">既存のOpenCodeサーバーに接続します。</string>
     <string name="onboarding_switch_note">どちらを選んでも、あとからもう一方を追加して切り替えることができます。</string>
@@ -597,7 +597,7 @@
     <string name="syntax_theme_dialog_title">シンタックステーマを選択</string>
     <string name="usage_row">使用量</string>
     <string name="font_size_dialog_title">フォントサイズ</string>
-    <string name="widget_quick_input_hint">OpenCodeにメッセージを送る…</string>
+    <string name="widget_quick_input_hint">メッセージを送る…</string>
 
     <!-- Subagent sessions -->
     <string name="subagent_session_label">サブエージェントのセッション</string>
@@ -763,12 +763,12 @@
     <string name="tasks_progress">%1$d/%2$d 完了</string>
 
     <!-- Chat errors -->
-    <string name="error_opencode_operation">OpenCode操作に失敗しました</string>
-    <string name="error_no_connection">OpenCode接続が設定されていません</string>
+    <string name="error_opencode_operation">操作に失敗しました</string>
+    <string name="error_no_connection">ランタイムの接続が設定されていません</string>
     <string name="session_title_attachment">添付ファイル</string>
     <string name="error_answer_required">回答が必要です</string>
-    <string name="error_question_failed">OpenCodeの質問に失敗しました</string>
-    <string name="error_session_failed">OpenCodeセッションに失敗しました</string>
+    <string name="error_question_failed">質問の処理に失敗しました</string>
+    <string name="error_session_failed">セッションでエラーが発生しました</string>
 
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
@@ -837,7 +837,7 @@
 
     <!-- Session detail -->
     <string name="session_info_id">ID</string>
-    <string name="session_info_opencode">OpenCode</string>
+    <string name="session_info_opencode">ランタイム</string>
     <string name="session_todo_title">Todo</string>
 
     <string name="runtime_diagnostics_failed">ローカルランタイムの診断に失敗しました</string>
@@ -916,6 +916,6 @@
     <string name="claude_error_submit_code">コードを送信できませんでした</string>
     <string name="claude_error_install_failed">Claude Codeのインストールに失敗しました</string>
     <string name="claude_error_update_failed">Claude Codeの更新に失敗しました</string>
-    <string name="message_agent_hint">%1$sにメッセージを送る…</string>
     <string name="setup_download_agents_description">共有のLinux環境と、選んだエージェントを準備します。</string>
+    <string name="claude_model_account_default">アカウントの既定</string>
 </resources>

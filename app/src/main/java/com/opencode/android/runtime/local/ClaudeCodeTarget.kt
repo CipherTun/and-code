@@ -7,7 +7,6 @@ import com.opencode.android.core.api.OpenCodeMessage
 import com.opencode.android.core.api.OpenCodeSession
 import com.opencode.android.core.api.OpenCodeTime
 import com.opencode.android.core.api.PromptRequest
-import com.opencode.android.core.api.ProviderCatalog
 import com.opencode.android.runtime.BackendKind
 import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.PermissionResponse
@@ -33,6 +32,7 @@ import java.util.UUID
 private data class ClaudeSessionRecord(
     @SerialName("session") val session: OpenCodeSession,
     @SerialName("permissionMode") val permissionMode: String = ClaudePermissionMode.DEFAULT.cliValue,
+    @SerialName("model") val model: String = ClaudeModels.DEFAULT_ALIAS,
 )
 
 /** Exposes the Android-local Claude Code agent as a selectable runtime. */
@@ -77,12 +77,24 @@ class ClaudeCodeTarget(
         )
     val defaultPermissionMode: StateFlow<ClaudePermissionMode> = mutableDefaultPermissionMode.asStateFlow()
 
-    fun setDefaultPermissionMode(mode: ClaudePermissionMode) {
+    /**
+     * Applies [mode] to new sessions, and to [sessionId] when one is given.
+     *
+     * Picking a mode from an open chat is an explicit choice about that conversation, so it takes
+     * effect there on the next message rather than only on the next session.
+     */
+    fun setPermissionMode(
+        mode: ClaudePermissionMode,
+        sessionId: String? = null,
+    ) {
         mutableDefaultPermissionMode.value = mode
         runCatching {
             modeFile.parentFile?.mkdirs()
             modeFile.writeText(mode.cliValue)
         }
+        val record = sessionId?.let(records::get) ?: return
+        records[sessionId] = record.copy(permissionMode = mode.cliValue)
+        persist()
     }
 
     val auth: ClaudeAuthCoordinator get() = runtime.auth
@@ -162,7 +174,7 @@ class ClaudeCodeTarget(
 
     override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = runtime.listMessages(sessionId)
 
-    override suspend fun listProviders() = ProviderCatalog()
+    override suspend fun listProviders() = ClaudeModels.catalog(messages.accountDefaultModel)
 
     override suspend fun listAgents() = listOf(OpenCodeAgent("claude", "Claude Code", "primary", true))
 
@@ -171,12 +183,19 @@ class ClaudeCodeTarget(
         request: PromptRequest,
     ) {
         val record = records[sessionId] ?: error("Claude Code session not found")
+        val model = request.modelId ?: record.model
+        // Remembered so reopening the chat keeps the model the user last picked.
+        if (model != record.model) {
+            records[sessionId] = record.copy(model = model)
+            persist()
+        }
         withContext(Dispatchers.IO) {
             runtime.send(
                 sessionId = sessionId,
                 directory = record.session.directory ?: "/workspace",
                 prompt = request.text,
                 permissionMode = ClaudePermissionMode.fromCliValue(record.permissionMode),
+                model = model,
             ).getOrThrow()
         }
     }

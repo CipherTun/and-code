@@ -122,7 +122,10 @@ class ClaudeCodeController(
             }
     }
 
-    fun setPermissionMode(mode: ClaudePermissionMode) = target.setDefaultPermissionMode(mode)
+    fun setPermissionMode(
+        mode: ClaudePermissionMode,
+        sessionId: String? = null,
+    ) = target.setPermissionMode(mode, sessionId)
 
     fun beginSignIn() = target.auth.begin()
 

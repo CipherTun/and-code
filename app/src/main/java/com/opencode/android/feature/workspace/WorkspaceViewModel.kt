@@ -205,7 +205,10 @@ class WorkspaceViewModel(
 
     fun updateClaudeCode() = claudeCode?.update() ?: Unit
 
-    fun setClaudePermissionMode(mode: ClaudePermissionMode) = claudeCode?.setPermissionMode(mode) ?: Unit
+    fun setClaudePermissionMode(
+        mode: ClaudePermissionMode,
+        sessionId: String? = null,
+    ) = claudeCode?.setPermissionMode(mode, sessionId) ?: Unit
 
     fun beginClaudeSignIn() = claudeCode?.beginSignIn() ?: Unit
 

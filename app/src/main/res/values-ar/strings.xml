@@ -31,11 +31,11 @@
     <string name="refresh">تحديث</string>
 
     <string name="new_chat">دردشة جديدة</string>
-    <string name="message_hint">رسالة إلى OpenCode…</string>
+    <string name="message_hint">أرسل رسالة…</string>
     <string name="send_description">إرسال الرسالة</string>
     <string name="stop_run">إيقاف</string>
     <string name="thinking">جارٍ التفكير…</string>
-    <string name="chat_reconnecting">انقطع الاتصال بـ OpenCode. جارٍ إعادة الاتصال…</string>
+    <string name="chat_reconnecting">انقطع الاتصال ببيئة التشغيل. جارٍ إعادة الاتصال…</string>
     <string name="processing">جارٍ المعالجة…</string>
     <string name="no_connection_chat">أضف وحدد اتصال جهاز كمبيوتر قبل بدء الدردشة.</string>
     <string name="model">النموذج</string>
@@ -96,7 +96,7 @@
     <string name="remote_runtime">بيئة التشغيل عن بُعد للكمبيوتر</string>
     <string name="local_runtime">بيئة التشغيل المحلية على Android</string>
     <string name="experimental_not_installed">بيئة التشغيل المحلية المُدارة</string>
-    <string name="local_runtime_note">ثبّت وشغّل وأوقف وأصلح بيئة تشغيل OpenCode المحلية على Android من مساحات العمل.</string>
+    <string name="local_runtime_note">ثبّت بيئة التشغيل المحلية على Android وشغّلها وأوقفها وأصلحها من مساحات العمل.</string>
 
     <string name="home_assistant">المساعد الرئيسي</string>
     <string name="set_default_assistant">تعيين كمساعد رقمي افتراضي</string>
@@ -112,12 +112,12 @@
 
     <string name="notification_channel_approvals">الموافقات</string>
     <string name="notification_channel_status">حالة المهمة</string>
-    <string name="notification_approval_title">OpenCode يحتاج إلى موافقة</string>
-    <string name="notification_complete_title">انتهى OpenCode</string>
+    <string name="notification_approval_title">مطلوب موافقة</string>
+    <string name="notification_complete_title">انتهى التنفيذ</string>
     <string name="notification_complete_body">المحادثة %1$s خاملة</string>
-    <string name="permission_chat_confirmation">تنتظر هذه المحادثة موافقتك. اختر ما يمكن لـ OpenCode فعله:</string>
-    <string name="permission_response_failed">تعذر على OpenCode تطبيق رد الإذن.</string>
-    <string name="notification_error_title">خطأ في OpenCode</string>
+    <string name="permission_chat_confirmation">تنتظر هذه المحادثة موافقتك. اختر ما يُسمح للوكيل بفعله:</string>
+    <string name="permission_response_failed">تعذّر على الوكيل تطبيق استجابة الإذن هذه.</string>
+    <string name="notification_error_title">خطأ في التنفيذ</string>
     <string name="notification_error_body">فشلت جلسة</string>
     <string name="notification_permission_failed">تعذّر إرسال الموافقة. افتح التطبيق وحاول مرة أخرى.</string>
     <string name="provider_credentials">اتصالات الموفرين</string>
@@ -179,7 +179,7 @@
     <string name="tab_approvals">الموافقات</string>
     <string name="tab_logs">السجلات</string>
     <string name="activity_screen_title">النشاط</string>
-    <string name="activity_screen_subtitle">حالة تشغيل OpenCode والسجل</string>
+    <string name="activity_screen_subtitle">حالة التنفيذ والسجل</string>
     <string name="no_running_tasks">لا توجد مهام قيد التشغيل</string>
     <string name="open_chat_button">فتح الدردشة</string>
     <string name="no_pending_approvals">لا توجد موافقات معلقة</string>
@@ -233,7 +233,7 @@
     <string name="rollback_confirm_body">سيتوقف OpenCode المحلي ويتبدل إلى الإصدار السابق المحفوظ، ثم يعاد تشغيله. إذا لم يتمكن من البدء، يعود إلى الإصدار الحالي.</string>
     <string name="rollback_button">رجوع</string>
     <string name="delete_runtime_confirm_title">حذف بيئة التشغيل المحلية؟</string>
-    <string name="delete_runtime_confirm_body">سيتم حذف OpenCode وبيئة Linux وذاكرة التخزين المؤقت والسجلات ومساحة العمل المحلية داخل التطبيق. يتم الاحتفاظ بإعدادات اتصال الكمبيوتر.</string>
+    <string name="delete_runtime_confirm_body">سيتم حذف الوكلاء المثبّتين وبيئة Linux والذاكرة المؤقتة والسجلات ومساحة العمل المحلية داخل التطبيق. تبقى إعدادات الاتصال بالحاسوب.</string>
     <string name="delete_completely">حذف بالكامل</string>
     <string name="runtime_version_transition">OpenCode %1$s → %2$s</string>
     <string name="version_transition">%1$s → %2$s</string>
@@ -291,7 +291,7 @@
 
     <string name="add_pc_connection_description">إضافة اتصال كمبيوتر</string>
     <string name="workspaces_title">مساحات العمل</string>
-    <string name="workspaces_subtitle">اختر الجهاز والمجلد الذي سيعمل فيه OpenCode.</string>
+    <string name="workspaces_subtitle">اختر الجهاز والمجلد الذي يعمل فيه وكيلك.</string>
     <string name="runtime_targets_title">بيئات التشغيل</string>
     <string name="in_use_label">قيد الاستخدام</string>
     <string name="edit_description">تعديل</string>
@@ -302,7 +302,7 @@
     <string name="diagnostics_and_management_button">التشخيصات والإدارة</string>
     <string name="workspace_folders_title">مجلدات مساحة العمل</string>
     <string name="no_workspaces_title">لا توجد مجلدات مساحة عمل بعد</string>
-    <string name="no_workspaces_body">ستظهر المجلدات التي يستخدمها OpenCode هنا بمجرد بدء جلسة.</string>
+    <string name="no_workspaces_body">ستظهر هنا المجلدات التي يستخدمها وكيلك بعد بدء جلسة.</string>
     <string name="status_fetch_failed">فشل جلب الحالة</string>
     <string name="connected_at_url">OpenCode %1$s · %2$s</string>
     <string name="connecting_at">جارٍ الاتصال · %1$s</string>
@@ -317,21 +317,21 @@
     <string name="disconnected_label">غير متصل</string>
     <string name="current_configuration">التكوين الحالي</string>
     <string name="not_selected">غير محدد</string>
-    <string name="opencode_default_value">افتراضي OpenCode</string>
+    <string name="opencode_default_value">الافتراضي لبيئة التشغيل</string>
     <string name="no_ai_service_selected">لم يتم تحديد خدمة ذكاء اصطناعي</string>
     <string name="connection_or_fetch_failed">فشل الاتصال أو الجلب</string>
     <string name="checking_connection_status">جارٍ التحقق من الاتصال والحالة</string>
     <string name="choose_local_or_pc_runtime">اختر بيئة تشغيل محلية على Android أو كمبيوتر</string>
-    <string name="not_connected_to_opencode">غير متصل بـ OpenCode</string>
+    <string name="not_connected_to_opencode">غير متصل ببيئة تشغيل</string>
 
-    <string name="voice_no_runtime_configured">يرجى إعداد بيئة تشغيل OpenCode.</string>
-    <string name="voice_event_connection_failed">فشل الاتصال بأحداث OpenCode</string>
-    <string name="voice_processing_failed">فشل OpenCode في معالجة الطلب</string>
-    <string name="voice_send_failed">تعذر الإرسال إلى OpenCode</string>
-    <string name="voice_no_answer_text">تعذر الحصول على إجابة من OpenCode</string>
+    <string name="voice_no_runtime_configured">يرجى إعداد بيئة تشغيل.</string>
+    <string name="voice_event_connection_failed">تعذّر الاتصال بأحداث بيئة التشغيل</string>
+    <string name="voice_processing_failed">تعذّر على الوكيل معالجة الطلب</string>
+    <string name="voice_send_failed">تعذّر الإرسال إلى الوكيل</string>
+    <string name="voice_no_answer_text">تعذّر الحصول على رد من الوكيل</string>
     <string name="voice_permission_send_failed">تعذر إرسال رد الموافقة</string>
     <string name="voice_state_listening">جارٍ الاستماع…</string>
-    <string name="voice_state_thinking">OpenCode قيد المعالجة</string>
+    <string name="voice_state_thinking">جارٍ المعالجة</string>
     <string name="voice_state_speaking">جارٍ قراءة الإجابة بصوت عالٍ</string>
     <string name="voice_state_done">تم</string>
     <string name="voice_state_error">خطأ</string>
@@ -393,7 +393,7 @@
     <string name="chat_home_title">الدردشة</string>
     <string name="chat_build_headline">ابنِ مع OpenCode</string>
     <string name="chat_build_subtitle">اسأل أي شيء — نفّذ وأصلح وراجع الكود معًا.</string>
-    <string name="chat_message_placeholder">رسالة إلى OpenCode…</string>
+    <string name="chat_message_placeholder">أرسل رسالة…</string>
     <string name="chat_attach">إرفاق ملف</string>
     <string name="chat_remove_attachment">إزالة المرفق</string>
     <string name="chat_thinking_default">جارٍ التفكير</string>
@@ -436,7 +436,7 @@
     <string name="onboarding_subtitle">اكتب وأصلح وافهم الكود. للبدء، ما عليك سوى اختيار مسار تنفيذ واحد.</string>
     <string name="onboarding_recommended_badge">موصى به</string>
     <string name="onboarding_android_title">البدء مع هذا Android</string>
-    <string name="onboarding_android_desc">شغّل OpenCode مباشرة على هذا الجهاز.</string>
+    <string name="onboarding_android_desc">شغّل وكيل برمجة مباشرة على هذا الجهاز.</string>
     <string name="onboarding_remote_title">الاتصال بجهاز كمبيوتر أو Mac</string>
     <string name="onboarding_remote_desc">اتصل بخادم OpenCode موجود.</string>
     <string name="onboarding_switch_note">في كلتا الحالتين، يمكنك إضافة الخيار الآخر لاحقًا والتبديل في أي وقت.</string>
@@ -580,7 +580,7 @@
     <string name="syntax_theme_dialog_title">اختيار سمة بناء الجملة</string>
     <string name="usage_row">الاستخدام</string>
     <string name="font_size_dialog_title">حجم الخط</string>
-    <string name="widget_quick_input_hint">أرسل رسالة إلى OpenCode…</string>
+    <string name="widget_quick_input_hint">أرسل رسالة…</string>
     <string name="model_visibility_row">النماذج المرئية</string>
     <string name="model_visibility_title">النماذج المرئية</string>
     <string name="model_visibility_caption">أزل التحديد عن النماذج لإخفائها من قائمة اختيار النموذج.</string>
@@ -749,12 +749,12 @@
     <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
-    <string name="error_opencode_operation">OpenCode operation failed</string>
-    <string name="error_no_connection">OpenCode connection is not configured</string>
+    <string name="error_opencode_operation">فشلت العملية</string>
+    <string name="error_no_connection">لم يتم إعداد اتصال ببيئة التشغيل</string>
     <string name="session_title_attachment">Attachment</string>
     <string name="error_answer_required">Answer required</string>
-    <string name="error_question_failed">OpenCode question failed</string>
-    <string name="error_session_failed">OpenCode session failed</string>
+    <string name="error_question_failed">فشل السؤال</string>
+    <string name="error_session_failed">فشلت الجلسة</string>
 
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
@@ -823,7 +823,7 @@
 
     <!-- Session detail -->
     <string name="session_info_id">ID</string>
-    <string name="session_info_opencode">OpenCode</string>
+    <string name="session_info_opencode">بيئة التشغيل</string>
     <string name="session_todo_title">Todo</string>
 
     <string name="runtime_diagnostics_failed">Failed to diagnose the local runtime</string>
@@ -902,6 +902,6 @@
     <string name="claude_error_submit_code">تعذّر إرسال الرمز</string>
     <string name="claude_error_install_failed">فشل تثبيت Claude Code</string>
     <string name="claude_error_update_failed">فشل تحديث Claude Code</string>
-    <string name="message_agent_hint">أرسل رسالة إلى %1$s…</string>
     <string name="setup_download_agents_description">تحضير بيئة Linux المشتركة والوكلاء الذين اخترتهم.</string>
+    <string name="claude_model_account_default">الافتراضي للحساب</string>
 </resources>

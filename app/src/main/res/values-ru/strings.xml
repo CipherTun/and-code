@@ -31,11 +31,11 @@
     <string name="refresh">Обновить</string>
 
     <string name="new_chat">Новый чат</string>
-    <string name="message_hint">Сообщение для OpenCode…</string>
+    <string name="message_hint">Написать сообщение…</string>
     <string name="send_description">Отправить сообщение</string>
     <string name="stop_run">Остановить</string>
     <string name="thinking">Размышление…</string>
-    <string name="chat_reconnecting">Соединение с OpenCode прервано. Переподключение…</string>
+    <string name="chat_reconnecting">Соединение со средой прервано. Переподключение…</string>
     <string name="processing">Обработка…</string>
     <string name="no_connection_chat">Добавьте и выберите подключение к ПК перед началом чата.</string>
     <string name="model">Модель</string>
@@ -96,7 +96,7 @@
     <string name="remote_runtime">Удалённая среда выполнения ПК</string>
     <string name="local_runtime">Локальная среда выполнения Android</string>
     <string name="experimental_not_installed">Управляемая локальная среда выполнения</string>
-    <string name="local_runtime_note">Устанавливайте, запускайте, останавливайте и восстанавливайте локальную среду выполнения OpenCode на Android из Рабочих пространств.</string>
+    <string name="local_runtime_note">Установка, запуск, остановка и восстановление локальной среды Android — в разделе «Рабочие области».</string>
 
     <string name="home_assistant">Домашний ассистент</string>
     <string name="set_default_assistant">Назначить цифровым ассистентом по умолчанию</string>
@@ -112,12 +112,12 @@
 
     <string name="notification_channel_approvals">Одобрения</string>
     <string name="notification_channel_status">Статус задачи</string>
-    <string name="notification_approval_title">OpenCode требует одобрения</string>
-    <string name="notification_complete_title">OpenCode завершил работу</string>
+    <string name="notification_approval_title">Требуется подтверждение</string>
+    <string name="notification_complete_title">Выполнение завершено</string>
     <string name="notification_complete_body">Чат %1$s бездействует</string>
-    <string name="permission_chat_confirmation">Этот чат ожидает вашего разрешения. Выберите, что может сделать OpenCode:</string>
-    <string name="permission_response_failed">OpenCode не удалось применить этот ответ на запрос разрешения.</string>
-    <string name="notification_error_title">Ошибка OpenCode</string>
+    <string name="permission_chat_confirmation">Этот чат ожидает вашего подтверждения. Выберите, что разрешено агенту:</string>
+    <string name="permission_response_failed">Агент не смог применить этот ответ о разрешении.</string>
+    <string name="notification_error_title">Ошибка выполнения</string>
     <string name="notification_error_body">Сессия завершилась с ошибкой</string>
     <string name="notification_permission_failed">Не удалось отправить подтверждение. Откройте приложение и попробуйте снова.</string>
     <string name="provider_credentials">Подключения провайдеров</string>
@@ -179,7 +179,7 @@
     <string name="tab_approvals">Одобрения</string>
     <string name="tab_logs">Журналы</string>
     <string name="activity_screen_title">Активность</string>
-    <string name="activity_screen_subtitle">Статус выполнения и история OpenCode</string>
+    <string name="activity_screen_subtitle">Состояние и история выполнения</string>
     <string name="no_running_tasks">Нет выполняемых задач</string>
     <string name="open_chat_button">Открыть чат</string>
     <string name="no_pending_approvals">Нет ожидающих одобрений</string>
@@ -233,7 +233,7 @@
     <string name="rollback_confirm_body">Локальный OpenCode остановится и переключится на сохранённую предыдущую версию, затем перезапустится. Если запуск не удастся, произойдёт откат к текущей версии.</string>
     <string name="rollback_button">Откатить</string>
     <string name="delete_runtime_confirm_title">Удалить локальную среду выполнения?</string>
-    <string name="delete_runtime_confirm_body">Будут удалены OpenCode, среда Linux, кэш, журналы и локальное рабочее пространство в приложении. Настройки подключения к ПК сохраняются.</string>
+    <string name="delete_runtime_confirm_body">Установленные агенты, среда Linux, кэш, журналы и локальная рабочая папка приложения будут удалены. Настройки подключения к ПК сохранятся.</string>
     <string name="delete_completely">Удалить полностью</string>
     <string name="runtime_version_transition">OpenCode %1$s → %2$s</string>
     <string name="version_transition">%1$s → %2$s</string>
@@ -291,7 +291,7 @@
 
     <string name="add_pc_connection_description">Добавить подключение к ПК</string>
     <string name="workspaces_title">Рабочие пространства</string>
-    <string name="workspaces_subtitle">Выберите устройство и папку, в которых будет работать OpenCode.</string>
+    <string name="workspaces_subtitle">Выберите устройство и папку для работы агента.</string>
     <string name="runtime_targets_title">Среды выполнения</string>
     <string name="in_use_label">Используется</string>
     <string name="edit_description">Изменить</string>
@@ -302,7 +302,7 @@
     <string name="diagnostics_and_management_button">Диагностика и управление</string>
     <string name="workspace_folders_title">Папки рабочего пространства</string>
     <string name="no_workspaces_title">Папок рабочего пространства пока нет</string>
-    <string name="no_workspaces_body">Папки, используемые OpenCode, появятся здесь после начала сессии.</string>
+    <string name="no_workspaces_body">Папки, которые использует агент, появятся здесь после начала сессии.</string>
     <string name="status_fetch_failed">Не удалось получить статус</string>
     <string name="connected_at_url">OpenCode %1$s · %2$s</string>
     <string name="connecting_at">Подключение · %1$s</string>
@@ -317,21 +317,21 @@
     <string name="disconnected_label">Не подключено</string>
     <string name="current_configuration">Текущая конфигурация</string>
     <string name="not_selected">Не выбрано</string>
-    <string name="opencode_default_value">По умолчанию OpenCode</string>
+    <string name="opencode_default_value">По умолчанию для среды</string>
     <string name="no_ai_service_selected">Сервис ИИ не выбран</string>
     <string name="connection_or_fetch_failed">Не удалось подключиться или получить данные</string>
     <string name="checking_connection_status">Проверка подключения и статуса</string>
     <string name="choose_local_or_pc_runtime">Выберите локальную среду выполнения Android или ПК</string>
-    <string name="not_connected_to_opencode">Не подключено к OpenCode</string>
+    <string name="not_connected_to_opencode">Нет подключения к среде</string>
 
-    <string name="voice_no_runtime_configured">Настройте среду выполнения OpenCode.</string>
-    <string name="voice_event_connection_failed">Не удалось подключиться к событиям OpenCode</string>
-    <string name="voice_processing_failed">OpenCode не удалось обработать запрос</string>
-    <string name="voice_send_failed">Не удалось отправить в OpenCode</string>
-    <string name="voice_no_answer_text">Не удалось получить ответ от OpenCode</string>
+    <string name="voice_no_runtime_configured">Настройте среду выполнения.</string>
+    <string name="voice_event_connection_failed">Не удалось подключиться к событиям среды</string>
+    <string name="voice_processing_failed">Агент не смог обработать запрос</string>
+    <string name="voice_send_failed">Не удалось отправить агенту</string>
+    <string name="voice_no_answer_text">Не удалось получить ответ от агента</string>
     <string name="voice_permission_send_failed">Не удалось отправить ответ на одобрение</string>
     <string name="voice_state_listening">Прослушивание…</string>
-    <string name="voice_state_thinking">OpenCode обрабатывает</string>
+    <string name="voice_state_thinking">Обработка</string>
     <string name="voice_state_speaking">Озвучивание ответа</string>
     <string name="voice_state_done">Готово</string>
     <string name="voice_state_error">Ошибка</string>
@@ -393,7 +393,7 @@
     <string name="chat_home_title">Чат</string>
     <string name="chat_build_headline">Создавайте с OpenCode</string>
     <string name="chat_build_subtitle">Спрашивайте о чём угодно — реализуйте, исправляйте и проверяйте код вместе.</string>
-    <string name="chat_message_placeholder">Сообщение для OpenCode…</string>
+    <string name="chat_message_placeholder">Написать сообщение…</string>
     <string name="chat_attach">Прикрепить файл</string>
     <string name="chat_remove_attachment">Удалить вложение</string>
     <string name="chat_thinking_default">Размышление</string>
@@ -436,7 +436,7 @@
     <string name="onboarding_subtitle">Пишите, исправляйте и понимайте код. Для начала просто выберите путь выполнения.</string>
     <string name="onboarding_recommended_badge">Рекомендуется</string>
     <string name="onboarding_android_title">Начать с этого Android</string>
-    <string name="onboarding_android_desc">Запускайте OpenCode прямо на этом устройстве.</string>
+    <string name="onboarding_android_desc">Запускайте агента программирования прямо на этом устройстве.</string>
     <string name="onboarding_remote_title">Подключиться к ПК или Mac</string>
     <string name="onboarding_remote_desc">Подключитесь к существующему серверу OpenCode.</string>
     <string name="onboarding_switch_note">В любом случае, вы можете добавить другой вариант позже и переключиться в любое время.</string>
@@ -580,7 +580,7 @@
     <string name="syntax_theme_dialog_title">Выбрать тему синтаксиса</string>
     <string name="usage_row">Использование</string>
     <string name="font_size_dialog_title">Размер шрифта</string>
-    <string name="widget_quick_input_hint">Отправить сообщение OpenCode…</string>
+    <string name="widget_quick_input_hint">Написать сообщение…</string>
     <string name="model_visibility_row">Показываемые модели</string>
     <string name="model_visibility_title">Показываемые модели</string>
     <string name="model_visibility_caption">Снимите отметку с моделей, чтобы скрыть их из списка выбора.</string>
@@ -749,12 +749,12 @@
     <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
-    <string name="error_opencode_operation">OpenCode operation failed</string>
-    <string name="error_no_connection">OpenCode connection is not configured</string>
+    <string name="error_opencode_operation">Операция не выполнена</string>
+    <string name="error_no_connection">Подключение к среде не настроено</string>
     <string name="session_title_attachment">Attachment</string>
     <string name="error_answer_required">Answer required</string>
-    <string name="error_question_failed">OpenCode question failed</string>
-    <string name="error_session_failed">OpenCode session failed</string>
+    <string name="error_question_failed">Не удалось обработать вопрос</string>
+    <string name="error_session_failed">Ошибка сессии</string>
 
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
@@ -823,7 +823,7 @@
 
     <!-- Session detail -->
     <string name="session_info_id">ID</string>
-    <string name="session_info_opencode">OpenCode</string>
+    <string name="session_info_opencode">Среда</string>
     <string name="session_todo_title">Todo</string>
 
     <string name="runtime_diagnostics_failed">Failed to diagnose the local runtime</string>
@@ -902,6 +902,6 @@
     <string name="claude_error_submit_code">Не удалось отправить код</string>
     <string name="claude_error_install_failed">Не удалось установить Claude Code</string>
     <string name="claude_error_update_failed">Не удалось обновить Claude Code</string>
-    <string name="message_agent_hint">Написать %1$s…</string>
     <string name="setup_download_agents_description">Подготовка общей среды Linux и выбранных агентов.</string>
+    <string name="claude_model_account_default">По умолчанию для аккаунта</string>
 </resources>

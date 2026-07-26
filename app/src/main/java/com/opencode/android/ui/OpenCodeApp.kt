@@ -623,7 +623,9 @@ fun OpenCodeApp(
                                 workspaceViewModel.installClaudeCode()
                             }
                         },
-                        onSelectClaudePermissionMode = workspaceViewModel::setClaudePermissionMode,
+                        onSelectClaudePermissionMode = { mode ->
+                            workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                        },
                         onBeginClaudeSignIn = workspaceViewModel::beginClaudeSignIn,
                         onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
                         onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
@@ -675,6 +677,13 @@ fun OpenCodeApp(
                         selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
                         runtimeTargets = runtimeTargets,
                         selectedRuntimeId = selectedRuntime?.id,
+                        claudePermissionMode =
+                            workspaceState.claude
+                                .takeIf { selectedRuntime?.agent == com.opencode.android.runtime.LocalAgent.CLAUDE_CODE }
+                                ?.permissionMode,
+                        onSelectClaudePermissionMode = { mode ->
+                            workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                        },
                         onSelectRuntime = { id ->
                             if (id != selectedRuntime?.id) {
                                 if (chatState.messages.isNotEmpty()) {

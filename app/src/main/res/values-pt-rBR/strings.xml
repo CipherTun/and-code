@@ -31,11 +31,11 @@
     <string name="refresh">Atualizar</string>
 
     <string name="new_chat">Novo chat</string>
-    <string name="message_hint">Mensagem para o OpenCode…</string>
+    <string name="message_hint">Enviar mensagem…</string>
     <string name="send_description">Enviar mensagem</string>
     <string name="stop_run">Parar</string>
     <string name="thinking">Pensando…</string>
-    <string name="chat_reconnecting">A conexão com o OpenCode foi interrompida. Reconectando…</string>
+    <string name="chat_reconnecting">A conexão com o ambiente foi interrompida. Reconectando…</string>
     <string name="processing">Processando…</string>
     <string name="no_connection_chat">Adicione e selecione uma conexão de PC antes de iniciar um chat.</string>
     <string name="model">Modelo</string>
@@ -96,7 +96,7 @@
     <string name="remote_runtime">Ambiente de execução remoto do PC</string>
     <string name="local_runtime">Ambiente de execução local do Android</string>
     <string name="experimental_not_installed">Ambiente de execução local gerenciado</string>
-    <string name="local_runtime_note">Instale, inicie, pare e repare o ambiente de execução OpenCode local do Android a partir dos Espaços de trabalho.</string>
+    <string name="local_runtime_note">Instale, inicie, pare e repare o ambiente local do Android em Espaços de trabalho.</string>
 
     <string name="home_assistant">Assistente inicial</string>
     <string name="set_default_assistant">Definir como assistente digital padrão</string>
@@ -112,12 +112,12 @@
 
     <string name="notification_channel_approvals">Aprovações</string>
     <string name="notification_channel_status">Status da tarefa</string>
-    <string name="notification_approval_title">OpenCode precisa de aprovação</string>
-    <string name="notification_complete_title">OpenCode terminou</string>
+    <string name="notification_approval_title">Aprovação necessária</string>
+    <string name="notification_complete_title">Execução concluída</string>
     <string name="notification_complete_body">O chat %1$s está ocioso</string>
-    <string name="permission_chat_confirmation">Este chat está aguardando sua aprovação. Escolha o que o OpenCode pode fazer:</string>
-    <string name="permission_response_failed">O OpenCode não conseguiu aplicar essa resposta de permissão.</string>
-    <string name="notification_error_title">Erro do OpenCode</string>
+    <string name="permission_chat_confirmation">Este chat aguarda sua aprovação. Escolha o que o agente pode fazer:</string>
+    <string name="permission_response_failed">O agente não conseguiu aplicar essa resposta de permissão.</string>
+    <string name="notification_error_title">Erro de execução</string>
     <string name="notification_error_body">Uma sessão falhou</string>
     <string name="notification_permission_failed">Não foi possível enviar a aprovação. Abra o app e tente novamente.</string>
     <string name="provider_credentials">Conexões de provedores</string>
@@ -179,7 +179,7 @@
     <string name="tab_approvals">Aprovações</string>
     <string name="tab_logs">Registros</string>
     <string name="activity_screen_title">Atividade</string>
-    <string name="activity_screen_subtitle">Status de execução e histórico do OpenCode</string>
+    <string name="activity_screen_subtitle">Status e histórico de execução</string>
     <string name="no_running_tasks">Nenhuma tarefa em execução</string>
     <string name="open_chat_button">Abrir chat</string>
     <string name="no_pending_approvals">Nenhuma aprovação pendente</string>
@@ -233,7 +233,7 @@
     <string name="rollback_confirm_body">O OpenCode local será interrompido e alternado para a versão anterior salva, depois reiniciado. Se não conseguir iniciar, reverte para a versão atual.</string>
     <string name="rollback_button">Reverter</string>
     <string name="delete_runtime_confirm_title">Excluir o ambiente de execução local?</string>
-    <string name="delete_runtime_confirm_body">OpenCode, o ambiente Linux, cache, registros e o espaço de trabalho local do aplicativo serão excluídos. As configurações de conexão do PC são mantidas.</string>
+    <string name="delete_runtime_confirm_body">Os agentes instalados, o ambiente Linux, o cache, os logs e o espaço de trabalho local do app serão excluídos. As configurações de conexão com o PC são mantidas.</string>
     <string name="delete_completely">Excluir completamente</string>
     <string name="runtime_version_transition">OpenCode %1$s → %2$s</string>
     <string name="version_transition">%1$s → %2$s</string>
@@ -291,7 +291,7 @@
 
     <string name="add_pc_connection_description">Adicionar uma conexão de PC</string>
     <string name="workspaces_title">Espaços de trabalho</string>
-    <string name="workspaces_subtitle">Escolha o dispositivo e a pasta em que o OpenCode será executado.</string>
+    <string name="workspaces_subtitle">Escolha o dispositivo e a pasta onde seu agente é executado.</string>
     <string name="runtime_targets_title">Ambientes de execução</string>
     <string name="in_use_label">Em uso</string>
     <string name="edit_description">Editar</string>
@@ -302,7 +302,7 @@
     <string name="diagnostics_and_management_button">Diagnósticos e gerenciamento</string>
     <string name="workspace_folders_title">Pastas do espaço de trabalho</string>
     <string name="no_workspaces_title">Nenhuma pasta de espaço de trabalho ainda</string>
-    <string name="no_workspaces_body">As pastas usadas pelo OpenCode aparecerão aqui quando você iniciar uma sessão.</string>
+    <string name="no_workspaces_body">As pastas usadas pelo seu agente aparecerão aqui quando você iniciar uma sessão.</string>
     <string name="status_fetch_failed">Falha ao buscar status</string>
     <string name="connected_at_url">OpenCode %1$s · %2$s</string>
     <string name="connecting_at">Conectando · %1$s</string>
@@ -317,21 +317,21 @@
     <string name="disconnected_label">Não conectado</string>
     <string name="current_configuration">Configuração atual</string>
     <string name="not_selected">Não selecionado</string>
-    <string name="opencode_default_value">Padrão do OpenCode</string>
+    <string name="opencode_default_value">Padrão do ambiente</string>
     <string name="no_ai_service_selected">Nenhum serviço de IA selecionado</string>
     <string name="connection_or_fetch_failed">Falha ao conectar ou buscar</string>
     <string name="checking_connection_status">Verificando conexão e status</string>
     <string name="choose_local_or_pc_runtime">Escolha um ambiente de execução local do Android ou do PC</string>
-    <string name="not_connected_to_opencode">Não conectado ao OpenCode</string>
+    <string name="not_connected_to_opencode">Sem conexão com um ambiente</string>
 
-    <string name="voice_no_runtime_configured">Configure um ambiente de execução OpenCode.</string>
-    <string name="voice_event_connection_failed">Falha ao conectar aos eventos do OpenCode</string>
-    <string name="voice_processing_failed">O OpenCode não conseguiu processar a solicitação</string>
-    <string name="voice_send_failed">Não foi possível enviar ao OpenCode</string>
-    <string name="voice_no_answer_text">Não foi possível obter uma resposta do OpenCode</string>
+    <string name="voice_no_runtime_configured">Configure um ambiente.</string>
+    <string name="voice_event_connection_failed">Não foi possível conectar aos eventos do ambiente</string>
+    <string name="voice_processing_failed">O agente não conseguiu processar a solicitação</string>
+    <string name="voice_send_failed">Não foi possível enviar ao agente</string>
+    <string name="voice_no_answer_text">Não foi possível obter resposta do agente</string>
     <string name="voice_permission_send_failed">Não foi possível enviar a resposta de aprovação</string>
     <string name="voice_state_listening">Ouvindo…</string>
-    <string name="voice_state_thinking">OpenCode está processando</string>
+    <string name="voice_state_thinking">Processando</string>
     <string name="voice_state_speaking">Lendo a resposta em voz alta</string>
     <string name="voice_state_done">Concluído</string>
     <string name="voice_state_error">Erro</string>
@@ -393,7 +393,7 @@
     <string name="chat_home_title">Chat</string>
     <string name="chat_build_headline">Construa com o OpenCode</string>
     <string name="chat_build_subtitle">Pergunte qualquer coisa — implemente, corrija e revise código juntos.</string>
-    <string name="chat_message_placeholder">Mensagem para o OpenCode…</string>
+    <string name="chat_message_placeholder">Enviar mensagem…</string>
     <string name="chat_attach">Anexar arquivo</string>
     <string name="chat_remove_attachment">Remover anexo</string>
     <string name="chat_thinking_default">Pensando</string>
@@ -436,7 +436,7 @@
     <string name="onboarding_subtitle">Escreva, corrija e entenda código. Para começar, basta escolher um caminho de execução.</string>
     <string name="onboarding_recommended_badge">Recomendado</string>
     <string name="onboarding_android_title">Começar com este Android</string>
-    <string name="onboarding_android_desc">Execute o OpenCode diretamente neste dispositivo.</string>
+    <string name="onboarding_android_desc">Execute um agente de programação diretamente neste dispositivo.</string>
     <string name="onboarding_remote_title">Conectar a um PC ou Mac</string>
     <string name="onboarding_remote_desc">Conecte-se a um servidor OpenCode existente.</string>
     <string name="onboarding_switch_note">De qualquer forma, você pode adicionar a outra opção depois e alternar a qualquer momento.</string>
@@ -580,7 +580,7 @@
     <string name="syntax_theme_dialog_title">Escolher tema de sintaxe</string>
     <string name="usage_row">Uso</string>
     <string name="font_size_dialog_title">Tamanho da fonte</string>
-    <string name="widget_quick_input_hint">Enviar mensagem para o OpenCode…</string>
+    <string name="widget_quick_input_hint">Enviar mensagem…</string>
     <string name="model_visibility_row">Modelos visíveis</string>
     <string name="model_visibility_title">Modelos visíveis</string>
     <string name="model_visibility_caption">Desmarque os modelos para ocultá-los do seletor de modelos.</string>
@@ -749,12 +749,12 @@
     <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
-    <string name="error_opencode_operation">OpenCode operation failed</string>
-    <string name="error_no_connection">OpenCode connection is not configured</string>
+    <string name="error_opencode_operation">A operação falhou</string>
+    <string name="error_no_connection">Nenhuma conexão de ambiente configurada</string>
     <string name="session_title_attachment">Attachment</string>
     <string name="error_answer_required">Answer required</string>
-    <string name="error_question_failed">OpenCode question failed</string>
-    <string name="error_session_failed">OpenCode session failed</string>
+    <string name="error_question_failed">A pergunta falhou</string>
+    <string name="error_session_failed">A sessão falhou</string>
 
     <!-- Connection dialog -->
     <string name="connection_test_success">OpenCode %1$s</string>
@@ -823,7 +823,7 @@
 
     <!-- Session detail -->
     <string name="session_info_id">ID</string>
-    <string name="session_info_opencode">OpenCode</string>
+    <string name="session_info_opencode">Ambiente</string>
     <string name="session_todo_title">Todo</string>
 
     <string name="runtime_diagnostics_failed">Failed to diagnose the local runtime</string>
@@ -902,6 +902,6 @@
     <string name="claude_error_submit_code">Não foi possível enviar o código</string>
     <string name="claude_error_install_failed">A instalação do Claude Code falhou</string>
     <string name="claude_error_update_failed">A atualização do Claude Code falhou</string>
-    <string name="message_agent_hint">Enviar mensagem para %1$s…</string>
     <string name="setup_download_agents_description">Prepara o ambiente Linux compartilhado e os agentes escolhidos.</string>
+    <string name="claude_model_account_default">Padrão da conta</string>
 </resources>

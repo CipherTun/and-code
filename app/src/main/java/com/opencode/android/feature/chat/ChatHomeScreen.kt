@@ -118,6 +118,7 @@ import com.opencode.android.feature.workspace.GitHubAutoAttachChips
 import com.opencode.android.feature.workspace.GitHubReference
 import com.opencode.android.runtime.PermissionResponse
 import com.opencode.android.runtime.RuntimeTarget
+import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.components.StatusChip
 import com.opencode.android.ui.components.VolumeMeter
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
@@ -146,6 +147,9 @@ fun ChatHomeScreen(
     recentModelKeys: List<String> = emptyList(),
     hiddenModelKeys: Set<String> = emptySet(),
     onToggleFavorite: (String, String) -> Unit = { _, _ -> },
+    /** Non-null only for runtimes that decide tool permissions per session, i.e. Claude Code. */
+    claudePermissionMode: ClaudePermissionMode? = null,
+    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit = {},
     onSelectQuestionAnswer: (String, Int, String) -> Unit,
     onSubmitQuestion: (String) -> Unit,
     onCancelQuestion: (String) -> Unit = {},
@@ -417,7 +421,6 @@ fun ChatHomeScreen(
             if (!runtimeNotReady) {
                 ChatComposer(
                     input = input,
-                    agentName = state.agentName,
                     onInputChange = {
                         input = it
                         showSlashCommands = it.startsWith("/")
@@ -551,6 +554,8 @@ fun ChatHomeScreen(
             recentModelKeys = recentModelKeys,
             hiddenModelKeys = hiddenModelKeys,
             onToggleFavorite = onToggleFavorite,
+            claudePermissionMode = claudePermissionMode,
+            onSelectClaudePermissionMode = onSelectClaudePermissionMode,
             onDismiss = { showModelPicker = false },
         )
     }
@@ -760,8 +765,6 @@ private fun ChatErrorCard(
 @Composable
 private fun ChatComposer(
     input: String,
-    /** Agent the session runs on, so the prompt addresses it by name. */
-    agentName: String,
     onInputChange: (String) -> Unit,
     isRunning: Boolean,
     onSend: () -> Unit,
@@ -898,10 +901,7 @@ private fun ChatComposer(
                 ) {
                     if (input.isEmpty()) {
                         Text(
-                            text =
-                                agentName.takeIf(String::isNotBlank)
-                                    ?.let { stringResource(R.string.message_agent_hint, it) }
-                                    ?: stringResource(R.string.chat_message_placeholder),
+                            text = stringResource(R.string.chat_message_placeholder),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
