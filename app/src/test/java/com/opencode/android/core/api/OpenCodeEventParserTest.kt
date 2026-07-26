@@ -87,18 +87,39 @@ class OpenCodeEventParserTest {
     fun `parses question asked with options`() {
         val event =
             parser.parse(
-                """{"type":"question.asked","properties":{"id":"q-1","sessionID":"s1","multiple":true,"questions":[{"question":"Pick a folder","header":"Folder","options":[{"label":"src","description":"Source code"},{"label":"docs"}],"placeholder":"Type a path"}]}}""",
+                """{"directory":"/workspace/repo","project":"global","payload":{"type":"question.asked","properties":{"id":"q-1","sessionID":"s1","questions":[{"question":"Pick a folder","header":"Folder","options":[{"label":"src","description":"Source code"},{"label":"docs"}],"placeholder":"Type a path","multiple":true}]}}}""",
             ) as OpenCodeEvent.QuestionAsked
 
         val request = event.request
         assertEquals("q-1", request.id)
         assertEquals("s1", request.sessionId)
-        assertTrue(request.multiple)
-        assertEquals("Pick a folder", request.questions.single().question)
-        assertEquals("Folder", request.questions.single().header)
-        assertEquals("Type a path", request.questions.single().placeholder)
-        assertEquals(listOf("src", "docs"), request.questions.single().options.map { it.label })
-        assertEquals("Source code", request.questions.single().options.first().description)
+        // Replying is scoped to the workspace the question came from, and only the envelope says
+        // which one that is.
+        assertEquals("/workspace/repo", request.directory)
+        val prompt = request.questions.single()
+        assertEquals("Pick a folder", prompt.question)
+        assertEquals("Folder", prompt.header)
+        assertEquals("Type a path", prompt.placeholder)
+        // OpenCode carries `multiple` on the prompt, not on the request around it.
+        assertTrue(prompt.multiple)
+        assertEquals(listOf("src", "docs"), prompt.options.map { it.label })
+        assertEquals("Source code", prompt.options.first().description)
+    }
+
+    @Test
+    fun `question prompts default to single choice and a typed answer`() {
+        val event =
+            parser.parse(
+                """{"type":"question.asked","properties":{"id":"q-4","sessionID":"s1","questions":[{"question":"Run it?","options":[{"label":"Yes"}]},{"question":"Which one?","options":[{"label":"A"}],"custom":false}]}}""",
+            ) as OpenCodeEvent.QuestionAsked
+
+        val prompts = event.request.questions
+        assertTrue(!prompts.first().multiple)
+        assertTrue(prompts.first().custom)
+        // `custom: false` means the prompt takes nothing but its own options.
+        assertTrue(!prompts.last().custom)
+        // The per-instance stream carries no workspace to scope the reply to.
+        assertEquals(null, event.request.directory)
     }
 
     @Test
@@ -110,7 +131,7 @@ class OpenCodeEventParserTest {
 
         assertEquals("Continue?", event.request.questions.single().question)
         assertTrue(event.request.questions.single().options.isEmpty())
-        assertTrue(!event.request.multiple)
+        assertTrue(!event.request.questions.single().multiple)
     }
 
     @Test

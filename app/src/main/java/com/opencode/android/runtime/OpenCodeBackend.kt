@@ -21,6 +21,7 @@ import com.opencode.android.core.api.PromptRequest
 import com.opencode.android.core.api.ProviderAuthAuthorization
 import com.opencode.android.core.api.ProviderAuthMethod
 import com.opencode.android.core.api.ProviderCatalog
+import com.opencode.android.core.api.QuestionRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -162,10 +163,17 @@ interface OpenCodeBackend {
     ): Boolean
 
     suspend fun answerQuestion(
-        sessionId: String,
         requestId: String,
         answers: List<List<String>>,
+        directory: String?,
     ): Boolean = unsupported("question answers")
+
+    suspend fun rejectQuestion(
+        requestId: String,
+        directory: String?,
+    ): Boolean = unsupported("question rejection")
+
+    suspend fun pendingQuestions(directory: String?): List<QuestionRequest> = emptyList()
 
     suspend fun archiveSession(sessionId: String): OpenCodeSession = unsupported("session archive")
 

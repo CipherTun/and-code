@@ -275,14 +275,23 @@ data class QuestionPrompt(
     val header: String? = null,
     val options: List<QuestionOption> = emptyList(),
     val placeholder: String? = null,
+    /** Whether more than one of [options] may be selected. OpenCode sets this per prompt. */
+    val multiple: Boolean = false,
+    /** Whether an answer outside [options] is accepted. OpenCode defaults this to true. */
+    val custom: Boolean = true,
 )
 
 @Serializable
 data class QuestionRequest(
     val id: String,
-    val sessionId: String,
+    @SerialName("sessionID") val sessionId: String,
     val questions: List<QuestionPrompt>,
-    val multiple: Boolean = false,
+    /**
+     * Workspace the request belongs to. The question routes are scoped to a single OpenCode
+     * instance, so replying needs the directory the question was asked in — it is not carried
+     * by the request itself, but by the `/global/event` envelope that delivered it.
+     */
+    val directory: String? = null,
 )
 
 sealed interface OpenCodeEvent {
