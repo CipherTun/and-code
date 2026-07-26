@@ -106,7 +106,7 @@ class OpenCodeApiClientTest {
                 "s1",
                 PromptRequest(
                     text = "",
-                    attachments = listOf(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg")),
+                    attachments = listOf(PromptAttachment("photo.jpg", "image/jpeg", "data:image/jpeg;base64,/9j/4AAQ")),
                 ),
             )
 
@@ -114,7 +114,7 @@ class OpenCodeApiClientTest {
                 Json.parseToJsonElement(server.takeRequest().body.readUtf8())
                     .jsonObject["parts"]!!.jsonArray
             assertEquals("file", parts[0].jsonObject["type"]!!.jsonPrimitive.content)
-            assertEquals("file:///workspace/photo.jpg", parts[0].jsonObject["url"]!!.jsonPrimitive.content)
+            assertEquals("data:image/jpeg;base64,/9j/4AAQ", parts[0].jsonObject["url"]!!.jsonPrimitive.content)
         }
 
     @Test

@@ -86,7 +86,7 @@ class ChatViewModelTest {
             val backend = FakeBackend()
             val viewModel = ChatViewModel(backend)
             advanceUntilIdle()
-            viewModel.addAttachment(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg"))
+            viewModel.addAttachment(PromptAttachment("photo.jpg", "image/jpeg", "data:image/jpeg;base64,/9j/4AAQ"))
 
             viewModel.sendMessage("")
             advanceUntilIdle()
