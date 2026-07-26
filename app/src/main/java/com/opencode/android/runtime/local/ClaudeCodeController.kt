@@ -143,6 +143,7 @@ class ClaudeCodeController(
     private suspend fun refreshBlocking() =
         withContext(Dispatchers.IO) {
             val version = runtime.version()
+            if (version != null) runtime.loadResolvedModels()
             val account = if (version != null) target.auth.signedInAccount() else null
             target.health()
             mutableState.value =

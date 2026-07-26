@@ -17,6 +17,15 @@ import java.util.concurrent.TimeUnit
 object ClaudeCodeInstaller {
     const val CLAUDE_BINARY = "/usr/bin/claude"
 
+    /**
+     * Preloaded into Claude Code so its DNS resolver has usable servers.
+     *
+     * The native build is a Bun binary, and Bun's resolver intermittently times out against
+     * api.anthropic.com on Android even when the system resolver is fine. Pointing it at explicit
+     * servers avoids a hang that otherwise looks like the agent simply never answering.
+     */
+    const val DNS_PRELOAD = "/usr/local/share/claude-setdns.js"
+
     private const val REPOSITORY = "https://downloads.claude.ai/claude-code/apk/stable"
     private const val SIGNING_KEY_URL = "https://downloads.claude.ai/keys/claude-code.rsa.pub"
     private const val SIGNING_KEY_PATH = "/etc/apk/keys/claude-code.rsa.pub"
@@ -81,6 +90,29 @@ object ClaudeCodeInstaller {
         }
         check(File(rootfs, CLAUDE_BINARY.removePrefix("/")).isFile) {
             "Claude Code reported success but $CLAUDE_BINARY is missing"
+        }
+        ensureDnsPreload(rootfs)
+    }
+
+    /**
+     * Writes the DNS preload if it is missing.
+     *
+     * Called before every launch, not just on install: the launcher always passes --preload, and a
+     * sandbox provisioned by an older build would otherwise point Bun at a file that is not there.
+     */
+    fun ensureDnsPreload(rootfs: File) {
+        runCatching {
+            File(rootfs, DNS_PRELOAD.removePrefix("/")).apply {
+                if (isFile) return@runCatching
+                parentFile?.mkdirs()
+                writeText(
+                    """
+                    try { require("dns").setServers(["1.1.1.1", "8.8.8.8"]); } catch (e) {}
+                    """.trimIndent()
+                        +
+                        "\n",
+                )
+            }
         }
     }
 

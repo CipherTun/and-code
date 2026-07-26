@@ -11,7 +11,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -50,6 +55,7 @@ class ClaudeCodeRuntime(
         val permissionMode: ClaudePermissionMode,
         val directory: String,
         val model: String?,
+        val effort: String?,
     )
 
     private val sessions = linkedMapOf<String, SessionProcess>()
@@ -57,9 +63,24 @@ class ClaudeCodeRuntime(
     /** Claude Code's own session ids, so a relaunched process resumes rather than starts over. */
     private val resumeIds = mutableMapOf<String, String>()
 
+    /**
+     * Alias to the model id Claude reported for it, so the picker can name models truthfully.
+     *
+     * Anthropic re-points these aliases over time, so a cached name is only trustworthy for as long
+     * as the alias means what it did when it was recorded. Two things keep it honest: every run
+     * overwrites the entry for the alias it used, and the whole cache is dropped when the CLI
+     * version changes, which is when a re-point is most likely. An alias the user has not sent to
+     * since a server-side re-point can still lag until the next message on it.
+     */
+    private val resolvedModelsFile = File(runtimeDirectory, "claude-resolved-models.json")
+    private val resolvedModels = MutableStateFlow<Map<String, String>>(emptyMap())
+
     val auth = ClaudeAuthCoordinator(runtimeDirectory, installedRuntimeProvider, accessCoordinator, messages)
 
     fun events(): Flow<OpenCodeEvent> = events
+
+    /** Alias to resolved model id, learned from run output. */
+    fun resolvedModels(): StateFlow<Map<String, String>> = resolvedModels.asStateFlow()
 
     fun isInstalled(): Boolean = installedRuntimeProvider()?.rootfs?.let(ClaudeCodeInstaller::isInstalledIn) == true
 
@@ -96,9 +117,10 @@ class ClaudeCodeRuntime(
         prompt: String,
         permissionMode: ClaudePermissionMode,
         model: String?,
+        effort: String?,
     ): Result<Unit> =
         runCatching {
-            val session = ensureProcess(sessionId, directory.ifBlank { "/workspace" }, permissionMode, model)
+            val session = ensureProcess(sessionId, directory.ifBlank { "/workspace" }, permissionMode, model, effort)
             recordUserMessage(sessionId, prompt)
             session.process.outputStream.apply {
                 write((json.encodeToString(JsonObject.serializer(), userMessage(prompt)) + "\n").toByteArray())
@@ -140,6 +162,7 @@ class ClaudeCodeRuntime(
         directory: String,
         permissionMode: ClaudePermissionMode,
         model: String?,
+        effort: String?,
     ): SessionProcess {
         val existing = sessions[sessionId]
         // Permission mode, working directory and model are read once at startup, so a change to any
@@ -148,7 +171,8 @@ class ClaudeCodeRuntime(
             existing.process.isAlive &&
             existing.permissionMode == permissionMode &&
             existing.directory == directory &&
-            existing.model == model
+            existing.model == model &&
+            existing.effort == effort
         ) {
             return existing
         }
@@ -156,6 +180,7 @@ class ClaudeCodeRuntime(
 
         val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
         require(ClaudeCodeInstaller.isInstalledIn(runtime.rootfs)) { "Claude Code is not installed" }
+        ClaudeCodeInstaller.ensureDnsPreload(runtime.rootfs)
 
         val stderrLog = File(runtimeDirectory, "logs/claude-stderr.log").also { it.parentFile?.mkdirs() }
         val process =
@@ -164,7 +189,7 @@ class ClaudeCodeRuntime(
                     runtime = runtime,
                     workspaceHostDir = File(runtimeDirectory, "workspace").apply { mkdirs() },
                     workingDirectory = directory,
-                    arguments = processArguments(sessionId, permissionMode, model),
+                    arguments = processArguments(sessionId, permissionMode, model, effort),
                     pty = false,
                 ),
             ).directory(runtimeDirectory)
@@ -178,10 +203,13 @@ class ClaudeCodeRuntime(
                 .start()
 
         val parser = ClaudeStreamJsonParser(sessionId, json)
+        val requestedModel = model
         val readerJob =
             scope.launch {
                 runCatching {
-                    process.inputStream.bufferedReader().forEachLine { line -> handleLine(sessionId, parser, line) }
+                    process.inputStream.bufferedReader().forEachLine { line ->
+                        handleLine(sessionId, parser, line, requestedModel)
+                    }
                 }
                 messageStore.flush()
                 // A CLI that exits mid-turn would otherwise leave the chat spinning forever.
@@ -191,13 +219,15 @@ class ClaudeCodeRuntime(
                 }
             }
 
-        return SessionProcess(process, readerJob, permissionMode, directory, model).also { sessions[sessionId] = it }
+        return SessionProcess(process, readerJob, permissionMode, directory, model, effort)
+            .also { sessions[sessionId] = it }
     }
 
     private fun processArguments(
         sessionId: String,
         permissionMode: ClaudePermissionMode,
         model: String?,
+        effort: String?,
     ): List<String> =
         buildList {
             add("--print")
@@ -211,6 +241,10 @@ class ClaudeCodeRuntime(
             add(permissionMode.cliValue)
             ClaudeModels.cliModel(model)?.let {
                 add("--model")
+                add(it)
+            }
+            ClaudeModels.cliEffort(effort)?.let {
+                add("--effort")
                 add(it)
             }
             val resumeId = resumeIds[sessionId]
@@ -251,15 +285,52 @@ class ClaudeCodeRuntime(
         sessionId: String,
         parser: ClaudeStreamJsonParser,
         line: String,
+        requestedModel: String?,
     ) {
         if (line.isBlank()) return
         val parsed = parser.parse(line)
         parsed.claudeSessionId?.let { claudeSessionId ->
             synchronized(this) { resumeIds[sessionId] = claudeSessionId }
         }
+        if (requestedModel != null) parsed.resolvedModel?.let { rememberResolvedModel(requestedModel, it) }
         parsed.messages.forEach { message -> messageStore.upsert(sessionId, message) }
         parsed.events.forEach(events::tryEmit)
         if (parsed.turnFinished) messageStore.flush()
+    }
+
+    /**
+     * Loads the cache, discarding it when the CLI version has moved on.
+     *
+     * Deliberately not done in the constructor: the version check runs the CLI, which is far too
+     * slow for whatever thread builds this object.
+     */
+    fun loadResolvedModels() {
+        resolvedModels.value = readResolvedModels()
+    }
+
+    private fun readResolvedModels(): Map<String, String> {
+        val stored =
+            runCatching {
+                json.decodeFromString(MapSerializer(String.serializer(), String.serializer()), resolvedModelsFile.readText())
+            }.getOrNull() ?: return emptyMap()
+        // A CLI upgrade is the most likely moment for an alias to start meaning a different model.
+        return if (stored[CLI_VERSION_KEY] == version()) stored - CLI_VERSION_KEY else emptyMap()
+    }
+
+    private fun rememberResolvedModel(
+        alias: String,
+        resolved: String,
+    ) {
+        if (resolvedModels.value[alias] == resolved) return
+        val updated = resolvedModels.value + (alias to resolved)
+        resolvedModels.value = updated
+        runCatching {
+            resolvedModelsFile.parentFile?.mkdirs()
+            val persisted = updated + (CLI_VERSION_KEY to version().orEmpty())
+            resolvedModelsFile.writeText(
+                json.encodeToString(MapSerializer(String.serializer(), String.serializer()), persisted),
+            )
+        }
     }
 
     private fun recordUserMessage(
@@ -296,5 +367,8 @@ class ClaudeCodeRuntime(
 
     private companion object {
         val VERSION = Regex("\\d+\\.\\d+\\.\\d+")
+
+        /** Reserved key; no model alias can collide with it. */
+        const val CLI_VERSION_KEY = "@cliVersion"
     }
 }

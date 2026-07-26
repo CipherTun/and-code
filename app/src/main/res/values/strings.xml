@@ -919,5 +919,4 @@
     <string name="claude_error_install_failed">Claude Code installation failed</string>
     <string name="claude_error_update_failed">Claude Code update failed</string>
     <string name="setup_download_agents_description">Prepare the shared Linux environment and the agents you picked.</string>
-    <string name="claude_model_account_default">Account default</string>
 </resources>

@@ -905,5 +905,4 @@
     <string name="claude_error_install_failed">Claude Code 安装失败</string>
     <string name="claude_error_update_failed">Claude Code 更新失败</string>
     <string name="setup_download_agents_description">准备共享的 Linux 环境以及你选择的智能体。</string>
-    <string name="claude_model_account_default">账号默认</string>
 </resources>
