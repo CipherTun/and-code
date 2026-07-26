@@ -676,13 +676,13 @@ class ChatViewModelTest {
             advanceUntilIdle()
 
             assertEquals("child-1", viewModel.uiState.value.sessionId)
-            assertEquals(ParentSessionRef("s1", "Delegate this"), viewModel.uiState.value.parentSession)
+            assertEquals(ParentSessionRef("s1", ""), viewModel.uiState.value.parentSession)
 
             viewModel.openParentSession()
             advanceUntilIdle()
 
             assertEquals("s1", viewModel.uiState.value.sessionId)
-            assertEquals("Delegate this", viewModel.uiState.value.sessionTitle)
+            assertEquals("", viewModel.uiState.value.sessionTitle)
             assertNull(viewModel.uiState.value.parentSession)
         }
 
