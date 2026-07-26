@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Computer
@@ -74,6 +73,7 @@ import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.components.SectionCard
 import com.opencode.android.ui.components.StatusChip
+import com.opencode.android.ui.runtimeAgentIcon
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -270,7 +270,7 @@ fun WorkspacesScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Icon(
-                            imageVector = if (target.type == RuntimeType.LOCAL) Icons.Default.Android else Icons.Default.Computer,
+                            imageVector = runtimeAgentIcon(target.agent),
                             contentDescription = stringResource(R.string.cd_runtime_type),
                             tint = MaterialTheme.colorScheme.primary,
                         )

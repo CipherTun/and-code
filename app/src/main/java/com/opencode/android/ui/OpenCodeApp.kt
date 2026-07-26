@@ -140,6 +140,10 @@ fun OpenCodeApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     var pendingSession by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pendingHandoffPrompt by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // A handoff waits for the model sheet to close: the runtime and the model are chosen in the
+    // same sheet, and sending the moment the runtime changes would use whichever model happened
+    // to be selected first.
+    var handoffReady by remember { mutableStateOf(false) }
     var selectedWorkspace by remember { mutableStateOf<WorkspaceRef?>(null) }
     var selectedSession by remember { mutableStateOf<OpenCodeSession?>(null) }
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -443,6 +447,7 @@ fun OpenCodeApp(
     val onHandoff: (String) -> Unit = { targetRuntimeId ->
         val prompt = buildHandoffPrompt(chatState.messages)
         pendingHandoffPrompt = targetRuntimeId to prompt
+        handoffReady = false
         app.runtimeRegistry.select(targetRuntimeId)
     }
 
@@ -673,11 +678,12 @@ fun OpenCodeApp(
                             pendingSession = null
                         }
                     }
-                    LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id) {
+                    LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id, handoffReady) {
                         val pending = pendingHandoffPrompt
-                        if (pending != null && selectedRuntime?.id == pending.first) {
+                        if (pending != null && handoffReady && selectedRuntime?.id == pending.first) {
                             chatViewModel.sendMessage(pending.second)
                             pendingHandoffPrompt = null
+                            handoffReady = false
                         }
                     }
                     ChatHomeScreen(
@@ -696,6 +702,7 @@ fun OpenCodeApp(
                         onSelectClaudePermissionMode = { mode ->
                             workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
                         },
+                        onModelPickerClosed = { handoffReady = true },
                         onSelectRuntime = { id ->
                             if (id != selectedRuntime?.id) {
                                 if (chatState.messages.isNotEmpty()) {

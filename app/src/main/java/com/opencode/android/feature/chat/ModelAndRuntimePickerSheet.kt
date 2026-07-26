@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +38,7 @@ import com.opencode.android.R
 import com.opencode.android.core.api.OpenCodeModel
 import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.runtime.RuntimeTarget
-import com.opencode.android.runtime.RuntimeType
+import com.opencode.android.ui.runtimeAgentIcon
 import com.opencode.android.ui.runtimeTargetLabel
 
 private const val MAX_RECENT_MODELS = 3
@@ -266,7 +264,7 @@ private fun RuntimeRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(
-            imageVector = if (target.type == RuntimeType.LOCAL) Icons.Default.Android else Icons.Default.Computer,
+            imageVector = runtimeAgentIcon(target.agent),
             contentDescription = stringResource(R.string.cd_runtime_type),
             tint = MaterialTheme.colorScheme.primary,
         )

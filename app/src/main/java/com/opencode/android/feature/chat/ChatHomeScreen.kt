@@ -150,6 +150,13 @@ fun ChatHomeScreen(
     /** Non-null only for runtimes that decide tool permissions per session, i.e. Claude Code. */
     claudePermissionMode: ClaudePermissionMode? = null,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit = {},
+    /**
+     * Called once the model and runtime sheet closes.
+     *
+     * Switching runtime and picking a model happen in the same sheet, so anything that reacts to a
+     * switch has to wait for the sheet to close or it acts on a half-made choice.
+     */
+    onModelPickerClosed: () -> Unit = {},
     onSelectQuestionAnswer: (String, Int, String) -> Unit,
     onSubmitQuestion: (String) -> Unit,
     onCancelQuestion: (String) -> Unit = {},
@@ -557,12 +564,16 @@ fun ChatHomeScreen(
             onSelectModel = { providerId, modelId ->
                 onSelectModel(providerId, modelId)
                 showModelPicker = false
+                onModelPickerClosed()
             },
             favoriteModelKeys = favoriteModelKeys,
             recentModelKeys = recentModelKeys,
             hiddenModelKeys = hiddenModelKeys,
             onToggleFavorite = onToggleFavorite,
-            onDismiss = { showModelPicker = false },
+            onDismiss = {
+                showModelPicker = false
+                onModelPickerClosed()
+            },
         )
     }
 
