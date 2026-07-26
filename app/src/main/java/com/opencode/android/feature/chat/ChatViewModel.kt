@@ -14,11 +14,13 @@ import com.opencode.android.core.api.PromptAttachment
 import com.opencode.android.core.api.PromptRequest
 import com.opencode.android.core.api.QuestionPrompt
 import com.opencode.android.core.api.QuestionRequest
+import com.opencode.android.core.util.safeMessage
 import com.opencode.android.data.settings.Draft
 import com.opencode.android.data.settings.DraftRepository
 import com.opencode.android.runtime.OpenCodeBackend
 import com.opencode.android.runtime.PermissionResponse
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -322,8 +324,8 @@ class ChatViewModel(
                             }
                             return@launch
                         }
-                        .onFailure { error -> lastError = error.safeMessage() }
-                    kotlinx.coroutines.delay(HEALTH_CHECK_DELAY_MS)
+                        .onFailure { error -> lastError = error.safeMessage("OpenCode operation failed") }
+                    delay(HEALTH_CHECK_DELAY_MS)
                 }
                 reportError(lastError)
             }
@@ -411,6 +413,7 @@ class ChatViewModel(
     }
 
     fun removeAttachment(index: Int) {
+        _uiState.value.imagePreviews.getOrNull(index)?.let { if (!it.isRecycled) it.recycle() }
         _uiState.update { state ->
             state.copy(
                 attachments = state.attachments.filterIndexed { i, _ -> i != index },
@@ -488,7 +491,7 @@ class ChatViewModel(
                 }
                 .onFailure { error ->
                     _uiState.update {
-                        it.copy(isLoadingHistory = false, error = error.safeMessage())
+                        it.copy(isLoadingHistory = false, error = error.safeMessage("OpenCode operation failed"))
                     }
                 }
         }
@@ -656,10 +659,14 @@ class ChatViewModel(
                         attachments = pendingAttachments,
                     ),
                 )
+<<<<<<< HEAD
                 runCatching { currentBackend.session(targetSessionId).title }
                     .onSuccess { title ->
                         if (title.isNotBlank()) _uiState.update { it.copy(sessionTitle = title) }
                     }
+=======
+                _uiState.value.imagePreviews.forEach { bmp -> if (!bmp.isRecycled) bmp.recycle() }
+>>>>>>> quality-improvements
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
@@ -671,7 +678,7 @@ class ChatViewModel(
                 val pollFinished =
                     withTimeoutOrNull(RESPONSE_POLL_TIMEOUT_MS) {
                         while (isStillActive() && _uiState.value.isRunning) {
-                            kotlinx.coroutines.delay(RESPONSE_POLL_INTERVAL_MS)
+                            delay(RESPONSE_POLL_INTERVAL_MS)
                             if (!isStillActive()) return@withTimeoutOrNull
                             runCatching { currentBackend.listMessages(targetSessionId) }
                                 .onSuccess { serverMessages ->
@@ -787,7 +794,7 @@ class ChatViewModel(
                     _uiState.update { it.copy(error = "OpenCode could not apply that permission response") }
                 }
             }.onFailure { error ->
-                _uiState.update { it.copy(error = error.safeMessage()) }
+                _uiState.update { it.copy(error = error.safeMessage("OpenCode operation failed")) }
             }
         }
     }
@@ -890,7 +897,7 @@ class ChatViewModel(
                         pendingQuestions =
                             state.pendingQuestions.map { pending ->
                                 if (pending.request.id == questionId) {
-                                    pending.copy(isSubmitting = false, error = error.safeMessage())
+                                    pending.copy(isSubmitting = false, error = error.safeMessage("OpenCode operation failed"))
                                 } else {
                                     pending
                                 }
@@ -960,6 +967,7 @@ class ChatViewModel(
         }
         val currentBackend = backend ?: return
         viewModelScope.launch {
+<<<<<<< HEAD
             runCatching {
                 currentBackend.rejectQuestion(
                     requestId = questionId,
@@ -968,6 +976,15 @@ class ChatViewModel(
             }.onFailure { error ->
                 _uiState.update { it.copy(error = error.safeMessage()) }
             }
+=======
+            runCatching { currentBackend.abortSession(pendingQuestion.request.sessionId) }
+                .onSuccess {
+                    _uiState.update { it.copy(isRunning = false, isThinking = false) }
+                }
+                .onFailure { error ->
+                    _uiState.update { it.copy(error = error.safeMessage("OpenCode operation failed")) }
+                }
+>>>>>>> quality-improvements
         }
     }
 
@@ -982,7 +999,7 @@ class ChatViewModel(
                     }
                 }
                 .onFailure { error ->
-                    _uiState.update { it.copy(error = error.safeMessage()) }
+                    _uiState.update { it.copy(error = error.safeMessage("OpenCode operation failed")) }
                 }
         }
     }
@@ -1295,16 +1312,18 @@ class ChatViewModel(
     }
 
     override fun onCleared() {
+        _uiState.value.imagePreviews.forEach { if (!it.isRecycled) it.recycle() }
+        _uiState.value.messages.forEach { msg ->
+            msg.imagePreviews.forEach { if (!it.isRecycled) it.recycle() }
+        }
         eventJob?.cancel()
         tts?.stop()
         tts = null
         super.onCleared()
     }
 
-    private fun Throwable.safeMessage(): String = message?.takeIf { it.isNotBlank() } ?: "OpenCode operation failed"
-
     private fun reportError(throwable: Throwable) {
-        _uiState.update { it.copy(error = throwable.safeMessage()) }
+        _uiState.update { it.copy(error = throwable.safeMessage("OpenCode operation failed")) }
         if (classifyChatError(throwable) == ChatErrorKind.TRANSIENT_CONNECTION) {
             scheduleTransientRecovery()
         }
@@ -1319,7 +1338,7 @@ class ChatViewModel(
 
     private fun scheduleTransientRecovery() {
         viewModelScope.launch {
-            kotlinx.coroutines.delay(TRANSIENT_RECOVERY_DELAY_MS)
+            delay(TRANSIENT_RECOVERY_DELAY_MS)
             val currentBackend = backend ?: return@launch
             if (classifyChatError(_uiState.value.error) != ChatErrorKind.TRANSIENT_CONNECTION) return@launch
             runCatching { currentBackend.health() }

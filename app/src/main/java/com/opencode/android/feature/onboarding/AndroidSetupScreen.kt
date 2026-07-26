@@ -62,6 +62,7 @@ import com.opencode.android.feature.settings.ProviderAuthDialog
 import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
+import kotlinx.coroutines.delay
 
 private const val TOTAL_STEPS = 3
 
@@ -99,7 +100,7 @@ fun AndroidSetupScreen(
     LaunchedEffect(runtimeReady, settingsState.availableProviders, settingsState.providerAuthMethods) {
         if (!runtimeReady) return@LaunchedEffect
         if (settingsState.availableProviders.isNotEmpty() && settingsState.providerAuthMethods.isNotEmpty()) return@LaunchedEffect
-        kotlinx.coroutines.delay(2000)
+        delay(2000)
         onRefreshCatalog()
         onRefreshProviderAuth()
     }
@@ -311,7 +312,11 @@ private fun SetupProgress(currentStep: Int) {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (completed) {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = stringResource(R.string.cd_step_completed),
+                                modifier = Modifier.size(17.dp),
+                            )
                         } else {
                             Text(step.toString(), style = MaterialTheme.typography.labelMedium)
                         }
@@ -417,7 +422,7 @@ private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Icon(
                                 Icons.Default.Error,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.cd_error),
                                 tint = MaterialTheme.colorScheme.error,
                             )
                             Text(runtimeStatus.reason, color = MaterialTheme.colorScheme.error)
@@ -441,7 +446,11 @@ private fun ReadyRuntimeRow(version: String) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        Icon(
+            Icons.Default.CheckCircle,
+            contentDescription = stringResource(R.string.cd_runtime_ready),
+            tint = MaterialTheme.colorScheme.primary,
+        )
         Column {
             Text(stringResource(R.string.setup_runtime_ready), fontWeight = FontWeight.Medium)
             Text(
@@ -490,11 +499,11 @@ private fun ProviderConnectionStep(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 placeholder = { Text(stringResource(R.string.setup_provider_search_hint)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search)) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
+                            Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear_search))
                         }
                     }
                 },
