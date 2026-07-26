@@ -18,8 +18,14 @@ class AntigravityAuthCoordinator(
         return AntigravityAuthStart(process, URL_PATTERN.matcher(output).takeIf { it.find() }?.group())
     }
 
-    fun submitCode(start: AntigravityAuthStart, code: String) {
-        start.process.outputStream.bufferedWriter().use { it.write(code.trim() + "\n"); it.flush() }
+    fun submitCode(
+        start: AntigravityAuthStart,
+        code: String,
+    ) {
+        start.process.outputStream.bufferedWriter().use {
+            it.write(code.trim() + "\n")
+            it.flush()
+        }
     }
 
     fun logout() {

@@ -22,9 +22,13 @@ class AntigravityTranscriptAdapterTest {
     }
 
     @Test fun `maps permission hook without leaking env`() {
-        val events = AntigravityTranscriptAdapter().parseHooks("s", sequenceOf(
-            "{\"schemaVersion\":1,\"conversationId\":\"c\",\"event\":\"PermissionAsked\",\"toolName\":\"shell\",\"step\":3}",
-        ))
+        val events =
+            AntigravityTranscriptAdapter().parseHooks(
+                "s",
+                sequenceOf(
+                    "{\"schemaVersion\":1,\"conversationId\":\"c\",\"event\":\"PermissionAsked\",\"toolName\":\"shell\",\"step\":3}",
+                ),
+            )
         assertEquals(1, events.size)
         assertEquals("shell", (events.first() as com.opencode.android.core.api.OpenCodeEvent.PermissionAsked).request.permission)
     }

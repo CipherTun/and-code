@@ -16,10 +16,10 @@ import com.opencode.android.feature.support.GitHubStarCoordinator
 import com.opencode.android.feature.support.GitHubStarService
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.local.AndroidClaudeMessages
+import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
+import com.opencode.android.runtime.local.AntigravityController
 import com.opencode.android.runtime.local.AntigravityRuntime
 import com.opencode.android.runtime.local.AntigravityTarget
-import com.opencode.android.runtime.local.AntigravityController
-import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
 import com.opencode.android.runtime.local.ClaudeCodeController
 import com.opencode.android.runtime.local.ClaudeCodeRuntime
 import com.opencode.android.runtime.local.ClaudeCodeTarget

@@ -8,9 +8,9 @@ import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.data.settings.DraftRepository
 import com.opencode.android.runtime.RuntimeRegistry
-import com.opencode.android.runtime.local.DefaultLocalRuntimeUpdateEngine
 import com.opencode.android.runtime.local.AntigravityRuntime
 import com.opencode.android.runtime.local.AntigravityTarget
+import com.opencode.android.runtime.local.DefaultLocalRuntimeUpdateEngine
 import com.opencode.android.runtime.local.GitCredentialHelper
 import com.opencode.android.runtime.local.LocalProviderCredentialStore
 import com.opencode.android.runtime.local.LocalRuntimeAccessCoordinator
@@ -145,11 +145,12 @@ val appModule =
             RuntimeRegistry(
                 store = get(),
                 localTarget = LocalRuntimeTarget(get()),
-                additionalTargets = listOf(
-                    AntigravityTarget(
-                        AntigravityRuntime(get(), (get<LocalRuntimeInstaller>())::installedRuntime),
+                additionalTargets =
+                    listOf(
+                        AntigravityTarget(
+                            AntigravityRuntime(get(), (get<LocalRuntimeInstaller>())::installedRuntime),
+                        ),
                     ),
-                ),
             )
         }
 

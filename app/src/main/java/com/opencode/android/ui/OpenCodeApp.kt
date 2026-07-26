@@ -622,6 +622,9 @@ fun OpenCodeApp(
                             ) {
                                 workspaceViewModel.installClaudeCode()
                             }
+                            if (com.opencode.android.runtime.LocalAgent.ANTIGRAVITY in agents) {
+                                app.antigravityController.install()
+                            }
                         },
                         onSelectClaudePermissionMode = { mode ->
                             workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
