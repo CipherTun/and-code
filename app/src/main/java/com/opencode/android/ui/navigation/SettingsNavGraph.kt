@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import com.opencode.android.data.settings.AppPreferences
 import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.feature.settings.ProviderSettingsScreen
+import com.opencode.android.feature.settings.GitHubSettingsScreen
 import com.opencode.android.feature.settings.SettingsScreenV2
 import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.settings.SettingsViewModel
@@ -41,6 +42,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenAssistantSettings = onOpenAssistantSettings,
             onOpenVoiceSettings = { navController.navigate(ROUTE_SETTINGS_VOICE) },
             onOpenProviderSettings = { navController.navigate(ROUTE_SETTINGS_PROVIDERS) },
+            onOpenGitHubSettings = { navController.navigate(ROUTE_SETTINGS_GITHUB) },
             onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
             onOpenRemoteConnection = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
             onOpenWorkspaces = { navController.navigate(ROUTE_WORKSPACES) },
@@ -107,12 +109,18 @@ fun NavGraphBuilder.settingsNavGraph(
                 }
             },
             onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
-            onConnectGitHub = { settingsViewModel.beginGitHubDeviceFlow() },
-            onDisconnectGitHub = settingsViewModel::disconnectGitHub,
-            onOpenGitHubVerification = { url ->
-                runCatching {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
-                }.onFailure { error -> settingsViewModel.reportOAuthError(error.message.orEmpty()) }
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_GITHUB) {
+        GitHubSettingsScreen(
+            state = settingsState,
+            onConnect = settingsViewModel::beginGitHubDeviceFlow,
+            onDisconnect = settingsViewModel::disconnectGitHub,
+            onOpenVerification = { url ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                    .onFailure { error -> settingsViewModel.reportOAuthError(error.message.orEmpty()) }
             },
             onBack = { navController.popBackStack() },
         )

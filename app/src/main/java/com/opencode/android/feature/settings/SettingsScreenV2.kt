@@ -72,6 +72,7 @@ fun SettingsScreenV2(
     onOpenAssistantSettings: () -> Unit,
     onOpenVoiceSettings: () -> Unit,
     onOpenProviderSettings: () -> Unit,
+    onOpenGitHubSettings: () -> Unit = {},
     onOpenLocalRuntime: () -> Unit,
     onOpenRemoteConnection: () -> Unit,
     onOpenWorkspaces: () -> Unit,
@@ -232,6 +233,12 @@ fun SettingsScreenV2(
                     icon = Icons.Default.Key,
                     title = stringResource(R.string.provider_settings_row),
                     onClick = onOpenProviderSettings,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.Code,
+                    title = "GitHub / Git Operations",
+                    onClick = onOpenGitHubSettings,
                 )
                 SettingsDivider()
                 SettingsRow(

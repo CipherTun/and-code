@@ -61,9 +61,6 @@ fun ProviderSettingsScreen(
     onDisconnectProvider: (String) -> Unit,
     onLaunchOAuthBrowser: (String) -> Unit,
     onDismissProviderAuth: () -> Unit,
-    onConnectGitHub: () -> Unit = {},
-    onDisconnectGitHub: () -> Unit = {},
-    onOpenGitHubVerification: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -165,38 +162,6 @@ fun ProviderSettingsScreen(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Text(
-                text = stringResource(R.string.github_git_operations),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = state.githubLogin ?: stringResource(R.string.github_not_connected),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            state.githubMessage?.let { message ->
-                Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-            }
-            val userCode = state.githubUserCode
-            if (userCode != null) {
-                GithubDeviceCodeCard(
-                    code = userCode,
-                    verificationUrl = state.githubVerificationUrl,
-                    onOpenVerification = onOpenGitHubVerification,
-                )
-            } else {
-                OutlinedButton(
-                    onClick = if (state.githubLogin == null) onConnectGitHub else onDisconnectGitHub,
-                    enabled = state.githubConfigured,
-                ) {
-                    Text(
-                        if (state.githubLogin == null) {
-                            stringResource(R.string.github_connect)
-                        } else {
-                            stringResource(R.string.github_disconnect)
-                        },
-                    )
-                }
-            }
         }
     }
 
@@ -215,7 +180,7 @@ fun ProviderSettingsScreen(
 }
 
 @Composable
-private fun GithubDeviceCodeCard(
+fun GithubDeviceCodeCard(
     code: String,
     verificationUrl: String?,
     onOpenVerification: (String) -> Unit,
@@ -389,9 +354,6 @@ private fun ProviderSettingsScreenPreview() {
             onDisconnectProvider = {},
             onLaunchOAuthBrowser = {},
             onDismissProviderAuth = {},
-            onConnectGitHub = {},
-            onDisconnectGitHub = {},
-            onOpenGitHubVerification = {},
             onBack = {},
         )
     }
