@@ -4,31 +4,26 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Base64
 import com.opencode.android.core.api.PromptAttachment
-import java.io.File
+import java.io.ByteArrayOutputStream
 
-/**
- * Copies a user-picked file into the runtime's shared workspace so the OpenCode
- * server can read it, returning a [PromptAttachment] referencing the server-side
- * /workspace path.
- */
 class AttachmentImporter(
     private val context: Context,
-    private val runtimeDirectory: File = File(context.filesDir, "runtime"),
 ) {
     fun import(uri: Uri): PromptAttachment {
-        val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
         val filename = sanitize(queryDisplayName(uri) ?: "attachment-${System.currentTimeMillis()}")
-        val destination = uniqueFile(workspace, filename)
-        context.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "Cannot open attachment input stream" }
-            destination.outputStream().use { output -> input.copyTo(output) }
-        }
         val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
+        val bytes =
+            context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { "Cannot open attachment input stream" }
+                input.readBytes()
+            }
+        val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
         return PromptAttachment(
-            filename = destination.name,
+            filename = filename,
             mime = mime,
-            url = "file:///workspace/${destination.name}",
+            url = "data:$mime;base64,$encoded",
         )
     }
 
@@ -36,12 +31,10 @@ class AttachmentImporter(
         bitmap: Bitmap,
         filename: String = "image-${System.currentTimeMillis()}.jpg",
     ): PromptAttachment {
-        val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-        val destination = uniqueFile(workspace, sanitize(filename))
-        destination.outputStream().use { output ->
-            check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)) { "Cannot encode attachment" }
-        }
-        return PromptAttachment(destination.name, "image/jpeg", "file:///workspace/${destination.name}")
+        val baos = ByteArrayOutputStream()
+        check(bitmap.compress(Bitmap.CompressFormat.JPEG, 90, baos)) { "Cannot encode attachment" }
+        val encoded = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+        return PromptAttachment(sanitize(filename), "image/jpeg", "data:image/jpeg;base64,$encoded")
     }
 
     private fun queryDisplayName(uri: Uri): String? =
@@ -51,22 +44,6 @@ class AttachmentImporter(
                 if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
             }
         }.getOrNull()
-
-    private fun uniqueFile(
-        dir: File,
-        name: String,
-    ): File {
-        var candidate = File(dir, name)
-        var counter = 1
-        val base = name.substringBeforeLast('.', name)
-        val extension = name.substringAfterLast('.', "").takeIf { it.isNotBlank() && it != name }
-        while (candidate.exists()) {
-            val suffixed = if (extension != null) "$base-$counter.$extension" else "$base-$counter"
-            candidate = File(dir, suffixed)
-            counter++
-        }
-        return candidate
-    }
 
     private fun sanitize(name: String): String = name.replace(Regex("[^a-zA-Z0-9._-]"), "_").ifBlank { "attachment" }
 }

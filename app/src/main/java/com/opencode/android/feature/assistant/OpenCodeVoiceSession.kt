@@ -212,8 +212,23 @@ class OpenCodeVoiceSession(context: Context) :
                             }
                             is OpenCodeEvent.PermissionAsked -> {
                                 if (event.request.sessionId == sessionId) {
-                                    permissionRequest.value = event.request
-                                    assistantState.value = VoiceState.PERMISSION
+                                    if (settings.autoAcceptPermissions) {
+                                        val request = event.request
+                                        val activeBackend = backend ?: return@collect
+                                        scope.launch {
+                                            runCatching {
+                                                activeBackend.respondToPermission(
+                                                    request.sessionId,
+                                                    request.id,
+                                                    PermissionResponse.ONCE,
+                                                    false,
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        permissionRequest.value = event.request
+                                        assistantState.value = VoiceState.PERMISSION
+                                    }
                                 }
                             }
                             is OpenCodeEvent.SessionIdle -> {
@@ -224,7 +239,19 @@ class OpenCodeVoiceSession(context: Context) :
                                     showError(event.message ?: context.getString(R.string.voice_processing_failed))
                                 }
                             }
+                            is OpenCodeEvent.PermissionReplied -> {
+                                if (
+                                    event.sessionId == sessionId &&
+                                    permissionRequest.value?.id == event.requestId
+                                ) {
+                                    permissionRequest.value = null
+                                }
+                            }
+                            // session.idle above is the single completion signal for voice;
+                            // handling session.status too would finish the same turn twice.
                             OpenCodeEvent.ServerConnected,
+                            is OpenCodeEvent.MessageUpdated,
+                            is OpenCodeEvent.SessionStatusChanged,
                             is OpenCodeEvent.QuestionAsked,
                             is OpenCodeEvent.Unknown,
                             -> Unit

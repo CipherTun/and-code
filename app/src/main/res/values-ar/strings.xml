@@ -54,6 +54,16 @@
     <string name="tool_input_label">الإدخال</string>
     <string name="tool_output_label">الإخراج</string>
     <string name="tool_output_truncated">…تم اقتطاع الإخراج</string>
+    <string name="activity_summary_commands">تم تنفيذ %1$d أمر</string>
+    <string name="activity_summary_reads">تم قراءة %1$d ملف</string>
+    <string name="activity_summary_edits">تم تعديل %1$d ملف</string>
+    <string name="activity_summary_subagents">تم تشغيل %1$d وكيل فرعي</string>
+    <string name="activity_summary_tools">تم استخدام %1$d أداة</string>
+    <string name="activity_summary_reasoning">%1$d عملية تفكير</string>
+    <string name="activity_summary_separator">، </string>
+    <string name="activity_details_title">النشاط</string>
+    <string name="activity_details_open">إظهار تفاصيل النشاط</string>
+    <string name="activity_details_close">إغلاق</string>
     <string name="file_changes_title">تغييرات الملفات</string>
     <string name="file_changes_generic">تم تغيير الملفات</string>
     <string name="workspace_folder_label">مجلد العمل</string>
@@ -104,7 +114,9 @@
     <string name="notification_channel_status">حالة المهمة</string>
     <string name="notification_approval_title">OpenCode يحتاج إلى موافقة</string>
     <string name="notification_complete_title">انتهى OpenCode</string>
-    <string name="notification_complete_body">الجلسة %1$s خاملة</string>
+    <string name="notification_complete_body">المحادثة %1$s خاملة</string>
+    <string name="permission_chat_confirmation">تنتظر هذه المحادثة موافقتك. اختر ما يمكن لـ OpenCode فعله:</string>
+    <string name="permission_response_failed">تعذر على OpenCode تطبيق رد الإذن.</string>
     <string name="notification_error_title">خطأ في OpenCode</string>
     <string name="notification_error_body">فشلت جلسة</string>
     <string name="notification_permission_failed">تعذّر إرسال الموافقة. افتح التطبيق وحاول مرة أخرى.</string>
@@ -132,7 +144,7 @@
     <string name="provider_auth_failed">فشلت مصادقة الموفر. حاول مرة أخرى.</string>
     <string name="continue_label">متابعة</string>
     <string name="question_free_text_label">أخرى (اكتب إجابتك)</string>
-    <string name="question_cancel">الإجابة لاحقًا (إيقاف)</string>
+    <string name="question_cancel">رفض الإجابة</string>
     <string name="question_dismiss">إغلاق السؤال</string>
     <string name="assistant_runtime">بيئة تشغيل المساعد</string>
     <string name="assistant_workspace">مسار مساحة عمل المساعد</string>
@@ -572,4 +584,9 @@
     <string name="model_visibility_row">النماذج المرئية</string>
     <string name="model_visibility_title">النماذج المرئية</string>
     <string name="model_visibility_caption">أزل التحديد عن النماذج لإخفائها من قائمة اختيار النموذج.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">جلسة الوكيل الفرعي</string>
+    <string name="subagent_return_to_parent">العودة إلى الوكيل الرئيسي: %1$s</string>
+    <string name="subagent_parent_untitled">الجلسة الرئيسية</string>
 </resources>

@@ -31,7 +31,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Compress
@@ -64,7 +63,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -124,6 +122,8 @@ fun OpenCodeChatScreen(
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val isAtBottom = remember { mutableStateOf(true) }
+    var activityGroupId by remember { mutableStateOf<String?>(null) }
+    val timelineEntries = remember(state.messages) { groupConversationTimeline(state.messages) }
 
     LaunchedEffect(listState) {
         snapshotFlow {
@@ -134,8 +134,8 @@ fun OpenCodeChatScreen(
         }.collect { atBottom -> isAtBottom.value = atBottom }
     }
 
-    LaunchedEffect(state.messages.size, state.permissions.size) {
-        val totalItems = state.messages.size + state.permissions.size
+    LaunchedEffect(timelineEntries.size, state.permissions.size) {
+        val totalItems = timelineEntries.size + state.permissions.size
         if (totalItems > 0 && isAtBottom.value) listState.animateScrollToItem(totalItems - 1)
     }
 
@@ -194,12 +194,8 @@ fun OpenCodeChatScreen(
                 }
             }
 
-            items(state.messages, key = { it.id }) { message ->
-                if (message.isUser) {
-                    MessageBubble(message)
-                } else {
-                    AssistantTimeline(message)
-                }
+            items(timelineEntries, key = { it.id }) { entry ->
+                TimelineEntryRow(entry, onOpenActivity = { activityGroupId = it })
             }
 
             items(state.permissions, key = { "permission-${it.id}" }) { permission ->
@@ -276,6 +272,13 @@ fun OpenCodeChatScreen(
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.send_description))
                 }
             }
+        }
+    }
+
+    activityGroupId?.let { groupId ->
+        val parts = findActivityParts(state.messages, groupId)
+        if (parts.isNotEmpty()) {
+            AssistantActivitySheet(parts = parts, onDismiss = { activityGroupId = null })
         }
     }
 }
@@ -583,9 +586,15 @@ private fun AgentSelector(
     }
 }
 
+private val TOOL_CALL_ECHO_REGEX =
+    Regex("""Called the [A-Za-z][A-Za-z ]*? tool with the following input: \{(?:[^{}]|\{[^{}]*\})*\}""")
+
+private fun String.hideToolCallEcho(): String = TOOL_CALL_ECHO_REGEX.replace(this, "").replace(Regex("[ \t]+\n"), "\n").trim()
+
 // Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
 @Composable
 fun MessageBubble(message: ChatMessage) {
+    val displayText = remember(message.text) { message.text.hideToolCallEcho() }
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.CenterEnd,
@@ -610,6 +619,7 @@ fun MessageBubble(message: ChatMessage) {
                     )
                 }
                 message.attachments.forEach { attachment ->
+                    if (attachment.mime.startsWith("image/")) return@forEach
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -624,41 +634,32 @@ fun MessageBubble(message: ChatMessage) {
                         )
                     }
                 }
-                if (message.text.isNotBlank()) {
-                    Text(text = message.text)
+                if (displayText.isNotBlank()) {
+                    Text(text = displayText)
                 }
             }
         }
     }
 }
 
-// Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
+/**
+ * Renders one row produced by [groupConversationTimeline].
+ *
+ * Not private: reused by ChatHomeScreen.kt (same package) for the redesigned chat screen.
+ */
 @Composable
-fun AssistantTimeline(
-    message: ChatMessage,
-    showProcessing: Boolean = false,
+fun TimelineEntryRow(
+    entry: TimelineEntry,
+    onOpenActivity: (String) -> Unit = {},
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        message.parts.forEach { part ->
-            key(part.id) {
-                when (part) {
-                    is ChatPart.Text -> MarkdownText(part.text)
-                    is ChatPart.Reasoning -> ReasoningCard(part)
-                    is ChatPart.Tool -> ToolCard(part)
-                    is ChatPart.Patch -> PatchCard(part)
-                }
-            }
-        }
-        if (showProcessing) {
-            Text(
-                text = stringResource(R.string.processing),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    when (entry) {
+        is TimelineEntry.UserMessage -> MessageBubble(entry.message)
+        is TimelineEntry.Body -> MarkdownText(entry.part.text)
+        is TimelineEntry.Activity ->
+            AssistantActivityRow(
+                parts = entry.parts,
+                onClick = { onOpenActivity(entry.id) },
             )
-        }
     }
 }
 
@@ -890,8 +891,9 @@ private fun renderInline(
         }
     }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the activity detail sheet.
 @Composable
-private fun ReasoningCard(
+fun ReasoningCard(
     part: ChatPart.Reasoning,
     autoExpand: Boolean = false,
 ) {
@@ -939,8 +941,9 @@ private fun ReasoningCard(
     }
 }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the activity detail sheet.
 @Composable
-private fun ToolCard(part: ChatPart.Tool) {
+fun ToolCard(part: ChatPart.Tool) {
     var expanded by remember { mutableStateOf(part.status == ToolStatus.RUNNING) }
     Card(
         modifier =
@@ -953,7 +956,7 @@ private fun ToolCard(part: ChatPart.Tool) {
         Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(
-                    Icons.Default.Build,
+                    toolCategoryIcon(part.name.toToolCategory()),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(15.dp),
@@ -1042,8 +1045,9 @@ private fun ToolCard(part: ChatPart.Tool) {
     }
 }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the collapsed activity row.
 @Composable
-private fun ToolStatusChip(status: ToolStatus) {
+fun ToolStatusChip(status: ToolStatus) {
     val (label, color) =
         when (status) {
             ToolStatus.PENDING -> stringResource(R.string.tool_status_pending) to MaterialTheme.colorScheme.onSurfaceVariant
@@ -1066,8 +1070,9 @@ private fun ToolStatusChip(status: ToolStatus) {
     }
 }
 
+// Not private: reused by AssistantActivityRow.kt (same package) for the activity detail sheet.
 @Composable
-private fun PatchCard(part: ChatPart.Patch) {
+fun PatchCard(part: ChatPart.Patch) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -1123,6 +1128,10 @@ fun PermissionCard(
                 Spacer(Modifier.padding(horizontal = 5.dp))
                 Text(stringResource(R.string.permission_required), fontWeight = FontWeight.SemiBold)
             }
+            Text(
+                text = stringResource(R.string.permission_chat_confirmation),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 text = permission.permission,
                 fontFamily = FontFamily.Monospace,

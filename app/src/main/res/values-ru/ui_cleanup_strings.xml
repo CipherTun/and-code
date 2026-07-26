@@ -35,9 +35,9 @@
     <string name="voice_response_description">Озвучивать ответы OpenCode.</string>
     <string name="wake_word_section_title">Активация</string>
     <string name="wake_word_pack_required">Необязательный пакет ключевого слова ещё не установлен.</string>
-    <string name="wake_word_description">Слушайте «Hey Mycroft», чтобы запустить ассистента без рук.</string>
+    <string name="wake_word_description">Слушайте «hey opencode», чтобы запустить ассистента без рук.</string>
     <string name="wake_word_notification_channel">Обнаружение ключевого слова</string>
     <string name="wake_word_notification_title">Ключевое слово активно</string>
-    <string name="wake_word_notification_text">Слушаю «Hey Mycroft»…</string>
+    <string name="wake_word_notification_text">Слушаю «hey opencode»…</string>
     <string name="wake_word_notification_stop">Остановить</string>
 </resources>

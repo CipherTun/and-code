@@ -77,10 +77,10 @@ class RemoteOpenCodeBackendTest {
                     ),
                 )
 
-            assertTrue(backend.answerQuestion("s1", "q-1", listOf(listOf("src"), listOf("docs", "tests"))))
+            assertTrue(backend.answerQuestion("q-1", listOf(listOf("src"), listOf("docs", "tests")), "/workspace/repo"))
 
             val request = server.takeRequest()
-            assertEquals("/session/s1/question/q-1", request.path)
+            assertEquals("/question/q-1/reply?directory=%2Fworkspace%2Frepo", request.path)
             assertEquals("""{"answers":[["src"],["docs","tests"]]}""", request.body.readUtf8())
         }
 }

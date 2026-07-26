@@ -30,6 +30,7 @@ import kotlinx.serialization.json.buildJsonObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -86,7 +87,7 @@ class ChatViewModelTest {
             val backend = FakeBackend()
             val viewModel = ChatViewModel(backend)
             advanceUntilIdle()
-            viewModel.addAttachment(PromptAttachment("photo.jpg", "image/jpeg", "file:///workspace/photo.jpg"))
+            viewModel.addAttachment(PromptAttachment("photo.jpg", "image/jpeg", "data:image/jpeg;base64,/9j/4AAQ"))
 
             viewModel.sendMessage("")
             advanceUntilIdle()
@@ -148,6 +149,35 @@ class ChatViewModelTest {
 
             assertTrue(viewModel.uiState.value.permissions.isEmpty())
             assertEquals(PermissionResponse.ONCE, backend.permissionResponses.single().third)
+        }
+
+    @Test
+    fun `auto accept approves subagent permissions from a different session`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.setAutoAcceptPermissions(true)
+            viewModel.sendMessage("Delegate work")
+            advanceUntilIdle()
+
+            backend.events.emit(
+                OpenCodeEvent.PermissionAsked(
+                    PermissionRequest(
+                        id = "perm-sub",
+                        sessionId = "subagent-session-42",
+                        permission = "bash",
+                        patterns = listOf("ls"),
+                    ),
+                ),
+            )
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.permissions.isEmpty())
+            val record = backend.permissionResponses.single()
+            assertEquals("subagent-session-42", record.sessionId)
+            assertEquals("perm-sub", record.permissionId)
+            assertEquals(PermissionResponse.ONCE, record.third)
         }
 
     @Test
@@ -633,6 +663,83 @@ class ChatViewModelTest {
             assertFalse(viewModel.uiState.value.isRunning)
         }
 
+    @Test
+    fun `opening a subagent session remembers the session to return to`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Delegate this")
+            advanceUntilIdle()
+
+            viewModel.openSubagentSession("child-1", "Investigate the bug")
+            advanceUntilIdle()
+
+            assertEquals("child-1", viewModel.uiState.value.sessionId)
+            assertEquals(ParentSessionRef("s1", ""), viewModel.uiState.value.parentSession)
+
+            viewModel.openParentSession()
+            advanceUntilIdle()
+
+            assertEquals("s1", viewModel.uiState.value.sessionId)
+            assertEquals("", viewModel.uiState.value.sessionTitle)
+            assertNull(viewModel.uiState.value.parentSession)
+        }
+
+    @Test
+    fun `session opened without a known parent resolves it from the backend`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            backend.sessionsById =
+                mapOf(
+                    "main" to OpenCodeSession(id = "main", title = "Main chat"),
+                    "child-1" to
+                        OpenCodeSession(
+                            id = "child-1",
+                            title = "Investigate the bug",
+                            parentId = "main",
+                        ),
+                )
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.openSession("child-1", "Investigate the bug")
+            advanceUntilIdle()
+
+            assertEquals(ParentSessionRef("main", "Main chat"), viewModel.uiState.value.parentSession)
+        }
+
+    @Test
+    fun `main session opened from history has no return target`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            backend.sessionsById = mapOf("main" to OpenCodeSession(id = "main", title = "Main chat"))
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.openSession("main", "Main chat")
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.parentSession)
+        }
+
+    @Test
+    fun `starting a new chat clears the subagent return target`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+            viewModel.sendMessage("Delegate this")
+            advanceUntilIdle()
+            viewModel.openSubagentSession("child-1", "Investigate the bug")
+            advanceUntilIdle()
+
+            viewModel.newSession()
+
+            assertNull(viewModel.uiState.value.sessionId)
+            assertNull(viewModel.uiState.value.parentSession)
+        }
+
     private fun sessionAssistantMessage(
         sessionId: String,
         messageId: String,
@@ -666,13 +773,17 @@ class ChatViewModelTest {
         var lastCreateDirectory: String? = null
         var historyMessages: List<OpenCodeMessage> = emptyList()
         var historyMessagesBySession: Map<String, List<OpenCodeMessage>> = emptyMap()
+        var sessionsById: Map<String, OpenCodeSession> = emptyMap()
         val sentPrompts = mutableListOf<Pair<String, PromptRequest>>()
         val permissionResponses = mutableListOf<PermissionRecord>()
         val abortedSessions = mutableListOf<String>()
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
 
-        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
+        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = sessionsById.values.toList()
+
+        override suspend fun session(sessionId: String): OpenCodeSession =
+            sessionsById[sessionId] ?: throw IllegalArgumentException("no session $sessionId")
 
         override suspend fun createSession(
             title: String?,

@@ -21,6 +21,7 @@ import com.opencode.android.core.api.PromptRequest
 import com.opencode.android.core.api.ProviderAuthAuthorization
 import com.opencode.android.core.api.ProviderAuthMethod
 import com.opencode.android.core.api.ProviderCatalog
+import com.opencode.android.core.api.QuestionRequest
 import com.opencode.android.data.connection.ConnectionProfile
 import com.opencode.android.runtime.BackendKind
 import com.opencode.android.runtime.OpenCodeBackend
@@ -194,10 +195,17 @@ class LocalOpenCodeBackend(
     ): Boolean = delegate().respondToPermission(sessionId, permissionId, response, remember)
 
     override suspend fun answerQuestion(
-        sessionId: String,
         requestId: String,
         answers: List<List<String>>,
-    ): Boolean = delegate().answerQuestion(sessionId, requestId, answers)
+        directory: String?,
+    ): Boolean = delegate().answerQuestion(requestId, answers, directory)
+
+    override suspend fun rejectQuestion(
+        requestId: String,
+        directory: String?,
+    ): Boolean = delegate().rejectQuestion(requestId, directory)
+
+    override suspend fun pendingQuestions(directory: String?): List<QuestionRequest> = delegate().pendingQuestions(directory)
 
     override suspend fun archiveSession(sessionId: String): OpenCodeSession = delegate().archiveSession(sessionId)
 

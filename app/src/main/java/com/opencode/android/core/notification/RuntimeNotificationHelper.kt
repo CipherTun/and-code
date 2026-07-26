@@ -25,7 +25,11 @@ class RuntimeNotificationHelper(private val context: Context) {
         ensureChannels()
     }
 
-    fun notifyPermission(request: PermissionRequest) {
+    fun notifyPermission(
+        request: PermissionRequest,
+        chatTitle: String?,
+        runtimeId: String,
+    ) {
         if (!canPostNotifications()) return
         val openIntent =
             pendingActivityIntent(
@@ -34,20 +38,26 @@ class RuntimeNotificationHelper(private val context: Context) {
                     mapOf(
                         EXTRA_OPEN_ACTIVITY to true,
                         EXTRA_TARGET_SESSION_ID to request.sessionId,
+                        EXTRA_RUNTIME_ID to runtimeId,
                     ),
             )
-        val allowOnce = permissionActionIntent(request, PermissionResponse.ONCE, remember = false)
-        val allowAlways = permissionActionIntent(request, PermissionResponse.ALWAYS, remember = true)
-        val reject = permissionActionIntent(request, PermissionResponse.REJECT, remember = false)
+        val allowOnce = permissionActionIntent(request, runtimeId, PermissionResponse.ONCE, remember = false)
+        val allowAlways = permissionActionIntent(request, runtimeId, PermissionResponse.ALWAYS, remember = true)
+        val reject = permissionActionIntent(request, runtimeId, PermissionResponse.REJECT, remember = false)
 
         val notification =
             NotificationCompat.Builder(context, CHANNEL_APPROVALS)
                 .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setContentTitle(context.getString(R.string.notification_approval_title))
+                .setContentTitle(
+                    context.getString(R.string.notification_approval_title) + " · " +
+                        (chatTitle?.takeIf(String::isNotBlank) ?: context.getString(R.string.new_chat)),
+                )
                 .setContentText(request.permission)
                 .setStyle(
                     NotificationCompat.BigTextStyle().bigText(
                         buildString {
+                            append(chatTitle?.takeIf(String::isNotBlank) ?: context.getString(R.string.new_chat))
+                            append('\n')
                             append(request.permission)
                             if (request.patterns.isNotEmpty()) {
                                 append('\n')
@@ -67,7 +77,10 @@ class RuntimeNotificationHelper(private val context: Context) {
         safeNotify(permissionNotificationId(request.id), notification)
     }
 
-    fun notifySessionComplete(sessionId: String) {
+    fun notifySessionComplete(
+        sessionId: String,
+        chatTitle: String?,
+    ) {
         if (!canPostNotifications()) return
         val intent =
             pendingActivityIntent(
@@ -82,7 +95,12 @@ class RuntimeNotificationHelper(private val context: Context) {
             NotificationCompat.Builder(context, CHANNEL_STATUS)
                 .setSmallIcon(android.R.drawable.stat_sys_upload_done)
                 .setContentTitle(context.getString(R.string.notification_complete_title))
-                .setContentText(context.getString(R.string.notification_complete_body, sessionId.take(12)))
+                .setContentText(
+                    context.getString(
+                        R.string.notification_complete_body,
+                        chatTitle?.takeIf(String::isNotBlank) ?: context.getString(R.string.new_chat),
+                    ),
+                )
                 .setContentIntent(intent)
                 .setAutoCancel(true)
                 .build()
@@ -137,6 +155,7 @@ class RuntimeNotificationHelper(private val context: Context) {
 
     private fun permissionActionIntent(
         request: PermissionRequest,
+        runtimeId: String,
         response: PermissionResponse,
         remember: Boolean,
     ): PendingIntent {
@@ -144,6 +163,7 @@ class RuntimeNotificationHelper(private val context: Context) {
             Intent(context, PermissionActionReceiver::class.java).apply {
                 action = ACTION_PERMISSION_RESPONSE
                 putExtra(EXTRA_SESSION_ID, request.sessionId)
+                putExtra(EXTRA_RUNTIME_ID, runtimeId)
                 putExtra(EXTRA_PERMISSION_ID, request.id)
                 putExtra(EXTRA_PERMISSION_RESPONSE, response.apiValue)
                 putExtra(EXTRA_PERMISSION_REMEMBER, remember)
@@ -216,6 +236,7 @@ class RuntimeNotificationHelper(private val context: Context) {
 
         /** The key [com.opencode.android.MainActivity] reads to jump straight to a session. */
         const val EXTRA_TARGET_SESSION_ID = "target_session_id"
+        const val EXTRA_RUNTIME_ID = "runtime_id"
         const val EXTRA_PERMISSION_ID = "permission_id"
         const val EXTRA_PERMISSION_RESPONSE = "permission_response"
         const val EXTRA_PERMISSION_REMEMBER = "permission_remember"

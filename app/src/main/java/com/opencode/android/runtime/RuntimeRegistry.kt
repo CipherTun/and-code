@@ -31,6 +31,8 @@ class RuntimeRegistry(
 
     fun remoteProfiles(): List<ConnectionProfile> = store.connections()
 
+    fun target(id: String): RuntimeTarget? = mutableTargets.value.firstOrNull { it.id == id }
+
     /**
      * Selects [id] as the active runtime.
      *

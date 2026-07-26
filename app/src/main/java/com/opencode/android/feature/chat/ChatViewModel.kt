@@ -81,10 +81,11 @@ data class PendingQuestionUi(
     val canSubmit: Boolean
         get() =
             request.questions.indices.all { index ->
+                val prompt = request.questions[index]
                 sanitizeQuestionAnswer(
-                    prompt = request.questions[index],
+                    prompt = prompt,
                     answers = selectedAnswers.getOrElse(index) { emptyList() },
-                    multiple = request.multiple,
+                    multiple = prompt.multiple,
                 ).isNotEmpty()
             }
 
@@ -176,10 +177,18 @@ private fun extractPatchFiles(state: Map<String, JsonElement>): List<String> {
     }
 }
 
+/** The session a subagent conversation was started from, used to walk back to the main agent. */
+data class ParentSessionRef(
+    val id: String,
+    val title: String = "",
+)
+
 data class ChatUiState(
     val backendName: String = "",
     val sessionId: String? = null,
     val sessionTitle: String = "",
+    /** Non-null while the open session is a subagent session spawned by [ParentSessionRef.id]. */
+    val parentSession: ParentSessionRef? = null,
     val messages: List<ChatMessage> = emptyList(),
     val permissions: List<PermissionRequest> = emptyList(),
     val pendingQuestions: List<PendingQuestionUi> = emptyList(),
@@ -246,6 +255,9 @@ class ChatViewModel(
     private var tts: TextToSpeech? = null
     private var contextLimit: Long = 0L
     private val streamedParts = mutableMapOf<String, LinkedHashMap<String, ChatPart>>()
+
+    /** Message id to role, learned from `message.updated`, so user echoes can be skipped. */
+    private val messageRoles = mutableMapOf<String, String>()
     private val connectionMonitor = ConnectionQualityMonitor(viewModelScope)
 
     init {
@@ -417,9 +429,15 @@ class ChatViewModel(
         }
     }
 
+    /**
+     * @param parent the session this one was spawned from when the caller already knows it
+     * (subagent drill-in). When null the parent is resolved from the backend so a subagent session
+     * opened from anywhere else still offers a way back to the main agent.
+     */
     fun openSession(
         sessionId: String,
         title: String = "",
+        parent: ParentSessionRef? = null,
     ) {
         val currentBackend = backend ?: return
         // Switching away from whatever chat was previously loaded here must drop its running
@@ -427,10 +445,12 @@ class ChatViewModel(
         // because the old chat happened to be mid-turn when the user navigated away.
         val switchingSession = _uiState.value.sessionId != sessionId
         streamedParts.clear()
+        messageRoles.clear()
         _uiState.update {
             it.copy(
                 sessionId = sessionId,
                 sessionTitle = title,
+                parentSession = parent,
                 isLoadingHistory = true,
                 messages = emptyList(),
                 permissions = emptyList(),
@@ -440,6 +460,8 @@ class ChatViewModel(
                 error = null,
             )
         }
+        if (parent == null) resolveParentSession(sessionId)
+        refreshPendingQuestions(sessionId)
         viewModelScope.launch {
             runCatching { currentBackend.listMessages(sessionId) }
                 .onSuccess { messages ->
@@ -464,12 +486,52 @@ class ChatViewModel(
         }
     }
 
+    /** Opens a subagent session started by the open chat, remembering the session to return to. */
+    fun openSubagentSession(
+        sessionId: String,
+        title: String = "",
+    ) {
+        val current = _uiState.value
+        val parent = current.sessionId?.let { ParentSessionRef(it, current.sessionTitle) }
+        openSession(sessionId, title, parent)
+    }
+
+    /** Returns from a subagent session to the session that spawned it. */
+    fun openParentSession() {
+        val parent = _uiState.value.parentSession ?: return
+        openSession(parent.id, parent.title)
+    }
+
+    /**
+     * Asks the backend whether the open session is a subagent session. Failures leave the return
+     * affordance hidden rather than surfacing an error the user cannot act on.
+     */
+    private fun resolveParentSession(sessionId: String) {
+        val currentBackend = backend ?: return
+        viewModelScope.launch {
+            val parentId =
+                runCatching { currentBackend.session(sessionId) }.getOrNull()?.parentId
+                    ?: return@launch
+            val parentTitle =
+                runCatching { currentBackend.session(parentId) }.getOrNull()?.title.orEmpty()
+            _uiState.update { state ->
+                if (state.sessionId != sessionId) {
+                    state
+                } else {
+                    state.copy(parentSession = ParentSessionRef(parentId, parentTitle))
+                }
+            }
+        }
+    }
+
     fun newSession() {
         streamedParts.clear()
+        messageRoles.clear()
         _uiState.update {
             it.copy(
                 sessionId = null,
                 sessionTitle = "",
+                parentSession = null,
                 messages = emptyList(),
                 permissions = emptyList(),
                 pendingQuestions = emptyList(),
@@ -550,7 +612,8 @@ class ChatViewModel(
                 val session =
                     if (existingSessionId == null) {
                         currentBackend.createSession(
-                            title = normalized.take(60).ifBlank { "Attachment" },
+                            // Let OpenCode generate the concise chat summary from the first prompt.
+                            title = null,
                             directory = _uiState.value.selectedWorkspacePath,
                         )
                     } else {
@@ -585,6 +648,10 @@ class ChatViewModel(
                         attachments = pendingAttachments,
                     ),
                 )
+                runCatching { currentBackend.session(targetSessionId).title }
+                    .onSuccess { title ->
+                        if (title.isNotBlank()) _uiState.update { it.copy(sessionTitle = title) }
+                    }
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
@@ -708,6 +775,8 @@ class ChatViewModel(
                         state.copy(permissions = state.permissions.filterNot { it.id == permissionId })
                     }
                     onPermissionResolved(permissionId)
+                } else {
+                    _uiState.update { it.copy(error = "OpenCode could not apply that permission response") }
                 }
             }.onFailure { error ->
                 _uiState.update { it.copy(error = error.safeMessage()) }
@@ -732,7 +801,7 @@ class ChatViewModel(
                                 prompt = prompt,
                                 current = pending.selectedAnswers.getOrElse(questionIndex) { emptyList() },
                                 answer = answer,
-                                multiple = pending.request.multiple,
+                                multiple = prompt.multiple,
                             )
                         pending.copy(selectedAnswers = updatedAnswers, error = null)
                     },
@@ -742,14 +811,14 @@ class ChatViewModel(
 
     fun submitQuestion(questionId: String) {
         val currentBackend = backend ?: return
-        val sessionId = _uiState.value.sessionId ?: return
         val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return
         val answers =
             pendingQuestion.request.questions.indices.map { index ->
+                val prompt = pendingQuestion.request.questions[index]
                 sanitizeQuestionAnswer(
-                    prompt = pendingQuestion.request.questions[index],
+                    prompt = prompt,
                     answers = pendingQuestion.selectedAnswers.getOrElse(index) { emptyList() },
-                    multiple = pendingQuestion.request.multiple,
+                    multiple = prompt.multiple,
                 )
             }
         if (answers.any { it.isEmpty() }) {
@@ -784,9 +853,9 @@ class ChatViewModel(
         viewModelScope.launch {
             runCatching {
                 currentBackend.answerQuestion(
-                    sessionId = sessionId,
                     requestId = questionId,
                     answers = answers,
+                    directory = pendingQuestion.workspaceDirectory(),
                 )
             }.onSuccess { accepted ->
                 _uiState.update { state ->
@@ -825,6 +894,38 @@ class ChatViewModel(
     }
 
     /**
+     * The directory the question routes have to be scoped to. What the event stream reported is
+     * authoritative; the selected workspace is the fallback for the older per-instance `/event`
+     * stream, whose frames carry no directory.
+     */
+    private fun PendingQuestionUi.workspaceDirectory(): String? = request.directory ?: _uiState.value.selectedWorkspacePath
+
+    /**
+     * Recovers questions that are already waiting for an answer. A question reaches the chat as an
+     * event and nowhere else, so one asked while this client was not listening — before the app
+     * opened the session, or across a dropped event stream — would otherwise leave the turn
+     * blocked with nothing on screen to unblock it.
+     */
+    private fun refreshPendingQuestions(sessionId: String) {
+        val currentBackend = backend ?: return
+        viewModelScope.launch {
+            val pending =
+                runCatching { currentBackend.pendingQuestions(_uiState.value.selectedWorkspacePath) }
+                    .getOrElse { return@launch }
+                    .filter { it.sessionId == sessionId }
+            if (pending.isEmpty()) return@launch
+            _uiState.update { state ->
+                if (state.sessionId != sessionId) return@update state
+                val known = state.pendingQuestions.map { it.request.id }.toSet()
+                state.copy(
+                    pendingQuestions =
+                        state.pendingQuestions + pending.filterNot { it.id in known }.map(PendingQuestionUi::from),
+                )
+            }
+        }
+    }
+
+    /**
      * Hides the question card and leaves the turn alone, so the user can ignore the question and
      * just keep typing. The request stays open on the OpenCode side; this only affects what the
      * chat shows.
@@ -838,9 +939,9 @@ class ChatViewModel(
     }
 
     /**
-     * Dismisses a question and stops the turn that is waiting on the answer. OpenCode has no
-     * "declined" reply for the question tool, so this is the way to end a turn outright rather
-     * than answering it — [dismissQuestion] is the lighter option that only clears the card.
+     * Declines the question. OpenCode fails the waiting tool call with "the user dismissed this
+     * question", which the agent can react to — unlike [dismissQuestion], which only clears the
+     * card and leaves the request open.
      */
     fun cancelQuestion(questionId: String) {
         val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return
@@ -851,13 +952,14 @@ class ChatViewModel(
         }
         val currentBackend = backend ?: return
         viewModelScope.launch {
-            runCatching { currentBackend.abortSession(pendingQuestion.request.sessionId) }
-                .onSuccess {
-                    _uiState.update { it.copy(isRunning = false, isThinking = false) }
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(error = error.safeMessage()) }
-                }
+            runCatching {
+                currentBackend.rejectQuestion(
+                    requestId = questionId,
+                    directory = pendingQuestion.workspaceDirectory(),
+                )
+            }.onFailure { error ->
+                _uiState.update { it.copy(error = error.safeMessage()) }
+            }
         }
     }
 
@@ -896,13 +998,21 @@ class ChatViewModel(
                                 }
                             }
                     }
+                    refreshPendingQuestions(session)
                 }
                 drainOfflineQueue()
+            }
+            is OpenCodeEvent.MessageUpdated -> {
+                if (event.info.sessionId != activeSession) return
+                messageRoles[event.info.id] = event.info.role
             }
             is OpenCodeEvent.MessagePartUpdated -> {
                 val part = event.part
                 if (part.sessionId != activeSession) return
                 val messageId = part.messageId ?: part.id ?: return
+                // The server echoes the user's own prompt back as parts too; rendering those
+                // would duplicate the bubble the composer already added.
+                if (messageRoles[messageId] == "user") return
                 val partId = part.id ?: messageId
                 val chatPart = part.toChatPart() ?: return
                 val messageParts = streamedParts.getOrPut(messageId) { linkedMapOf() }
@@ -926,7 +1036,6 @@ class ChatViewModel(
                 updateStreamingMessage(event.messageId, messageParts.values.toList())
             }
             is OpenCodeEvent.PermissionAsked -> {
-                if (event.request.sessionId != activeSession) return
                 if (_uiState.value.autoAcceptPermissions) {
                     val request = event.request
                     val autoBackend = backend ?: return
@@ -944,6 +1053,7 @@ class ChatViewModel(
                     }
                     return
                 }
+                if (event.request.sessionId != activeSession) return
                 _uiState.update { state ->
                     state.copy(
                         permissions = state.permissions.filterNot { it.id == event.request.id } + event.request,
@@ -962,23 +1072,28 @@ class ChatViewModel(
                     )
                 }
             }
+            is OpenCodeEvent.PermissionReplied -> {
+                // Answered elsewhere — another device, or the TUI. Drop the stale card.
+                if (event.sessionId != activeSession) return
+                _uiState.update { state ->
+                    state.copy(permissions = state.permissions.filterNot { it.id == event.requestId })
+                }
+            }
+            is OpenCodeEvent.SessionStatusChanged -> {
+                // session.idle is deprecated in favour of session.status; treat idle the same way,
+                // and let a busy status pick up a run that was started from another client.
+                if (event.sessionId != activeSession) return
+                when (event.status) {
+                    "idle" -> handleSessionIdle(event.sessionId)
+                    "busy", "retry" ->
+                        if (!_uiState.value.isRunning) {
+                            _uiState.update { it.copy(isRunning = true) }
+                        }
+                }
+            }
             is OpenCodeEvent.SessionIdle -> {
                 if (event.sessionId != activeSession) return
-                streamedParts.clear()
-                _uiState.update { state ->
-                    state.copy(
-                        messages =
-                            state.messages.map { message ->
-                                if (message.isStreaming) message.copy(isStreaming = false) else message
-                            },
-                        isRunning = false,
-                        isThinking = false,
-                    )
-                }
-                refreshContextUsage(event.sessionId)
-                refreshMessages(event.sessionId)
-                onSessionCreated()
-                drainQueue()
+                handleSessionIdle(event.sessionId)
             }
             is OpenCodeEvent.SessionError -> {
                 if (event.sessionId != null && event.sessionId != activeSession) return
@@ -992,6 +1107,24 @@ class ChatViewModel(
             }
             is OpenCodeEvent.Unknown -> Unit
         }
+    }
+
+    private fun handleSessionIdle(sessionId: String) {
+        streamedParts.clear()
+        _uiState.update { state ->
+            state.copy(
+                messages =
+                    state.messages.map { message ->
+                        if (message.isStreaming) message.copy(isStreaming = false) else message
+                    },
+                isRunning = false,
+                isThinking = false,
+            )
+        }
+        refreshContextUsage(sessionId)
+        refreshMessages(sessionId)
+        onSessionCreated()
+        drainQueue()
     }
 
     private fun refreshMessages(sessionId: String) {
@@ -1052,6 +1185,7 @@ class ChatViewModel(
     }
 
     private fun toUiMessage(message: OpenCodeMessage): ChatMessage? {
+        messageRoles[message.info.id] = message.info.role
         val parts = message.parts.mapNotNull { it.toChatPart() }
         val attachments =
             message.parts.mapNotNull { part ->
@@ -1255,7 +1389,8 @@ private fun sanitizeQuestionAnswer(
 
     val optionLabels = prompt.options.map { it.label }.toSet()
     val selectedOptions = normalizedAnswers.filter { it in optionLabels }.distinct()
-    val fallback = normalizedAnswers.lastOrNull { it !in optionLabels }
+    // A prompt with `custom` off only accepts its own options, so never submit a typed answer.
+    val fallback = normalizedAnswers.lastOrNull { it !in optionLabels }?.takeIf { prompt.custom }
     return if (multiple) {
         selectedOptions + listOfNotNull(fallback)
     } else {

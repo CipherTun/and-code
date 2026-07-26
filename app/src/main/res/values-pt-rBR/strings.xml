@@ -54,6 +54,16 @@
     <string name="tool_input_label">Entrada</string>
     <string name="tool_output_label">Saída</string>
     <string name="tool_output_truncated">…saída truncada</string>
+    <string name="activity_summary_commands">%1$d comando(s) executado(s)</string>
+    <string name="activity_summary_reads">%1$d arquivo(s) lido(s)</string>
+    <string name="activity_summary_edits">%1$d arquivo(s) editado(s)</string>
+    <string name="activity_summary_subagents">%1$d subagente(s) executado(s)</string>
+    <string name="activity_summary_tools">%1$d ferramenta(s) usada(s)</string>
+    <string name="activity_summary_reasoning">%1$d raciocínio(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Atividade</string>
+    <string name="activity_details_open">Mostrar detalhes da atividade</string>
+    <string name="activity_details_close">Fechar</string>
     <string name="file_changes_title">Alterações de arquivos</string>
     <string name="file_changes_generic">Arquivos foram alterados</string>
     <string name="workspace_folder_label">Pasta de trabalho</string>
@@ -104,7 +114,9 @@
     <string name="notification_channel_status">Status da tarefa</string>
     <string name="notification_approval_title">OpenCode precisa de aprovação</string>
     <string name="notification_complete_title">OpenCode terminou</string>
-    <string name="notification_complete_body">A sessão %1$s está ociosa</string>
+    <string name="notification_complete_body">O chat %1$s está ocioso</string>
+    <string name="permission_chat_confirmation">Este chat está aguardando sua aprovação. Escolha o que o OpenCode pode fazer:</string>
+    <string name="permission_response_failed">O OpenCode não conseguiu aplicar essa resposta de permissão.</string>
     <string name="notification_error_title">Erro do OpenCode</string>
     <string name="notification_error_body">Uma sessão falhou</string>
     <string name="notification_permission_failed">Não foi possível enviar a aprovação. Abra o app e tente novamente.</string>
@@ -132,7 +144,7 @@
     <string name="provider_auth_failed">A autenticação do provedor falhou. Tente novamente.</string>
     <string name="continue_label">Continuar</string>
     <string name="question_free_text_label">Outro (digite sua resposta)</string>
-    <string name="question_cancel">Responder depois (parar)</string>
+    <string name="question_cancel">Não responder</string>
     <string name="question_dismiss">Fechar a pergunta</string>
     <string name="assistant_runtime">Ambiente de execução do assistente</string>
     <string name="assistant_workspace">Caminho do espaço de trabalho do assistente</string>
@@ -572,4 +584,9 @@
     <string name="model_visibility_row">Modelos visíveis</string>
     <string name="model_visibility_title">Modelos visíveis</string>
     <string name="model_visibility_caption">Desmarque os modelos para ocultá-los do seletor de modelos.</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Sessão do subagente</string>
+    <string name="subagent_return_to_parent">Voltar ao agente principal: %1$s</string>
+    <string name="subagent_parent_untitled">Sessão principal</string>
 </resources>

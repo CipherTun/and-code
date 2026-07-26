@@ -153,7 +153,9 @@ val appModule =
             RuntimeActivityRepository(
                 registry = get(),
                 scope = get(),
-                onPermissionAsked = notifications::notifyPermission,
+                onPermissionAsked = { request, title, runtimeId ->
+                    notifications.notifyPermission(request, title, runtimeId)
+                },
                 onSessionIdle = notifications::notifySessionComplete,
                 onSessionError = notifications::notifySessionError,
             )

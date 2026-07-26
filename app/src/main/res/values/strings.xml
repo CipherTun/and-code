@@ -54,6 +54,16 @@
     <string name="tool_input_label">Input</string>
     <string name="tool_output_label">Output</string>
     <string name="tool_output_truncated">…output truncated</string>
+    <string name="activity_summary_commands">Ran %1$d command(s)</string>
+    <string name="activity_summary_reads">Read %1$d file(s)</string>
+    <string name="activity_summary_edits">Edited %1$d file(s)</string>
+    <string name="activity_summary_subagents">Ran %1$d subagent(s)</string>
+    <string name="activity_summary_tools">Used %1$d tool(s)</string>
+    <string name="activity_summary_reasoning">Thought %1$d time(s)</string>
+    <string name="activity_summary_separator">, </string>
+    <string name="activity_details_title">Activity</string>
+    <string name="activity_details_open">Show activity details</string>
+    <string name="activity_details_close">Close</string>
     <string name="file_changes_title">File changes</string>
     <string name="file_changes_generic">Files were changed</string>
     <string name="workspace_folder_label">Working folder</string>
@@ -104,7 +114,9 @@
     <string name="notification_channel_status">Task status</string>
     <string name="notification_approval_title">OpenCode needs approval</string>
     <string name="notification_complete_title">OpenCode finished</string>
-    <string name="notification_complete_body">Session %1$s is idle</string>
+    <string name="notification_complete_body">Chat %1$s is idle</string>
+    <string name="permission_chat_confirmation">This chat is waiting for your approval. Choose what OpenCode may do:</string>
+    <string name="permission_response_failed">OpenCode could not apply that permission response.</string>
     <string name="notification_error_title">OpenCode error</string>
     <string name="notification_error_body">A session failed</string>
     <string name="notification_permission_failed">Could not send the approval. Open the app and try again.</string>
@@ -132,7 +144,7 @@
     <string name="provider_auth_failed">Provider authentication failed. Try again.</string>
     <string name="continue_label">Continue</string>
     <string name="question_free_text_label">Other (type your own answer)</string>
-    <string name="question_cancel">Answer later (stop)</string>
+    <string name="question_cancel">Decline to answer</string>
     <string name="question_dismiss">Dismiss question</string>
     <string name="assistant_runtime">Assistant runtime</string>
     <string name="assistant_workspace">Assistant workspace path</string>
@@ -586,4 +598,9 @@
     <string name="split_view">Split</string>
     <string name="diff_stat">+%1$d / -%2$d</string>
     <string name="widget_quick_input_hint">Message OpenCode…</string>
+
+    <!-- Subagent sessions -->
+    <string name="subagent_session_label">Subagent session</string>
+    <string name="subagent_return_to_parent">Back to the main agent: %1$s</string>
+    <string name="subagent_parent_untitled">Main session</string>
 </resources>
