@@ -2,6 +2,10 @@ package com.opencode.android.ui.navigation
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -12,6 +16,7 @@ import com.opencode.android.feature.settings.SettingsScreenV2
 import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.settings.SettingsViewModel
 import com.opencode.android.feature.settings.VoiceSettingsScreen
+import com.opencode.android.feature.support.GitHubSupportSheetHost
 import com.opencode.android.runtime.RuntimeRegistry
 
 fun NavGraphBuilder.settingsNavGraph(
@@ -32,6 +37,8 @@ fun NavGraphBuilder.settingsNavGraph(
     onRequestWakeWordPermission: () -> Unit,
 ) {
     composable(ROUTE_SETTINGS) {
+        var showSupportSheet by remember { mutableStateOf(false) }
+
         SettingsScreenV2(
             assistantConfigured = settingsState.assistantRuntimeId != null,
             notificationsEnabled = notificationsEnabled,
@@ -45,6 +52,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenRemoteConnection = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
             onOpenWorkspaces = { navController.navigate(ROUTE_WORKSPACES) },
             onOpenDiagnostics = onShowDiagnostics,
+            onOpenSupport = { showSupportSheet = true },
             onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
             onOpenServerInfo = { navController.navigate(ROUTE_SETTINGS_SERVER_INFO) },
             currentTheme = preferences.theme,
@@ -62,6 +70,13 @@ fun NavGraphBuilder.settingsNavGraph(
             sendBehavior = preferences.sendBehavior,
             onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
         )
+
+        if (showSupportSheet) {
+            GitHubSupportSheetHost(
+                appVersion = appVersion,
+                onDismiss = { showSupportSheet = false },
+            )
+        }
     }
 
     composable(ROUTE_SETTINGS_VOICE) {

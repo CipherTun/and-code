@@ -324,7 +324,7 @@ class ChatViewModel(
                             }
                             return@launch
                         }
-                        .onFailure { error -> lastError = error.safeMessage("OpenCode operation failed") }
+                        .onFailure { error -> lastError = error.safeMessage() }
                     delay(HEALTH_CHECK_DELAY_MS)
                 }
                 reportError(lastError)

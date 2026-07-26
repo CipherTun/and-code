@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
@@ -75,6 +76,7 @@ fun SettingsScreenV2(
     onOpenRemoteConnection: () -> Unit,
     onOpenWorkspaces: () -> Unit,
     onOpenDiagnostics: () -> Unit,
+    onOpenSupport: () -> Unit = {},
     onOpenMcp: () -> Unit = {},
     onOpenServerInfo: () -> Unit = {},
     onOpenModelVisibility: () -> Unit = {},
@@ -94,7 +96,6 @@ fun SettingsScreenV2(
     sendBehavior: String = "interrupt",
     onSendBehaviorChange: (String) -> Unit = {},
 ) {
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showUiFontDialog by remember { mutableStateOf(false) }
     var showCodeFontDialog by remember { mutableStateOf(false) }
@@ -285,9 +286,9 @@ fun SettingsScreenV2(
                 )
                 SettingsDivider()
                 SettingsRow(
-                    icon = Icons.Default.Info,
-                    title = stringResource(R.string.app_info_row),
-                    onClick = { showAboutDialog = true },
+                    icon = Icons.Default.Star,
+                    title = stringResource(R.string.github_support_button),
+                    onClick = onOpenSupport,
                 )
             }
         }
@@ -315,24 +316,6 @@ fun SettingsScreenV2(
                 item { settingsListContent() }
             }
         }
-    }
-
-    if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            title = { Text(stringResource(R.string.app_info_row)) },
-            text = {
-                Text(
-                    "${stringResource(R.string.app_name)} $appVersion\n" +
-                        stringResource(R.string.unofficial_client),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text(stringResource(R.string.close_description))
-                }
-            },
-        )
     }
 
     if (showThemeDialog) {
