@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -264,7 +265,7 @@ private fun RuntimeRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(
-            imageVector = runtimeAgentIcon(target.agent),
+            painter = painterResource(runtimeAgentIcon(target.agent)),
             contentDescription = stringResource(R.string.cd_runtime_type),
             tint = MaterialTheme.colorScheme.primary,
         )

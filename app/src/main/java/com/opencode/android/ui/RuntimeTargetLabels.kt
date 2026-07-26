@@ -1,11 +1,7 @@
 package com.opencode.android.ui
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.Terminal
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.opencode.android.R
 import com.opencode.android.runtime.LocalAgent
@@ -28,12 +24,13 @@ fun runtimeTargetLabel(target: RuntimeTarget): String {
  * Icon standing in for a runtime.
  *
  * Every local runtime used to share the Android robot, which made the agents indistinguishable at a
- * glance. These are generic marks rather than the products' own logos: those are trademarks, and
- * this app has no licensed copy of them to ship.
+ * glance. Local agents now carry their own product mark; remote connections keep a generic one
+ * because they can be any OpenCode server.
  */
-fun runtimeAgentIcon(agent: LocalAgent?): ImageVector =
+@DrawableRes
+fun runtimeAgentIcon(agent: LocalAgent?): Int =
     when (agent) {
-        LocalAgent.CLAUDE_CODE -> Icons.Default.AutoAwesome
-        LocalAgent.OPEN_CODE -> Icons.Default.Terminal
-        null -> Icons.Default.Computer
+        LocalAgent.CLAUDE_CODE -> R.drawable.ic_agent_claude
+        LocalAgent.OPEN_CODE -> R.drawable.ic_agent_opencode
+        null -> R.drawable.ic_runtime_remote
     }
