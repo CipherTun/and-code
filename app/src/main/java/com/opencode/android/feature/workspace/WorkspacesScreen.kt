@@ -489,6 +489,14 @@ fun WorkspacesScreen(
                     }
                 }
             }
+            state.claudeError?.let { error ->
+                item {
+                    SectionCard {
+                        Text("Claude Code installation failed", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold)
+                        Text(error, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
     }
 

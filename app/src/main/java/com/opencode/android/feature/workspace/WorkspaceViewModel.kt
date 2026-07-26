@@ -42,6 +42,7 @@ data class WorkspaceUiState(
     val localStatus: LocalRuntimeStatus = LocalRuntimeStatus.NotInstalled,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val claudeError: String? = null,
 )
 
 class WorkspaceViewModel(
@@ -54,6 +55,8 @@ class WorkspaceViewModel(
     private val claudeCodeInstaller: (suspend () -> Unit)? = null,
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
+    private val claudeError = MutableStateFlow<String?>(null)
+    private val installState = combine(registeredTick, claudeError) { _, error -> error }
 
     val state: StateFlow<WorkspaceUiState> =
         combine(
@@ -61,8 +64,8 @@ class WorkspaceViewModel(
             registry.selected,
             catalog.state,
             localRuntimeManager.state,
-            registeredTick,
-        ) { targets, selected, runtime, localStatus, _ ->
+            installState,
+        ) { targets, selected, runtime, localStatus, installError ->
             val profiles = registry.remoteProfiles()
             // Read imperatively: the registry recomputes this set while building the target list, so
             // it is already up to date by the time `targets` emits.
@@ -85,6 +88,7 @@ class WorkspaceViewModel(
                 localStatus = localStatus,
                 isRefreshing = runtime.isRefreshing,
                 error = runtime.error,
+                claudeError = installError,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
 
@@ -190,10 +194,16 @@ class WorkspaceViewModel(
 
     fun reinstallLocalRuntime() = localRuntimeController.reinstall()
 
-    fun installClaudeCode() =
-        claudeCodeInstaller?.let { installer ->
-            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { installer() }
+    fun installClaudeCode() {
+        val installer = claudeCodeInstaller ?: return
+        claudeError.value = null
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { installer() }
+                .onFailure { error ->
+                    claudeError.value = error.message ?: "Claude Code installation failed"
+                }
         }
+    }
 
     fun authenticateClaudeCode() {
         val target =
