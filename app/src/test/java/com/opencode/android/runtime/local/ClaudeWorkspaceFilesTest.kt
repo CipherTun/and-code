@@ -1,6 +1,7 @@
 package com.opencode.android.runtime.local
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -84,6 +85,17 @@ class ClaudeWorkspaceFilesTest {
         assertEquals("README.md", match.path.text)
         assertEquals(2, match.lineNumber)
         assertEquals(0, match.absoluteOffset)
+    }
+
+    @Test
+    fun `counts the lines of a file so an untracked change has a size`() {
+        assertEquals(2, files.countLines("/workspace/project", "README.md"))
+    }
+
+    @Test
+    fun `counts nothing for a directory or a path outside the workspace`() {
+        assertNull(files.countLines("/workspace/project", "src"))
+        assertNull(files.countLines("/workspace/project", "../outside.txt"))
     }
 
     private fun write(

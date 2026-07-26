@@ -99,6 +99,21 @@ class ClaudeWorkspaceFiles(private val workspaceHostDir: File) {
         return matches
     }
 
+    /**
+     * Lines in a file, or null when it cannot be counted.
+     *
+     * Untracked files are absent from `git diff`, so their size has to come from the file itself if
+     * the changes list is to say the same thing OpenCode's server says about the same repository.
+     */
+    fun countLines(
+        directory: String,
+        path: String,
+    ): Int? {
+        val root = canonical(resolveRoot(directory)) ?: return null
+        val file = resolve(root, path)?.takeIf { it.isFile && it.length() <= MAX_READ_BYTES } ?: return null
+        return runCatching { file.useLines { lines -> lines.count() } }.getOrNull()
+    }
+
     private fun walk(root: File) =
         root.walkTopDown()
             .onEnter { it.name != ".git" && it.name != "node_modules" }

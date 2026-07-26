@@ -330,7 +330,13 @@ class ClaudeCodeTarget(
             // repository with no commits has nothing to diff against, hence the empty fallback.
             val counts =
                 ClaudeWorkspaceGit.parseNumstat(runtime.runInWorkspace(directory, ClaudeWorkspaceGit.NUMSTAT_SCRIPT).orEmpty())
-            ClaudeWorkspaceGit.parseStatus(status, counts)
+            ClaudeWorkspaceGit.parseStatus(status, counts).map { change ->
+                // An untracked file has nothing to diff against, so git reports no counts for it.
+                // Its own length is the addition, which is what OpenCode's server reports too.
+                if (change.status != "added" || change.added > 0) return@map change
+                val lines = change.path?.let { files.countLines(directory, it) } ?: return@map change
+                change.copy(added = lines, additions = lines.toDouble())
+            }
         }
 
     override suspend fun vcsDiff(
