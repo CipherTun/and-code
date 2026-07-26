@@ -14,10 +14,11 @@ class AttachmentImporter(
     fun import(uri: Uri): PromptAttachment {
         val filename = sanitize(queryDisplayName(uri) ?: "attachment-${System.currentTimeMillis()}")
         val mime = context.contentResolver.getType(uri) ?: "application/octet-stream"
-        val bytes = context.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "Cannot open attachment input stream" }
-            input.readBytes()
-        }
+        val bytes =
+            context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { "Cannot open attachment input stream" }
+                input.readBytes()
+            }
         val encoded = Base64.encodeToString(bytes, Base64.NO_WRAP)
         return PromptAttachment(
             filename = filename,

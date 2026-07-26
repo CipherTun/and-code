@@ -185,9 +185,9 @@ class OpenCodeApplication : Application() {
             RuntimeActivityRepository(
                 registry = runtimeRegistry,
                 scope = applicationScope,
-                 onPermissionAsked = { request, title, runtimeId ->
-                     notifications.notifyPermission(request, title, runtimeId)
-                 },
+                onPermissionAsked = { request, title, runtimeId ->
+                    notifications.notifyPermission(request, title, runtimeId)
+                },
                 onPermissionResolved = notifications::cancelPermission,
                 onSessionIdle = notifications::notifySessionComplete,
                 onSessionError = notifications::notifySessionError,
