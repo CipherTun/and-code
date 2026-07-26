@@ -1,8 +1,11 @@
 package com.opencode.android.feature.chat
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -192,6 +195,14 @@ fun ChatHomeScreen(
             if (bitmap != null) {
                 attachedImages.add(bitmap)
                 onImageAttachment(bitmap)
+            }
+        }
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) {
+                cameraLauncher.launch(null)
             }
         }
     val galleryLauncher =
@@ -434,7 +445,15 @@ fun ChatHomeScreen(
                         attachedImages.removeAt(it)
                         onRemoveAttachment(it)
                     },
-                    onCameraLaunch = { cameraLauncher.launch(null) },
+                    onCameraLaunch = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                            == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            cameraLauncher.launch(null)
+                        } else {
+                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
+                    },
                     onGalleryLaunch = {
                         galleryLauncher.launch(
                             androidx.activity.result.PickVisualMediaRequest(
