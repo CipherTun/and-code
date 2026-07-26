@@ -390,15 +390,27 @@ fun OpenCodeApp(
         }
     }
 
-    LaunchedEffect(preferences.providerId, preferences.modelId, preferences.agentId, settingsState.providers) {
-        chatViewModel.selectConfiguration(
-            preferences.providerId,
-            preferences.modelId,
-            preferences.agentId,
+    LaunchedEffect(
+        preferences.providerId,
+        preferences.modelId,
+        preferences.agentId,
+        settingsState.providers,
+        settingsState.agents,
+    ) {
+        // Provider, model and agent are all remembered globally, so a selection made against one
+        // runtime survives a switch to another that has never heard of it. Forwarding one is not a
+        // cosmetic problem: the runtime rejects the prompt and no message is created at all. Each is
+        // only passed on once the active runtime's catalogue confirms it, and dropping it lets the
+        // runtime fall back to its own default.
+        val model =
             settingsState.providers
                 .firstOrNull { it.id == preferences.providerId }
                 ?.models?.get(preferences.modelId)
-                ?.limit?.context ?: 0L,
+        chatViewModel.selectConfiguration(
+            preferences.providerId?.takeIf { model != null },
+            preferences.modelId?.takeIf { model != null },
+            preferences.agentId?.takeIf { id -> settingsState.agents.any { it.name == id } },
+            model?.limit?.context ?: 0L,
         )
     }
 

@@ -84,20 +84,34 @@ class ClaudeCodeRuntime(
 
     fun isInstalled(): Boolean = installedRuntimeProvider()?.rootfs?.let(ClaudeCodeInstaller::isInstalledIn) == true
 
+    /**
+     * Cached because reading it is not cheap: it starts a ~250 MB binary under PRoot, and the UI
+     * asks for it on every refresh and health check. Enough of those at once put the device under
+     * memory pressure and got the OpenCode server killed alongside them. The value only changes on
+     * install or update, and both clear it.
+     */
+    @Volatile
+    private var cachedVersion: String? = null
+
     fun version(): String? {
+        cachedVersion?.let { return it }
         if (!isInstalled()) return null
         val result = runCommand("${ClaudeCodeInstaller.CLAUDE_BINARY} --version", timeoutSeconds = 120)
         if (result.exitCode != 0) return null
-        return result.output
+        return readVersion(result.output).also { cachedVersion = it }
+    }
+
+    private fun readVersion(output: String): String? =
+        output
             .lineSequence()
             .map(String::trim)
             .firstOrNull { it.isNotEmpty() }
             ?.let { line -> VERSION.find(line)?.value ?: line }
-    }
 
     /** Installs Claude Code into the already-provisioned sandbox. */
     fun install(onStep: (ClaudeCodeInstaller.Step) -> Unit = {}) {
         val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
+        cachedVersion = null
         accessCoordinator.write {
             ClaudeCodeInstaller.installInto(runtime.rootfs, runtime.commandSuite, runtimeDirectory, onStep)
         }
@@ -105,6 +119,7 @@ class ClaudeCodeRuntime(
 
     fun update() {
         val runtime = installedRuntimeProvider() ?: error(messages.runtimeMissing)
+        cachedVersion = null
         accessCoordinator.write {
             ClaudeCodeInstaller.updateIn(runtime.rootfs, runtime.commandSuite, runtimeDirectory)
         }
