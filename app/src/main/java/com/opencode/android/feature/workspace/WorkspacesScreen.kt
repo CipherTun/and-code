@@ -91,6 +91,8 @@ fun WorkspacesScreen(
     onStartLocal: () -> Unit,
     onStopLocal: () -> Unit,
     onReinstallLocal: () -> Unit,
+    onInstallClaude: () -> Unit = {},
+    onAuthenticateClaude: () -> Unit = {},
     onOpenLocalManagement: () -> Unit,
     onImportFolder: () -> Unit = {},
     onCloneGithub: () -> Unit = {},
@@ -243,7 +245,11 @@ fun WorkspacesScreen(
                 val remoteProfile = state.connections.firstOrNull { it.id == target.id }
                 SectionCard(
                     modifier =
-                        Modifier.clickable(enabled = target.type == RuntimeType.REMOTE || state.localStatus is LocalRuntimeStatus.Ready) {
+                        Modifier.clickable(
+                            enabled = target.type == RuntimeType.REMOTE ||
+                                target.id == "claude-code-local" ||
+                                state.localStatus is LocalRuntimeStatus.Ready,
+                        ) {
                             onSelectRuntime(target.id)
                         },
                 ) {
@@ -276,7 +282,22 @@ fun WorkspacesScreen(
                             }
                         }
                     }
-                    if (target.type == RuntimeType.LOCAL) {
+                    if (target.id == "claude-code-local") {
+                        Spacer(Modifier.height(12.dp))
+                        Text("Claude Code runs locally in the shared Linux environment.", style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(8.dp))
+                        if (target.state is RuntimeState.Connected) {
+                            Text("Installed: ${(target.state as RuntimeState.Connected).version}")
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = onAuthenticateClaude, modifier = Modifier.fillMaxWidth()) {
+                                Text("Sign in to Claude")
+                            }
+                        } else {
+                            Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
+                                Text("Install Claude Code")
+                            }
+                        }
+                    } else if (target.type == RuntimeType.LOCAL) {
                         Spacer(Modifier.height(12.dp))
                         when (val local = state.localStatus) {
                             LocalRuntimeStatus.NotInstalled -> {
@@ -632,7 +653,15 @@ private fun targetSubtitle(
     localStatus: LocalRuntimeStatus,
     remoteUrl: String?,
 ): String =
-    when (target.type) {
+    if (target.id == "claude-code-local") {
+        when (val runtimeState = target.state) {
+            is RuntimeState.Connected -> "Ready · ${runtimeState.version}"
+            is RuntimeState.Failed -> runtimeState.message
+            is RuntimeState.Unavailable -> runtimeState.reason
+            RuntimeState.Connecting -> "Installing or starting"
+            RuntimeState.Disconnected -> "Not installed"
+        }
+    } else when (target.type) {
         RuntimeType.REMOTE ->
             when (val runtimeState = target.state) {
                 is RuntimeState.Connected -> stringResource(R.string.connected_at_url, runtimeState.version, remoteUrl.orEmpty())

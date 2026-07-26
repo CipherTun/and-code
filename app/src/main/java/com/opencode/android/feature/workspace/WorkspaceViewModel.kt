@@ -51,6 +51,7 @@ class WorkspaceViewModel(
     private val localRuntimeController: LocalRuntimeServiceController,
     private val settings: SecureSettingsRepository,
     private val workspaceHostDir: File,
+    private val claudeCodeInstaller: (suspend () -> Unit)? = null,
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
 
@@ -188,6 +189,20 @@ class WorkspaceViewModel(
     fun stopLocalRuntime() = localRuntimeController.stop()
 
     fun reinstallLocalRuntime() = localRuntimeController.reinstall()
+
+    fun installClaudeCode() =
+        claudeCodeInstaller?.let { installer ->
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { installer() }
+        }
+
+    fun authenticateClaudeCode() {
+        val target = registry.targets.value.firstOrNull { it.id == "claude-code-local" } as? com.opencode.android.runtime.local.ClaudeCodeTarget
+            ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            target.authLogin()
+            refresh()
+        }
+    }
 
     fun refresh() {
         registry.refresh()

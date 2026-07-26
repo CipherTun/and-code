@@ -66,6 +66,8 @@ fun NavGraphBuilder.workspaceNavGraph(
             onStartLocal = workspaceViewModel::startLocalRuntime,
             onStopLocal = workspaceViewModel::stopLocalRuntime,
             onReinstallLocal = workspaceViewModel::reinstallLocalRuntime,
+            onInstallClaude = workspaceViewModel::installClaudeCode,
+            onAuthenticateClaude = workspaceViewModel::authenticateClaudeCode,
             onOpenLocalManagement = {
                 navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE)
             },

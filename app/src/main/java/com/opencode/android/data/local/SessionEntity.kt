@@ -12,4 +12,5 @@ data class SessionEntity(
     val updatedAt: Long,
     val providerId: String?,
     val modelId: String?,
+    val agentType: String = "OPEN_CODE",
 )

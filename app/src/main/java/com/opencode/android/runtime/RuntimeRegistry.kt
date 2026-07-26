@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class RuntimeRegistry(
     private val store: RuntimeConnectionStore,
     private val localTarget: RuntimeTarget,
+    private val additionalTargets: List<RuntimeTarget> = emptyList(),
     private val remoteFactory: (ConnectionProfile) -> RuntimeTarget = { profile ->
         RemoteRuntimeTarget(profile)
     },
@@ -108,6 +109,7 @@ class RuntimeRegistry(
         val targets =
             buildList {
                 add(localTarget)
+                addAll(additionalTargets)
                 store.connections().forEach { profile ->
                     // A stored endpoint can stop being usable across app versions (tightened URL
                     // rules) or arrive broken from a QR payload. Building the target must not throw

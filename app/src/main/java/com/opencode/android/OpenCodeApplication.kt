@@ -28,6 +28,8 @@ import com.opencode.android.runtime.local.LocalRuntimeServiceController
 import com.opencode.android.runtime.local.LocalRuntimeTarget
 import com.opencode.android.runtime.local.LocalRuntimeUpdater
 import com.opencode.android.runtime.local.VerifiedRuntimeDownloader
+import com.opencode.android.runtime.local.ClaudeCodeRuntime
+import com.opencode.android.runtime.local.ClaudeCodeTarget
 import com.opencode.android.startup.CatalogReconcileInitializer
 import com.opencode.android.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope
@@ -77,6 +79,9 @@ class OpenCodeApplication : Application() {
     lateinit var commandRunner: LocalRuntimeCommandRunner
         private set
 
+    lateinit var claudeCodeRuntime: ClaudeCodeRuntime
+        private set
+
     override fun onCreate() {
         super.onCreate()
         startKoin {
@@ -117,6 +122,7 @@ class OpenCodeApplication : Application() {
                 installedRuntimeProvider = installer::installedRuntime,
                 accessCoordinator = accessCoordinator,
             )
+        claudeCodeRuntime = ClaudeCodeRuntime(runtimeDirectory, installer::installedRuntime, accessCoordinator)
         gitCloneRepository =
             GitCloneRepository(
                 runtimeDirectory = runtimeDirectory,
@@ -179,6 +185,7 @@ class OpenCodeApplication : Application() {
             RuntimeRegistry(
                 store = settings,
                 localTarget = LocalRuntimeTarget(localRuntimeManager),
+                additionalTargets = listOf(ClaudeCodeTarget(claudeCodeRuntime)),
             )
         catalogRepository = RuntimeCatalogRepository(runtimeRegistry, applicationScope)
         activityRepository =
