@@ -39,10 +39,13 @@ fun StatusDot(
     val tc = LocalThemeColors.current
 
     if (status == SessionStatus.RUNNING) {
+        // The indicator used to be a 12dp ring with a 1.5dp stroke, which read as a static green
+        // dot on a dense drawer row because the arc was too thin to show its rotation. A larger
+        // ring with a thicker stroke makes the spinning arc unmistakable while a run is active.
         CircularProgressIndicator(
-            modifier = modifier.size(size + 4.dp),
+            modifier = modifier.size(size + 6.dp),
             color = tc.statusRunning,
-            strokeWidth = 1.5.dp,
+            strokeWidth = 2.dp,
         )
         return
     }

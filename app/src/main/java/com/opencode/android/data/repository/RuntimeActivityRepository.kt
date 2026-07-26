@@ -196,7 +196,11 @@ class RuntimeActivityRepository(
             is OpenCodeEvent.MessagePartUpdated -> {
                 val sessionId = event.part.sessionId ?: return
                 mutableState.update { current ->
-                    current.copy(activeSessionIds = current.activeSessionIds + sessionId)
+                    if (sessionId in current.completedSessionIds) {
+                        current
+                    } else {
+                        current.copy(activeSessionIds = current.activeSessionIds + sessionId)
+                    }
                 }
                 when (event.part.type) {
                     "tool", "tool-invocation" -> appendLog("ツール実行", event.part.tool, sessionId)
@@ -205,7 +209,11 @@ class RuntimeActivityRepository(
             }
             is OpenCodeEvent.MessagePartDelta -> {
                 mutableState.update { current ->
-                    current.copy(activeSessionIds = current.activeSessionIds + event.sessionId)
+                    if (event.sessionId in current.completedSessionIds) {
+                        current
+                    } else {
+                        current.copy(activeSessionIds = current.activeSessionIds + event.sessionId)
+                    }
                 }
             }
             is OpenCodeEvent.PermissionAsked -> {
@@ -234,7 +242,11 @@ class RuntimeActivityRepository(
             }
             is OpenCodeEvent.MessageUpdated -> {
                 mutableState.update { current ->
-                    current.copy(activeSessionIds = current.activeSessionIds + event.info.sessionId)
+                    if (event.info.sessionId in current.completedSessionIds) {
+                        current
+                    } else {
+                        current.copy(activeSessionIds = current.activeSessionIds + event.info.sessionId)
+                    }
                 }
             }
             is OpenCodeEvent.PermissionReplied -> {
@@ -245,13 +257,13 @@ class RuntimeActivityRepository(
                 onPermissionResolved?.invoke(event.requestId)
             }
             is OpenCodeEvent.SessionStatusChanged -> {
-                // Completion notifications stay driven by session.idle so a finished run is
-                // never announced twice.
                 mutableState.update { current ->
                     current.copy(
                         activeSessionIds =
                             if (event.status == "idle") {
                                 current.activeSessionIds - event.sessionId
+                            } else if (event.sessionId in current.completedSessionIds) {
+                                current.activeSessionIds
                             } else {
                                 current.activeSessionIds + event.sessionId
                             },
