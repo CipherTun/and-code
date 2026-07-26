@@ -402,10 +402,11 @@ class OpenCodeApiClient(
             buildJsonObject {
                 put("response", apiResponse)
             }
-        return post(
+        postWithoutResponse(
             "session/${encodePath(sessionId)}/permissions/${encodePath(permissionId)}",
             body,
         )
+        return true
     }
 
     /**
@@ -431,11 +432,12 @@ class OpenCodeApiClient(
                     },
                 )
             }
-        return post(
+        postWithoutResponse(
             "question/${encodePath(requestId)}/reply",
             body,
             query("directory" to directory),
         )
+        return true
     }
 
     /** Declines a question outright, which fails the waiting tool call without killing the turn. */
@@ -617,9 +619,10 @@ class OpenCodeApiClient(
     private suspend fun postWithoutResponse(
         path: String,
         body: JsonObject,
+        queryParameters: List<Pair<String, String>> = emptyList(),
     ) = withContext(Dispatchers.IO) {
         val request =
-            requestBuilder(path)
+            requestBuilder(path, queryParameters)
                 .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
         execute(request) { Unit }
