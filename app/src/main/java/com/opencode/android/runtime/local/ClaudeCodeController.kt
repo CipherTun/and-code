@@ -58,6 +58,13 @@ class ClaudeCodeController(
 
     private var installJob: Job? = null
 
+    init {
+        // Without this the state starts empty and stays that way until something triggers a
+        // refresh, so a sandbox that already has Claude Code reads as "not installed" on every
+        // launch.
+        refresh()
+    }
+
     /** Reads the sandbox to find out whether Claude Code is installed and signed in. */
     fun refresh() {
         if (installJob?.isActive == true) return

@@ -18,7 +18,6 @@ import com.opencode.android.feature.workspace.TerminalScreen
 import com.opencode.android.feature.workspace.TerminalViewModel
 import com.opencode.android.feature.workspace.WorkspaceExplorerScreen
 import com.opencode.android.feature.workspace.WorkspaceExplorerViewModel
-import com.opencode.android.feature.workspace.WorkspaceUiState
 import com.opencode.android.feature.workspace.WorkspaceViewModel
 import com.opencode.android.feature.workspace.WorkspacesScreen
 import com.opencode.android.runtime.RuntimeTarget
@@ -30,7 +29,6 @@ import kotlinx.coroutines.withContext
 fun NavGraphBuilder.workspaceNavGraph(
     navController: NavController,
     workspaceViewModel: WorkspaceViewModel,
-    workspaceState: WorkspaceUiState,
     selectedWorkspace: WorkspaceRef?,
     onSelectWorkspace: (WorkspaceRef?) -> Unit,
     selectedRuntime: RuntimeTarget?,
@@ -52,6 +50,10 @@ fun NavGraphBuilder.workspaceNavGraph(
 
     composable(ROUTE_WORKSPACES) {
         val context = androidx.compose.ui.platform.LocalContext.current
+        // Collected here rather than passed in: NavHost remembers the graph, so a state value
+        // handed to this builder would stay frozen at whatever it was on first composition and
+        // every later update — runtime installs, health checks — would never reach the screen.
+        val workspaceState by workspaceViewModel.state.collectAsState()
         WorkspacesScreen(
             state = workspaceState,
             onSelectRuntime = workspaceViewModel::selectRuntime,

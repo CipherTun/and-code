@@ -417,6 +417,7 @@ fun ChatHomeScreen(
             if (!runtimeNotReady) {
                 ChatComposer(
                     input = input,
+                    agentName = state.agentName,
                     onInputChange = {
                         input = it
                         showSlashCommands = it.startsWith("/")
@@ -759,6 +760,8 @@ private fun ChatErrorCard(
 @Composable
 private fun ChatComposer(
     input: String,
+    /** Agent the session runs on, so the prompt addresses it by name. */
+    agentName: String,
     onInputChange: (String) -> Unit,
     isRunning: Boolean,
     onSend: () -> Unit,
@@ -895,7 +898,10 @@ private fun ChatComposer(
                 ) {
                     if (input.isEmpty()) {
                         Text(
-                            text = stringResource(R.string.chat_message_placeholder),
+                            text =
+                                agentName.takeIf(String::isNotBlank)
+                                    ?.let { stringResource(R.string.message_agent_hint, it) }
+                                    ?: stringResource(R.string.chat_message_placeholder),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

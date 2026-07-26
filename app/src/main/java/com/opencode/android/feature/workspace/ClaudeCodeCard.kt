@@ -126,13 +126,6 @@ private fun InstalledSection(
     onOpenUrl: (String) -> Unit,
     showInstallActions: Boolean,
 ) {
-    claude.version?.let { version ->
-        Text(
-            text = stringResource(R.string.claude_installed_version, version),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
     when (val auth = claude.auth) {
         ClaudeAuthCoordinator.State.Starting -> {
             Text(stringResource(R.string.claude_auth_starting), style = MaterialTheme.typography.bodySmall)

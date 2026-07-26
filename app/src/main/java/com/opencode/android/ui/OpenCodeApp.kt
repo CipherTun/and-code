@@ -797,7 +797,6 @@ fun OpenCodeApp(
                 workspaceNavGraph(
                     navController = navController,
                     workspaceViewModel = workspaceViewModel,
-                    workspaceState = workspaceState,
                     selectedWorkspace = selectedWorkspace,
                     onSelectWorkspace = { selectedWorkspace = it },
                     selectedRuntime = selectedRuntime,
