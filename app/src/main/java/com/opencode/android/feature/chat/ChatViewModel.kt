@@ -393,6 +393,7 @@ class ChatViewModel(
     }
 
     fun removeAttachment(index: Int) {
+        _uiState.value.imagePreviews.getOrNull(index)?.let { if (!it.isRecycled) it.recycle() }
         _uiState.update { state ->
             state.copy(
                 attachments = state.attachments.filterIndexed { i, _ -> i != index },
@@ -587,6 +588,7 @@ class ChatViewModel(
                         attachments = pendingAttachments,
                     ),
                 )
+                _uiState.value.imagePreviews.forEach { bmp -> if (!bmp.isRecycled) bmp.recycle() }
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
@@ -1155,6 +1157,10 @@ class ChatViewModel(
     }
 
     override fun onCleared() {
+        _uiState.value.imagePreviews.forEach { if (!it.isRecycled) it.recycle() }
+        _uiState.value.messages.forEach { msg ->
+            msg.imagePreviews.forEach { if (!it.isRecycled) it.recycle() }
+        }
         eventJob?.cancel()
         tts?.stop()
         tts = null

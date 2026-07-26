@@ -42,12 +42,10 @@ import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 private enum class OnboardingOption { ANDROID, REMOTE }
 
 /** First run requires one usable execution path before chat can start. */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun OnboardingChoiceScreen(
     onSelectAndroid: () -> Unit,
     onSelectRemote: () -> Unit,
-    onAddRemoteLater: () -> Unit,
 ) {
     var selected by remember { mutableStateOf(OnboardingOption.ANDROID) }
 
@@ -67,7 +65,7 @@ fun OnboardingChoiceScreen(
         ) {
             Icon(
                 imageVector = Icons.Default.Terminal,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_app_logo),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier =
                     Modifier
@@ -181,7 +179,7 @@ private fun OnboardingCard(
         ) {
             Icon(
                 icon,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_onboarding_option),
                 tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp),
             )
@@ -223,6 +221,6 @@ private fun OnboardingCard(
 @Composable
 private fun OnboardingChoiceScreenPreview() {
     OpenCodeAndroidTheme {
-        OnboardingChoiceScreen(onSelectAndroid = {}, onSelectRemote = {}, onAddRemoteLater = {})
+        OnboardingChoiceScreen(onSelectAndroid = {}, onSelectRemote = {})
     }
 }
