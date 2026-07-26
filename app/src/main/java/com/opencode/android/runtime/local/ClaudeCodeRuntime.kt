@@ -547,9 +547,9 @@ class ClaudeCodeTarget(private val runtime: ClaudeCodeRuntime) : RuntimeTarget {
     }
 
     override suspend fun answerQuestion(
-        sessionId: String,
         requestId: String,
         answers: List<List<String>>,
+        directory: String?,
     ): Boolean {
         runtime.answerQuestion(answers.flatten().joinToString(", "))
         return true
