@@ -53,7 +53,11 @@ class GitHubAuthRepository(
             require(isConfigured) { "GitHub client ID is not configured" }
             // repo: git push, PR creation, private repos. workflow: push/modify .github/workflows.
             // read:org: org repo visibility. gist: log/output sharing. notifications: PR updates.
-            val body = FormBody.Builder().add("client_id", clientId).add("scope", "read:user read:org repo workflow gist notifications").build()
+            val body =
+                FormBody.Builder().add(
+                    "client_id",
+                    clientId,
+                ).add("scope", "read:user read:org repo workflow gist notifications").build()
             executeJson("https://github.com/login/device/code", body)
         }
 
