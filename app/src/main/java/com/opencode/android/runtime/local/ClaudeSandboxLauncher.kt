@@ -59,6 +59,10 @@ object ClaudeSandboxLauncher {
                 // Alpine's ripgrep instead.
                 "USE_BUILTIN_RIPGREP" to "0",
                 "CLAUDE_CODE_DISABLE_AUTOUPDATER" to "1",
+                // PRoot presents a fake uid 0, and Claude Code refuses bypassPermissions as root
+                // unless it is told it is sandboxed. The rootfs is exactly that: app-private
+                // storage reachable only through the bind mounts declared above.
+                "IS_SANDBOX" to "1",
                 "TERM" to "xterm-256color",
                 "CI" to "1",
             )

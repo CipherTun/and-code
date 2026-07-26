@@ -1003,13 +1003,6 @@ private fun ChatComposer(
                         maxWidth = 168.dp,
                         onClick = onModelChipClick,
                     )
-                    if (thinkingOptions.isNotEmpty()) {
-                        ThinkingChip(
-                            options = thinkingOptions,
-                            selected = selectedVariant,
-                            onSelect = onSelectVariant,
-                        )
-                    }
                     Spacer(Modifier.weight(1f))
                     if (isListening) {
                         VolumeMeter(amplitude = 0.5f, idle = true)
@@ -1103,6 +1096,13 @@ private fun ChatComposer(
                 AutoAcceptChip(
                     enabled = autoAcceptPermissions,
                     onToggle = onToggleAutoAccept,
+                )
+            }
+            if (thinkingOptions.isNotEmpty()) {
+                ThinkingChip(
+                    options = thinkingOptions,
+                    selected = selectedVariant,
+                    onSelect = onSelectVariant,
                 )
             }
             if (contextLimit > 0L) {
@@ -1252,7 +1252,9 @@ private fun ModeChip(
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val label = selectedAgentId ?: "build"
+    // The selection is remembered across runtimes, so an id this runtime does not offer would
+    // otherwise label the chip with another agent's name.
+    val label = selectedAgentId?.takeIf { id -> agents.isEmpty() || agents.any { it.name == id } } ?: "build"
     Box {
         Surface(
             modifier =

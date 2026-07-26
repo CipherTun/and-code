@@ -33,6 +33,7 @@ private data class ClaudeSessionRecord(
     @SerialName("session") val session: OpenCodeSession,
     @SerialName("permissionMode") val permissionMode: String = ClaudePermissionMode.DEFAULT.cliValue,
     @SerialName("model") val model: String = ClaudeModels.DEFAULT_MODEL,
+    @SerialName("effort") val effort: String? = null,
 )
 
 /** Exposes the Android-local Claude Code agent as a selectable runtime. */
@@ -184,9 +185,10 @@ class ClaudeCodeTarget(
     ) {
         val record = records[sessionId] ?: error("Claude Code session not found")
         val model = request.modelId ?: record.model
-        // Remembered so reopening the chat keeps the model the user last picked.
-        if (model != record.model) {
-            records[sessionId] = record.copy(model = model)
+        val effort = request.variant ?: record.effort
+        // Remembered so reopening the chat keeps what the user last picked.
+        if (model != record.model || effort != record.effort) {
+            records[sessionId] = record.copy(model = model, effort = effort)
             persist()
         }
         withContext(Dispatchers.IO) {
@@ -196,6 +198,7 @@ class ClaudeCodeTarget(
                 prompt = request.text,
                 permissionMode = ClaudePermissionMode.fromCliValue(record.permissionMode),
                 model = model,
+                effort = effort,
             ).getOrThrow()
         }
     }
