@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.WifiFind
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -295,17 +294,27 @@ fun WorkspacesScreen(
                                 Text("Sign in to Claude")
                             }
                         } else {
-                            Button(
-                                onClick = onInstallClaude,
-                                enabled = !state.claudeInstalling,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                if (state.claudeInstalling) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Installing Claude Code...")
-                                } else {
-                                    Text("Install Claude Code")
+                            when (val claudeStatus = state.claudeInstallStatus) {
+                                is ClaudeInstallStatus.Installing -> {
+                                    Text(claudeStatus.step, style = MaterialTheme.typography.bodySmall)
+                                    Spacer(Modifier.height(8.dp))
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                                is ClaudeInstallStatus.Failed -> {
+                                    Text(
+                                        claudeStatus.message,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Install Claude Code")
+                                    }
+                                }
+                                else -> {
+                                    Button(onClick = onInstallClaude, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Install Claude Code")
+                                    }
                                 }
                             }
                         }

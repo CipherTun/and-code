@@ -24,6 +24,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
+sealed interface ClaudeInstallStatus {
+    data object Idle : ClaudeInstallStatus
+
+    data class Installing(val step: String) : ClaudeInstallStatus
+
+    data object Ready : ClaudeInstallStatus
+
+    data class Failed(val message: String) : ClaudeInstallStatus
+}
+
 data class RuntimeSummary(
     val id: String,
     val name: String,
@@ -43,7 +53,7 @@ data class WorkspaceUiState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val claudeError: String? = null,
-    val claudeInstalling: Boolean = false,
+    val claudeInstallStatus: ClaudeInstallStatus = ClaudeInstallStatus.Idle,
 )
 
 class WorkspaceViewModel(
@@ -53,12 +63,13 @@ class WorkspaceViewModel(
     private val localRuntimeController: LocalRuntimeServiceController,
     private val settings: SecureSettingsRepository,
     private val workspaceHostDir: File,
-    private val claudeCodeInstaller: (suspend () -> Unit)? = null,
+    private val claudeCodeInstaller: (suspend ((String) -> Unit) -> Unit)? = null,
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
     private val claudeError = MutableStateFlow<String?>(null)
-    private val claudeInstalling = MutableStateFlow(false)
-    private val installState = combine(registeredTick, claudeError, claudeInstalling) { _, error, installing -> error to installing }
+    private val claudeInstallStatus = MutableStateFlow<ClaudeInstallStatus>(ClaudeInstallStatus.Idle)
+    private val installState =
+        combine(registeredTick, claudeError, claudeInstallStatus) { _, error, status -> error to status }
 
     val state: StateFlow<WorkspaceUiState> =
         combine(
@@ -91,7 +102,7 @@ class WorkspaceViewModel(
                 isRefreshing = runtime.isRefreshing,
                 error = runtime.error,
                 claudeError = installState.first,
-                claudeInstalling = installState.second,
+                claudeInstallStatus = installState.second,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
 
@@ -200,13 +211,17 @@ class WorkspaceViewModel(
     fun installClaudeCode() {
         val installer = claudeCodeInstaller ?: return
         claudeError.value = null
-        claudeInstalling.value = true
+        claudeInstallStatus.value = ClaudeInstallStatus.Installing("Starting...")
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { installer() }
+            runCatching { installer { step -> claudeInstallStatus.value = ClaudeInstallStatus.Installing(step) } }
+                .onSuccess {
+                    claudeInstallStatus.value = ClaudeInstallStatus.Ready
+                    refresh()
+                }
                 .onFailure { error ->
                     claudeError.value = error.message ?: "Claude Code installation failed"
+                    claudeInstallStatus.value = ClaudeInstallStatus.Failed(error.message ?: "Claude Code installation failed")
                 }
-                .also { claudeInstalling.value = false }
         }
     }
 

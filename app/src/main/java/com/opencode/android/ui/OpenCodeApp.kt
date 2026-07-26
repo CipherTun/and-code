@@ -166,10 +166,12 @@ fun OpenCodeApp(
                         app.localRuntimeController,
                         app.settings,
                         java.io.File(context.filesDir, "runtime/workspace"),
-                        claudeCodeInstaller = {
+                        claudeCodeInstaller = { reportStep ->
                             if (app.localRuntimeManager.status() !is com.opencode.android.runtime.LocalRuntimeStatus.Ready) {
+                                reportStep("Starting OpenCode Linux runtime...")
                                 app.localRuntimeManager.installAndStart().getOrThrow()
                             }
+                            reportStep("Installing Claude Code package...")
                             check(app.claudeCodeRuntime.install().exitCode == 0) {
                                 "Claude Code installation failed"
                             }
