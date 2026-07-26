@@ -81,10 +81,11 @@ data class PendingQuestionUi(
     val canSubmit: Boolean
         get() =
             request.questions.indices.all { index ->
+                val prompt = request.questions[index]
                 sanitizeQuestionAnswer(
-                    prompt = request.questions[index],
+                    prompt = prompt,
                     answers = selectedAnswers.getOrElse(index) { emptyList() },
-                    multiple = request.multiple,
+                    multiple = prompt.multiple,
                 ).isNotEmpty()
             }
 
@@ -460,6 +461,7 @@ class ChatViewModel(
             )
         }
         if (parent == null) resolveParentSession(sessionId)
+        refreshPendingQuestions(sessionId)
         viewModelScope.launch {
             runCatching { currentBackend.listMessages(sessionId) }
                 .onSuccess { messages ->
@@ -792,7 +794,7 @@ class ChatViewModel(
                                 prompt = prompt,
                                 current = pending.selectedAnswers.getOrElse(questionIndex) { emptyList() },
                                 answer = answer,
-                                multiple = pending.request.multiple,
+                                multiple = prompt.multiple,
                             )
                         pending.copy(selectedAnswers = updatedAnswers, error = null)
                     },
@@ -802,14 +804,14 @@ class ChatViewModel(
 
     fun submitQuestion(questionId: String) {
         val currentBackend = backend ?: return
-        val sessionId = _uiState.value.sessionId ?: return
         val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return
         val answers =
             pendingQuestion.request.questions.indices.map { index ->
+                val prompt = pendingQuestion.request.questions[index]
                 sanitizeQuestionAnswer(
-                    prompt = pendingQuestion.request.questions[index],
+                    prompt = prompt,
                     answers = pendingQuestion.selectedAnswers.getOrElse(index) { emptyList() },
-                    multiple = pendingQuestion.request.multiple,
+                    multiple = prompt.multiple,
                 )
             }
         if (answers.any { it.isEmpty() }) {
@@ -844,9 +846,9 @@ class ChatViewModel(
         viewModelScope.launch {
             runCatching {
                 currentBackend.answerQuestion(
-                    sessionId = sessionId,
                     requestId = questionId,
                     answers = answers,
+                    directory = pendingQuestion.workspaceDirectory(),
                 )
             }.onSuccess { accepted ->
                 _uiState.update { state ->
@@ -885,6 +887,38 @@ class ChatViewModel(
     }
 
     /**
+     * The directory the question routes have to be scoped to. What the event stream reported is
+     * authoritative; the selected workspace is the fallback for the older per-instance `/event`
+     * stream, whose frames carry no directory.
+     */
+    private fun PendingQuestionUi.workspaceDirectory(): String? = request.directory ?: _uiState.value.selectedWorkspacePath
+
+    /**
+     * Recovers questions that are already waiting for an answer. A question reaches the chat as an
+     * event and nowhere else, so one asked while this client was not listening — before the app
+     * opened the session, or across a dropped event stream — would otherwise leave the turn
+     * blocked with nothing on screen to unblock it.
+     */
+    private fun refreshPendingQuestions(sessionId: String) {
+        val currentBackend = backend ?: return
+        viewModelScope.launch {
+            val pending =
+                runCatching { currentBackend.pendingQuestions(_uiState.value.selectedWorkspacePath) }
+                    .getOrElse { return@launch }
+                    .filter { it.sessionId == sessionId }
+            if (pending.isEmpty()) return@launch
+            _uiState.update { state ->
+                if (state.sessionId != sessionId) return@update state
+                val known = state.pendingQuestions.map { it.request.id }.toSet()
+                state.copy(
+                    pendingQuestions =
+                        state.pendingQuestions + pending.filterNot { it.id in known }.map(PendingQuestionUi::from),
+                )
+            }
+        }
+    }
+
+    /**
      * Hides the question card and leaves the turn alone, so the user can ignore the question and
      * just keep typing. The request stays open on the OpenCode side; this only affects what the
      * chat shows.
@@ -898,9 +932,9 @@ class ChatViewModel(
     }
 
     /**
-     * Dismisses a question and stops the turn that is waiting on the answer. OpenCode has no
-     * "declined" reply for the question tool, so this is the way to end a turn outright rather
-     * than answering it — [dismissQuestion] is the lighter option that only clears the card.
+     * Declines the question. OpenCode fails the waiting tool call with "the user dismissed this
+     * question", which the agent can react to — unlike [dismissQuestion], which only clears the
+     * card and leaves the request open.
      */
     fun cancelQuestion(questionId: String) {
         val pendingQuestion = _uiState.value.pendingQuestions.firstOrNull { it.request.id == questionId } ?: return
@@ -911,13 +945,14 @@ class ChatViewModel(
         }
         val currentBackend = backend ?: return
         viewModelScope.launch {
-            runCatching { currentBackend.abortSession(pendingQuestion.request.sessionId) }
-                .onSuccess {
-                    _uiState.update { it.copy(isRunning = false, isThinking = false) }
-                }
-                .onFailure { error ->
-                    _uiState.update { it.copy(error = error.safeMessage()) }
-                }
+            runCatching {
+                currentBackend.rejectQuestion(
+                    requestId = questionId,
+                    directory = pendingQuestion.workspaceDirectory(),
+                )
+            }.onFailure { error ->
+                _uiState.update { it.copy(error = error.safeMessage()) }
+            }
         }
     }
 
@@ -956,6 +991,7 @@ class ChatViewModel(
                                 }
                             }
                     }
+                    refreshPendingQuestions(session)
                 }
                 drainOfflineQueue()
             }
@@ -1346,7 +1382,8 @@ private fun sanitizeQuestionAnswer(
 
     val optionLabels = prompt.options.map { it.label }.toSet()
     val selectedOptions = normalizedAnswers.filter { it in optionLabels }.distinct()
-    val fallback = normalizedAnswers.lastOrNull { it !in optionLabels }
+    // A prompt with `custom` off only accepts its own options, so never submit a typed answer.
+    val fallback = normalizedAnswers.lastOrNull { it !in optionLabels }?.takeIf { prompt.custom }
     return if (multiple) {
         selectedOptions + listOfNotNull(fallback)
     } else {

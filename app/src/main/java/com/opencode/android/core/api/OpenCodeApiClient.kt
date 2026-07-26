@@ -408,10 +408,17 @@ class OpenCodeApiClient(
         )
     }
 
+    /**
+     * Questions are answered on the request itself, not through the session that asked. Like
+     * `/event`, the question routes resolve to a single OpenCode instance — the one rooted at
+     * [directory], defaulting to the server's own working directory — so a request raised in any
+     * other workspace is invisible without it and the reply comes back as
+     * `QuestionNotFoundError`. Pass the directory the question was asked in.
+     */
     suspend fun answerQuestion(
-        sessionId: String,
         requestId: String,
         answers: List<List<String>>,
+        directory: String? = null,
     ): Boolean {
         val body =
             buildJsonObject {
@@ -425,10 +432,32 @@ class OpenCodeApiClient(
                 )
             }
         return post(
-            "session/${encodePath(sessionId)}/question/${encodePath(requestId)}",
+            "question/${encodePath(requestId)}/reply",
             body,
+            query("directory" to directory),
         )
     }
+
+    /** Declines a question outright, which fails the waiting tool call without killing the turn. */
+    suspend fun rejectQuestion(
+        requestId: String,
+        directory: String? = null,
+    ): Boolean =
+        post(
+            "question/${encodePath(requestId)}/reject",
+            JsonObject(emptyMap()),
+            query("directory" to directory),
+        )
+
+    /**
+     * Questions that are still waiting for an answer. They reach a client only through the event
+     * stream, so anything asked while this client was away — a reconnect, a restart, a session
+     * opened after the fact — has to be recovered here or the turn stays blocked with nothing on
+     * screen to unblock it.
+     */
+    suspend fun pendingQuestions(directory: String? = null): List<QuestionRequest> =
+        getList<QuestionRequest>("question", query("directory" to directory))
+            .map { request -> request.copy(directory = request.directory ?: directory) }
 
     /**
      * `GET /event` is scoped to a single OpenCode instance: the one rooted at the request's

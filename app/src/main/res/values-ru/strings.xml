@@ -142,7 +142,7 @@
     <string name="provider_auth_failed">Аутентификация провайдера не удалась. Попробуйте снова.</string>
     <string name="continue_label">Продолжить</string>
     <string name="question_free_text_label">Другое (введите свой ответ)</string>
-    <string name="question_cancel">Ответить позже (остановить)</string>
+    <string name="question_cancel">Не отвечать</string>
     <string name="question_dismiss">Закрыть вопрос</string>
     <string name="assistant_runtime">Среда выполнения ассистента</string>
     <string name="assistant_workspace">Путь к рабочему пространству ассистента</string>

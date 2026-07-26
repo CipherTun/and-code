@@ -142,7 +142,7 @@
     <string name="provider_auth_failed">La autenticación del proveedor falló. Inténtalo de nuevo.</string>
     <string name="continue_label">Continuar</string>
     <string name="question_free_text_label">Otro (escribe tu respuesta)</string>
-    <string name="question_cancel">Responder después (detener)</string>
+    <string name="question_cancel">No responder</string>
     <string name="question_dismiss">Cerrar la pregunta</string>
     <string name="assistant_runtime">Entorno de ejecución del asistente</string>
     <string name="assistant_workspace">Ruta del espacio de trabajo del asistente</string>

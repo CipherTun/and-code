@@ -142,7 +142,7 @@
     <string name="provider_auth_failed">提供商身份验证失败。请重试。</string>
     <string name="continue_label">继续</string>
     <string name="question_free_text_label">其他（自行输入答案）</string>
-    <string name="question_cancel">稍后回答（停止）</string>
+    <string name="question_cancel">不回答</string>
     <string name="question_dismiss">关闭问题</string>
     <string name="assistant_runtime">助手运行时</string>
     <string name="assistant_workspace">助手工作区路径</string>

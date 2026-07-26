@@ -142,7 +142,7 @@
     <string name="provider_auth_failed">فشلت مصادقة الموفر. حاول مرة أخرى.</string>
     <string name="continue_label">متابعة</string>
     <string name="question_free_text_label">أخرى (اكتب إجابتك)</string>
-    <string name="question_cancel">الإجابة لاحقًا (إيقاف)</string>
+    <string name="question_cancel">رفض الإجابة</string>
     <string name="question_dismiss">إغلاق السؤال</string>
     <string name="assistant_runtime">بيئة تشغيل المساعد</string>
     <string name="assistant_workspace">مسار مساحة عمل المساعد</string>

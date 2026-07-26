@@ -4,7 +4,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -77,7 +77,8 @@ class OpenCodeEventParser(
                             id = properties["id"]!!.jsonPrimitive.content,
                             sessionId = properties["sessionID"]!!.jsonPrimitive.content,
                             questions = questions,
-                            multiple = (properties["multiple"] as? JsonPrimitive)?.boolean ?: false,
+                            // Only `/global/event` carries the workspace, and answering needs it.
+                            directory = (envelope["directory"] as? JsonPrimitive)?.content,
                         ),
                     )
                 }
@@ -139,6 +140,9 @@ class OpenCodeEventParser(
                                 ?.mapNotNull { option -> parseQuestionOption(option) }
                                 .orEmpty(),
                         placeholder = (prompt["placeholder"] as? JsonPrimitive)?.content,
+                        // Both flags belong to the individual prompt, not to the request.
+                        multiple = (prompt["multiple"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                        custom = (prompt["custom"] as? JsonPrimitive)?.booleanOrNull ?: true,
                     )
                 }
             }

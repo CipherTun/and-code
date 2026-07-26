@@ -162,20 +162,51 @@ class OpenCodeApiClientTest {
         }
 
     @Test
-    fun `answers question request`() =
+    fun `answers question request on the workspace it was asked in`() =
         runBlocking {
             server.enqueue(MockResponse().setBody("true"))
             val client = client()
 
-            val result = client.answerQuestion("s1", "q-1", listOf(listOf("src"), listOf("docs", "tests")))
+            val result = client.answerQuestion("q-1", listOf(listOf("src"), listOf("docs", "tests")), "/workspace/repo")
 
             assertTrue(result)
             val request = server.takeRequest()
-            assertEquals("/session/s1/question/q-1", request.path)
+            // Questions are answered on the request, and the route resolves one OpenCode instance:
+            // without the directory the server looks in its own and reports the request as missing.
+            assertEquals("/question/q-1/reply?directory=%2Fworkspace%2Frepo", request.path)
             val answers = Json.parseToJsonElement(request.body.readUtf8()).jsonObject["answers"]!!.jsonArray
             assertEquals("src", answers[0].jsonArray[0].jsonPrimitive.content)
             assertEquals("docs", answers[1].jsonArray[0].jsonPrimitive.content)
             assertEquals("tests", answers[1].jsonArray[1].jsonPrimitive.content)
+        }
+
+    @Test
+    fun `rejects question request`() =
+        runBlocking {
+            server.enqueue(MockResponse().setBody("true"))
+            val client = client()
+
+            assertTrue(client.rejectQuestion("q-1", "/workspace/repo"))
+            assertEquals("/question/q-1/reject?directory=%2Fworkspace%2Frepo", server.takeRequest().path)
+        }
+
+    @Test
+    fun `lists pending questions and tags them with the workspace`() =
+        runBlocking {
+            server.enqueue(
+                MockResponse().setBody(
+                    """[{"id":"q-1","sessionID":"s1","questions":[{"question":"Run it?","options":[{"label":"Yes"}]}]}]""",
+                ),
+            )
+            val client = client()
+
+            val pending = client.pendingQuestions("/workspace/repo")
+
+            assertEquals("/question?directory=%2Fworkspace%2Frepo", server.takeRequest().path)
+            assertEquals("q-1", pending.single().id)
+            assertEquals("s1", pending.single().sessionId)
+            // The listing does not echo the directory back, but answering still needs it.
+            assertEquals("/workspace/repo", pending.single().directory)
         }
 
     @Test
