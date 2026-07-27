@@ -9,29 +9,44 @@ import kotlinx.serialization.json.JsonPrimitive
  * Models offered for Antigravity, read from `agy models`.
  *
  * Unlike Claude Code, the official CLI does enumerate what the signed-in account can actually use.
- * Its output is one `<base name> (<variant>)` label per line, for example `Gemini 3.1 Pro (High)` or
- * `Claude Sonnet 4.6 (Thinking)` - the same base-model-plus-variant shape [ClaudeModels] already
- * exposes through [OpenCodeModel.variants], so the existing model picker needs no changes.
+ * The pinned official release (1.1.7, [AntigravityManifest.VERSION]) prints one lowercase, hyphenated
+ * slug per line - `gemini-3.1-pro-high`, `claude-opus-4-6-thinking`, `claude-sonnet-4-6` - confirmed
+ * live against a signed-in install of that exact version. Earlier builds of this parser were tested
+ * against a different locally-installed `agy` version (1.1.1) that prints `Title Case (Variant)`
+ * labels instead; that format does not appear in the version this app actually ships, which is why
+ * the model picker previously showed nothing useful.
  */
 object AntigravityModels {
     const val PROVIDER_ID = "antigravity"
 
     /** Shown until `agy models` has run once for a signed-in account. */
     private const val FALLBACK_MODEL = "default"
-    private val EFFORT_WORDS = setOf("low", "medium", "high")
+
+    /** The only suffixes `agy 1.1.7` appends to a base model slug. */
+    private val VARIANT_SUFFIXES = setOf("high", "medium", "low", "thinking")
 
     data class Entry(val base: String, val variant: String?)
 
-    private val LABEL_PATTERN = Regex("^(.+?)\\s*\\(([^()]+)\\)$")
-
-    /** Parses one model per non-blank line; a line without a `(variant)` suffix has no variant. */
+    /**
+     * Parses one model per non-blank line.
+     *
+     * A slug's last hyphen-separated segment is a variant only when it is one of the CLI's known
+     * suffix words; `claude-sonnet-4-6`'s last segment is `6`, which is not a variant word, so that
+     * slug is its own base model with no variant - splitting on every hyphen would otherwise cut
+     * version numbers like `4-6` apart.
+     */
     fun parse(output: String): List<Entry> =
         output.lineSequence()
             .map(String::trim)
             .filter(String::isNotEmpty)
-            .map { line ->
-                val match = LABEL_PATTERN.matchEntire(line)
-                if (match != null) Entry(match.groupValues[1].trim(), match.groupValues[2].trim()) else Entry(line, null)
+            .map { slug ->
+                val segments = slug.split('-')
+                val last = segments.last()
+                if (segments.size > 1 && last in VARIANT_SUFFIXES) {
+                    Entry(segments.dropLast(1).joinToString("-"), last)
+                } else {
+                    Entry(slug, null)
+                }
             }
             .toList()
 
@@ -57,8 +72,7 @@ object AntigravityModels {
             )
         }
         val grouped = linkedMapOf<String, MutableList<String>>()
-        entries.forEach {
-                entry ->
+        entries.forEach { entry ->
             grouped.getOrPut(entry.base) { mutableListOf() }.also { if (entry.variant != null) it.add(entry.variant) }
         }
         val models =
@@ -79,13 +93,11 @@ object AntigravityModels {
     }
 
     /**
-     * CLI arguments for [model] and [variant].
+     * CLI arguments for [model] (a base id from [catalog]) and [variant].
      *
-     * `--effort low|medium|high` is documented separately from `--model`, and it matches exactly the
-     * variant words Gemini models print (`(High)`, `(Medium)`, `(Low)`), so those are sent through the
-     * dedicated flag. A variant that is not one of those three words - `(Thinking)` on the Claude and
-     * GPT-OSS entries - has no equivalent flag, so the full label is sent as `--model` instead and no
-     * `--effort` is added.
+     * The base and variant were produced by splitting the CLI's own slug on a hyphen, so rejoining
+     * them the same way reconstructs the exact slug `agy models` printed - no separate `--effort`
+     * flag is needed or used, since the variant is already encoded in the slug itself.
      */
     fun cliArgs(
         model: String?,
@@ -93,13 +105,7 @@ object AntigravityModels {
     ): List<String> {
         val base = model?.takeIf(String::isNotBlank) ?: return emptyList()
         if (base == FALLBACK_MODEL) return emptyList()
-        val effort = variant?.trim()?.takeIf { it.lowercase() in EFFORT_WORDS }
-        return if (effort != null) {
-            listOf("--model", base, "--effort", effort.lowercase())
-        } else if (!variant.isNullOrBlank()) {
-            listOf("--model", "$base ($variant)")
-        } else {
-            listOf("--model", base)
-        }
+        val slug = if (!variant.isNullOrBlank()) "$base-$variant" else base
+        return listOf("--model", slug)
     }
 }

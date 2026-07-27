@@ -4,29 +4,39 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** [OUTPUT] is captured verbatim from a real signed-in `agy models` run. */
+/**
+ * [output] is captured verbatim from `agy models` run on a signed-in real device with the exact
+ * official 1.1.7 release this app pins - not the differently-formatted output an unrelated locally
+ * installed 1.1.1 build printed, which an earlier version of this parser was built against.
+ */
 class AntigravityModelsTest {
     private val output =
         """
-        Gemini 3.6 Flash (High)
-        Gemini 3.6 Flash (Medium)
-        Gemini 3.6 Flash (Low)
-        Gemini 3.5 Flash (High)
-        Gemini 3.5 Flash (Medium)
-        Gemini 3.5 Flash (Low)
-        Gemini 3.1 Pro (High)
-        Gemini 3.1 Pro (Low)
-        Claude Sonnet 4.6 (Thinking)
-        Claude Opus 4.6 (Thinking)
-        GPT-OSS 120B (Medium)
+        gemini-3.6-flash-high
+        gemini-3.6-flash-medium
+        gemini-3.6-flash-low
+        gemini-3.5-flash-high
+        gemini-3.5-flash-medium
+        gemini-3.5-flash-low
+        gemini-3.1-pro-high
+        gemini-3.1-pro-low
+        claude-sonnet-4-6
+        claude-opus-4-6-thinking
+        gpt-oss-120b-medium
         """.trimIndent()
 
     @Test
     fun `parses the real agy models output`() {
         val entries = AntigravityModels.parse(output)
         assertEquals(11, entries.size)
-        assertEquals(AntigravityModels.Entry("Gemini 3.6 Flash", "High"), entries.first())
-        assertEquals(AntigravityModels.Entry("GPT-OSS 120B", "Medium"), entries.last())
+        assertEquals(AntigravityModels.Entry("gemini-3.6-flash", "high"), entries.first())
+        assertEquals(AntigravityModels.Entry("gpt-oss-120b", "medium"), entries.last())
+    }
+
+    @Test
+    fun `a version number ending in a digit is not mistaken for a variant`() {
+        val entry = AntigravityModels.parse("claude-sonnet-4-6").single()
+        assertEquals(AntigravityModels.Entry("claude-sonnet-4-6", null), entry)
     }
 
     @Test
@@ -34,11 +44,13 @@ class AntigravityModelsTest {
         val catalog = AntigravityModels.catalog(AntigravityModels.parse(output))
         val provider = catalog.all.single()
         assertEquals(6, provider.models.size)
-        val flash = provider.models.getValue("Gemini 3.6 Flash")
-        assertEquals(listOf("High", "Medium", "Low"), flash.variants.keys.toList())
-        val sonnet = provider.models.getValue("Claude Sonnet 4.6")
-        assertEquals(listOf("Thinking"), sonnet.variants.keys.toList())
-        assertEquals("Gemini 3.6 Flash", catalog.default[AntigravityModels.PROVIDER_ID])
+        val flash = provider.models.getValue("gemini-3.6-flash")
+        assertEquals(listOf("high", "medium", "low"), flash.variants.keys.toList())
+        val sonnet = provider.models.getValue("claude-sonnet-4-6")
+        assertEquals(emptyList<String>(), sonnet.variants.keys.toList())
+        val opus = provider.models.getValue("claude-opus-4-6")
+        assertEquals(listOf("thinking"), opus.variants.keys.toList())
+        assertEquals("gemini-3.6-flash", catalog.default[AntigravityModels.PROVIDER_ID])
     }
 
     @Test
@@ -50,33 +62,25 @@ class AntigravityModelsTest {
     }
 
     @Test
-    fun `a line without a variant suffix has no variant`() {
-        val entries = AntigravityModels.parse("Some Custom Model\n")
-        assertEquals(AntigravityModels.Entry("Some Custom Model", null), entries.single())
+    fun `a slug without a variant suffix has no variant`() {
+        val entries = AntigravityModels.parse("some-custom-model\n")
+        assertEquals(AntigravityModels.Entry("some-custom-model", null), entries.single())
     }
 
     @Test
-    fun `effort words map to the dedicated flag`() {
-        assertEquals(listOf("--model", "Gemini 3.1 Pro", "--effort", "high"), AntigravityModels.cliArgs("Gemini 3.1 Pro", "High"))
-        assertEquals(listOf("--model", "Gemini 3.1 Pro", "--effort", "low"), AntigravityModels.cliArgs("Gemini 3.1 Pro", "low"))
+    fun `cli args rejoin the base and variant into the original slug`() {
+        assertEquals(listOf("--model", "gemini-3.1-pro-high"), AntigravityModels.cliArgs("gemini-3.1-pro", "high"))
+        assertEquals(listOf("--model", "claude-opus-4-6-thinking"), AntigravityModels.cliArgs("claude-opus-4-6", "thinking"))
     }
 
     @Test
-    fun `a non-effort variant is sent as part of the model label`() {
-        assertEquals(
-            listOf("--model", "Claude Sonnet 4.6 (Thinking)"),
-            AntigravityModels.cliArgs("Claude Sonnet 4.6", "Thinking"),
-        )
+    fun `a model with no variant is sent as-is`() {
+        assertEquals(listOf("--model", "claude-sonnet-4-6"), AntigravityModels.cliArgs("claude-sonnet-4-6", null))
     }
 
     @Test
     fun `no model selected omits every flag`() {
         assertEquals(emptyList<String>(), AntigravityModels.cliArgs(null, null))
         assertEquals(emptyList<String>(), AntigravityModels.cliArgs("default", null))
-    }
-
-    @Test
-    fun `a model with no variant is still sent`() {
-        assertEquals(listOf("--model", "Gemini 3.1 Pro"), AntigravityModels.cliArgs("Gemini 3.1 Pro", null))
     }
 }

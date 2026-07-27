@@ -49,12 +49,33 @@ class ProviderCatalogCache(
         }
     }
 
-    /** True when [catalog] describes a different set of connected providers than the cache holds. */
+    /**
+     * True when [catalog] differs from the cache in its connected providers or in the models those
+     * providers offer.
+     *
+     * Comparing only the connected set is not enough for a runtime whose catalogue comes from
+     * querying a CLI rather than from a static list. Antigravity is always connected to exactly one
+     * provider, so a catalogue written before sign-in — holding a single placeholder model — matched
+     * on `connected` forever and was never replaced by the real list, leaving the picker showing one
+     * fake model no matter how many the account actually had.
+     */
     fun isStale(
         runtimeId: String,
         version: String,
         catalog: ProviderCatalog,
-    ): Boolean = read(runtimeId, version)?.connected?.toSet() != catalog.connected.toSet()
+    ): Boolean {
+        val cached = read(runtimeId, version) ?: return true
+        if (cached.connected.toSet() != catalog.connected.toSet()) return true
+        return modelIdsByConnectedProvider(cached) != modelIdsByConnectedProvider(catalog)
+    }
+
+    /** Only connected providers keep their models through [trim], so only those can be compared. */
+    private fun modelIdsByConnectedProvider(catalog: ProviderCatalog): Map<String, Set<String>> {
+        val connected = catalog.connected.toSet()
+        return catalog.all
+            .filter { it.id in connected }
+            .associate { it.id to it.models.keys.toSet() }
+    }
 
     private fun file(runtimeId: String) = File(directory, "providers-${runtimeId.replace(Regex("[^A-Za-z0-9._-]"), "_")}.json")
 

@@ -65,12 +65,10 @@ class AntigravityController(
                         install = version?.let(AntigravityInstallStatus::Ready) ?: AntigravityInstallStatus.Idle,
                     )
                 // The token lives in the guest rootfs, so a restarted app is still signed in even
-                // though the in-memory coordinator starts at Idle. Ask the official CLI instead of
-                // showing a misleading "Signed out".
-                if (target.auth.isSignedIn()) {
-                    target.auth.markSignedIn()
-                    target.runtime.invalidateModels()
-                }
+                // though the in-memory coordinator starts at Idle. `models()` answers that and fills
+                // the picker's catalogue in the same launch - asking twice would mean two agy runs,
+                // and two of those overlapping is what previously hung both of them.
+                if (target.runtime.models().isNotEmpty()) target.auth.markSignedIn()
             }
         }
         scope.launch {
@@ -110,18 +108,30 @@ class AntigravityController(
         }
     }
 
+    /** [AntigravityAuthCoordinator.logout] blocks on the guest CLI, so this runs off the caller's thread. */
     fun logout() {
-        target.auth.logout()
+        scope.launch {
+            target.auth.logout()
+            // The cached catalog belongs to the account that just signed out.
+            target.runtime.invalidateModels()
+        }
     }
 
+    /**
+     * [AntigravityAuthCoordinator.start] blocks briefly while it holds [AntigravityProcessGate], so
+     * this must never run on the caller's thread - it is only safe to call from `onClick`-style UI
+     * code because it is dispatched onto [scope] here.
+     */
     fun beginAuth() {
-        runCatching { target.auth.start() }
-            .onFailure {
-                mutableState.value =
-                    mutableState.value.copy(
-                        auth = AntigravityAuthCoordinator.State.Failed(it.message ?: "Unable to start sign-in", ""),
-                    )
-            }
+        scope.launch {
+            runCatching { target.auth.start() }
+                .onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            auth = AntigravityAuthCoordinator.State.Failed(error.message ?: "Unable to start sign-in", ""),
+                        )
+                }
+        }
     }
 
     fun submitAuthCode(code: String) = target.auth.submitCode(code)

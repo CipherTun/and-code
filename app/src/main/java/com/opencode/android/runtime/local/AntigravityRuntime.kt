@@ -68,39 +68,19 @@ class AntigravityRuntime(
     /** The rootfs `mcp_config.json` and other guest-side files live in, or null when not installed. */
     fun currentRootfs(): File? = installedRuntimeProvider()?.let { it.antigravityRootfs ?: it.rootfs }
 
-    fun version(): String? =
-        runCatching {
-            cachedVersion?.let { return@runCatching it }
-            val runtime = installedRuntimeProvider() ?: return null
-            AntigravityGuestSettings.repair(runtime)
-            val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-            val result =
-                ProcessBuilder(AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("--version"), false))
-                    .redirectErrorStream(true)
-                    .apply {
-                        environment().putAll(
-                            AntigravitySandboxLauncher.environment(
-                                runtime,
-                                File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
-                                githubToken(),
-                            ),
-                        )
-                    }
-                    .start()
-            val completed = result.waitFor(45, java.util.concurrent.TimeUnit.SECONDS)
-            if (!completed) {
-                result.destroyForcibly()
-                return@runCatching null
-            }
-            val output = result.inputStream.bufferedReader().readText().trim()
-            // Some official builds initialize the auth provider before returning the version and
-            // may exit non-zero when no account is present. The semantic version is still a valid
-            // install signal; auth is verified separately with `agy models`.
-            (VERSION_PATTERN.find(output)?.value ?: output.takeIf { result.exitValue() == 0 && it.isNotBlank() })
-                .also { cachedVersion = it }
-        }.getOrNull()
+    /**
+     * The installed version, without launching the CLI.
+     *
+     * `agy --version` is not a cheap probe: it boots the whole bundled language server before it
+     * prints anything, and on device it took over a minute and overlapped the `models` call that the
+     * model picker actually needs. The version is not in question either - [AntigravityInstaller]
+     * writes exactly [AntigravityManifest.VERSION] and verifies its SHA-256 first - so reporting the
+     * pinned version for a present, executable binary says the same thing at no cost. Whether the CLI
+     * *works* is answered by [models], which the app needs to run anyway.
+     */
+    fun version(): String? = AntigravityManifest.VERSION.takeIf { isInstalled() }
 
-    /** Clears the in-memory health cache after an install or runtime update. */
+    /** Kept for call sites that invalidate health after an install or update; see [version]. */
     fun invalidateVersion() {
         cachedVersion = null
     }
@@ -117,26 +97,36 @@ class AntigravityRuntime(
         cachedModels ?: runCatching {
             val runtime = installedRuntimeProvider() ?: return@runCatching emptyList()
             val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-            val result =
-                ProcessBuilder(AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("models"), false))
-                    .redirectErrorStream(true)
-                    .apply {
-                        environment().putAll(
-                            AntigravitySandboxLauncher.environment(
-                                runtime,
-                                File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
-                                githubToken(),
-                            ),
-                        )
+            AntigravityProcessGate.exclusive {
+                val result =
+                    with(AntigravityProcessGate) {
+                        ProcessBuilder(AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("models"), false))
+                            .redirectErrorStream(true)
+                            .withoutStdin()
+                            .apply {
+                                environment().putAll(
+                                    AntigravitySandboxLauncher.environment(
+                                        runtime,
+                                        File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                        githubToken(),
+                                    ),
+                                )
+                            }
+                            .start()
                     }
-                    .start()
-            val output = result.inputStream.bufferedReader().readText()
-            if (!result.waitFor(45, java.util.concurrent.TimeUnit.SECONDS)) {
-                result.destroyForcibly()
-                return@runCatching emptyList()
-            }
-            if (result.exitValue() != 0) emptyList() else AntigravityModels.parse(output)
-        }.getOrDefault(emptyList()).also { cachedModels = it }
+                val output = AntigravityProcessGate.readWithTimeout(result, MODELS_READ_TIMEOUT_MS)
+                if (output == null || !result.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    terminate(result)
+                    return@exclusive emptyList()
+                }
+                if (result.exitValue() != 0) emptyList() else AntigravityModels.parse(output)
+            }.orEmpty()
+        }.getOrDefault(emptyList())
+            // Only a real answer is cached. An empty result means the call failed - not signed in
+            // yet, contended, timed out - and caching that would be permanent: `cachedModels` is
+            // non-null from then on, so the elvis above never retries and the picker is stuck
+            // showing the placeholder model forever, which is exactly what happened on device.
+            .also { if (it.isNotEmpty()) cachedModels = it }
 
     /** Clears the cached model list; called after sign-in and sign-out so a switched account is picked up. */
     fun invalidateModels() {
@@ -157,7 +147,7 @@ class AntigravityRuntime(
                 val runtime = installedRuntimeProvider() ?: error("Linux environment is not installed")
                 require(isInstalled()) { "Antigravity is not installed" }
                 AntigravityGuestSettings.repair(runtime)
-                processes.remove(sessionId)?.destroyForcibly()
+                processes.remove(sessionId)?.let { terminate(it) }
                 val args =
                     buildList {
                         add("--print")
@@ -238,7 +228,7 @@ class AntigravityRuntime(
                 process.outputStream.flush()
             }
             Thread.sleep(2000)
-            if (process.isAlive) process.destroyForcibly()
+            if (process.isAlive) terminate(process)
         }
     }
 
@@ -300,12 +290,19 @@ class AntigravityRuntime(
         answers: List<List<String>>,
     ): Boolean = false
 
+    /** See [killAntigravityProcessTree] for why a plain `destroy()`/`destroyForcibly()` is not enough. */
+    private fun terminate(process: Process) {
+        killAntigravityProcessTree(process)
+        if (process.isAlive) process.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)
+    }
+
     private companion object {
         // Keep this deliberately narrow. A UUID-shaped value in arbitrary model text is not
         // enough to claim resume support, but this lets a future official --print transcript
         // bridge persist an explicitly emitted conversation id without fabricating one.
         val CONVERSATION_ID_PATTERN = Regex("(?:conversation(?:Id|_id)|conversation)\\s*[:=]\\s*[\\\"']?([0-9a-fA-F-]{16,})")
         val VERSION_PATTERN = Regex("\\b\\d+\\.\\d+\\.\\d+\\b")
+        const val MODELS_READ_TIMEOUT_MS = 45_000L
     }
 
     private fun load() {
