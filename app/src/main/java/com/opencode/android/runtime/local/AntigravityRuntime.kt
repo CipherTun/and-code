@@ -27,6 +27,13 @@ data class AntigravitySessionRecord(
     val model: String? = null,
     val variant: String? = null,
     val permissionMode: String = AntigravityPermissionMode.DEFAULT.cliValue,
+    /**
+     * The chat's name in the drawer, or null while it has never been named.
+     *
+     * The CLI does not name its conversations, so this is the app's own - null is what tells
+     * [AntigravityTarget] a session is still unnamed and its first prompt should name it.
+     */
+    val title: String? = null,
 )
 
 class AntigravityRuntime(
@@ -148,15 +155,19 @@ class AntigravityRuntime(
                 require(isInstalled()) { "Antigravity is not installed" }
                 AntigravityGuestSettings.repair(runtime)
                 processes.remove(sessionId)?.let { terminate(it) }
+                // `--print` takes the prompt as its value, so it must come last with the prompt
+                // immediately after it. Every other flag goes first: with `--print` leading, the CLI
+                // took the *next* token as the prompt, so a message sent with any flag set asked the
+                // model about "--conversation" or "--mode" instead of what the user typed.
                 val args =
                     buildList {
-                        add("--print")
                         if (conversationId != null) {
                             add("--conversation")
                             add(conversationId)
                         }
                         addAll(AntigravityModels.cliArgs(model, variant))
                         addAll(permissionMode.cliArgs)
+                        add("--print")
                         add(prompt)
                     }
                 val process =
@@ -201,14 +212,22 @@ class AntigravityRuntime(
                 messages.getOrPut(sessionId) { mutableListOf() }.apply {
                     add(
                         OpenCodeMessage(
-                            OpenCodeMessageInfo(userId, sessionId, "user", OpenCodeTime(now, now)),
-                            listOf(OpenCodePart(type = "text", text = prompt)),
+                            OpenCodeMessageInfo(userId, sessionId, "user", OpenCodeTime(now, now, now)),
+                            // A part without an id is dropped when the chat maps the transcript for
+                            // display, so an id-less part is invisible however well the run went -
+                            // and the empty result then replaced the whole transcript on screen.
+                            listOf(OpenCodePart(id = "$userId-text", type = "text", text = prompt)),
                         ),
                     )
                     add(
                         OpenCodeMessage(
-                            OpenCodeMessageInfo(assistantId, sessionId, "assistant", OpenCodeTime(now, now), agent = "antigravity"),
-                            listOf(OpenCodePart(type = "text", text = output)),
+                            // `completed` is how the chat decides a turn is over: it polls the
+                            // transcript and only stops on an assistant message that carries one.
+                            // Leaving it null kept the composer on "thinking" until the two minute
+                            // timeout even though the reply was already written and on disk.
+                            // `--print` is one-shot, so the reply is complete the moment it lands.
+                            OpenCodeMessageInfo(assistantId, sessionId, "assistant", OpenCodeTime(now, now, now), agent = "antigravity"),
+                            listOf(OpenCodePart(id = "$assistantId-text", type = "text", text = output)),
                         ),
                     )
                 }
@@ -249,8 +268,9 @@ class AntigravityRuntime(
     fun create(
         sessionId: String,
         workspace: String,
+        title: String? = null,
     ) {
-        records[sessionId] = AntigravitySessionRecord(sessionId, null, workspace)
+        records[sessionId] = AntigravitySessionRecord(sessionId, null, workspace, title = title)
         persist()
     }
 
@@ -263,6 +283,83 @@ class AntigravityRuntime(
         val record = records[sessionId] ?: return
         records[sessionId] = record.copy(model = model, variant = variant)
         persist()
+    }
+
+    /** Renames a session; see [AntigravitySessionRecord.title]. */
+    fun setSessionTitle(
+        sessionId: String,
+        title: String,
+    ) {
+        val record = records[sessionId] ?: return
+        records[sessionId] = record.copy(title = title, updatedAt = System.currentTimeMillis())
+        persist()
+    }
+
+    /**
+     * Asks the model for a short name for a new chat, or null if it could not be produced.
+     *
+     * Mirrors [ClaudeCodeRuntime.summarizeTitle], with two differences the guest CLI forces. It runs
+     * through [AntigravityProcessGate] and refuses while any send is in flight, because two `agy`
+     * processes racing against the same rootfs hang each other; and it picks the cheapest model the
+     * account actually has from [models] rather than naming one, since `--model` only accepts a slug
+     * the signed-in account can use. `plan` mode keeps a naming call from touching the workspace.
+     */
+    fun summarizeTitle(prompt: String): String? {
+        if (processes.isNotEmpty()) return null
+        val runtime = installedRuntimeProvider() ?: return null
+        if (!isInstalled()) return null
+        val entries = cachedModels.orEmpty()
+        val cheapest = entries.firstOrNull { it.base.contains("flash") && it.variant == "low" } ?: entries.firstOrNull()
+        val instruction =
+            "Reply with a title of at most 6 words for a chat that starts with the following " +
+                "message. Reply with the title only, no quotes, no punctuation at the end, in the " +
+                "same language as the message.\n\n" + prompt.take(TITLE_PROMPT_LIMIT)
+        val args =
+            buildList {
+                addAll(AntigravityModels.cliArgs(cheapest?.slug, null))
+                addAll(AntigravityPermissionMode.PLAN.cliArgs)
+                add("--print")
+                add(instruction)
+            }
+        val output =
+            AntigravityProcessGate.exclusive {
+                val process =
+                    runCatching {
+                        with(AntigravityProcessGate) {
+                            ProcessBuilder(
+                                AntigravitySandboxLauncher.command(
+                                    runtime,
+                                    File(runtimeDirectory, "workspace").apply { mkdirs() }.absolutePath,
+                                    args,
+                                    false,
+                                ),
+                            )
+                                .directory(runtimeDirectory)
+                                .redirectErrorStream(false)
+                                .withoutStdin()
+                                .apply {
+                                    environment().putAll(
+                                        AntigravitySandboxLauncher.environment(
+                                            runtime,
+                                            File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                            githubToken(),
+                                        ),
+                                    )
+                                }
+                                .start()
+                        }
+                    }.getOrNull() ?: return@exclusive null
+                val text = AntigravityProcessGate.readWithTimeout(process, TITLE_READ_TIMEOUT_MS)
+                if (text == null || !process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)) {
+                    terminate(process)
+                    return@exclusive null
+                }
+                if (process.exitValue() != 0) null else text
+            } ?: return null
+        return output.lineSequence()
+            .map { it.trim().trim('"', '\'', '。', '.') }
+            .firstOrNull { it.isNotEmpty() }
+            ?.take(TITLE_LENGTH)
     }
 
     /** Remembers the permission mode a session's next message should use. */
@@ -303,6 +400,9 @@ class AntigravityRuntime(
         val CONVERSATION_ID_PATTERN = Regex("(?:conversation(?:Id|_id)|conversation)\\s*[:=]\\s*[\\\"']?([0-9a-fA-F-]{16,})")
         val VERSION_PATTERN = Regex("\\b\\d+\\.\\d+\\.\\d+\\b")
         const val MODELS_READ_TIMEOUT_MS = 45_000L
+        const val TITLE_READ_TIMEOUT_MS = 45_000L
+        const val TITLE_PROMPT_LIMIT = 2_000
+        const val TITLE_LENGTH = 40
     }
 
     private fun load() {

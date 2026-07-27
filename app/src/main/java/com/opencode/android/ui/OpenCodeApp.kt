@@ -712,6 +712,7 @@ fun OpenCodeApp(
                             workspaceState.claude
                                 .takeIf { selectedRuntime?.agent == com.opencode.android.runtime.LocalAgent.CLAUDE_CODE }
                                 ?.permissionMode,
+                        supportsPermissions = selectedRuntime?.capabilities?.permissions != false,
                         onSelectClaudePermissionMode = { mode ->
                             workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
                         },

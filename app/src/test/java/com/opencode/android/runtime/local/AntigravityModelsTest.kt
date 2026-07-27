@@ -39,18 +39,28 @@ class AntigravityModelsTest {
         assertEquals(AntigravityModels.Entry("claude-sonnet-4-6", null), entry)
     }
 
+    /** The picker lists whole CLI ids, effort included, so an effort can never be left unselected. */
     @Test
-    fun `groups entries by base model with variants in order`() {
+    fun `catalog lists one model per printed line`() {
         val catalog = AntigravityModels.catalog(AntigravityModels.parse(output))
         val provider = catalog.all.single()
-        assertEquals(6, provider.models.size)
-        val flash = provider.models.getValue("gemini-3.6-flash")
-        assertEquals(listOf("high", "medium", "low"), flash.variants.keys.toList())
-        val sonnet = provider.models.getValue("claude-sonnet-4-6")
-        assertEquals(emptyList<String>(), sonnet.variants.keys.toList())
-        val opus = provider.models.getValue("claude-opus-4-6")
-        assertEquals(listOf("thinking"), opus.variants.keys.toList())
-        assertEquals("gemini-3.6-flash", catalog.default[AntigravityModels.PROVIDER_ID])
+        assertEquals(11, provider.models.size)
+        assertTrue(provider.models.containsKey("gemini-3.6-flash-high"))
+        assertTrue(provider.models.containsKey("gemini-3.1-pro-low"))
+        assertTrue(provider.models.containsKey("claude-sonnet-4-6"))
+        assertTrue(provider.models.values.all { it.variants.isEmpty() })
+        assertEquals("gemini-3.6-flash-high", catalog.default[AntigravityModels.PROVIDER_ID])
+    }
+
+    /** `--model claude-opus-4-6-thinking` is accepted whole; `thinking` is not a `--effort` value. */
+    @Test
+    fun `a thinking suffix stays part of the model id`() {
+        assertEquals(
+            AntigravityModels.Entry("claude-opus-4-6-thinking", null),
+            AntigravityModels.parse("claude-opus-4-6-thinking").single(),
+        )
+        val catalog = AntigravityModels.catalog(AntigravityModels.parse(output))
+        assertTrue(catalog.all.single().models.containsKey("claude-opus-4-6-thinking"))
     }
 
     @Test
@@ -67,15 +77,19 @@ class AntigravityModelsTest {
         assertEquals(AntigravityModels.Entry("some-custom-model", null), entries.single())
     }
 
+    /** `--model gemini-3.1-pro` alone is rejected by the CLI with "requires --effort". */
     @Test
-    fun `cli args rejoin the base and variant into the original slug`() {
-        assertEquals(listOf("--model", "gemini-3.1-pro-high"), AntigravityModels.cliArgs("gemini-3.1-pro", "high"))
-        assertEquals(listOf("--model", "claude-opus-4-6-thinking"), AntigravityModels.cliArgs("claude-opus-4-6", "thinking"))
+    fun `an effort is sent through its own flag`() {
+        // The picker id already carries the effort, so no separate variant is needed or trusted.
+        assertEquals(listOf("--model", "gemini-3.1-pro", "--effort", "high"), AntigravityModels.cliArgs("gemini-3.1-pro-high", null))
+        assertEquals(listOf("--model", "gpt-oss-120b", "--effort", "medium"), AntigravityModels.cliArgs("gpt-oss-120b-medium", null))
     }
 
+    /** Adding `--effort` to a model that has none makes the CLI report a conflict. */
     @Test
-    fun `a model with no variant is sent as-is`() {
+    fun `a model with no effort is sent alone`() {
         assertEquals(listOf("--model", "claude-sonnet-4-6"), AntigravityModels.cliArgs("claude-sonnet-4-6", null))
+        assertEquals(listOf("--model", "claude-opus-4-6-thinking"), AntigravityModels.cliArgs("claude-opus-4-6-thinking", null))
     }
 
     @Test

@@ -2,10 +2,14 @@ package com.opencode.android.runtime.local
 
 import com.opencode.android.core.api.*
 import com.opencode.android.runtime.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import java.io.File
@@ -26,6 +30,7 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
     override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
     private val files = ClaudeWorkspaceFiles(File(runtime.runtimeDirectory, "workspace"))
+    private val titleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val auth get() = runtime.auth()
 
     private val modeFile = File(runtime.runtimeDirectory, "antigravity-permission-mode")
@@ -65,7 +70,7 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
             OpenCodeSession(
                 it.appSessionId,
                 directory = it.workspace,
-                title = "Antigravity",
+                title = it.title ?: DEFAULT_TITLE,
                 time = OpenCodeTime(it.createdAt, it.updatedAt),
             )
         }
@@ -75,12 +80,26 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
         directory: String?,
     ): OpenCodeSession {
         val id = UUID.randomUUID().toString()
-        runtime.create(id, directory ?: "/workspace")
+        runtime.create(id, directory ?: "/workspace", title)
         return OpenCodeSession(
             id,
             directory = directory ?: "/workspace",
-            title = title ?: "Antigravity",
+            title = title ?: DEFAULT_TITLE,
             time = OpenCodeTime(System.currentTimeMillis(), System.currentTimeMillis()),
+        )
+    }
+
+    override suspend fun renameSession(
+        sessionId: String,
+        title: String,
+    ): OpenCodeSession {
+        runtime.setSessionTitle(sessionId, title)
+        val record = runtime.listSessions(null).firstOrNull { it.appSessionId == sessionId } ?: error("Antigravity session not found")
+        return OpenCodeSession(
+            record.appSessionId,
+            directory = record.workspace,
+            title = record.title ?: DEFAULT_TITLE,
+            time = OpenCodeTime(record.createdAt, record.updatedAt),
         )
     }
 
@@ -89,18 +108,50 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
     override suspend fun listProviders(): ProviderCatalog =
         withContext(kotlinx.coroutines.Dispatchers.IO) { AntigravityModels.catalog(runtime.models()) }
 
-    override suspend fun listAgents(): List<OpenCodeAgent> = listOf(OpenCodeAgent("antigravity", "Antigravity", "primary", true))
+    /**
+     * The permission modes, offered through the composer's mode chip.
+     *
+     * That chip is where OpenCode's `build`/`plan` live, so a single agent named "antigravity" there
+     * told the user nothing and left no way to switch modes without opening settings.
+     */
+    override suspend fun listAgents(): List<OpenCodeAgent> =
+        AntigravityPermissionMode.entries.map { OpenCodeAgent(it.agentId, "Antigravity", "primary", true) }
 
     override suspend fun sendMessage(
         sessionId: String,
         request: PromptRequest,
     ) {
         val record = runtime.listSessions(null).firstOrNull { it.appSessionId == sessionId } ?: error("Antigravity session not found")
+        // The CLI does not name its conversations, so every chat would sit in the drawer as
+        // "Antigravity" - the same gap ClaudeCodeTarget fills, filled the same way. The prompt stands
+        // in at once so the drawer is never left showing the tool's name.
+        val needsTitle = record.title == null
+        if (needsTitle) titleFromPrompt(request.text)?.let { runtime.setSessionTitle(sessionId, it) }
         val model = request.modelId ?: record.model
         val variant = request.variant ?: record.variant
         if (model != record.model || variant != record.variant) runtime.setSessionModel(sessionId, model, variant)
-        val permissionMode = AntigravityPermissionMode.fromCliValue(record.permissionMode)
+        // The chip's choice wins for this message and is remembered; falling back to the session's
+        // stored mode, then to the default the settings screen shows.
+        val permissionMode =
+            AntigravityPermissionMode.fromAgentId(request.agent)
+                ?.also { runtime.setSessionMode(sessionId, it) }
+                ?: AntigravityPermissionMode.fromCliValue(record.permissionMode)
         runtime.send(sessionId, record.workspace, request.text, record.conversationId, model, variant, permissionMode).getOrThrow()
+        // Claude Code summarises while its answer is still streaming; here it has to wait for the
+        // send to finish, because two concurrent `agy` processes hang each other. Failure is silent:
+        // the prompt-derived name set above is already in the drawer and simply stays.
+        if (needsTitle) {
+            titleScope.launch {
+                val summary = withContext(kotlinx.coroutines.Dispatchers.IO) { runtime.summarizeTitle(request.text) }
+                if (summary != null) runtime.setSessionTitle(sessionId, summary)
+            }
+        }
+    }
+
+    /** The chat's stand-in name: the prompt's first line, shortened. */
+    private fun titleFromPrompt(prompt: String): String? {
+        val firstLine = prompt.lineSequence().map(String::trim).firstOrNull(String::isNotEmpty) ?: return null
+        return if (firstLine.length <= TITLE_LENGTH) firstLine else firstLine.take(TITLE_LENGTH).trimEnd() + "…"
     }
 
     override suspend fun mcpServers(): List<McpServer> =
@@ -176,4 +227,10 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
         runtime.listSessions(null).map {
             WorkspaceRef(it.workspace, it.workspace.substringAfterLast('/').ifBlank { it.workspace }, it.workspace)
         }.distinctBy { it.id }
+
+    private companion object {
+        /** Shown only until the chat's first prompt names it. */
+        const val DEFAULT_TITLE = "Antigravity"
+        const val TITLE_LENGTH = 40
+    }
 }
