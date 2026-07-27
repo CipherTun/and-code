@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">让智能体去实现、修复或调查。</string>
     <string name="settings_wake_word_row">唤醒词</string>
     <string name="settings_wake_word_value">未安装</string>
+    <string name="wake_word_active">已激活</string>
+    <string name="wake_word_inactive">已禁用</string>
     <string name="setup_step_counter">第 %1$d 步，共 %2$d 步</string>
     <string name="setup_next_action">下一步</string>
     <string name="setup_back_action">返回</string>
@@ -31,6 +33,10 @@
     <string name="provider_saved_credentials_title">已保存的凭据</string>
     <string name="provider_add_credentials_title">添加或更新 API 密钥</string>
     <string name="voice_settings_intro">配置语音输入和语音回复。</string>
+    <string name="assistant_target_section">助手目标</string>
+    <string name="assistant_agent_label">要激活的代理</string>
+    <string name="assistant_agent_auto">自动跟随当前代理</string>
+    <string name="assistant_workspace_label">默认工作区</string>
     <string name="voice_conversation_section">语音对话</string>
     <string name="voice_response_description">朗读智能体的回复。</string>
     <string name="wake_word_section_title">唤醒</string>

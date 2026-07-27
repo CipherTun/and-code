@@ -1,4 +1,4 @@
-# Contributing to OpenCode Android
+# Contributing to AndCode
 
 Thank you for your interest in contributing!
 
@@ -39,7 +39,7 @@ CI validates commit messages on all PRs.
 ## Project Structure
 
 ```
-app/src/main/java/com/opencode/android/
+app/src/main/java/com/yugahashimoto/androidcode/
 ├── data/          # API clients, repositories, models
 ├── runtime/       # On-device PRoot runtime management
 ├── ui/            # Jetpack Compose screens and components

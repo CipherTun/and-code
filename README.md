@@ -1,39 +1,57 @@
-# OpenCode Android
+# AndCode
 
 <p align="center">
-  <a href="https://github.com/yuga-hashimoto/opencode-android/actions/workflows/android.yml"><img src="https://github.com/yuga-hashimoto/opencode-android/actions/workflows/android.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/yuga-hashimoto/opencode-android/releases/latest"><img src="https://img.shields.io/github/v/release/yuga-hashimoto/opencode-android" alt="Release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/yuga-hashimoto/opencode-android" alt="License: MIT" /></a>
-  <a href="https://github.com/yuga-hashimoto/opencode-android/releases/latest"><img src="https://img.shields.io/github/downloads/yuga-hashimoto/opencode-android/total" alt="Downloads" /></a>
+  <a href="https://github.com/yuga-hashimoto/and-code/actions/workflows/android.yml"><img src="https://github.com/yuga-hashimoto/and-code/actions/workflows/android.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/yuga-hashimoto/and-code/releases/latest"><img src="https://img.shields.io/github/v/release/yuga-hashimoto/and-code" alt="Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/yuga-hashimoto/and-code" alt="License: MIT" /></a>
+  <a href="https://github.com/yuga-hashimoto/and-code/releases/latest"><img src="https://img.shields.io/github/downloads/yuga-hashimoto/and-code/total" alt="Downloads" /></a>
 </p>
 
-**An unofficial, open-source Android client for [OpenCode](https://github.com/sst/opencode) — run AI coding agents on your phone or connect to a remote PC.**
+**Run coding agents locally on Android through a native GUI — no terminal required.**
 
-OpenCode Android does not fork OpenCode. It uses the same REST/SSE API to talk to either an on-device runtime (Alpine Linux + OpenCode binary via PRoot) or a remote `opencode serve` instance on your PC/Mac/Linux.
+AndCode is a native Android GUI app that brings AI coding agents to your phone. Chat with [OpenCode](https://github.com/sst/opencode) and [Claude Code](https://github.com/anthropics/claude-code) through a touch-first interface — no terminal, no SSH, no PC required for on-device use. It wraps agent runtimes via PRoot (on-device) or connects remotely to your existing OpenCode server on PC/Mac/Linux.
 
 > [!IMPORTANT]
-> This is **not** an official OpenCode project.
+> AndCode is an independent open-source project. It is **not** affiliated with OpenCode or Anthropic.
 
 [日本語のREADMEはこちら](README.ja.md)
 
 ---
 
+## Supported Agents
+
+| Agent | On-Device | Remote PC | Status |
+|-------|:---------:|:---------:|--------|
+| [OpenCode](https://github.com/sst/opencode) | ✓ | ✓ | Stable |
+| [Claude Code](https://github.com/anthropics/claude-code) | ✓ | — | Beta |
+
+On-device agents run inside an Alpine Linux environment via PRoot. Remote OpenCode connects to a running `opencode serve` instance on your PC, Mac, or Linux machine over LAN or Tailscale.
+
 ## Features
 
-- **On-device runtime** — Alpine Linux, Git, bash, curl, ripgrep, and OpenCode auto-installed on your Android device via PRoot
-- **Remote connection** — Connect to OpenCode running on your PC/Mac/Linux over LAN or Tailscale
-- **Runtime switching** — Seamlessly switch between local and remote execution, even mid-conversation (handoff)
-- **Dynamic models** — Models, providers, and agents fetched live from your OpenCode instance
+- **Native Android GUI** — Touch-first interface for coding agents; no CLI or terminal required
+- **On-device runtime** — Alpine Linux, Git, bash, curl, ripgrep, and coding agents auto-installed on your Android device via PRoot
+- **Repository & workspace** — Open and work within git repositories on-device
+- **Git support** — Stage, diff, commit, and manage branches from the GUI
+- **Diff viewer** — Review code changes inline before accepting
+- **Tool approvals** — Approve or reject dangerous tool operations
 - **Session management** — Create, resume, rename, and delete sessions
-- **Discovery** — Find PCs via QR code or mDNS (zero-config LAN discovery)
+- **Dynamic models** — Models, providers, and agents fetched live from your connected agent instance
 - **Real-time streaming** — SSE-based live responses, tool execution, and approval requests
 - **Structured timeline** — Collapsible reasoning, tool calls, and command output
-- **Approval flow** — Approve or reject dangerous tool operations
-- **Voice input** — Push-to-talk with Android speech recognition + wake word detection
+- **Voice + Wake Word** — Push-to-talk with Android speech recognition + wake word detection
 - **Text-to-speech** — Read responses aloud
 - **Digital assistant** — Register as Android's default assistant (home gesture / corner swipe)
 - **Secure storage** — Connection credentials encrypted with Android Keystore
 - **Bilingual** — English and Japanese UI
+
+## Remote OpenCode
+
+In addition to on-device agents, AndCode can connect to OpenCode running on your PC/Mac/Linux as an additional feature:
+
+- **Remote connection** — Connect over LAN or Tailscale
+- **Runtime switching** — Seamlessly switch between local and remote execution, even mid-conversation (handoff)
+- **Discovery** — Find PCs via QR code or mDNS (zero-config LAN discovery)
 
 ## Screens
 
@@ -49,10 +67,10 @@ OpenCode Android does not fork OpenCode. It uses the same REST/SSE API to talk t
 
 ### Option A: On-Device (no PC needed)
 
-1. Install the APK from [Releases](https://github.com/yuga-hashimoto/opencode-android/releases/latest)
-2. Open the app → **Workspaces → This Android device → Set up on this device**
+1. Install the APK from [Releases](https://github.com/yuga-hashimoto/and-code/releases/latest)
+2. Open the app → tap **Workspaces** → **This Android device** → **Set up on this device**
 3. Wait for the runtime to download and install (~2 min on a good connection)
-4. Start chatting with your AI coding agent
+4. Select your coding agent and start chatting
 
 ### Option B: Remote PC
 
@@ -64,7 +82,7 @@ OPENCODE_SERVER_PASSWORD='your-strong-password' \
 ```
 
 2. Install the APK on your Android device
-3. Open the app → **Workspaces → Add connection**
+3. Open the app → **Workspaces** → **Add connection**
 4. Enter your PC's IP (or use **LAN search** / **QR code** for auto-discovery)
 
 ```text
@@ -84,7 +102,7 @@ Generate a QR code on your PC:
 npx qrcode "opencode://connect?name=Mac%20mini&url=http%3A%2F%2F192.168.1.10%3A4096&username=opencode&password=your-password&insecure=true"
 ```
 
-Then scan it from **Workspaces → Add via QR** in the app.
+Then scan it from **Workspaces** → **Add via QR** in the app.
 
 ## Security
 
@@ -100,14 +118,14 @@ The setup process (triggered from Workspaces):
 
 1. Verifies the native PRoot runner bundled in the APK
 2. Downloads Alpine Linux minirootfs from the official CDN
-3. Downloads the OpenCode musl binary from GitHub Releases
+3. Downloads the agent binary from GitHub Releases
 4. Validates SHA-256 checksums for both
 5. Extracts to a private app directory
 6. Installs Git, bash, curl, ripgrep, and CA certificates inside Alpine
-7. Starts the OpenCode server on `127.0.0.1:4097`
+7. Starts the agent server on `127.0.0.1:4097`
 8. Switches the app to the local runtime
 
-Pinned versions (updatable via app releases without OpenCode changes):
+Pinned versions (updatable via app releases without agent changes):
 
 - Alpine Linux 3.24.1
 - OpenCode 1.18.3
@@ -160,13 +178,13 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 
 ## Design Documents
 
-- [OpenCode Android v2 Design](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
+- [AndCode v2 Design](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
 - [Initial MVP Plan](docs/superpowers/plans/2026-07-18-initial-mvp.md)
 - [Local Runtime Design](docs/LOCAL_RUNTIME.md)
 
 ## Third-Party Software
 
-Runtime generation reuses generic Termux package resolution/extraction logic redesigned for OpenCode, inspired by the MIT-licensed Hermes Agent Android implementation. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.
+Runtime generation reuses generic Termux package resolution/extraction logic redesigned for coding agents, inspired by the MIT-licensed Hermes Agent Android implementation. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.
 
 ## License
 

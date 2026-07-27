@@ -10,18 +10,18 @@ GitHub Actions builds `app-release-unsigned.apk`. These are for smoke testing on
 
 ```bash
 keytool -genkey -v \
-  -keystore opencode-android-release.jks \
+  -keystore and-code-release.jks \
   -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias opencode-android
+  -alias and-code
 ```
 
 2. Add to `~/.gradle/gradle.properties` (do not commit):
 
 ```properties
-OPENCODE_STORE_FILE=/absolute/path/opencode-android-release.jks
-OPENCODE_STORE_PASSWORD=...
-OPENCODE_KEY_ALIAS=opencode-android
-OPENCODE_KEY_PASSWORD=...
+ANDROID_CODE_STORE_FILE=/absolute/path/and-code-release.jks
+ANDROID_CODE_STORE_PASSWORD=...
+ANDROID_CODE_KEY_ALIAS=and-code
+ANDROID_CODE_KEY_PASSWORD=...
 ```
 
 3. Optional: wire `signingConfigs` in `app/build.gradle.kts` reading those properties, then:
