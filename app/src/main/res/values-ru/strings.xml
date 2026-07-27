@@ -908,4 +908,10 @@
     <string name="setup_download_agents_description">Подготовка общей среды Linux и выбранных агентов.</string>
     <string name="settings_agents_row">Агенты</string>
     <string name="settings_agents_section">Агенты</string>
+    <string name="antigravity_status_signed_out">Вы вышли из аккаунта</string>
+    <string name="antigravity_sign_in_button">Войти в Antigravity</string>
+    <string name="antigravity_auth_starting">Начинаем вход…</string>
+    <string name="antigravity_auth_instructions">Подтвердите запрос Google в браузере и вставьте код сюда.</string>
+    <string name="antigravity_auth_verifying">Проверка…</string>
+    <string name="antigravity_signed_in">Вход в Antigravity выполнен</string>
 </resources>

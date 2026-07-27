@@ -922,4 +922,10 @@
     <string name="setup_download_agents_description">共有のLinux環境と、選んだエージェントを準備します。</string>
     <string name="settings_agents_row">エージェント</string>
     <string name="settings_agents_section">エージェント</string>
+    <string name="antigravity_status_signed_out">サインアウト済み</string>
+    <string name="antigravity_sign_in_button">Antigravityにサインイン</string>
+    <string name="antigravity_auth_starting">サインインを開始しています…</string>
+    <string name="antigravity_auth_instructions">ブラウザでGoogleのリクエストを承認し、表示されたコードをここに貼り付けてください。</string>
+    <string name="antigravity_auth_verifying">確認しています…</string>
+    <string name="antigravity_signed_in">Antigravityにサインイン済み</string>
 </resources>

@@ -908,4 +908,10 @@
     <string name="setup_download_agents_description">Prepara o ambiente Linux compartilhado e os agentes escolhidos.</string>
     <string name="settings_agents_row">Agentes</string>
     <string name="settings_agents_section">Agentes</string>
+    <string name="antigravity_status_signed_out">Desconectado</string>
+    <string name="antigravity_sign_in_button">Entrar no Antigravity</string>
+    <string name="antigravity_auth_starting">Iniciando login…</string>
+    <string name="antigravity_auth_instructions">Aprove a solicitação do Google no navegador e cole o código aqui.</string>
+    <string name="antigravity_auth_verifying">Verificando…</string>
+    <string name="antigravity_signed_in">Conectado ao Antigravity</string>
 </resources>

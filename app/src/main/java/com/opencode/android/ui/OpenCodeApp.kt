@@ -655,6 +655,10 @@ fun OpenCodeApp(
                         onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
                         onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
                         onSignOutClaude = workspaceViewModel::signOutClaude,
+                        onBeginAntigravitySignIn = app.antigravityController::beginAuth,
+                        onSubmitAntigravitySignInCode = app.antigravityController::submitAuthCode,
+                        onCancelAntigravitySignIn = app.antigravityController::cancelAuth,
+                        onSignOutAntigravity = app.antigravityController::logout,
                         onOpenUrl = { url ->
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
                         },

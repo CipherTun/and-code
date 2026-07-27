@@ -922,4 +922,10 @@
     <string name="setup_download_agents_description">Prepare the shared Linux environment and the agents you picked.</string>
     <string name="settings_agents_row">Agents</string>
     <string name="settings_agents_section">Agents</string>
+    <string name="antigravity_status_signed_out">Signed out</string>
+    <string name="antigravity_sign_in_button">Sign in to Antigravity</string>
+    <string name="antigravity_auth_starting">Starting sign-in…</string>
+    <string name="antigravity_auth_instructions">Approve the Google request in your browser, then paste the code it shows back here.</string>
+    <string name="antigravity_auth_verifying">Verifying…</string>
+    <string name="antigravity_signed_in">Signed in to Antigravity</string>
 </resources>

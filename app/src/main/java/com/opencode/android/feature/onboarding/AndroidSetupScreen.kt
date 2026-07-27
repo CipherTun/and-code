@@ -67,6 +67,7 @@ import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.workspace.ClaudeCodeCard
 import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
+import com.opencode.android.runtime.local.AntigravityAuthCoordinator
 import com.opencode.android.runtime.local.AntigravityControllerState
 import com.opencode.android.runtime.local.ClaudeCodeUiState
 import com.opencode.android.runtime.local.ClaudeInstallStatus
@@ -94,6 +95,10 @@ fun AndroidSetupScreen(
     onSubmitClaudeSignInCode: (String) -> Unit,
     onCancelClaudeSignIn: () -> Unit,
     onSignOutClaude: () -> Unit,
+    onBeginAntigravitySignIn: () -> Unit = {},
+    onSubmitAntigravitySignInCode: (String) -> Unit = {},
+    onCancelAntigravitySignIn: () -> Unit = {},
+    onSignOutAntigravity: () -> Unit = {},
     onOpenUrl: (String) -> Unit,
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
@@ -139,8 +144,8 @@ fun AndroidSetupScreen(
         }
     }
 
-    LaunchedEffect(openCodeReady, claude.installed, antigravitySelected, antigravity.installed, antigravity.busy) {
-        if (!antigravitySelected || antigravity.installed || antigravity.busy) return@LaunchedEffect
+    LaunchedEffect(openCodeReady, claude.installed, antigravitySelected, antigravity.installed, antigravity.busy, antigravity.error) {
+        if (!antigravitySelected || antigravity.installed || antigravity.busy || antigravity.error != null) return@LaunchedEffect
         // The shared rootfs must be activated before the official agy asset is copied into it.
         // When OpenCode was selected, its service owns the first install; add Antigravity after it
         // reports a usable environment. With Antigravity alone, start its installer immediately.
@@ -248,18 +253,26 @@ fun AndroidSetupScreen(
                     RuntimeDownloadStep(
                         runtimeStatus = runtimeStatus,
                         claude = claude,
+                        antigravity = antigravity,
                         openCodeSelected = openCodeSelected,
                         claudeSelected = claudeSelected,
+                        antigravitySelected = antigravitySelected,
                     )
                 3 ->
                     SignInStep(
                         claudeSelected = claudeSelected,
                         openCodeSelected = openCodeSelected,
+                        antigravitySelected = antigravitySelected,
                         claude = claude,
+                        antigravity = antigravity,
                         onBeginClaudeSignIn = onBeginClaudeSignIn,
                         onSubmitClaudeSignInCode = onSubmitClaudeSignInCode,
                         onCancelClaudeSignIn = onCancelClaudeSignIn,
                         onSignOutClaude = onSignOutClaude,
+                        onBeginAntigravitySignIn = onBeginAntigravitySignIn,
+                        onSubmitAntigravitySignInCode = onSubmitAntigravitySignInCode,
+                        onCancelAntigravitySignIn = onCancelAntigravitySignIn,
+                        onSignOutAntigravity = onSignOutAntigravity,
                         onOpenUrl = onOpenUrl,
                         onSelectClaudePermissionMode = onSelectClaudePermissionMode,
                         settingsState = settingsState,
@@ -514,8 +527,10 @@ private fun AgentOption(
 private fun RuntimeDownloadStep(
     runtimeStatus: LocalRuntimeStatus,
     claude: ClaudeCodeUiState,
+    antigravity: AntigravityControllerState,
     openCodeSelected: Boolean,
     claudeSelected: Boolean,
+    antigravitySelected: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
@@ -532,6 +547,17 @@ private fun RuntimeDownloadStep(
             SetupPanel {
                 Text(stringResource(R.string.agent_claude_code_name), fontWeight = FontWeight.SemiBold)
                 ClaudeInstallProgress(claude)
+            }
+        }
+        if (antigravitySelected) {
+            SetupPanel {
+                Text(stringResource(R.string.agent_antigravity_name), fontWeight = FontWeight.SemiBold)
+                when {
+                    antigravity.busy -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    antigravity.installed -> ReadyAgentRow(antigravity.version ?: "Antigravity 1.1.7")
+                    antigravity.error != null -> Text(antigravity.error, color = MaterialTheme.colorScheme.error)
+                    else -> Text(stringResource(R.string.setup_runtime_not_installed), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
@@ -666,11 +692,17 @@ private fun ReadyAgentRow(detail: String) {
 private fun SignInStep(
     claudeSelected: Boolean,
     openCodeSelected: Boolean,
+    antigravitySelected: Boolean,
     claude: ClaudeCodeUiState,
+    antigravity: AntigravityControllerState,
     onBeginClaudeSignIn: () -> Unit,
     onSubmitClaudeSignInCode: (String) -> Unit,
     onCancelClaudeSignIn: () -> Unit,
     onSignOutClaude: () -> Unit,
+    onBeginAntigravitySignIn: () -> Unit,
+    onSubmitAntigravitySignInCode: (String) -> Unit,
+    onCancelAntigravitySignIn: () -> Unit,
+    onSignOutAntigravity: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
     settingsState: SettingsUiState,
@@ -705,6 +737,83 @@ private fun SignInStep(
                 onOpenProviderAuth = onOpenProviderAuth,
                 onDisconnectProvider = onDisconnectProvider,
             )
+        }
+        if (antigravitySelected) {
+            SetupPanel {
+                Text(stringResource(R.string.agent_antigravity_name), fontWeight = FontWeight.SemiBold)
+                AntigravitySignInCard(
+                    auth = antigravity.auth,
+                    onSignIn = onBeginAntigravitySignIn,
+                    onSubmitCode = onSubmitAntigravitySignInCode,
+                    onCancel = onCancelAntigravitySignIn,
+                    onSignOut = onSignOutAntigravity,
+                    onOpenUrl = onOpenUrl,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AntigravitySignInCard(
+    auth: AntigravityAuthCoordinator.State,
+    onSignIn: () -> Unit,
+    onSubmitCode: (String) -> Unit,
+    onCancel: () -> Unit,
+    onSignOut: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+) {
+    var code by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        when (auth) {
+            AntigravityAuthCoordinator.State.Idle -> {
+                Text(stringResource(R.string.antigravity_status_signed_out), style = MaterialTheme.typography.bodySmall)
+                Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.antigravity_sign_in_button)) }
+            }
+            AntigravityAuthCoordinator.State.Starting -> {
+                Text(stringResource(R.string.antigravity_auth_starting), style = MaterialTheme.typography.bodySmall)
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.claude_auth_cancel)) }
+            }
+            is AntigravityAuthCoordinator.State.AwaitingBrowser -> {
+                Text(stringResource(R.string.antigravity_auth_instructions), style = MaterialTheme.typography.bodySmall)
+                Button(
+                    onClick = { onOpenUrl(auth.url) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.claude_auth_open_browser)) }
+                OutlinedTextField(value = code, onValueChange = {
+                    code = it
+                }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.claude_auth_code_hint)) })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onSubmitCode(code)
+                        },
+                        enabled = code.isNotBlank(),
+                        modifier =
+                            Modifier.weight(
+                                1f,
+                            ),
+                    ) { Text(stringResource(R.string.claude_auth_submit_code)) }
+                    TextButton(onClick = onCancel) { Text(stringResource(R.string.claude_auth_cancel)) }
+                }
+            }
+            AntigravityAuthCoordinator.State.Verifying -> {
+                Text(stringResource(R.string.antigravity_auth_verifying), style = MaterialTheme.typography.bodySmall)
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            is AntigravityAuthCoordinator.State.SignedIn -> {
+                Text(stringResource(R.string.antigravity_signed_in), fontWeight = FontWeight.Medium)
+                OutlinedButton(
+                    onClick = onSignOut,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.claude_sign_out_button)) }
+            }
+            is AntigravityAuthCoordinator.State.Failed -> {
+                Text(auth.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                if (auth.transcript.isNotBlank()) Text(auth.transcript, style = MaterialTheme.typography.labelSmall)
+                Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.antigravity_sign_in_button)) }
+            }
         }
     }
 }

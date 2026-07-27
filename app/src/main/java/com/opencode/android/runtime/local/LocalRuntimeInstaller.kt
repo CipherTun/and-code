@@ -1,6 +1,7 @@
 package com.opencode.android.runtime.local
 
 import android.content.Context
+import android.system.Os
 import com.opencode.android.R
 import com.opencode.android.runtime.LocalAgent
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,8 @@ class LocalRuntimeInstaller(
         val rootfs: File,
         /** Null when the sandbox was provisioned without the OpenCode agent. */
         val openCode: File?,
+        /** Debian Bookworm rootfs for the glibc-linked official Antigravity binary. */
+        val antigravityRootfs: File? = null,
     )
 
     /**
@@ -108,6 +111,18 @@ class LocalRuntimeInstaller(
                         extractOpenCode(archive, staging, rootfs)
                     }
                 configureRootfs(rootfs, commandSuite)
+                val antigravityRootfs =
+                    if (LocalAgent.ANTIGRAVITY in requestedAgents) {
+                        onProgress(0.90f, "Preparing Debian Bookworm for Antigravity")
+                        DebianRootfsInstaller(runtimeDirectory, abi, downloader, httpClient).installInto(
+                            File(staging, "antigravity-rootfs"),
+                        ) { progress ->
+                            onProgress(0.90f + progress * 0.03f, "Preparing Debian Bookworm for Antigravity")
+                        }
+                    } else {
+                        null
+                    }
+                if (antigravityRootfs != null) copyCaCertificates(rootfs, antigravityRootfs)
                 // Credentials and agent config live under /root inside the rootfs. Activation swaps
                 // the whole environment directory, so without this the user is signed out of every
                 // agent whenever another one is added or the runtime is reinstalled.
@@ -120,7 +135,7 @@ class LocalRuntimeInstaller(
                 }
                 if (LocalAgent.ANTIGRAVITY in requestedAgents) {
                     onProgress(0.94f, "Downloading and verifying official Antigravity")
-                    AntigravityInstaller(runtimeDirectory, abi, downloader).installInto(rootfs) { progress ->
+                    AntigravityInstaller(runtimeDirectory, abi, downloader).installInto(antigravityRootfs ?: rootfs) { progress ->
                         onProgress(0.94f + progress * 0.04f, "Installing Antigravity")
                     }
                 }
@@ -155,6 +170,7 @@ class LocalRuntimeInstaller(
                     commandSuite,
                     File(active, "rootfs"),
                     openCodeBinary?.let { File(active, "rootfs/usr/local/bin/opencode") },
+                    File(active, "antigravity-rootfs").takeIf { LocalAgent.ANTIGRAVITY in requestedAgents && it.isDirectory },
                 )
             } catch (error: Throwable) {
                 staging.deleteRecursively()
@@ -191,7 +207,13 @@ class LocalRuntimeInstaller(
                 runCatching {
                     EmbeddedCommandSuite(context, runtimeDirectory, abi).ensureInstalled()
                 }.getOrNull() ?: return@read null
-            InstalledRuntime(metadata, commandSuite, rootfs, File(rootfs, "usr/local/bin/opencode").takeIf { it.isFile })
+            InstalledRuntime(
+                metadata,
+                commandSuite,
+                rootfs,
+                File(rootfs, "usr/local/bin/opencode").takeIf { it.isFile },
+                File(active, "antigravity-rootfs").takeIf { metadata.has(LocalAgent.ANTIGRAVITY) && it.isDirectory },
+            )
         }
 
     /** Metadata of the active install, without requiring the command suite to be extractable. */
@@ -359,7 +381,24 @@ class LocalRuntimeInstaller(
         }
         File(rootfs, "root/.config/opencode").mkdirs()
         File(rootfs, "root/.local/share/opencode").mkdirs()
+        // The compact Alpine archive intentionally omits a few SONAME symlinks. apk loads
+        // libapk.so.3 by SONAME, so restore the link before installing agent dependencies.
+        val libApk = File(rootfs, "usr/lib/libapk.so.3")
+        if (!libApk.exists() && File(rootfs, "usr/lib/libapk.so.3.0.0").isFile) {
+            Os.symlink("libapk.so.3.0.0", libApk.absolutePath)
+        }
         require(suite.proot.isFile) { "PRoot launcher is unavailable" }
+    }
+
+    private fun copyCaCertificates(
+        alpineRootfs: File,
+        debianRootfs: File,
+    ) {
+        val source = File(alpineRootfs, "etc/ssl/certs/ca-certificates.crt")
+        if (!source.isFile) return
+        val destination = File(debianRootfs, "etc/ssl/certs/ca-certificates.crt")
+        destination.parentFile?.mkdirs()
+        source.copyTo(destination, overwrite = true)
     }
 
     companion object {

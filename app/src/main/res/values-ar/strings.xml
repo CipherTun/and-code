@@ -908,4 +908,10 @@
     <string name="setup_download_agents_description">تحضير بيئة Linux المشتركة والوكلاء الذين اخترتهم.</string>
     <string name="settings_agents_row">الوكلاء</string>
     <string name="settings_agents_section">الوكلاء</string>
+    <string name="antigravity_status_signed_out">تم تسجيل الخروج</string>
+    <string name="antigravity_sign_in_button">تسجيل الدخول إلى Antigravity</string>
+    <string name="antigravity_auth_starting">جارٍ بدء تسجيل الدخول…</string>
+    <string name="antigravity_auth_instructions">وافق على طلب Google في المتصفح، ثم الصق الرمز هنا.</string>
+    <string name="antigravity_auth_verifying">جارٍ التحقق…</string>
+    <string name="antigravity_signed_in">تم تسجيل الدخول إلى Antigravity</string>
 </resources>

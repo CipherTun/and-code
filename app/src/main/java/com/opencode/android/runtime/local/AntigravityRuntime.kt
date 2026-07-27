@@ -14,7 +14,6 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.util.UUID
 
 @Serializable
 data class AntigravitySessionRecord(
@@ -42,6 +41,7 @@ class AntigravityRuntime(
     private val messages = linkedMapOf<String, MutableList<OpenCodeMessage>>()
     private val processes = linkedMapOf<String, Process>()
     private val adapter = AntigravityTranscriptAdapter(json)
+    private val authCoordinator = AntigravityAuthCoordinator(runtimeDirectory, installedRuntimeProvider)
 
     init {
         load()
@@ -49,17 +49,39 @@ class AntigravityRuntime(
 
     fun events(): Flow<OpenCodeEvent> = events
 
-    fun auth() = AntigravityAuthCoordinator(runtimeDirectory, installedRuntimeProvider)
+    fun auth() = authCoordinator
 
-    fun isInstalled(): Boolean = installedRuntimeProvider()?.rootfs?.resolve("usr/local/bin/agy")?.canExecute() == true
+    fun isInstalled(): Boolean =
+        installedRuntimeProvider()?.let { runtime ->
+            (runtime.antigravityRootfs ?: runtime.rootfs).resolve("usr/local/bin/agy").canExecute()
+        } == true
 
     fun version(): String? =
         runCatching {
             val runtime = installedRuntimeProvider() ?: return null
+            val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
             val result =
-                ProcessBuilder(AntigravitySandboxLauncher.command(runtime, "/workspace", listOf("--version"), false))
-                    .redirectErrorStream(true).start().apply { waitFor() }
-            result.inputStream.bufferedReader().readText().trim().takeIf { result.exitValue() == 0 && it.isNotBlank() }
+                ProcessBuilder(AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("--version"), false))
+                    .redirectErrorStream(true)
+                    .apply {
+                        environment().putAll(
+                            AntigravitySandboxLauncher.environment(
+                                runtime,
+                                File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                            ),
+                        )
+                    }
+                    .start()
+            val completed = result.waitFor(45, java.util.concurrent.TimeUnit.SECONDS)
+            if (!completed) {
+                result.destroyForcibly()
+                return@runCatching null
+            }
+            val output = result.inputStream.bufferedReader().readText().trim()
+            // Some official builds initialize the auth provider before returning the version and
+            // may exit non-zero when no account is present. The semantic version is still a valid
+            // install signal; auth is verified separately with `agy models`.
+            VERSION_PATTERN.find(output)?.value ?: output.takeIf { result.exitValue() == 0 && it.isNotBlank() }
         }.getOrNull()
 
     suspend fun send(
@@ -103,8 +125,17 @@ class AntigravityRuntime(
                 process.waitFor()
                 processes.remove(sessionId)
                 require(process.exitValue() == 0) { output.ifBlank { "agy exited with ${process.exitValue()}" } }
-                val record = records[sessionId] ?: AntigravitySessionRecord(sessionId, UUID.randomUUID().toString(), workspace)
-                records[sessionId] = record.copy(updatedAt = System.currentTimeMillis(), lastStep = record.lastStep + 1)
+                val record = records[sessionId] ?: AntigravitySessionRecord(sessionId, null, workspace)
+                val discoveredConversationId = CONVERSATION_ID_PATTERN.find(output)?.groupValues?.getOrNull(1)
+                records[sessionId] =
+                    record.copy(
+                        // Never invent a conversation id: --conversation must only be used with
+                        // an id emitted by the official CLI, otherwise a cold resume can attach
+                        // to an unrelated conversation.
+                        conversationId = discoveredConversationId ?: record.conversationId,
+                        updatedAt = System.currentTimeMillis(),
+                        lastStep = record.lastStep + 1,
+                    )
                 val now = System.currentTimeMillis()
                 val userId = "$sessionId-user-${record.lastStep}"
                 val assistantId = "$sessionId-assistant-${record.lastStep}"
@@ -160,7 +191,7 @@ class AntigravityRuntime(
         sessionId: String,
         workspace: String,
     ) {
-        records[sessionId] = AntigravitySessionRecord(sessionId, UUID.randomUUID().toString(), workspace)
+        records[sessionId] = AntigravitySessionRecord(sessionId, null, workspace)
         persist()
     }
 
@@ -172,12 +203,20 @@ class AntigravityRuntime(
         permissionId: String,
         response: com.opencode.android.runtime.PermissionResponse,
         remember: Boolean,
-    ): Boolean = true
+    ): Boolean = false
 
     fun answer(
         requestId: String,
         answers: List<List<String>>,
-    ): Boolean = true
+    ): Boolean = false
+
+    private companion object {
+        // Keep this deliberately narrow. A UUID-shaped value in arbitrary model text is not
+        // enough to claim resume support, but this lets a future official --print transcript
+        // bridge persist an explicitly emitted conversation id without fabricating one.
+        val CONVERSATION_ID_PATTERN = Regex("(?:conversation(?:Id|_id)|conversation)\\s*[:=]\\s*[\\\"']?([0-9a-fA-F-]{16,})")
+        val VERSION_PATTERN = Regex("\\b\\d+\\.\\d+\\.\\d+\\b")
+    }
 
     private fun load() {
         runCatching {

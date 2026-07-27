@@ -10,12 +10,13 @@ object AntigravitySandboxLauncher {
         pty: Boolean,
     ): List<String> =
         buildList {
+            val rootfs = runtime.antigravityRootfs ?: runtime.rootfs
             add(runtime.commandSuite.proot.absolutePath)
             add("--kill-on-exit")
             add("--link2symlink")
             add("-0")
             add("-r")
-            add(runtime.rootfs.absolutePath)
+            add(rootfs.absolutePath)
             add("-b")
             add("/dev")
             add("-b")
@@ -49,6 +50,8 @@ object AntigravitySandboxLauncher {
                 "TERM" to "xterm-256color",
                 "AGY_CLI_DISABLE_AUTO_UPDATE" to "1",
                 "AGY_CLI_HIDE_ACCOUNT_INFO" to "1",
+                "SSL_CERT_FILE" to "/etc/ssl/certs/ca-certificates.crt",
+                "SSL_CERT_DIR" to "/etc/ssl/certs",
                 "CI" to "1",
             )
 }
