@@ -3,19 +3,21 @@ package com.opencode.android.runtime.local
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 data class AntigravityAuthStart(val process: Process, val url: String? = null)
 
 /**
  * Owns the official agy first-launch OAuth process. Authentication is not a subcommand: Google
- * documents launching `agy` with no arguments, then either opening a local browser or printing a
- * remote SSH URL and waiting for the returned code. The process and its token store remain inside
- * the Debian rootfs; only the URL and user-entered code cross the Android boundary.
+ * documents launching `agy` with no arguments, choosing "Google OAuth" in the sign-in chooser, then
+ * opening the printed URL and pasting the code back. The process and its token store remain inside
+ * the Debian rootfs; only the URL and the user-entered code cross the Android boundary.
  */
 class AntigravityAuthCoordinator(
     private val runtimeDirectory: File,
@@ -42,72 +44,73 @@ class AntigravityAuthCoordinator(
     private var process: Process? = null
     private var transcript = StringBuilder()
 
+    /**
+     * Frozen once the code field is live. Everything the TUI paints from that point on can contain
+     * the authorization code the user typed, so it must never reach the UI or a log.
+     */
+    @Volatile private var diagnostics: String = ""
+
+    @Volatile private var codeFieldLive = false
+
+    @Volatile private var menuAnswered = false
+
     /** Starts the no-argument agy TUI and returns immediately while its URL is discovered. */
     @Synchronized
     fun start(): AntigravityAuthStart {
         cancel()
         val runtime = installedRuntimeProvider() ?: error("Linux environment is not installed")
-        val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-        val command = AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, emptyList(), pty = true)
-        val started =
-            ProcessBuilder(command)
-                .directory(runtimeDirectory)
-                .redirectErrorStream(true)
-                .apply {
-                    environment().putAll(
-                        AntigravitySandboxLauncher.environment(
-                            runtime,
-                            File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
-                            githubToken(),
-                        ),
-                    )
-                    // Force the documented remote OAuth path. CI is intentionally removed: agy
-                    // treats CI as a headless test mode and skips the browser handoff entirely.
-                    environment().remove("CI")
-                    environment()["SSH_CONNECTION"] = "127.0.0.1 22 127.0.0.1 22"
-                    environment()["SSH_CLIENT"] = "127.0.0.1 22 22"
-                    environment()["SSH_TTY"] = "/dev/pts/0"
-                }
-                .start()
+        AntigravityGuestSettings.repair(runtime)
+        val started = launchTui(runtime)
         process = started
         transcript = StringBuilder()
+        diagnostics = ""
+        codeFieldLive = false
+        menuAnswered = false
         mutableState.value = State.Starting
-        // agy's first-launch TUI can wait for the initial prompt focus before it invokes the
-        // browser handoff. Give the canonical empty prompt one Enter so a headless PTY reaches
-        // the same auth path as a human launching `agy` and pressing Enter.
+        scope.launch { driveLoginChooser(started) }
         scope.launch {
-            kotlinx.coroutines.delay(750)
-            runCatching {
-                started.outputStream.write('\n'.code)
-                started.outputStream.flush()
-            }
+            runCatching { started.inputStream.bufferedReader().forEachChunk(::onOutput) }
+            onProcessExit(runCatching { started.waitFor() }.getOrDefault(-1))
         }
-        scope.launch {
-            runCatching {
-                started.inputStream.bufferedReader().forEachChunk(::onOutput)
-            }
-            val exit = runCatching { started.waitFor() }.getOrDefault(-1)
-            onProcessExit(exit)
-        }
-        // A local-browser launch has no useful URL for Android and otherwise leaves onboarding
-        // spinning forever. Surface the exact compatibility state while retaining the official
-        // process transcript for diagnostics.
-        scope.launch {
-            kotlinx.coroutines.delay(AUTH_DISCOVERY_TIMEOUT_MS)
-            if (started.isAlive && mutableState.value is State.Starting) {
-                val clean = transcript.toString().replace(ANSI_ESCAPE, "")
-                mutableState.value =
-                    if (clean.contains("local chrome mode", ignoreCase = true)) {
-                        State.Failed(
-                            "Official agy selected local browser mode; no remote OAuth URL was emitted in the Android PRoot session",
-                            clean.takeLast(VISIBLE_TRANSCRIPT),
-                        )
-                    } else {
-                        State.Failed("Antigravity did not emit a Google OAuth URL", clean.takeLast(VISIBLE_TRANSCRIPT))
-                    }
-            }
-        }
+        scope.launch { watchForDiscoveryTimeout(started) }
         return AntigravityAuthStart(started)
+    }
+
+    /**
+     * "1. Google OAuth" is preselected, so a single Enter starts the flow. The chooser only appears
+     * once the bundled language server is up, which is why this waits for the chooser to be painted
+     * instead of pressing Enter on a fixed delay.
+     */
+    private suspend fun driveLoginChooser(started: Process) {
+        val deadline = System.currentTimeMillis() + MENU_TIMEOUT_MS
+        while (started.isAlive && System.currentTimeMillis() < deadline) {
+            if (AntigravityAuthParser.isLoginMenuVisible(cleanTranscript())) {
+                menuAnswered = true
+                // Bubble Tea reads Enter as CR because it puts the PTY in raw mode.
+                runCatching {
+                    started.outputStream.write('\r'.code)
+                    started.outputStream.flush()
+                }
+                return
+            }
+            delay(POLL_INTERVAL_MS)
+        }
+    }
+
+    private suspend fun watchForDiscoveryTimeout(started: Process) {
+        delay(AUTH_DISCOVERY_TIMEOUT_MS)
+        if (!started.isAlive || mutableState.value !is State.Starting) return
+        val clean = cleanTranscript()
+        mutableState.value =
+            State.Failed(
+                when {
+                    AntigravityAuthParser.isLocalBrowserMode(clean) ->
+                        "Antigravity selected local browser mode and did not print a sign-in URL"
+                    !menuAnswered -> "Antigravity did not show its sign-in chooser"
+                    else -> "Antigravity did not print a Google sign-in URL"
+                },
+                visibleDiagnostics(clean),
+            )
     }
 
     fun submitCode(
@@ -130,10 +133,38 @@ class AntigravityAuthCoordinator(
         if (trimmed.isEmpty()) return
         mutableState.value = State.Verifying
         runCatching {
-            target.outputStream.write((trimmed + "\n").toByteArray())
+            target.outputStream.write((trimmed + "\r").toByteArray())
             target.outputStream.flush()
         }.onFailure {
-            mutableState.value = State.Failed(it.message ?: "Could not submit the Antigravity code", transcript.toString())
+            mutableState.value = State.Failed(it.message ?: "Could not submit the Antigravity code", diagnostics)
+            return
+        }
+        scope.launch { awaitVerification(target) }
+    }
+
+    /**
+     * The official CLI stays running after a successful exchange, so completion is confirmed out of
+     * band with `agy models` rather than by waiting for the process to exit.
+     */
+    private suspend fun awaitVerification(target: Process) {
+        val deadline = System.currentTimeMillis() + VERIFY_TIMEOUT_MS
+        while (System.currentTimeMillis() < deadline) {
+            if (mutableState.value !is State.Verifying) return
+            val clean = cleanTranscript()
+            if (AntigravityAuthParser.isFailure(clean)) {
+                mutableState.value = State.Failed("Antigravity rejected the authorization code", diagnostics)
+                return
+            }
+            if (AntigravityAuthParser.isSignedIn(clean) || verifyModels()) {
+                target.takeIf(Process::isAlive)?.destroyForcibly()
+                synchronized(this) { process = null }
+                mutableState.value = State.SignedIn()
+                return
+            }
+            delay(VERIFY_POLL_MS)
+        }
+        if (mutableState.value is State.Verifying) {
+            mutableState.value = State.Failed("Antigravity sign-in did not complete in time", diagnostics)
         }
     }
 
@@ -141,15 +172,93 @@ class AntigravityAuthCoordinator(
     fun cancel() {
         process?.takeIf(Process::isAlive)?.destroyForcibly()
         process = null
+        codeFieldLive = false
         if (mutableState.value !is State.SignedIn) mutableState.value = State.Idle
     }
 
     /** Sends the documented `/logout` command through a short-lived official TUI process. */
     fun logout() {
         val runtime = installedRuntimeProvider() ?: return
+        cancel()
         runCatching {
+            val target = launchTui(runtime)
+            target.outputStream.bufferedWriter().use {
+                it.write("/logout\r")
+                it.flush()
+            }
+            if (!target.waitFor(LOGOUT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) target.destroyForcibly()
+        }
+        mutableState.value = State.Idle
+    }
+
+    /** True when the guest token store already satisfies the official CLI. */
+    fun isSignedIn(): Boolean = verifyModels()
+
+    /** Restores the signed-in state discovered from the guest token store after an app restart. */
+    fun markSignedIn() {
+        if (mutableState.value is State.Idle) mutableState.value = State.SignedIn()
+    }
+
+    private fun launchTui(runtime: LocalRuntimeInstaller.InstalledRuntime): Process {
+        val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
+        val command = AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, emptyList(), pty = true)
+        return ProcessBuilder(command)
+            .directory(runtimeDirectory)
+            .redirectErrorStream(true)
+            .apply {
+                environment().putAll(
+                    AntigravitySandboxLauncher.environment(
+                        runtime,
+                        File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                        githubToken(),
+                    ),
+                )
+                // agy treats CI as a headless test mode and skips the browser handoff entirely.
+                environment().remove("CI")
+            }
+            .start()
+    }
+
+    private fun cleanTranscript(): String = AntigravityAuthParser.stripAnsi(synchronized(this) { transcript.toString() })
+
+    private fun visibleDiagnostics(clean: String): String = AntigravityAuthParser.redact(clean).takeLast(VISIBLE_TRANSCRIPT)
+
+    private fun onOutput(chunk: String) {
+        synchronized(this) {
+            transcript.append(chunk)
+            if (transcript.length > MAX_TRANSCRIPT) transcript.delete(0, transcript.length - MAX_TRANSCRIPT)
+        }
+        val clean = cleanTranscript()
+        if (!codeFieldLive) {
+            diagnostics = visibleDiagnostics(clean)
+            codeFieldLive = AntigravityAuthParser.isAwaitingCode(clean)
+        }
+        if (mutableState.value is State.Verifying || mutableState.value is State.SignedIn) return
+        val url = AntigravityAuthParser.findOAuthUrl(clean)
+        if (url != null) mutableState.value = State.AwaitingBrowser(url, diagnostics)
+    }
+
+    private fun onProcessExit(exitCode: Int) {
+        synchronized(this) { process = null }
+        when (mutableState.value) {
+            is State.SignedIn -> return
+            // Verification owns the terminal state once a code has been submitted.
+            is State.Verifying -> return
+            else -> Unit
+        }
+        mutableState.value =
+            if (verifyModels()) {
+                State.SignedIn()
+            } else {
+                State.Failed("Antigravity sign-in stopped (exit code $exitCode)", diagnostics)
+            }
+    }
+
+    private fun verifyModels(): Boolean =
+        runCatching {
+            val runtime = installedRuntimeProvider() ?: return false
             val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-            val command = AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, emptyList(), pty = true)
+            val command = AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("models"), pty = false)
             val target =
                 ProcessBuilder(command)
                     .directory(runtimeDirectory)
@@ -162,66 +271,15 @@ class AntigravityAuthCoordinator(
                                 githubToken(),
                             ),
                         )
-                        environment().remove("CI")
                     }
                     .start()
-            target.outputStream.bufferedWriter().use {
-                it.write("/logout\n")
-                it.flush()
+            val output = target.inputStream.bufferedReader().readText()
+            if (!target.waitFor(MODELS_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                target.destroyForcibly()
+                return false
             }
-            target.waitFor()
-        }
-        mutableState.value = State.Idle
-    }
-
-    private fun onOutput(chunk: String) {
-        synchronized(this) {
-            transcript.append(chunk)
-            if (transcript.length > MAX_TRANSCRIPT) transcript.delete(0, transcript.length - MAX_TRANSCRIPT)
-        }
-        val clean = transcript.toString().replace(ANSI_ESCAPE, "")
-        val url = URL_PATTERN.find(clean)?.value
-        if (url != null && mutableState.value !is State.Verifying) {
-            mutableState.value = State.AwaitingBrowser(url, clean.takeLast(VISIBLE_TRANSCRIPT))
-        } else if (mutableState.value is State.AwaitingBrowser) {
-            mutableState.value = (mutableState.value as State.AwaitingBrowser).copy(transcript = clean.takeLast(VISIBLE_TRANSCRIPT))
-        }
-    }
-
-    private fun onProcessExit(exitCode: Int) {
-        synchronized(this) { process = null }
-        val clean = transcript.toString().replace(ANSI_ESCAPE, "")
-        val authenticated = runCatching { verifyModels() }.getOrDefault(false)
-        mutableState.value =
-            when {
-                authenticated -> State.SignedIn()
-                exitCode == 0 -> State.Failed("Antigravity sign-in did not complete", clean.takeLast(VISIBLE_TRANSCRIPT))
-                else -> State.Failed("Antigravity sign-in stopped (exit code $exitCode)", clean.takeLast(VISIBLE_TRANSCRIPT))
-            }
-    }
-
-    private fun verifyModels(): Boolean {
-        val runtime = installedRuntimeProvider() ?: return false
-        val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
-        val command = AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("models"), pty = false)
-        val target =
-            ProcessBuilder(command)
-                .directory(runtimeDirectory)
-                .redirectErrorStream(true)
-                .apply {
-                    environment().putAll(
-                        AntigravitySandboxLauncher.environment(
-                            runtime,
-                            File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
-                            githubToken(),
-                        ),
-                    )
-                }
-                .start()
-        val output = target.inputStream.bufferedReader().readText()
-        target.waitFor()
-        return target.exitValue() == 0 && output.isNotBlank() && !output.contains("Please sign in", ignoreCase = true)
-    }
+            target.exitValue() == 0 && output.isNotBlank() && !output.contains(NOT_LOGGED_IN, ignoreCase = true)
+        }.getOrDefault(false)
 
     private fun java.io.BufferedReader.forEachChunk(onChunk: (String) -> Unit) {
         val buffer = CharArray(1024)
@@ -233,10 +291,15 @@ class AntigravityAuthCoordinator(
     }
 
     private companion object {
-        const val MAX_TRANSCRIPT = 8_000
+        const val MAX_TRANSCRIPT = 16_000
         const val VISIBLE_TRANSCRIPT = 1_200
-        const val AUTH_DISCOVERY_TIMEOUT_MS = 15_000L
-        val ANSI_ESCAPE = Regex("\\u001B\\[[;?\\d]*[ -/]*[@-~]|\\u001B\\][^\\u0007]*\\u0007")
-        val URL_PATTERN = Regex("https://[^\\s\\\"'()\\[\\]]+")
+        const val POLL_INTERVAL_MS = 400L
+        const val MENU_TIMEOUT_MS = 90_000L
+        const val AUTH_DISCOVERY_TIMEOUT_MS = 120_000L
+        const val VERIFY_POLL_MS = 2_000L
+        const val VERIFY_TIMEOUT_MS = 120_000L
+        const val MODELS_TIMEOUT_SECONDS = 90L
+        const val LOGOUT_TIMEOUT_SECONDS = 60L
+        const val NOT_LOGGED_IN = "not logged into Antigravity"
     }
 }

@@ -70,21 +70,7 @@ class DebianRootfsInstaller(
         File(rootfs, "etc/hosts").writeText("127.0.0.1 localhost\n::1 localhost\n")
         File(rootfs, "root/.config/antigravity").mkdirs()
         File(rootfs, "root/.gemini").mkdirs()
-        val settings = File(rootfs, "root/.gemini/antigravity-cli/settings.json")
-        settings.parentFile?.mkdirs()
-        settings.writeText(
-            """
-            {
-              "altScreenMode": "never",
-              "notifications": false,
-              "enableTelemetry": false,
-              "toolPermission": "request-review",
-              "trustedWorkspaces": ["/workspace"]
-            }
-            """.trimIndent()
-                +
-                "\n",
-        )
+        AntigravityGuestSettings.write(rootfs)
     }
 
     private suspend fun installPtyUtility(rootfs: File) {

@@ -34,6 +34,10 @@ class AntigravityController(
             val binaryInstalled = rootfs?.resolve("usr/local/bin/agy")?.let { it.isFile && it.canExecute() } == true
             if (binaryInstalled) {
                 mutableState.value = mutableState.value.copy(installed = true, busy = false)
+                // The token lives in the guest rootfs, so a restarted app is still signed in even
+                // though the in-memory coordinator starts at Idle. Ask the official CLI instead of
+                // showing a misleading "Signed out".
+                if (target.auth.isSignedIn()) target.auth.markSignedIn()
             }
         }
         scope.launch {

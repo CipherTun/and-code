@@ -63,6 +63,7 @@ class AntigravityRuntime(
         runCatching {
             cachedVersion?.let { return@runCatching it }
             val runtime = installedRuntimeProvider() ?: return null
+            AntigravityGuestSettings.repair(runtime)
             val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
             val result =
                 ProcessBuilder(AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("--version"), false))
@@ -105,6 +106,7 @@ class AntigravityRuntime(
             runCatching {
                 val runtime = installedRuntimeProvider() ?: error("Linux environment is not installed")
                 require(isInstalled()) { "Antigravity is not installed" }
+                AntigravityGuestSettings.repair(runtime)
                 processes.remove(sessionId)?.destroyForcibly()
                 val args =
                     buildList {
