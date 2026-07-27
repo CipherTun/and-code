@@ -1,4 +1,4 @@
-package com.opencode.android.accessibility
+package com.yugahashimoto.andcode.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
@@ -8,7 +8,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import org.json.JSONArray
 import org.json.JSONObject
 
-class OpenCodeAccessibilityService : AccessibilityService() {
+class AndCodeAccessibilityService : AccessibilityService() {
     @Volatile
     private var lastRoot: AccessibilityNodeInfo? = null
 
@@ -106,6 +106,6 @@ class OpenCodeAccessibilityService : AccessibilityService() {
 
     companion object {
         @Volatile
-        var instance: OpenCodeAccessibilityService? = null
+        var instance: AndCodeAccessibilityService? = null
     }
 }

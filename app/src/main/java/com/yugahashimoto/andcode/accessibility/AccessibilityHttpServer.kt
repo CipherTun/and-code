@@ -1,4 +1,4 @@
-package com.opencode.android.accessibility
+package com.yugahashimoto.andcode.accessibility
 
 import android.util.Log
 import org.json.JSONObject
@@ -91,7 +91,7 @@ class AccessibilityHttpServer(
         path: String,
         body: JSONObject,
     ): Pair<Int, String> {
-        val service = OpenCodeAccessibilityService.instance
+        val service = AndCodeAccessibilityService.instance
         if (service == null && path != "/health") {
             return 503 to """{"error":"Accessibility service not connected"}"""
         }
