@@ -156,6 +156,7 @@ fun OpenCodeApp(
     val selectedRuntime by app.runtimeRegistry.selected.collectAsState()
     val runtimeTargets by app.runtimeRegistry.targets.collectAsState()
     val preferences by app.preferences.state.collectAsState()
+    val antigravityState by app.antigravityController.state.collectAsState()
 
     var sidebarGrouping by remember { mutableStateOf(preferences.sidebarGrouping) }
     var collapsedSections by remember { mutableStateOf(setOf<String>()) }
@@ -631,6 +632,7 @@ fun OpenCodeApp(
                     AndroidSetupScreen(
                         runtimeStatus = localRuntimeStatus,
                         claude = workspaceState.claude,
+                        antigravity = antigravityState,
                         onStartSetup = { agents ->
                             if (com.opencode.android.runtime.LocalAgent.OPEN_CODE in agents) {
                                 workspaceViewModel.setupLocalRuntime()
@@ -640,7 +642,9 @@ fun OpenCodeApp(
                             ) {
                                 workspaceViewModel.installClaudeCode()
                             }
-                            if (com.opencode.android.runtime.LocalAgent.ANTIGRAVITY in agents) {
+                            if (com.opencode.android.runtime.LocalAgent.ANTIGRAVITY in agents &&
+                                com.opencode.android.runtime.LocalAgent.OPEN_CODE !in agents
+                            ) {
                                 app.antigravityController.install()
                             }
                         },

@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import com.opencode.android.data.settings.AppPreferences
 import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.feature.settings.AgentSettingsScreen
+import com.opencode.android.feature.settings.AntigravityAgentSettingsScreen
 import com.opencode.android.feature.settings.ClaudeCodeAgentSettingsScreen
 import com.opencode.android.feature.settings.GitHubSettingsScreen
 import com.opencode.android.feature.settings.OpenCodeAgentSettingsScreen
@@ -117,6 +118,7 @@ fun NavGraphBuilder.settingsNavGraph(
         AgentSettingsScreen(
             onOpenOpenCode = { navController.navigate(ROUTE_SETTINGS_AGENT_OPENCODE) },
             onOpenClaudeCode = { navController.navigate(ROUTE_SETTINGS_AGENT_CLAUDE) },
+            onOpenAntigravity = { navController.navigate(ROUTE_SETTINGS_AGENT_ANTIGRAVITY) },
             onBack = { navController.popBackStack() },
         )
     }
@@ -144,6 +146,13 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenUrl = { url ->
                 runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
             },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENT_ANTIGRAVITY) {
+        AntigravityAgentSettingsScreen(
+            onOpenLocalRuntime = { navController.navigate(ROUTE_ANDROID_SETUP) },
             onBack = { navController.popBackStack() },
         )
     }

@@ -41,6 +41,7 @@ import com.opencode.android.ui.runtimeAgentIcon
 fun AgentSettingsScreen(
     onOpenOpenCode: () -> Unit,
     onOpenClaudeCode: () -> Unit,
+    onOpenAntigravity: () -> Unit,
     onBack: () -> Unit,
 ) {
     AgentSettingsScaffold(title = stringResource(R.string.settings_agents_row), onBack = onBack) {
@@ -48,6 +49,26 @@ fun AgentSettingsScreen(
             AgentRow(LocalAgent.OPEN_CODE, onOpenOpenCode)
             SettingsDivider()
             AgentRow(LocalAgent.CLAUDE_CODE, onOpenClaudeCode)
+            SettingsDivider()
+            AgentRow(LocalAgent.ANTIGRAVITY, onOpenAntigravity)
+        }
+    }
+}
+
+/** Antigravity is installed and authenticated from the Android setup flow. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AntigravityAgentSettingsScreen(
+    onOpenLocalRuntime: () -> Unit,
+    onBack: () -> Unit,
+) {
+    AgentSettingsScaffold(title = stringResource(LocalAgent.ANTIGRAVITY.displayNameRes), onBack = onBack) {
+        SettingsSection(title = stringResource(R.string.settings_agents_section)) {
+            SettingsRow(
+                icon = Icons.Default.Terminal,
+                title = stringResource(R.string.settings_local_runtime_row),
+                onClick = onOpenLocalRuntime,
+            )
         }
     }
 }

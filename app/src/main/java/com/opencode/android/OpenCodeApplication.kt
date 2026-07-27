@@ -45,6 +45,7 @@ import com.opencode.android.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -233,6 +234,9 @@ class OpenCodeApplication : Application() {
                 localTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages),
                 additionalTargets = listOf(claudeCodeTarget, antigravityTarget),
             )
+        // Surface the installed/version state to the workspace picker without waiting for the
+        // first chat to touch Antigravity.
+        applicationScope.launch { antigravityTarget.connect() }
         claudeCodeController =
             ClaudeCodeController(
                 target = claudeCodeTarget,

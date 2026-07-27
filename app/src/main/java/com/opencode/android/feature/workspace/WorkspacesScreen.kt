@@ -307,7 +307,7 @@ fun WorkspacesScreen(
                             onSignOut = onSignOutClaude,
                             onOpenUrl = onOpenUrl,
                         )
-                    } else if (target.type == RuntimeType.LOCAL) {
+                    } else if (target.type == RuntimeType.LOCAL && target.agent != LocalAgent.ANTIGRAVITY) {
                         Spacer(Modifier.height(12.dp))
                         when (val local = state.localStatus) {
                             LocalRuntimeStatus.NotInstalled -> {
@@ -689,6 +689,14 @@ private fun targetSubtitle(
             is RuntimeState.Unavailable -> stringResource(R.string.claude_status_not_installed)
             RuntimeState.Connecting -> stringResource(R.string.claude_status_installing)
             RuntimeState.Disconnected -> stringResource(R.string.claude_status_not_installed)
+        }
+    } else if (target.agent == LocalAgent.ANTIGRAVITY) {
+        when (val runtimeState = target.state) {
+            is RuntimeState.Connected -> runtimeState.version
+            RuntimeState.Connecting -> stringResource(R.string.claude_status_installing)
+            is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
+            is RuntimeState.Unavailable -> compactRuntimeError(runtimeState.reason)
+            RuntimeState.Disconnected -> stringResource(R.string.runtime_status_not_installed)
         }
     } else {
         when (target.type) {

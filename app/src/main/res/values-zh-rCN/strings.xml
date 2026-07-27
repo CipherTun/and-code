@@ -838,7 +838,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="agent_antigravity_name">Antigravity · Local</string>
+    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">无法安装本地运行时</string>
     <string name="runtime_error_reinstall_failed">无法重新安装本地运行时</string>
     <string name="runtime_error_start_failed">无法启动本地 OpenCode</string>

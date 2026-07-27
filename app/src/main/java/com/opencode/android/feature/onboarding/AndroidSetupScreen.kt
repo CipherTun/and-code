@@ -67,6 +67,7 @@ import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.workspace.ClaudeCodeCard
 import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
+import com.opencode.android.runtime.local.AntigravityControllerState
 import com.opencode.android.runtime.local.ClaudeCodeUiState
 import com.opencode.android.runtime.local.ClaudeInstallStatus
 import com.opencode.android.runtime.local.ClaudePermissionMode
@@ -86,6 +87,7 @@ private const val TOTAL_STEPS = 4
 fun AndroidSetupScreen(
     runtimeStatus: LocalRuntimeStatus,
     claude: ClaudeCodeUiState,
+    antigravity: AntigravityControllerState = AntigravityControllerState(),
     onStartSetup: (Set<LocalAgent>) -> Unit,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
     onBeginClaudeSignIn: () -> Unit,
@@ -121,8 +123,10 @@ fun AndroidSetupScreen(
 
     val openCodeSelected = LocalAgent.OPEN_CODE in selectedAgents
     val claudeSelected = LocalAgent.CLAUDE_CODE in selectedAgents
+    val antigravitySelected = LocalAgent.ANTIGRAVITY in selectedAgents
     val openCodeReady = runtimeStatus is LocalRuntimeStatus.Ready || runtimeStatus is LocalRuntimeStatus.Stopped
-    val installComplete = (!openCodeSelected || openCodeReady) && (!claudeSelected || claude.installed)
+    val antigravityReady = antigravitySelected && antigravity.installed && !antigravity.busy
+    val installComplete = (!openCodeSelected || openCodeReady) && (!claudeSelected || claude.installed) && (!antigravitySelected || antigravityReady)
 
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
 
@@ -133,6 +137,16 @@ fun AndroidSetupScreen(
         if (openCodeReady && !claude.installed && claude.install is ClaudeInstallStatus.Idle) {
             onStartSetup(setOf(LocalAgent.CLAUDE_CODE))
         }
+    }
+
+    LaunchedEffect(openCodeReady, claude.installed, antigravitySelected, antigravity.installed, antigravity.busy) {
+        if (!antigravitySelected || antigravity.installed || antigravity.busy) return@LaunchedEffect
+        // The shared rootfs must be activated before the official agy asset is copied into it.
+        // When OpenCode was selected, its service owns the first install; add Antigravity after it
+        // reports a usable environment. With Antigravity alone, start its installer immediately.
+        if (openCodeSelected && !openCodeReady) return@LaunchedEffect
+        if (!openCodeSelected && claudeSelected && !claude.installed) return@LaunchedEffect
+        onStartSetup(setOf(LocalAgent.ANTIGRAVITY))
     }
 
     LaunchedEffect(installComplete) {
@@ -161,8 +175,10 @@ fun AndroidSetupScreen(
             2 ->
                 if (installComplete) {
                     SetupPrimaryAction(stringResource(R.string.setup_next_action), true) { currentStep = 3 }
-                } else if (runtimeStatus is LocalRuntimeStatus.Broken || claude.install is ClaudeInstallStatus.Failed) {
-                    SetupPrimaryAction(stringResource(R.string.claude_retry_install_button), true) { onStartSetup(selectedAgents) }
+                } else if (runtimeStatus is LocalRuntimeStatus.Broken || claude.install is ClaudeInstallStatus.Failed || antigravity.error != null) {
+                    SetupPrimaryAction(stringResource(R.string.claude_retry_install_button), true) {
+                        onStartSetup(if (antigravity.error != null) setOf(LocalAgent.ANTIGRAVITY) else selectedAgents)
+                    }
                 } else {
                     null
                 }

@@ -36,8 +36,20 @@ class AntigravityInstaller(
                         ?: error("Official Antigravity archive did not contain an agy binary")
                 val destination = File(rootfs, "usr/local/bin/agy")
                 destination.parentFile?.mkdirs()
-                source.copyTo(destination, overwrite = true)
-                require(destination.setExecutable(true, false) || destination.canExecute()) { "Unable to mark agy executable" }
+                val candidate = File(destination.parentFile, "agy.new-${System.nanoTime()}")
+                val backup = File(destination.parentFile, "agy.rollback")
+                runCatching {
+                    source.copyTo(candidate, overwrite = true)
+                    require(candidate.setExecutable(true, false) || candidate.canExecute()) { "Unable to mark agy executable" }
+                    backup.delete()
+                    if (destination.exists()) require(destination.renameTo(backup)) { "Unable to stage the previous agy binary" }
+                    require(candidate.renameTo(destination)) { "Unable to activate the verified agy binary" }
+                    backup.delete()
+                }.onFailure { error ->
+                    candidate.delete()
+                    if (!destination.exists() && backup.exists()) backup.renameTo(destination)
+                    throw error
+                }
                 onProgress(1f)
                 archive.delete()
                 destination

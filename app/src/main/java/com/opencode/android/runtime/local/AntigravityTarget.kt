@@ -15,7 +15,10 @@ class AntigravityTarget(private val runtime: AntigravityRuntime) : RuntimeTarget
     override val kind = BackendKind.LOCAL
     override val type = RuntimeType.LOCAL
     override val capabilities =
-        RuntimeCapabilities(permissions = true, questions = true, toolEvents = true, providerModelList = true, resume = true)
+        // The transcript parser is ready for these events, but the current CLI bridge is a
+        // request/response process rather than a long-lived PTY. Do not advertise interactions
+        // that would make the UI send answers into a process that no longer exists.
+        RuntimeCapabilities(toolEvents = true, resume = true)
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
     override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
     val auth get() = runtime.auth()
