@@ -41,6 +41,8 @@ class AntigravityRuntime(
     private val records = linkedMapOf<String, AntigravitySessionRecord>()
     private val messages = linkedMapOf<String, MutableList<OpenCodeMessage>>()
     private val processes = linkedMapOf<String, Process>()
+
+    @Volatile private var cachedVersion: String? = null
     private val adapter = AntigravityTranscriptAdapter(json)
     private val authCoordinator = AntigravityAuthCoordinator(runtimeDirectory, installedRuntimeProvider, githubToken)
 
@@ -59,6 +61,7 @@ class AntigravityRuntime(
 
     fun version(): String? =
         runCatching {
+            cachedVersion?.let { return@runCatching it }
             val runtime = installedRuntimeProvider() ?: return null
             val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
             val result =
@@ -83,8 +86,14 @@ class AntigravityRuntime(
             // Some official builds initialize the auth provider before returning the version and
             // may exit non-zero when no account is present. The semantic version is still a valid
             // install signal; auth is verified separately with `agy models`.
-            VERSION_PATTERN.find(output)?.value ?: output.takeIf { result.exitValue() == 0 && it.isNotBlank() }
+            (VERSION_PATTERN.find(output)?.value ?: output.takeIf { result.exitValue() == 0 && it.isNotBlank() })
+                .also { cachedVersion = it }
         }.getOrNull()
+
+    /** Clears the in-memory health cache after an install or runtime update. */
+    fun invalidateVersion() {
+        cachedVersion = null
+    }
 
     suspend fun send(
         sessionId: String,

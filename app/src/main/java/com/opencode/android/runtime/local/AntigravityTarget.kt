@@ -6,9 +6,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.UUID
 
-class AntigravityTarget(private val runtime: AntigravityRuntime) : RuntimeTarget {
+class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarget {
     override val id = LocalAgent.ANTIGRAVITY.targetId
     override val displayName = "Antigravity · Local"
     override val agent = LocalAgent.ANTIGRAVITY
@@ -22,6 +24,7 @@ class AntigravityTarget(private val runtime: AntigravityRuntime) : RuntimeTarget
         RuntimeCapabilities()
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
     override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
+    private val files = ClaudeWorkspaceFiles(File(runtime.runtimeDirectory, "workspace"))
     val auth get() = runtime.auth()
 
     override suspend fun connect(): Result<OpenCodeHealth> =
@@ -112,6 +115,32 @@ class AntigravityTarget(private val runtime: AntigravityRuntime) : RuntimeTarget
     ): Boolean = runtime.answer(requestId, answers)
 
     override fun events(): Flow<OpenCodeEvent> = runtime.events()
+
+    // The merged Claude runtime added the local workspace explorer because a local agent has no
+    // HTTP file API. Antigravity uses the same /workspace bind mount, so expose the same safe,
+    // canonicalized read/search surface instead of falling back to OpenCodeBackend.unsupported().
+    override suspend fun listFiles(
+        directory: String,
+        path: String,
+    ): List<OpenCodeFileNode> = withContext(kotlinx.coroutines.Dispatchers.IO) { files.list(directory, path) }
+
+    override suspend fun readFile(
+        directory: String,
+        path: String,
+    ): OpenCodeFileContent = withContext(kotlinx.coroutines.Dispatchers.IO) { files.read(directory, path) }
+
+    override suspend fun findFiles(
+        directory: String,
+        query: String,
+        includeDirectories: Boolean?,
+        type: String?,
+        limit: Int?,
+    ): List<String> = withContext(kotlinx.coroutines.Dispatchers.IO) { files.find(directory, query, includeDirectories, limit) }
+
+    override suspend fun searchText(
+        directory: String,
+        pattern: String,
+    ): List<OpenCodeSearchMatch> = withContext(kotlinx.coroutines.Dispatchers.IO) { files.search(directory, pattern) }
 
     override suspend fun listWorkspaces(): List<WorkspaceRef> =
         runtime.listSessions(null).map {

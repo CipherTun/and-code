@@ -49,6 +49,7 @@ class AntigravityController(
         scope.launch {
             runCatching { installer.install(setOf(LocalAgent.ANTIGRAVITY)) }
                 .onSuccess {
+                    target.runtime.invalidateVersion()
                     target.connect()
                     mutableState.value =
                         AntigravityControllerState(
