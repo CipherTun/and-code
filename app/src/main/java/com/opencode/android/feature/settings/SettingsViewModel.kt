@@ -5,12 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.opencode.android.core.api.OpenCodeAgent
 import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.core.api.ProviderAuthMethod
+import com.opencode.android.core.api.ProviderCatalog
 import com.opencode.android.data.connection.SecureSettingsRepository
 import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.data.repository.RuntimeCatalogState
 import com.opencode.android.data.settings.AppPreferences
 import com.opencode.android.data.settings.AppPreferencesRepository
 import com.opencode.android.runtime.BackendKind
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.local.LocalProviderCredentialStore
@@ -68,6 +70,15 @@ class SettingsViewModel(
 ) : ViewModel() {
     private val settingsTick = MutableStateFlow(0)
     private val oauthState = MutableStateFlow(OAuthState())
+
+    /**
+     * Providers of the runtime that owns them, which is not always the selected one.
+     *
+     * The catalogue behind [catalog] follows the chat's runtime, as the model picker needs. Provider
+     * settings must not: with Claude Code selected the screen listed Claude Code as the only
+     * provider and hid every real one, because Claude's catalogue is its own models.
+     */
+    private val providerCatalog = MutableStateFlow<ProviderCatalog?>(null)
     private val githubState = MutableStateFlow(GitHubState())
     private var providerAuthJob: Job? = null
     private val githubAuth =
@@ -82,6 +93,7 @@ class SettingsViewModel(
         val preferences: AppPreferences,
         val targets: List<RuntimeTarget>,
         val selected: RuntimeTarget?,
+        val providerCatalog: ProviderCatalog?,
     )
 
     private data class OAuthState(
@@ -109,18 +121,31 @@ class SettingsViewModel(
 
     val state: StateFlow<SettingsUiState> =
         combine(
-            combine(catalog.state, preferences.state, registry.targets, registry.selected) { runtime, prefs, targets, selected ->
-                CoreState(runtime, prefs, targets, selected)
+            combine(
+                catalog.state,
+                preferences.state,
+                registry.targets,
+                registry.selected,
+                providerCatalog,
+            ) { runtime, prefs, targets, selected, providers ->
+                CoreState(runtime, prefs, targets, selected, providers)
             },
             settingsTick,
             oauthState,
             githubState,
         ) { core, _, oauth, github ->
-            val connected = core.runtime.providers.connected.toSet() + oauth.locallyConnected
+            // Two different questions, two different catalogues.
+            //
+            // `providers` answers "what can this chat talk to", so it follows the selected runtime.
+            // `availableProviders` answers "whose credentials can I manage", which is always the
+            // provider-owning runtime. Serving both from one catalogue put OpenCode's models in the
+            // model picker while Claude Code was the active agent.
+            val chatConnected = core.runtime.providers.connected.toSet() + oauth.locallyConnected
+            val managed = core.providerCatalog ?: core.runtime.providers
             SettingsUiState(
-                providers = core.runtime.providers.all.filter { it.id in connected },
-                availableProviders = core.runtime.providers.all,
-                connectedProviderIds = connected,
+                providers = core.runtime.providers.all.filter { it.id in chatConnected },
+                availableProviders = managed.all,
+                connectedProviderIds = managed.connected.toSet() + oauth.locallyConnected,
                 agents = core.runtime.agents.filter { it.mode == null || it.mode == "primary" },
                 providerId = core.preferences.providerId,
                 modelId = core.preferences.modelId,
@@ -209,6 +234,15 @@ class SettingsViewModel(
         settingsTick.update { it + 1 }
     }
 
+    /**
+     * Runtime that owns provider credentials.
+     *
+     * Providers are an OpenCode concept: Claude Code authenticates as itself and has no catalogue.
+     * With Claude selected, every one of these calls used to go to a runtime that cannot answer, so
+     * the connect button simply did nothing.
+     */
+    private fun providerTarget(): RuntimeTarget? = registry.targetFor(LocalAgent.OPEN_CODE)
+
     fun openProviderAuth(providerId: String) {
         val methods = oauthState.value.methods[providerId].orEmpty()
         val effectiveMethods =
@@ -287,7 +321,7 @@ class SettingsViewModel(
     }
 
     private fun submitProviderApiKey(dialog: ProviderAuthDialogState) {
-        val target = registry.selected.value ?: return
+        val target = providerTarget() ?: return
         val apiKey = dialog.apiKey.trim()
         if (apiKey.isEmpty()) return
         providerAuthJob =
@@ -314,7 +348,7 @@ class SettingsViewModel(
         dialog: ProviderAuthDialogState,
         methodIndex: Int,
     ) {
-        val target = registry.selected.value ?: return
+        val target = providerTarget() ?: return
         providerAuthJob =
             viewModelScope.launch {
                 android.util.Log.w(TAG, "beginProviderOAuth: provider=${dialog.providerId} method=$methodIndex")
@@ -391,7 +425,7 @@ class SettingsViewModel(
     }
 
     fun disconnectProvider(providerId: String) {
-        val target = registry.selected.value ?: return
+        val target = providerTarget() ?: return
         if (providerAuthJob?.isActive == true) return
         providerAuthJob =
             viewModelScope.launch {
@@ -478,11 +512,26 @@ class SettingsViewModel(
 
     fun refreshProviderAuth() {
         val target =
-            registry.selected.value ?: run {
+            providerTarget() ?: run {
                 oauthState.value = OAuthState()
                 return
             }
         viewModelScope.launch {
+            // Only when the chat is on another agent: otherwise the shared catalogue already holds
+            // this runtime's providers and a second fetch would be pure duplication.
+            providerCatalog.value =
+                if (target.id == registry.selected.value?.id) {
+                    null
+                } else {
+                    // A failure keeps whatever was fetched before: the runtime may simply not be
+                    // running yet, and falling back would put the other agent's models on screen,
+                    // which is the very thing this exists to prevent.
+                    runCatching { target.listProviders() }.getOrNull()
+                        ?: providerCatalog.value
+                        // The runtime may simply be stopped. Its stored catalogue is still the
+                        // truth about which providers exist and which are connected.
+                        ?: catalog.cachedProviders(target.id)
+                }
             runCatching { target.providerAuthMethods() }
                 .onSuccess { methods ->
                     oauthState.update { current -> current.copy(methods = methods, message = null) }

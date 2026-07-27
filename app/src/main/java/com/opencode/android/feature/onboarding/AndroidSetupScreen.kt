@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,6 +48,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,18 +64,35 @@ import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.core.api.ProviderAuthMethod
 import com.opencode.android.feature.settings.ProviderAuthDialog
 import com.opencode.android.feature.settings.SettingsUiState
+import com.opencode.android.feature.workspace.ClaudeCodeCard
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
+import com.opencode.android.runtime.local.ClaudeCodeUiState
+import com.opencode.android.runtime.local.ClaudeInstallStatus
+import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
 import kotlinx.coroutines.delay
 
-private const val TOTAL_STEPS = 3
+private const val TOTAL_STEPS = 4
 
-/** Guided two-step setup: runtime download, then optional provider connection. */
+/**
+ * Guided setup: choose agents, install them, sign in, then connect GitHub.
+ *
+ * The agent choice comes first because it decides what is downloaded — installing Claude Code alone
+ * skips the OpenCode binary entirely — and which sign-in the third step has to offer.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AndroidSetupScreen(
     runtimeStatus: LocalRuntimeStatus,
-    onStartRuntimeSetup: () -> Unit,
+    claude: ClaudeCodeUiState,
+    onStartSetup: (Set<LocalAgent>) -> Unit,
+    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
+    onBeginClaudeSignIn: () -> Unit,
+    onSubmitClaudeSignInCode: (String) -> Unit,
+    onCancelClaudeSignIn: () -> Unit,
+    onSignOutClaude: () -> Unit,
+    onOpenUrl: (String) -> Unit,
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
     onSelectProviderAuthMethod: (Int) -> Unit,
@@ -90,15 +111,36 @@ fun AndroidSetupScreen(
     onFinish: () -> Unit,
 ) {
     val context = LocalContext.current
-    val runtimeReady = runtimeStatus is LocalRuntimeStatus.Ready || runtimeStatus is LocalRuntimeStatus.Stopped
-    var currentStep by remember { mutableIntStateOf(if (runtimeReady) 2 else 1) }
+    var selectedAgents by rememberSaveable(
+        stateSaver =
+            listSaver<Set<LocalAgent>, String>(
+                save = { agents -> agents.map(LocalAgent::id) },
+                restore = { ids -> ids.mapNotNull(LocalAgent::fromId).toSet() },
+            ),
+    ) { mutableStateOf(setOf(LocalAgent.CLAUDE_CODE)) }
 
-    LaunchedEffect(runtimeReady) {
-        if (runtimeReady && currentStep == 1) currentStep = 2
+    val openCodeSelected = LocalAgent.OPEN_CODE in selectedAgents
+    val claudeSelected = LocalAgent.CLAUDE_CODE in selectedAgents
+    val openCodeReady = runtimeStatus is LocalRuntimeStatus.Ready || runtimeStatus is LocalRuntimeStatus.Stopped
+    val installComplete = (!openCodeSelected || openCodeReady) && (!claudeSelected || claude.installed)
+
+    var currentStep by rememberSaveable { mutableIntStateOf(1) }
+
+    // With both agents selected the sandbox is built once for OpenCode and Claude Code is added to
+    // it, so the second install only starts after the first has produced a usable runtime.
+    LaunchedEffect(openCodeReady, claudeSelected, claude.installed, claude.install) {
+        if (!claudeSelected || !openCodeSelected) return@LaunchedEffect
+        if (openCodeReady && !claude.installed && claude.install is ClaudeInstallStatus.Idle) {
+            onStartSetup(setOf(LocalAgent.CLAUDE_CODE))
+        }
     }
 
-    LaunchedEffect(runtimeReady, settingsState.availableProviders, settingsState.providerAuthMethods) {
-        if (!runtimeReady) return@LaunchedEffect
+    LaunchedEffect(installComplete) {
+        if (installComplete && currentStep == 2) currentStep = 3
+    }
+
+    LaunchedEffect(openCodeReady, openCodeSelected, settingsState.availableProviders, settingsState.providerAuthMethods) {
+        if (!openCodeSelected || !openCodeReady) return@LaunchedEffect
         if (settingsState.availableProviders.isNotEmpty() && settingsState.providerAuthMethods.isNotEmpty()) return@LaunchedEffect
         delay(2000)
         onRefreshCatalog()
@@ -108,41 +150,24 @@ fun AndroidSetupScreen(
     val primaryAction: SetupPrimaryAction? =
         when (currentStep) {
             1 ->
-                when (runtimeStatus) {
-                    LocalRuntimeStatus.NotInstalled,
-                    is LocalRuntimeStatus.Broken,
-                    ->
-                        SetupPrimaryAction(
-                            label = stringResource(R.string.setup_this_device_button),
-                            enabled = true,
-                            onClick = onStartRuntimeSetup,
-                        )
-                    is LocalRuntimeStatus.UnsupportedAbi,
-                    is LocalRuntimeStatus.Installing,
-                    is LocalRuntimeStatus.Starting,
-                    is LocalRuntimeStatus.Updating,
-                    -> null
-                    is LocalRuntimeStatus.Ready,
-                    is LocalRuntimeStatus.Stopped,
-                    ->
-                        SetupPrimaryAction(
-                            label = stringResource(R.string.setup_next_action),
-                            enabled = true,
-                            onClick = { currentStep = 2 },
-                        )
-                }
-            2 ->
                 SetupPrimaryAction(
                     label = stringResource(R.string.setup_next_action),
-                    enabled = true,
-                    onClick = { currentStep = 3 },
+                    enabled = selectedAgents.isNotEmpty(),
+                    onClick = {
+                        currentStep = 2
+                        if (!installComplete) onStartSetup(selectedAgents)
+                    },
                 )
-            else ->
-                SetupPrimaryAction(
-                    label = stringResource(R.string.setup_complete_button),
-                    enabled = true,
-                    onClick = onFinish,
-                )
+            2 ->
+                if (installComplete) {
+                    SetupPrimaryAction(stringResource(R.string.setup_next_action), true) { currentStep = 3 }
+                } else if (runtimeStatus is LocalRuntimeStatus.Broken || claude.install is ClaudeInstallStatus.Failed) {
+                    SetupPrimaryAction(stringResource(R.string.claude_retry_install_button), true) { onStartSetup(selectedAgents) }
+                } else {
+                    null
+                }
+            3 -> SetupPrimaryAction(stringResource(R.string.setup_next_action), true) { currentStep = 4 }
+            else -> SetupPrimaryAction(stringResource(R.string.setup_complete_button), true, onFinish)
         }
 
     Scaffold(
@@ -179,7 +204,7 @@ fun AndroidSetupScreen(
             SetupBottomBar(
                 currentStep = currentStep,
                 primaryAction = primaryAction,
-                onSkip = if (currentStep >= 2) onFinish else null,
+                onSkip = if (currentStep >= 3) onFinish else null,
                 onBackStep = { currentStep -= 1 },
             )
         },
@@ -195,9 +220,32 @@ fun AndroidSetupScreen(
         ) {
             SetupProgress(currentStep = currentStep)
             when (currentStep) {
-                1 -> RuntimeDownloadStep(runtimeStatus)
+                1 ->
+                    AgentSelectionStep(
+                        selectedAgents = selectedAgents,
+                        onToggle = { agent ->
+                            selectedAgents =
+                                if (agent in selectedAgents) selectedAgents - agent else selectedAgents + agent
+                        },
+                    )
                 2 ->
-                    ProviderConnectionStep(
+                    RuntimeDownloadStep(
+                        runtimeStatus = runtimeStatus,
+                        claude = claude,
+                        openCodeSelected = openCodeSelected,
+                        claudeSelected = claudeSelected,
+                    )
+                3 ->
+                    SignInStep(
+                        claudeSelected = claudeSelected,
+                        openCodeSelected = openCodeSelected,
+                        claude = claude,
+                        onBeginClaudeSignIn = onBeginClaudeSignIn,
+                        onSubmitClaudeSignInCode = onSubmitClaudeSignInCode,
+                        onCancelClaudeSignIn = onCancelClaudeSignIn,
+                        onSignOutClaude = onSignOutClaude,
+                        onOpenUrl = onOpenUrl,
+                        onSelectClaudePermissionMode = onSelectClaudePermissionMode,
                         settingsState = settingsState,
                         onOpenProviderAuth = onOpenProviderAuth,
                         onDisconnectProvider = onDisconnectProvider,
@@ -366,82 +414,212 @@ private fun StepHeader(
 }
 
 @Composable
-private fun RuntimeDownloadStep(runtimeStatus: LocalRuntimeStatus) {
-    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+private fun AgentSelectionStep(
+    selectedAgents: Set<LocalAgent>,
+    onToggle: (LocalAgent) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         StepHeader(
-            title = stringResource(R.string.setup_step_download),
-            description = stringResource(R.string.setup_download_description),
+            title = stringResource(R.string.setup_step_agents),
+            description = stringResource(R.string.setup_agents_description),
         )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+        AgentOption(
+            title = stringResource(R.string.agent_claude_code_name),
+            description = stringResource(R.string.setup_agent_claude_code_desc),
+            selected = LocalAgent.CLAUDE_CODE in selectedAgents,
+            onToggle = { onToggle(LocalAgent.CLAUDE_CODE) },
+        )
+        AgentOption(
+            title = stringResource(R.string.agent_opencode_name),
+            description = stringResource(R.string.setup_agent_opencode_desc),
+            selected = LocalAgent.OPEN_CODE in selectedAgents,
+            onToggle = { onToggle(LocalAgent.OPEN_CODE) },
+        )
+        if (selectedAgents.size == 2) {
+            Text(
+                text = stringResource(R.string.setup_runtime_shared_note),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (selectedAgents.isEmpty()) {
+            Text(
+                text = stringResource(R.string.setup_agents_required),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AgentOption(
+    title: String,
+    description: String,
+    selected: Boolean,
+    onToggle: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+        border =
+            BorderStroke(
+                width = 1.dp,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+            ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                when (runtimeStatus) {
-                    LocalRuntimeStatus.NotInstalled -> {
-                        Text(
-                            stringResource(R.string.setup_runtime_not_installed),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    is LocalRuntimeStatus.Installing -> {
-                        Text(runtimeStatus.step, fontWeight = FontWeight.Medium)
-                        if (runtimeStatus.progress != null) {
-                            LinearProgressIndicator(
-                                progress = { runtimeStatus.progress.coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Text(
-                                text = "${(runtimeStatus.progress * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        } else {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                    is LocalRuntimeStatus.Starting -> {
-                        Text(stringResource(R.string.starting_opencode_version, runtimeStatus.version))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    is LocalRuntimeStatus.Updating -> {
-                        Text(runtimeStatus.step)
-                        LinearProgressIndicator(
-                            progress = { runtimeStatus.progress?.coerceIn(0f, 1f) ?: 0f },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    is LocalRuntimeStatus.Ready -> ReadyRuntimeRow(runtimeStatus.version)
-                    is LocalRuntimeStatus.Stopped -> ReadyRuntimeRow(runtimeStatus.version)
-                    is LocalRuntimeStatus.Broken -> {
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Icon(
-                                Icons.Default.Error,
-                                contentDescription = stringResource(R.string.cd_error),
-                                tint = MaterialTheme.colorScheme.error,
-                            )
-                            Text(runtimeStatus.reason, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                    is LocalRuntimeStatus.UnsupportedAbi -> {
-                        Text(
-                            stringResource(R.string.unsupported_abi, runtimeStatus.abi),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
+            Checkbox(checked = selected, onCheckedChange = { onToggle() })
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ReadyRuntimeRow(version: String) {
+private fun RuntimeDownloadStep(
+    runtimeStatus: LocalRuntimeStatus,
+    claude: ClaudeCodeUiState,
+    openCodeSelected: Boolean,
+    claudeSelected: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        StepHeader(
+            title = stringResource(R.string.setup_step_download),
+            description = stringResource(R.string.setup_download_agents_description),
+        )
+        if (openCodeSelected) {
+            SetupPanel {
+                Text(stringResource(R.string.agent_opencode_name), fontWeight = FontWeight.SemiBold)
+                OpenCodeRuntimeProgress(runtimeStatus)
+            }
+        }
+        if (claudeSelected) {
+            SetupPanel {
+                Text(stringResource(R.string.agent_claude_code_name), fontWeight = FontWeight.SemiBold)
+                ClaudeInstallProgress(claude)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SetupPanel(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun ClaudeInstallProgress(claude: ClaudeCodeUiState) {
+    when (val install = claude.install) {
+        is ClaudeInstallStatus.Installing -> {
+            Text(stringResource(install.step), fontWeight = FontWeight.Medium)
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        is ClaudeInstallStatus.Ready -> ReadyAgentRow(stringResource(R.string.claude_installed_version, install.version))
+        is ClaudeInstallStatus.Failed ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(install.message, color = MaterialTheme.colorScheme.error)
+            }
+        ClaudeInstallStatus.Idle ->
+            if (claude.installed) {
+                ReadyAgentRow(stringResource(R.string.claude_installed_version, claude.version.orEmpty()))
+            } else {
+                Text(
+                    stringResource(R.string.claude_status_not_installed),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+    }
+}
+
+@Composable
+private fun OpenCodeRuntimeProgress(runtimeStatus: LocalRuntimeStatus) {
+    when (runtimeStatus) {
+        LocalRuntimeStatus.NotInstalled -> {
+            Text(
+                stringResource(R.string.setup_runtime_not_installed),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        is LocalRuntimeStatus.Installing -> {
+            Text(runtimeStatus.step, fontWeight = FontWeight.Medium)
+            if (runtimeStatus.progress != null) {
+                LinearProgressIndicator(
+                    progress = { runtimeStatus.progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = "${(runtimeStatus.progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
+        is LocalRuntimeStatus.Starting -> {
+            Text(stringResource(R.string.starting_opencode_version, runtimeStatus.version))
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+        is LocalRuntimeStatus.Updating -> {
+            Text(runtimeStatus.step)
+            LinearProgressIndicator(
+                progress = { runtimeStatus.progress?.coerceIn(0f, 1f) ?: 0f },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        is LocalRuntimeStatus.Ready -> ReadyAgentRow("OpenCode ${runtimeStatus.version}")
+        is LocalRuntimeStatus.Stopped -> ReadyAgentRow("OpenCode ${runtimeStatus.version}")
+        is LocalRuntimeStatus.Broken -> {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(runtimeStatus.reason, color = MaterialTheme.colorScheme.error)
+            }
+        }
+        is LocalRuntimeStatus.UnsupportedAbi -> {
+            Text(
+                stringResource(R.string.unsupported_abi, runtimeStatus.abi),
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadyAgentRow(detail: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -454,9 +632,56 @@ private fun ReadyRuntimeRow(version: String) {
         Column {
             Text(stringResource(R.string.setup_runtime_ready), fontWeight = FontWeight.Medium)
             Text(
-                text = "OpenCode $version",
+                text = detail,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SignInStep(
+    claudeSelected: Boolean,
+    openCodeSelected: Boolean,
+    claude: ClaudeCodeUiState,
+    onBeginClaudeSignIn: () -> Unit,
+    onSubmitClaudeSignInCode: (String) -> Unit,
+    onCancelClaudeSignIn: () -> Unit,
+    onSignOutClaude: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
+    settingsState: SettingsUiState,
+    onOpenProviderAuth: (String) -> Unit,
+    onDisconnectProvider: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        StepHeader(
+            title = stringResource(R.string.setup_step_sign_in),
+            description = stringResource(R.string.setup_sign_in_description),
+        )
+        if (claudeSelected) {
+            SetupPanel {
+                Text(stringResource(R.string.agent_claude_code_name), fontWeight = FontWeight.SemiBold)
+                ClaudeCodeCard(
+                    claude = claude,
+                    onInstall = {},
+                    onUpdate = {},
+                    onSelectPermissionMode = onSelectClaudePermissionMode,
+                    onSignIn = onBeginClaudeSignIn,
+                    onSubmitCode = onSubmitClaudeSignInCode,
+                    onCancelSignIn = onCancelClaudeSignIn,
+                    onSignOut = onSignOutClaude,
+                    onOpenUrl = onOpenUrl,
+                    showInstallActions = false,
+                )
+            }
+        }
+        if (openCodeSelected) {
+            ProviderConnectionStep(
+                settingsState = settingsState,
+                onOpenProviderAuth = onOpenProviderAuth,
+                onDisconnectProvider = onDisconnectProvider,
             )
         }
     }
@@ -686,7 +911,14 @@ private fun AndroidSetupScreenPreview() {
     OpenCodeAndroidTheme {
         AndroidSetupScreen(
             runtimeStatus = LocalRuntimeStatus.Installing(0.68f, "Downloading runtime"),
-            onStartRuntimeSetup = {},
+            claude = ClaudeCodeUiState(),
+            onStartSetup = {},
+            onBeginClaudeSignIn = {},
+            onSubmitClaudeSignInCode = {},
+            onCancelClaudeSignIn = {},
+            onSignOutClaude = {},
+            onOpenUrl = {},
+            onSelectClaudePermissionMode = {},
             settingsState = SettingsUiState(),
             onOpenProviderAuth = {},
             onSelectProviderAuthMethod = {},
@@ -710,7 +942,14 @@ private fun AndroidSetupProviderStepPreview() {
     OpenCodeAndroidTheme {
         AndroidSetupScreen(
             runtimeStatus = LocalRuntimeStatus.Ready("1.0.0", 4097),
-            onStartRuntimeSetup = {},
+            claude = ClaudeCodeUiState(installed = true, version = "2.1.212"),
+            onStartSetup = {},
+            onBeginClaudeSignIn = {},
+            onSubmitClaudeSignInCode = {},
+            onCancelClaudeSignIn = {},
+            onSignOutClaude = {},
+            onOpenUrl = {},
+            onSelectClaudePermissionMode = {},
             settingsState =
                 SettingsUiState(
                     availableProviders =

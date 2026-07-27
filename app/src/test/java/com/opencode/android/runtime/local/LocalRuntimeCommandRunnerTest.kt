@@ -21,7 +21,9 @@ class LocalRuntimeCommandRunnerTest {
         val result = runner.runShell("opencode --version")
 
         assertEquals(127, result.exitCode)
-        assertEquals("未インストール", result.output)
+        // Compared against the message provider rather than a literal: the runner no longer hardcodes
+        // this text, it comes from string resources in production and the English default here.
+        assertEquals(LocalRuntimeMessages.notInstalled, result.output)
     }
 
     @Test

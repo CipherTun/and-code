@@ -3,7 +3,9 @@ package com.opencode.android.runtime.local
 import com.opencode.android.runtime.LocalRuntimeStatus
 
 internal class LocalRuntimeWatchdog(
-    private val failureThreshold: Int = 3,
+    // Two consecutive readings, not three: a deliberate stop disables auto-restart entirely,
+    // so this only ever counts a process that died on its own.
+    private val failureThreshold: Int = 2,
 ) {
     private var consecutiveFailures = 0
 

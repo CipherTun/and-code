@@ -86,6 +86,15 @@ interface RuntimeTarget : OpenCodeBackend {
     val type: RuntimeType
     val state: StateFlow<RuntimeState>
 
+    /**
+     * Which Android-local agent this target drives, or null for remote targets.
+     *
+     * The UI branches on this rather than on [id] so that adding an agent never means hunting for
+     * hardcoded id comparisons.
+     */
+    val agent: LocalAgent?
+        get() = null
+
     suspend fun connect(): Result<OpenCodeHealth>
 
     fun disconnect()

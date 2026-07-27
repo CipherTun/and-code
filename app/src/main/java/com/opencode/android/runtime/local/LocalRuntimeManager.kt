@@ -1,5 +1,6 @@
 package com.opencode.android.runtime.local
 
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +25,20 @@ data class LocalRuntimeMetadata(
     @SerialName("installedAt") val installedAt: Long,
     @SerialName("runtimeVersion") val runtimeVersion: String = "legacy",
     @SerialName("abi") val abi: String = "unknown",
-)
+    /**
+     * Agents provisioned into the sandbox, by [LocalAgent.id].
+     *
+     * Defaulted to OpenCode so runtimes installed before agents became selectable keep reporting
+     * the agent they actually contain.
+     */
+    @SerialName("components") val components: Set<String> = setOf(LocalAgent.OPEN_CODE.id),
+) {
+    fun has(agent: LocalAgent): Boolean = agent.id in components
+
+    fun with(agent: LocalAgent): LocalRuntimeMetadata = copy(components = components + agent.id)
+
+    fun without(agent: LocalAgent): LocalRuntimeMetadata = copy(components = components - agent.id)
+}
 
 class LocalRuntimeManager(
     private val runtimeDirectory: File,
@@ -32,8 +46,11 @@ class LocalRuntimeManager(
     private val portProbe: (Int) -> Boolean = ::defaultPortProbe,
     private val installer: LocalRuntimeInstaller? = null,
     private val processLauncher: LocalRuntimeProcessLauncher? = null,
+    /** Whether the server process we started is still alive, independent of whether it answers. */
+    private val processAlive: () -> Boolean = { processLauncher?.isRunning() == true },
     private val updateEngine: LocalRuntimeUpdateEngine? = null,
     private val runtimeOperations: LocalRuntimeOperations? = null,
+    private val messages: LocalRuntimeMessages = LocalRuntimeMessages,
 ) {
     private val json: Json =
         Json {
@@ -79,7 +96,7 @@ class LocalRuntimeManager(
             }.onFailure { error ->
                 mutableState.value =
                     LocalRuntimeStatus.Broken(
-                        error.message ?: "ローカルランタイムの導入に失敗しました",
+                        error.message ?: messages.installFailed,
                     )
             }
         }
@@ -102,7 +119,10 @@ class LocalRuntimeManager(
             ) {
                 return@withLock updateToLatestLocked()
             }
-            if (portProbe(metadata.port)) {
+            // Same reasoning as computeStatus(): only restart a server that is genuinely gone. A
+            // live process that missed a probe is busy, and stopping it here would end whatever it
+            // was busy with.
+            if (portProbe(metadata.port) || processAlive()) {
                 return@withLock Result.success(
                     LocalRuntimeStatus.Ready(metadata.version, metadata.port).also { mutableState.value = it },
                 )
@@ -120,7 +140,7 @@ class LocalRuntimeManager(
             }.onFailure { error ->
                 mutableState.value =
                     LocalRuntimeStatus.Broken(
-                        error.message ?: "ローカルOpenCodeを停止できません",
+                        error.message ?: messages.stopFailed,
                     )
             }
         }
@@ -132,7 +152,7 @@ class LocalRuntimeManager(
                     processLauncher?.stop()
                     if (runtimeDirectory.exists()) {
                         require(runtimeDirectory.deleteRecursively()) {
-                            "ローカルランタイムを完全に削除できませんでした"
+                            messages.deleteIncomplete
                         }
                     }
                 }
@@ -141,7 +161,7 @@ class LocalRuntimeManager(
             }.onFailure { error ->
                 mutableState.value =
                     LocalRuntimeStatus.Broken(
-                        error.message ?: "ローカルランタイムを削除できません",
+                        error.message ?: messages.deleteFailed,
                     )
             }
         }
@@ -162,7 +182,7 @@ class LocalRuntimeManager(
             }.onFailure { error ->
                 mutableState.value =
                     LocalRuntimeStatus.Broken(
-                        error.message ?: "ローカルランタイムの再導入に失敗しました",
+                        error.message ?: messages.reinstallFailed,
                     )
             }
         }
@@ -181,7 +201,7 @@ class LocalRuntimeManager(
                     mutableLastOperation.value =
                         LocalRuntimeOperationResult.Failed(
                             operation = "update-check",
-                            message = error.message ?: "OpenCodeの更新確認に失敗しました",
+                            message = error.message ?: messages.updateCheckFailed,
                         )
                 }
         }
@@ -215,7 +235,7 @@ class LocalRuntimeManager(
                     mutableLastOperation.value =
                         LocalRuntimeOperationResult.Failed(
                             "update-check",
-                            error.message ?: "OpenCodeの更新確認に失敗しました",
+                            error.message ?: messages.updateCheckFailed,
                         )
                     return Result.failure(error)
                 }
@@ -239,7 +259,7 @@ class LocalRuntimeManager(
                 currentVersion = current.version,
                 targetVersion = targetVersion,
                 progress = null,
-                step = "更新を準備しています",
+                step = messages.preparingUpdate(),
             )
         val prepared =
             runCatching {
@@ -258,7 +278,7 @@ class LocalRuntimeManager(
                 mutableLastOperation.value =
                     LocalRuntimeOperationResult.Failed(
                         "update-prepare",
-                        error.message ?: "OpenCodeの更新準備に失敗しました",
+                        error.message ?: messages.updatePrepareFailed,
                     )
                 return Result.failure(error)
             }
@@ -305,7 +325,7 @@ class LocalRuntimeManager(
                     mutableLastOperation.value =
                         LocalRuntimeOperationResult.Failed(
                             "rollback-check",
-                            error.message ?: "ロールバック可能なバージョンを確認できません",
+                            error.message ?: messages.rollbackCheckFailed,
                         )
                     return Result.failure(error)
                 }
@@ -316,7 +336,7 @@ class LocalRuntimeManager(
                 currentVersion = current.version,
                 targetVersion = targetVersion,
                 progress = null,
-                step = "OpenCode ${targetVersion}へロールバックしています",
+                step = messages.rollingBackTo(targetVersion),
             )
         return try {
             stopForOperation()
@@ -368,13 +388,13 @@ class LocalRuntimeManager(
                         LocalRuntimeOperationResult.RollbackFailedRestored(
                             attemptedVersion = attemptedVersion,
                             restoredVersion = ready.version,
-                            reason = originalError.message ?: "ロールバック後の起動に失敗しました",
+                            reason = originalError.message ?: messages.startAfterRollbackFailed,
                         )
                     } else {
                         LocalRuntimeOperationResult.AutomaticRollback(
                             failedVersion = attemptedVersion,
                             restoredVersion = ready.version,
-                            reason = originalError.message ?: "更新後の起動に失敗しました",
+                            reason = originalError.message ?: messages.startAfterUpdateFailed,
                         )
                     }
                 Result.failure(originalError)
@@ -383,12 +403,12 @@ class LocalRuntimeManager(
                 originalError.addSuppressed(restartError)
                 mutableState.value =
                     LocalRuntimeStatus.Broken(
-                        "OpenCode ${restoredMetadata.version}を復元しましたが起動できません: ${restartError.message.orEmpty()}",
+                        messages.restoredButCannotStart(restoredMetadata.version, restartError.message.orEmpty()),
                     )
                 mutableLastOperation.value =
                     LocalRuntimeOperationResult.Failed(
                         operation = if (rollbackOperation) "rollback-recovery" else "update-recovery",
-                        message = originalError.message ?: "OpenCodeランタイムを復元できません",
+                        message = originalError.message ?: messages.restoreFailed,
                     )
                 Result.failure(originalError)
             },
@@ -447,7 +467,7 @@ class LocalRuntimeManager(
         }.onFailure { error ->
             mutableState.value =
                 LocalRuntimeStatus.Broken(
-                    error.message ?: "ローカルOpenCodeを起動できません",
+                    error.message ?: messages.startFailed,
                 )
         }
 
@@ -481,19 +501,25 @@ class LocalRuntimeManager(
             }.getOrElse { error ->
                 return LocalRuntimeStatus.Broken("Runtime metadata is invalid: ${error.message}")
             }
+        // A sandbox provisioned for Claude Code only is not a broken OpenCode install: OpenCode was
+        // never asked for, so it is simply not installed and the UI should offer to add it.
+        if (!metadata.has(LocalAgent.OPEN_CODE)) return LocalRuntimeStatus.NotInstalled
         val rootfs = File(runtimeDirectory, "environment/rootfs")
         val openCode = File(rootfs, "usr/local/bin/opencode")
         if (!rootfs.isDirectory || !openCode.isFile) {
-            return LocalRuntimeStatus.Broken("ローカルランタイムのファイルが不足しています")
+            return LocalRuntimeStatus.Broken(messages.missingFiles)
         }
         if (metadata.version.isBlank() || metadata.port !in 1..65535) {
             return LocalRuntimeStatus.Broken("Runtime metadata contains invalid values")
         }
-        return if (portProbe(metadata.port)) {
-            LocalRuntimeStatus.Ready(metadata.version, metadata.port)
-        } else {
-            LocalRuntimeStatus.Stopped(metadata.version, metadata.port)
+        if (portProbe(metadata.port)) return LocalRuntimeStatus.Ready(metadata.version, metadata.port)
+        // A missed probe is not proof of death. Our own child process is: if it is still running,
+        // the server exists and is merely too busy to answer, and restarting it would destroy work
+        // in progress rather than recover anything.
+        if (processAlive()) {
+            return LocalRuntimeStatus.Ready(metadata.version, metadata.port)
         }
+        return LocalRuntimeStatus.Stopped(metadata.version, metadata.port)
     }
 
     private fun readMetadata(): LocalRuntimeMetadata? {
@@ -508,10 +534,22 @@ class LocalRuntimeManager(
         private const val METADATA_FILE = "metadata.json"
         private val SUPPORTED_ABIS = setOf("arm64-v8a", "x86_64")
 
+        /**
+         * Timeout for the liveness probe.
+         *
+         * A loopback connect to a listening socket returns in well under a millisecond, so a
+         * generous limit costs nothing while the server is healthy. It matters only when the device
+         * is loaded — and the heaviest load this app produces is a Claude Code turn, a 250 MB
+         * binary running under PRoot. At the previous 300 ms the probe missed under that load, the
+         * watchdog read it as a dead server, and a perfectly healthy OpenCode was killed and
+         * restarted. That is the "OpenCode keeps crashing" the logs never showed a crash for.
+         */
+        private const val PROBE_TIMEOUT_MILLIS = 2_500
+
         fun defaultPortProbe(port: Int): Boolean =
             runCatching {
                 Socket().use { socket ->
-                    socket.connect(InetSocketAddress("127.0.0.1", port), 300)
+                    socket.connect(InetSocketAddress("127.0.0.1", port), PROBE_TIMEOUT_MILLIS)
                 }
                 true
             }.getOrDefault(false)

@@ -7,12 +7,16 @@ import com.opencode.android.core.api.OpenCodeHealth
 import com.opencode.android.data.connection.ConnectionProfile
 import com.opencode.android.data.connection.SecureSettingsRepository
 import com.opencode.android.data.repository.RuntimeCatalogRepository
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.runtime.RuntimeState
 import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.RuntimeType
 import com.opencode.android.runtime.WorkspaceRef
+import com.opencode.android.runtime.local.ClaudeCodeController
+import com.opencode.android.runtime.local.ClaudeCodeUiState
+import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.runtime.local.LocalRuntimeManager
 import com.opencode.android.runtime.local.LocalRuntimeServiceController
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +34,8 @@ data class RuntimeSummary(
     val type: RuntimeType,
     val state: RuntimeState,
     val selected: Boolean,
+    /** Which local agent this target runs, or null for remote connections. */
+    val agent: LocalAgent?,
 )
 
 data class WorkspaceUiState(
@@ -42,6 +48,7 @@ data class WorkspaceUiState(
     val localStatus: LocalRuntimeStatus = LocalRuntimeStatus.NotInstalled,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val claude: ClaudeCodeUiState = ClaudeCodeUiState(),
 )
 
 class WorkspaceViewModel(
@@ -51,8 +58,11 @@ class WorkspaceViewModel(
     private val localRuntimeController: LocalRuntimeServiceController,
     private val settings: SecureSettingsRepository,
     private val workspaceHostDir: File,
+    private val claudeCode: ClaudeCodeController? = null,
 ) : ViewModel() {
     private val registeredTick = MutableStateFlow(0)
+    private val claudeState: StateFlow<ClaudeCodeUiState> =
+        claudeCode?.state ?: MutableStateFlow(ClaudeCodeUiState())
 
     val state: StateFlow<WorkspaceUiState> =
         combine(
@@ -60,8 +70,8 @@ class WorkspaceViewModel(
             registry.selected,
             catalog.state,
             localRuntimeManager.state,
-            registeredTick,
-        ) { targets, selected, runtime, localStatus, _ ->
+            combine(registeredTick, claudeState) { _, claude -> claude },
+        ) { targets, selected, runtime, localStatus, claude ->
             val profiles = registry.remoteProfiles()
             // Read imperatively: the registry recomputes this set while building the target list, so
             // it is already up to date by the time `targets` emits.
@@ -75,6 +85,7 @@ class WorkspaceViewModel(
                             type = target.type,
                             state = target.state.value,
                             selected = target.id == selected?.id,
+                            agent = target.agent,
                         )
                     },
                 connections = profiles,
@@ -84,6 +95,7 @@ class WorkspaceViewModel(
                 localStatus = localStatus,
                 isRefreshing = runtime.isRefreshing,
                 error = runtime.error,
+                claude = claude,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, WorkspaceUiState())
 
@@ -189,9 +201,27 @@ class WorkspaceViewModel(
 
     fun reinstallLocalRuntime() = localRuntimeController.reinstall()
 
+    fun installClaudeCode() = claudeCode?.install() ?: Unit
+
+    fun updateClaudeCode() = claudeCode?.update() ?: Unit
+
+    fun setClaudePermissionMode(
+        mode: ClaudePermissionMode,
+        sessionId: String? = null,
+    ) = claudeCode?.setPermissionMode(mode, sessionId) ?: Unit
+
+    fun beginClaudeSignIn() = claudeCode?.beginSignIn() ?: Unit
+
+    fun submitClaudeSignInCode(code: String) = claudeCode?.submitSignInCode(code) ?: Unit
+
+    fun cancelClaudeSignIn() = claudeCode?.cancelSignIn() ?: Unit
+
+    fun signOutClaude() = claudeCode?.signOut() ?: Unit
+
     fun refresh() {
         registry.refresh()
         catalog.refresh()
+        claudeCode?.refresh()
     }
 
     private companion object {

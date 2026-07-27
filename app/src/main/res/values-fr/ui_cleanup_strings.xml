@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="runtime_setup_required_title">OpenCode n\'est pas prêt</string>
+    <string name="runtime_setup_required_title">Aucun agent n’est prêt</string>
     <string name="runtime_setup_required_body">Ouvrez le menu, puis Paramètres, pour installer le runtime Android ou ajouter une connexion à votre PC ou Mac.</string>
-    <string name="runtime_setup_required_body_compact">Configurez OpenCode sur cet appareil Android, ou connectez-vous à un PC ou Mac exécutant déjà OpenCode.</string>
+    <string name="runtime_setup_required_body_compact">Configurez un agent sur cet appareil Android, ou connectez-vous à un PC/Mac exécutant déjà OpenCode.</string>
     <string name="open_settings_action">Ouvrir le menu</string>
     <string name="setup_this_android_action">Configurer cet Android</string>
     <string name="connect_pc_mac_action">Connecter à un PC ou Mac</string>
@@ -10,7 +10,7 @@
     <string name="connect_short_action">Connecter</string>
     <string name="chat_model_short_default">Modèle</string>
     <string name="chat_workspace_short_default">Par défaut</string>
-    <string name="chat_build_subtitle_compact">Demandez à OpenCode d\'implémenter, corriger ou investiguer.</string>
+    <string name="chat_build_subtitle_compact">Demandez à votre agent d’implémenter, corriger ou investiguer.</string>
     <string name="settings_wake_word_row">Mot de réveil</string>
     <string name="settings_wake_word_value">Non installé</string>
     <string name="setup_step_counter">Étape %1$d sur %2$d</string>
@@ -32,7 +32,7 @@
     <string name="provider_add_credentials_title">Ajouter ou mettre à jour une clé API</string>
     <string name="voice_settings_intro">Configurez la saisie vocale et les réponses parlées.</string>
     <string name="voice_conversation_section">Conversation vocale</string>
-    <string name="voice_response_description">Lire les réponses d\'OpenCode à voix haute.</string>
+    <string name="voice_response_description">Lit à voix haute les réponses de l’agent.</string>
     <string name="wake_word_section_title">Invocation</string>
     <string name="wake_word_pack_required">Le pack de mot de réveil optionnel n\'est pas encore installé.</string>
     <string name="wake_word_description">Écoutez « hey opencode » pour démarrer l\'assistant en mains libres.</string>

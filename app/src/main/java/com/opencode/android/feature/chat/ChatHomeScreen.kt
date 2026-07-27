@@ -118,6 +118,7 @@ import com.opencode.android.feature.workspace.GitHubAutoAttachChips
 import com.opencode.android.feature.workspace.GitHubReference
 import com.opencode.android.runtime.PermissionResponse
 import com.opencode.android.runtime.RuntimeTarget
+import com.opencode.android.runtime.local.ClaudePermissionMode
 import com.opencode.android.ui.components.StatusChip
 import com.opencode.android.ui.components.VolumeMeter
 import com.opencode.android.ui.theme.OpenCodeAndroidTheme
@@ -146,6 +147,16 @@ fun ChatHomeScreen(
     recentModelKeys: List<String> = emptyList(),
     hiddenModelKeys: Set<String> = emptySet(),
     onToggleFavorite: (String, String) -> Unit = { _, _ -> },
+    /** Non-null only for runtimes that decide tool permissions per session, i.e. Claude Code. */
+    claudePermissionMode: ClaudePermissionMode? = null,
+    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit = {},
+    /**
+     * Called once the model and runtime sheet closes.
+     *
+     * Switching runtime and picking a model happen in the same sheet, so anything that reacts to a
+     * switch has to wait for the sheet to close or it acts on a half-made choice.
+     */
+    onModelPickerClosed: () -> Unit = {},
     onSelectQuestionAnswer: (String, Int, String) -> Unit,
     onSubmitQuestion: (String) -> Unit,
     onCancelQuestion: (String) -> Unit = {},
@@ -434,7 +445,13 @@ fun ChatHomeScreen(
                     onMic = onMic,
                     isListening = state.isListening,
                     isSpeechProcessing = state.isSpeechProcessing,
-                    modelLabel = selectedModelId ?: stringResource(R.string.chat_model_short_default),
+                    modelLabel =
+                        providers
+                            .firstOrNull { it.id == selectedProviderId }
+                            ?.models?.get(selectedModelId)
+                            ?.name
+                            ?: selectedModelId
+                            ?: stringResource(R.string.chat_model_short_default),
                     onModelChipClick = {
                         onRefreshCatalog()
                         showModelPicker = true
@@ -453,6 +470,8 @@ fun ChatHomeScreen(
                     onAttach = onAttach,
                     onRemoveAttachment = onRemoveAttachment,
                     autoAcceptPermissions = autoAcceptPermissions,
+                    claudePermissionMode = claudePermissionMode,
+                    onSelectClaudePermissionMode = onSelectClaudePermissionMode,
                     onToggleAutoAccept = onToggleAutoAccept,
                     sendBehavior = sendBehavior,
                     contextTokensUsed = state.contextTokensUsed,
@@ -546,12 +565,16 @@ fun ChatHomeScreen(
             onSelectModel = { providerId, modelId ->
                 onSelectModel(providerId, modelId)
                 showModelPicker = false
+                onModelPickerClosed()
             },
             favoriteModelKeys = favoriteModelKeys,
             recentModelKeys = recentModelKeys,
             hiddenModelKeys = hiddenModelKeys,
             onToggleFavorite = onToggleFavorite,
-            onDismiss = { showModelPicker = false },
+            onDismiss = {
+                showModelPicker = false
+                onModelPickerClosed()
+            },
         )
     }
 
@@ -780,6 +803,8 @@ private fun ChatComposer(
     onRemoveAttachment: (Int) -> Unit,
     autoAcceptPermissions: Boolean,
     onToggleAutoAccept: (Boolean) -> Unit,
+    claudePermissionMode: ClaudePermissionMode?,
+    onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
     sendBehavior: String,
     contextTokensUsed: Long,
     contextLimit: Long,
@@ -987,16 +1012,9 @@ private fun ChatComposer(
                     }
                     CompactContextButton(
                         label = modelLabel,
-                        maxWidth = 84.dp,
+                        maxWidth = 168.dp,
                         onClick = onModelChipClick,
                     )
-                    if (thinkingOptions.isNotEmpty()) {
-                        ThinkingChip(
-                            options = thinkingOptions,
-                            selected = selectedVariant,
-                            onSelect = onSelectVariant,
-                        )
-                    }
                     Spacer(Modifier.weight(1f))
                     if (isListening) {
                         VolumeMeter(amplitude = 0.5f, idle = true)
@@ -1073,15 +1091,32 @@ private fun ChatComposer(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            ModeChip(
-                agents = agents,
-                selectedAgentId = selectedAgentId,
-                onSelect = onSelectAgent,
-            )
-            AutoAcceptChip(
-                enabled = autoAcceptPermissions,
-                onToggle = onToggleAutoAccept,
-            )
+            if (claudePermissionMode != null) {
+                // Claude Code has a single agent and decides permissions per session, so the mode
+                // chip selects the permission mode. Auto-accept is an OpenCode concept and has no
+                // meaning here, so it is left out rather than shown as a dead toggle.
+                PermissionModeChip(
+                    selected = claudePermissionMode,
+                    onSelect = onSelectClaudePermissionMode,
+                )
+            } else {
+                ModeChip(
+                    agents = agents,
+                    selectedAgentId = selectedAgentId,
+                    onSelect = onSelectAgent,
+                )
+                AutoAcceptChip(
+                    enabled = autoAcceptPermissions,
+                    onToggle = onToggleAutoAccept,
+                )
+            }
+            if (thinkingOptions.isNotEmpty()) {
+                ThinkingChip(
+                    options = thinkingOptions,
+                    selected = selectedVariant,
+                    onSelect = onSelectVariant,
+                )
+            }
             if (contextLimit > 0L) {
                 CompactContextMeter(
                     tokensUsed = contextTokensUsed,
@@ -1229,7 +1264,10 @@ private fun ModeChip(
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val label = selectedAgentId ?: "build"
+    // The selection is remembered across runtimes, so an id this runtime does not offer would
+    // otherwise label the chip with another agent's name. An empty list is not a licence to trust
+    // it either: that is exactly the state a stopped runtime is in.
+    val label = selectedAgentId?.takeIf { id -> agents.any { it.name == id } } ?: "build"
     Box {
         Surface(
             modifier =
@@ -1272,6 +1310,61 @@ private fun ModeChip(
                         expanded = false
                     },
                     modifier = Modifier.testTag("chat-mode-${agent.name}"),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionModeChip(
+    selected: ClaudePermissionMode,
+    onSelect: (ClaudePermissionMode) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Surface(
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(100.dp))
+                    .clickable(onClick = { expanded = true })
+                    .testTag("chat-permission-mode"),
+            shape = RoundedCornerShape(100.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    Icons.Outlined.VerifiedUser,
+                    contentDescription = stringResource(R.string.claude_permission_mode_label),
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
+                    stringResource(selected.labelRes),
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Icon(
+                    Icons.Default.ArrowDropDown,
+                    contentDescription = stringResource(R.string.cd_expand_dropdown),
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ClaudePermissionMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(mode.labelRes)) },
+                    onClick = {
+                        onSelect(mode)
+                        expanded = false
+                    },
+                    modifier = Modifier.testTag("chat-permission-mode-${mode.cliValue}"),
                 )
             }
         }

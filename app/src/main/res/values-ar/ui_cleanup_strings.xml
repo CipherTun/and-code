@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="runtime_setup_required_title">OpenCode غير جاهز</string>
+    <string name="runtime_setup_required_title">لا يوجد وكيل جاهز</string>
     <string name="runtime_setup_required_body">افتح القائمة، ثم الإعدادات، لتثبيت runtime Android أو إضافة اتصال بجهاز الكمبيوتر أو Mac.</string>
-    <string name="runtime_setup_required_body_compact">قم بإعداد OpenCode على جهاز Android هذا، أو اتصل بجهاز كمبيوتر أو Mac يعمل عليه OpenCode بالفعل.</string>
+    <string name="runtime_setup_required_body_compact">أعدّ وكيلًا على جهاز Android هذا، أو اتصل بجهاز PC أو Mac يشغّل OpenCode بالفعل.</string>
     <string name="open_settings_action">فتح القائمة</string>
     <string name="setup_this_android_action">إعداد هذا الجهاز</string>
     <string name="connect_pc_mac_action">الاتصال بالكمبيوتر</string>
@@ -10,7 +10,7 @@
     <string name="connect_short_action">اتصال</string>
     <string name="chat_model_short_default">النموذج</string>
     <string name="chat_workspace_short_default">افتراضي</string>
-    <string name="chat_build_subtitle_compact">اطلب من OpenCode التنفيذ أو الإصلاح أو التحقيق.</string>
+    <string name="chat_build_subtitle_compact">اطلب من وكيلك التنفيذ أو الإصلاح أو التحقيق.</string>
     <string name="settings_wake_word_row">كلمة التنبيه</string>
     <string name="settings_wake_word_value">غير مثبت</string>
     <string name="setup_step_counter">الخطوة %1$d من %2$d</string>
@@ -32,7 +32,7 @@
     <string name="provider_add_credentials_title">إضافة أو تحديث مفتاح API</string>
     <string name="voice_settings_intro">قم بتكوين الإدخال الصوتي والردود المنطوقة.</string>
     <string name="voice_conversation_section">محادثة صوتية</string>
-    <string name="voice_response_description">قراءة ردود OpenCode بصوت عالٍ.</string>
+    <string name="voice_response_description">قراءة ردود الوكيل بصوت عالٍ.</string>
     <string name="wake_word_section_title">الاستدعاء</string>
     <string name="wake_word_pack_required">لم يتم تثبيت حزمة كلمة التنبيه الاختيارية بعد.</string>
     <string name="wake_word_description">استمع إلى \"hey opencode\" لبدء المساعد بدون استخدام اليدين.</string>

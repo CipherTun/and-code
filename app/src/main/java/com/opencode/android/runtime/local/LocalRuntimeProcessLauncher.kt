@@ -24,7 +24,9 @@ class LocalRuntimeProcessLauncher(
     fun start(runtime: LocalRuntimeInstaller.InstalledRuntime): Process {
         val port = runtime.metadata.port
         process?.let { current ->
-            if (current.isAlive && portProbe(port)) return current
+            // A running process is kept whether or not it answered the probe: under load it may be
+            // slow to accept a connection, and replacing it would drop the session it is serving.
+            if (current.isAlive) return current
             terminate(current)
             process = null
         }
@@ -272,6 +274,7 @@ internal fun localRuntimeEnvironment(
         put("XDG_STATE_HOME", "/root/.local/state")
         put("OPENCODE_CONFIG_DIR", "/root/.config/opencode")
         put("OPENCODE_DISABLE_AUTOUPDATE", "true")
+        put("USE_BUILTIN_RIPGREP", "0")
         githubToken?.takeIf(String::isNotBlank)?.let {
             put("OPENCODE_GITHUB_TOKEN", it)
             put("GH_TOKEN", it)

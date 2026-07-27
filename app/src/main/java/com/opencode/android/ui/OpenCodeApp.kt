@@ -81,6 +81,7 @@ import com.opencode.android.feature.workspace.WorkspaceViewModel
 import com.opencode.android.runtime.WorkspaceRef
 import com.opencode.android.runtime.local.GitCloneResult
 import com.opencode.android.ui.components.SessionStatus
+import com.opencode.android.ui.navigation.ClaudeSettingsActions
 import com.opencode.android.ui.navigation.DRAWER_ROOT_ROUTES
 import com.opencode.android.ui.navigation.ROUTE_ACTIVITY
 import com.opencode.android.ui.navigation.ROUTE_ANDROID_SETUP
@@ -140,6 +141,10 @@ fun OpenCodeApp(
     val backStackEntry by navController.currentBackStackEntryAsState()
     var pendingSession by remember { mutableStateOf<Pair<String, String>?>(null) }
     var pendingHandoffPrompt by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // A handoff waits for the model sheet to close: the runtime and the model are chosen in the
+    // same sheet, and sending the moment the runtime changes would use whichever model happened
+    // to be selected first.
+    var handoffReady by remember { mutableStateOf(false) }
     var selectedWorkspace by remember { mutableStateOf<WorkspaceRef?>(null) }
     var selectedSession by remember { mutableStateOf<OpenCodeSession?>(null) }
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -167,6 +172,7 @@ fun OpenCodeApp(
                         app.localRuntimeController,
                         app.settings,
                         java.io.File(context.filesDir, "runtime/workspace"),
+                        claudeCode = app.claudeCodeController,
                     )
                 },
         )
@@ -389,15 +395,27 @@ fun OpenCodeApp(
         }
     }
 
-    LaunchedEffect(preferences.providerId, preferences.modelId, preferences.agentId, settingsState.providers) {
-        chatViewModel.selectConfiguration(
-            preferences.providerId,
-            preferences.modelId,
-            preferences.agentId,
+    LaunchedEffect(
+        preferences.providerId,
+        preferences.modelId,
+        preferences.agentId,
+        settingsState.providers,
+        settingsState.agents,
+    ) {
+        // Provider, model and agent are all remembered globally, so a selection made against one
+        // runtime survives a switch to another that has never heard of it. Forwarding one is not a
+        // cosmetic problem: the runtime rejects the prompt and no message is created at all. Each is
+        // only passed on once the active runtime's catalogue confirms it, and dropping it lets the
+        // runtime fall back to its own default.
+        val model =
             settingsState.providers
                 .firstOrNull { it.id == preferences.providerId }
                 ?.models?.get(preferences.modelId)
-                ?.limit?.context ?: 0L,
+        chatViewModel.selectConfiguration(
+            preferences.providerId?.takeIf { model != null },
+            preferences.modelId?.takeIf { model != null },
+            preferences.agentId?.takeIf { id -> settingsState.agents.any { it.name == id } },
+            model?.limit?.context ?: 0L,
         )
     }
 
@@ -430,6 +448,7 @@ fun OpenCodeApp(
     val onHandoff: (String) -> Unit = { targetRuntimeId ->
         val prompt = buildHandoffPrompt(chatState.messages)
         pendingHandoffPrompt = targetRuntimeId to prompt
+        handoffReady = false
         app.runtimeRegistry.select(targetRuntimeId)
     }
 
@@ -611,7 +630,27 @@ fun OpenCodeApp(
                     val localRuntimeStatus by app.localRuntimeManager.state.collectAsState()
                     AndroidSetupScreen(
                         runtimeStatus = localRuntimeStatus,
-                        onStartRuntimeSetup = workspaceViewModel::setupLocalRuntime,
+                        claude = workspaceState.claude,
+                        onStartSetup = { agents ->
+                            if (com.opencode.android.runtime.LocalAgent.OPEN_CODE in agents) {
+                                workspaceViewModel.setupLocalRuntime()
+                            }
+                            if (com.opencode.android.runtime.LocalAgent.CLAUDE_CODE in agents &&
+                                com.opencode.android.runtime.LocalAgent.OPEN_CODE !in agents
+                            ) {
+                                workspaceViewModel.installClaudeCode()
+                            }
+                        },
+                        onSelectClaudePermissionMode = { mode ->
+                            workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                        },
+                        onBeginClaudeSignIn = workspaceViewModel::beginClaudeSignIn,
+                        onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
+                        onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
+                        onSignOutClaude = workspaceViewModel::signOutClaude,
+                        onOpenUrl = { url ->
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                        },
                         settingsState = settingsState,
                         onOpenProviderAuth = settingsViewModel::openProviderAuth,
                         onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,
@@ -640,11 +679,12 @@ fun OpenCodeApp(
                             pendingSession = null
                         }
                     }
-                    LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id) {
+                    LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id, handoffReady) {
                         val pending = pendingHandoffPrompt
-                        if (pending != null && selectedRuntime?.id == pending.first) {
+                        if (pending != null && handoffReady && selectedRuntime?.id == pending.first) {
                             chatViewModel.sendMessage(pending.second)
                             pendingHandoffPrompt = null
+                            handoffReady = false
                         }
                     }
                     ChatHomeScreen(
@@ -656,6 +696,14 @@ fun OpenCodeApp(
                         selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
                         runtimeTargets = runtimeTargets,
                         selectedRuntimeId = selectedRuntime?.id,
+                        claudePermissionMode =
+                            workspaceState.claude
+                                .takeIf { selectedRuntime?.agent == com.opencode.android.runtime.LocalAgent.CLAUDE_CODE }
+                                ?.permissionMode,
+                        onSelectClaudePermissionMode = { mode ->
+                            workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                        },
+                        onModelPickerClosed = { handoffReady = true },
                         onSelectRuntime = { id ->
                             if (id != selectedRuntime?.id) {
                                 if (chatState.messages.isNotEmpty()) {
@@ -752,8 +800,7 @@ fun OpenCodeApp(
                 settingsNavGraph(
                     navController = navController,
                     settingsViewModel = settingsViewModel,
-                    settingsState = settingsState,
-                    notificationsEnabled = notificationsEnabled,
+                    notificationsEnabled = { notificationsEnabled },
                     onToggleNotifications = { enabled ->
                         notificationsEnabled = enabled
                         if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
@@ -764,11 +811,24 @@ fun OpenCodeApp(
                     onOpenDrawer = { drawerScope.launch { drawerState.open() } },
                     onOpenAssistantSettings = onOpenAssistantSettings,
                     onShowDiagnostics = { showDiagnostics = true },
-                    preferences = preferences,
+                    preferences = { preferences },
                     appPreferences = app.preferences,
                     runtimeRegistry = app.runtimeRegistry,
                     context = context,
                     hasMicrophonePermission = { hasMicrophonePermission() },
+                    claude = { workspaceState.claude },
+                    claudeActions =
+                        ClaudeSettingsActions(
+                            onInstall = workspaceViewModel::installClaudeCode,
+                            onUpdate = workspaceViewModel::updateClaudeCode,
+                            onSelectPermissionMode = { mode ->
+                                workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
+                            },
+                            onSignIn = workspaceViewModel::beginClaudeSignIn,
+                            onSubmitCode = workspaceViewModel::submitClaudeSignInCode,
+                            onCancelSignIn = workspaceViewModel::cancelClaudeSignIn,
+                            onSignOut = workspaceViewModel::signOutClaude,
+                        ),
                     onRequestWakeWordPermission = {
                         startWakeWordAfterPermission = true
                         microphonePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -778,10 +838,9 @@ fun OpenCodeApp(
                 workspaceNavGraph(
                     navController = navController,
                     workspaceViewModel = workspaceViewModel,
-                    workspaceState = workspaceState,
-                    selectedWorkspace = selectedWorkspace,
+                    selectedWorkspace = { selectedWorkspace },
                     onSelectWorkspace = { selectedWorkspace = it },
-                    selectedRuntime = selectedRuntime,
+                    selectedRuntime = { selectedRuntime },
                     app = app,
                     onImportFolder = { workspaceImportLauncher.launch(null) },
                     onShowCloneDialog = { showCloneDialog = true },

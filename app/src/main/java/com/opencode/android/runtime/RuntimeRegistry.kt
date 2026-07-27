@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class RuntimeRegistry(
     private val store: RuntimeConnectionStore,
     private val localTarget: RuntimeTarget,
+    private val additionalTargets: List<RuntimeTarget> = emptyList(),
     private val remoteFactory: (ConnectionProfile) -> RuntimeTarget = { profile ->
         RemoteRuntimeTarget(profile)
     },
@@ -31,6 +32,23 @@ class RuntimeRegistry(
     fun remoteProfiles(): List<ConnectionProfile> = store.connections()
 
     fun target(id: String): RuntimeTarget? = mutableTargets.value.firstOrNull { it.id == id }
+
+    /**
+     * Runtime that answers for [agent].
+     *
+     * Settings screens belong to one agent — MCP servers, providers and commands are configured per
+     * agent, not per chat — so they must not read whatever the chat happens to have selected. A
+     * remote runtime speaks OpenCode's protocol, hence the preference for the selected one when it
+     * is not another agent's: a user connected to a server expects to configure that server.
+     */
+    fun targetFor(agent: LocalAgent): RuntimeTarget? {
+        val selected = mutableSelected.value
+        if (selected != null && (selected.agent == agent || (selected.agent == null && agent == LocalAgent.OPEN_CODE))) {
+            return selected
+        }
+        return mutableTargets.value.firstOrNull { it.agent == agent }
+            ?: mutableTargets.value.firstOrNull { it.agent == null && agent == LocalAgent.OPEN_CODE }
+    }
 
     /**
      * Selects [id] as the active runtime.
@@ -110,6 +128,7 @@ class RuntimeRegistry(
         val targets =
             buildList {
                 add(localTarget)
+                addAll(additionalTargets)
                 store.connections().forEach { profile ->
                     // A stored endpoint can stop being usable across app versions (tightened URL
                     // rules) or arrive broken from a QR payload. Building the target must not throw

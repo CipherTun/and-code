@@ -18,19 +18,16 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Router
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Terminal
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
@@ -71,6 +68,8 @@ fun SettingsScreenV2(
     onOpenAssistantSettings: () -> Unit,
     onOpenVoiceSettings: () -> Unit,
     onOpenProviderSettings: () -> Unit,
+    onOpenAgentSettings: () -> Unit = {},
+    onOpenGitHubSettings: () -> Unit = {},
     onOpenLocalRuntime: () -> Unit,
     onOpenRemoteConnection: () -> Unit,
     onOpenWorkspaces: () -> Unit,
@@ -228,33 +227,21 @@ fun SettingsScreenV2(
 
             SettingsSection(title = stringResource(R.string.section_system_settings)) {
                 SettingsRow(
-                    icon = Icons.Default.Key,
-                    title = stringResource(R.string.provider_settings_row),
-                    onClick = onOpenProviderSettings,
+                    icon = Icons.Default.SmartToy,
+                    title = stringResource(R.string.settings_agents_row),
+                    onClick = onOpenAgentSettings,
                 )
                 SettingsDivider()
                 SettingsRow(
-                    icon = Icons.Default.Visibility,
-                    title = stringResource(R.string.model_visibility_row),
-                    onClick = onOpenModelVisibility,
-                )
-                SettingsDivider()
-                SettingsRow(
-                    icon = Icons.Default.Extension,
-                    title = stringResource(R.string.mcp_settings_row),
-                    onClick = onOpenMcp,
+                    icon = Icons.Default.Code,
+                    title = "GitHub / Git Operations",
+                    onClick = onOpenGitHubSettings,
                 )
                 SettingsDivider()
                 SettingsRow(
                     icon = Icons.Default.Build,
                     title = stringResource(R.string.server_info_settings_row),
                     onClick = onOpenServerInfo,
-                )
-                SettingsDivider()
-                SettingsRow(
-                    icon = Icons.Default.Terminal,
-                    title = stringResource(R.string.settings_local_runtime_row),
-                    onClick = onOpenLocalRuntime,
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -467,7 +454,7 @@ fun SettingsScreenV2(
 }
 
 @Composable
-private fun SettingsSection(
+internal fun SettingsSection(
     title: String,
     content: @Composable () -> Unit,
 ) {
@@ -484,7 +471,53 @@ private fun SettingsSection(
 }
 
 @Composable
-private fun SettingsRow(
+internal fun SettingsRow(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    title: String,
+    onClick: () -> Unit,
+) {
+    SettingsRowLayout(
+        leading = {
+            Icon(
+                painter = painter,
+                contentDescription = stringResource(R.string.cd_setting),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        },
+        title = title,
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun SettingsRowLayout(
+    leading: @Composable () -> Unit,
+    title: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 4.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        leading()
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = stringResource(R.string.cd_navigate),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+internal fun SettingsRow(
     icon: ImageVector,
     title: String,
     value: String? = null,
@@ -559,7 +592,7 @@ private fun SettingsToggleRow(
 }
 
 @Composable
-private fun SettingsDivider() {
+internal fun SettingsDivider() {
     HorizontalDivider(
         modifier = Modifier.padding(start = 36.dp),
         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.38f),
@@ -599,6 +632,7 @@ private fun SettingsScreenV2Preview() {
             onOpenAssistantSettings = {},
             onOpenVoiceSettings = {},
             onOpenProviderSettings = {},
+            onOpenAgentSettings = {},
             onOpenLocalRuntime = {},
             onOpenRemoteConnection = {},
             onOpenWorkspaces = {},
