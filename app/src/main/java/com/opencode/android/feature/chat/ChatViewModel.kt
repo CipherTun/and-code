@@ -40,6 +40,12 @@ import java.util.UUID
 
 enum class ToolStatus { PENDING, RUNNING, COMPLETED, ERROR, UNKNOWN }
 
+data class TodoItem(
+    val content: String,
+    val status: String,
+    val priority: String,
+)
+
 sealed interface ChatPart {
     val id: String
 
@@ -56,6 +62,7 @@ sealed interface ChatPart {
         val output: String? = null,
         val outputTruncated: Boolean = false,
         val error: String? = null,
+        val todos: List<TodoItem> = emptyList(),
     ) : ChatPart
 
     data class Patch(override val id: String, val files: List<String>) : ChatPart
@@ -117,9 +124,11 @@ private fun OpenCodePart.toChatPart(): ChatPart? {
             val inputText = formatToolInput(stateMap["input"])
             val rawOutput = stateMap["output"]?.jsonPrimitiveOrNull()
             val truncated = rawOutput != null && rawOutput.length > MAX_TOOL_OUTPUT_CHARS
+            val toolName = tool ?: "tool"
+            val parsedTodos = if (toolName == "todowrite") parseTodosFromInput(stateMap["input"]) else emptyList()
             ChatPart.Tool(
                 id = partId,
-                name = tool ?: "tool",
+                name = toolName,
                 status = parseToolStatus(stateMap["status"]?.jsonPrimitiveOrNull()),
                 title =
                     stateMap["title"]?.jsonPrimitiveOrNull()?.takeIf { it.isNotBlank() }
@@ -128,6 +137,7 @@ private fun OpenCodePart.toChatPart(): ChatPart? {
                 output = if (truncated) rawOutput?.takeLast(MAX_TOOL_OUTPUT_CHARS) else rawOutput,
                 outputTruncated = truncated,
                 error = stateMap["error"]?.jsonPrimitiveOrNull(),
+                todos = parsedTodos,
             )
         }
         "patch" -> ChatPart.Patch(partId, extractPatchFiles(stateMap))
@@ -159,6 +169,19 @@ private fun formatToolInput(input: JsonElement?): String? {
         }
     }
     return obj.entries.joinToString("\n") { (key, value) -> "$key: ${value.jsonPrimitiveOrNull() ?: value}" }
+}
+
+private fun parseTodosFromInput(input: JsonElement?): List<TodoItem> {
+    val obj = input as? JsonObject ?: return emptyList()
+    val todosArray = obj["todos"] as? JsonArray ?: return emptyList()
+    return todosArray.mapNotNull { element ->
+        val todoObj = element as? JsonObject ?: return@mapNotNull null
+        TodoItem(
+            content = todoObj["content"]?.jsonPrimitiveOrNull() ?: return@mapNotNull null,
+            status = todoObj["status"]?.jsonPrimitiveOrNull() ?: "pending",
+            priority = todoObj["priority"]?.jsonPrimitiveOrNull() ?: "medium",
+        )
+    }
 }
 
 private fun extractPatchFiles(state: Map<String, JsonElement>): List<String> {

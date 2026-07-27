@@ -38,6 +38,13 @@ class ClaudeCodeRuntime(
     private val installedRuntimeProvider: () -> LocalRuntimeInstaller.InstalledRuntime?,
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator(),
     private val messages: ClaudeMessages = ClaudeMessages,
+    /**
+     * The user's GitHub token, so `gh` and git-over-HTTPS work here as they do for OpenCode.
+     *
+     * The OpenCode server has always been launched with it; Claude Code was not, which is why `gh`
+     * reported no logged-in host inside the same sandbox where OpenCode was authenticated.
+     */
+    private val githubToken: () -> String? = { null },
 ) {
     private val json =
         Json {
@@ -109,7 +116,7 @@ class ClaudeCodeRuntime(
     private val resolvedModelsFile = File(runtimeDirectory, "claude-resolved-models.json")
     private val resolvedModels = MutableStateFlow<Map<String, String>>(emptyMap())
 
-    val auth = ClaudeAuthCoordinator(runtimeDirectory, installedRuntimeProvider, accessCoordinator, messages)
+    val auth = ClaudeAuthCoordinator(runtimeDirectory, installedRuntimeProvider, accessCoordinator, messages, githubToken)
 
     fun events(): Flow<OpenCodeEvent> = events
 
@@ -247,7 +254,7 @@ class ClaudeCodeRuntime(
                 .apply {
                     environment().clear()
                     environment().putAll(
-                        ClaudeSandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                        ClaudeSandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }, githubToken()),
                     )
                 }
                 .start()
@@ -289,6 +296,10 @@ class ClaudeCodeRuntime(
             add("--include-partial-messages")
             add("--permission-mode")
             add(permissionMode.cliValue)
+            permissionMode.allowedTools.takeIf(List<String>::isNotEmpty)?.let { tools ->
+                add("--allowedTools")
+                addAll(tools)
+            }
             ClaudeModels.cliModel(model)?.let {
                 add("--model")
                 add(it)
@@ -437,7 +448,11 @@ class ClaudeCodeRuntime(
                     .apply {
                         environment().clear()
                         environment().putAll(
-                            ClaudeSandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                            ClaudeSandboxLauncher.environment(
+                                runtime,
+                                File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                githubToken(),
+                            ),
                         )
                     }
                     .start()
@@ -493,6 +508,7 @@ class ClaudeCodeRuntime(
                                 ClaudeSandboxLauncher.environment(
                                     runtime,
                                     File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                    githubToken(),
                                 ),
                             )
                         }

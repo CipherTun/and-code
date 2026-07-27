@@ -23,7 +23,6 @@
     <string name="allow_lan_http">السماح بـ HTTP غير المشفر على LAN/Tailscale</string>
     <string name="test_connection">اختبار الاتصال</string>
     <string name="select">تحديد</string>
-    <string name="active">نشط</string>
     <string name="not_set">غير محدد</string>
     <string name="delete">حذف</string>
     <string name="cancel">إلغاء</string>
@@ -37,15 +36,12 @@
     <string name="thinking">جارٍ التفكير…</string>
     <string name="chat_reconnecting">انقطع الاتصال ببيئة التشغيل. جارٍ إعادة الاتصال…</string>
     <string name="processing">جارٍ المعالجة…</string>
-    <string name="no_connection_chat">أضف وحدد اتصال جهاز كمبيوتر قبل بدء الدردشة.</string>
     <string name="model">النموذج</string>
     <string name="agent">الوكيل</string>
     <string name="permission_required">الموافقة مطلوبة</string>
     <string name="allow_once">السماح مرة واحدة</string>
     <string name="always_allow">السماح دائمًا</string>
     <string name="reject">رفض</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">يمكنك طلب التنفيذ والبحث وعمليات الملفات هنا. تظهر إجراءات الأدوات الجارية وطلبات الموافقة ضمن السياق.</string>
     <string name="reasoning_card_title">الاستدلال</string>
     <string name="tool_status_pending">قيد الانتظار</string>
     <string name="tool_status_running">قيد التشغيل</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">تغييرات الملفات</string>
     <string name="file_changes_generic">تم تغيير الملفات</string>
     <string name="workspace_folder_label">مجلد العمل</string>
-    <string name="default_folder">المجلد الافتراضي</string>
-    <string name="default_folder_description">استخدام الموقع الحالي لخادم OpenCode</string>
     <string name="workspace_import_folder">استيراد مجلد…</string>
     <string name="workspace_clone_github">استنساخ من GitHub…</string>
     <string name="workspace_clone_title">استنساخ مستودع GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">إزالة من القائمة</string>
     <string name="workspace_delete_files">حذف الملفات</string>
     <string name="workspace_delete_files_confirm">حذف \"%1$s\" وجميع ملفاته؟ لا يمكن التراجع عن هذا.</string>
-    <string name="chat_options_description">خيارات الدردشة</string>
-    <string name="continue_on_other_runtime">المتابعة على بيئة تشغيل أخرى</string>
-    <string name="handoff_dialog_title">اختيار بيئة تشغيل</string>
 
     <string name="recent_sessions">الجلسات الأخيرة</string>
     <string name="view_all">عرض الكل</string>
@@ -197,6 +188,7 @@
     <string name="todo_status_in_progress">قيد التقدم</string>
     <string name="todo_status_cancelled">ملغى</string>
     <string name="todo_status_pending">لم يبدأ</string>
+    <string name="todo_timeline_progress">اكتمل %1$d من %2$d Todo</string>
     <string name="priority_high">عالية</string>
     <string name="priority_medium">متوسطة</string>
     <string name="priority_low">منخفضة</string>
@@ -277,6 +269,23 @@
     <string name="deleting_label">جارٍ الحذف…</string>
     <string name="delete_runtime_completely_button">حذف بيئة التشغيل بالكامل</string>
     <string name="delete_runtime_note">يحذف بيئة Linux وذاكرة التخزين المؤقت للتنزيلات والسجلات ومساحة العمل المحلية.</string>
+    <string name="adb_setup_title">Android Debug Bridge (ADB)</string>
+    <string name="adb_setup_description">اتصل بهذا الجهاز عبر تصحيح الأخطاء اللاسلكي لتمكين التقاط الشاشة وأتمتة واجهة المستخدم وتثبيت التطبيقات واختبارات الأجهزة.</string>
+    <string name="adb_status_disconnected">غير متصل</string>
+    <string name="adb_status_discovered">تم اكتشاف تصحيح الأخطاء اللاسلكي (المنفذ %1$d)</string>
+    <string name="adb_status_connected">متصل (المنفذ %1$d)</string>
+    <string name="adb_status_error">خطأ</string>
+    <string name="adb_pair_button">إقران الجهاز</string>
+    <string name="adb_connect_button">اتصال</string>
+    <string name="adb_disconnect_button">قطع الاتصال</string>
+    <string name="adb_pair_dialog_title">الإقران بتصحيح الأخطاء اللاسلكي</string>
+    <string name="adb_pair_dialog_instructions">افتح الإعدادات ← خيارات المطور ← تصحيح الأخطاء اللاسلكي ← إقران جهاز برمز الإقران.</string>
+    <string name="adb_pair_port_label">منفذ الإقران</string>
+    <string name="adb_pair_code_label">رمز الإقران</string>
+    <string name="adb_pair_confirm">إقران</string>
+    <string name="adb_pairing_in_progress">جارٍ الإقران…</string>
+    <string name="adb_connecting_in_progress">جارٍ الاتصال…</string>
+    <string name="adb_requires_android_11">يتطلب Android 11 أو أحدث</string>
     <string name="runtime_status_not_installed">غير مثبت</string>
     <string name="runtime_status_setting_up">جارٍ الإعداد</string>
     <string name="runtime_status_starting">جارٍ البدء</string>
@@ -613,11 +622,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -740,14 +744,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">فشلت العملية</string>
@@ -780,7 +776,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>
@@ -860,7 +855,7 @@
     <string name="claude_permission_plan">التخطيط فقط</string>
     <string name="claude_permission_plan_desc">يقرأ Claude ويخطّط فقط دون تعديل الملفات أو تنفيذ الأوامر.</string>
     <string name="claude_permission_accept_edits">قبول التعديلات</string>
-    <string name="claude_permission_accept_edits_desc">يمكن لـ Claude تعديل ملفات مساحة العمل. موصى به.</string>
+    <string name="claude_permission_accept_edits_desc">يمكن لـ Claude تعديل الملفات وتنفيذ الأوامر في مساحة العمل دون سؤال. موصى به.</string>
     <string name="claude_permission_full_access">وصول كامل</string>
     <string name="claude_permission_full_access_desc">يمكن لـ Claude تنفيذ أي أمر دون سؤال. استخدمه بحذر.</string>
     <string name="claude_permission_mode_label">وضع الأذونات</string>

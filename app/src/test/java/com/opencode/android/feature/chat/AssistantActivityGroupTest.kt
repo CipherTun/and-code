@@ -11,7 +11,8 @@ class AssistantActivityGroupTest {
         name: String,
         status: ToolStatus = ToolStatus.COMPLETED,
         title: String? = null,
-    ) = ChatPart.Tool(id = id, name = name, status = status, title = title)
+        todos: List<TodoItem> = emptyList(),
+    ) = ChatPart.Tool(id = id, name = name, status = status, title = title, todos = todos)
 
     private fun assistant(
         id: String,
@@ -218,5 +219,56 @@ class AssistantActivityGroupTest {
         assertTrue(summary.counts.isEmpty())
         assertEquals(1, summary.reasoningCount)
         assertTrue(!summary.isEmpty)
+    }
+
+    @Test
+    fun `todowrite with todos is extracted into a Todo entry`() {
+        val todos =
+            listOf(
+                TodoItem("task 1", "completed", "high"),
+                TodoItem("task 2", "in_progress", "medium"),
+            )
+        val entries =
+            groupConversationTimeline(
+                listOf(assistant("m1", tool("t1", "todowrite", todos = todos))),
+            )
+
+        assertEquals(1, entries.size)
+        val todoEntry = entries.single() as TimelineEntry.Todo
+        assertEquals("todo:t1", todoEntry.id)
+        assertEquals(2, todoEntry.todos.size)
+        assertEquals("task 1", todoEntry.todos[0].content)
+    }
+
+    @Test
+    fun `todowrite with todos splits surrounding activity`() {
+        val todos = listOf(TodoItem("task 1", "completed", "high"))
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        tool("t2", "todowrite", todos = todos),
+                        tool("t3", "read"),
+                    ),
+                ),
+            )
+
+        assertEquals(3, entries.size)
+        assertEquals(listOf("t1"), (entries[0] as TimelineEntry.Activity).parts.map { it.id })
+        assertEquals("todo:t2", (entries[1] as TimelineEntry.Todo).id)
+        assertEquals(listOf("t3"), (entries[2] as TimelineEntry.Activity).parts.map { it.id })
+    }
+
+    @Test
+    fun `todowrite without todos stays in activity group`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(assistant("m1", tool("t1", "todowrite"))),
+            )
+
+        assertEquals(1, entries.size)
+        assertTrue(entries.single() is TimelineEntry.Activity)
     }
 }

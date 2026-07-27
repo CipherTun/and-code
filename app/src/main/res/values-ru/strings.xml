@@ -23,7 +23,6 @@
     <string name="allow_lan_http">Разрешить незашифрованный HTTP в LAN/Tailscale</string>
     <string name="test_connection">Проверить подключение</string>
     <string name="select">Выбрать</string>
-    <string name="active">Активно</string>
     <string name="not_set">Не задано</string>
     <string name="delete">Удалить</string>
     <string name="cancel">Отмена</string>
@@ -37,15 +36,12 @@
     <string name="thinking">Размышление…</string>
     <string name="chat_reconnecting">Соединение со средой прервано. Переподключение…</string>
     <string name="processing">Обработка…</string>
-    <string name="no_connection_chat">Добавьте и выберите подключение к ПК перед началом чата.</string>
     <string name="model">Модель</string>
     <string name="agent">Агент</string>
     <string name="permission_required">Требуется одобрение</string>
     <string name="allow_once">Разрешить один раз</string>
     <string name="always_allow">Всегда разрешать</string>
     <string name="reject">Отклонить</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">Здесь можно запрашивать реализацию, исследование и операции с файлами. Выполняемые действия инструментов и запросы на одобрение отображаются встроенно.</string>
     <string name="reasoning_card_title">Рассуждение</string>
     <string name="tool_status_pending">Ожидание</string>
     <string name="tool_status_running">Выполняется</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">Изменения файлов</string>
     <string name="file_changes_generic">Файлы были изменены</string>
     <string name="workspace_folder_label">Рабочая папка</string>
-    <string name="default_folder">Папка по умолчанию</string>
-    <string name="default_folder_description">Использовать текущее расположение сервера OpenCode</string>
     <string name="workspace_import_folder">Импортировать папку…</string>
     <string name="workspace_clone_github">Клонировать из GitHub…</string>
     <string name="workspace_clone_title">Клонировать репозиторий GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">Удалить из списка</string>
     <string name="workspace_delete_files">Удалить файлы</string>
     <string name="workspace_delete_files_confirm">Удалить \"%1$s\" и все его файлы? Это действие нельзя отменить.</string>
-    <string name="chat_options_description">Параметры чата</string>
-    <string name="continue_on_other_runtime">Продолжить в другой среде выполнения</string>
-    <string name="handoff_dialog_title">Выберите среду выполнения</string>
 
     <string name="recent_sessions">Недавние сессии</string>
     <string name="view_all">Показать все</string>
@@ -197,6 +188,7 @@
     <string name="todo_status_in_progress">В процессе</string>
     <string name="todo_status_cancelled">Отменено</string>
     <string name="todo_status_pending">Не начато</string>
+    <string name="todo_timeline_progress">Выполнено %1$d из %2$d Todo</string>
     <string name="priority_high">Высокий</string>
     <string name="priority_medium">Средний</string>
     <string name="priority_low">Низкий</string>
@@ -277,6 +269,23 @@
     <string name="deleting_label">Удаление…</string>
     <string name="delete_runtime_completely_button">Полностью удалить среду выполнения</string>
     <string name="delete_runtime_note">Удаляет среду Linux, кэш загрузок, журналы и локальное рабочее пространство.</string>
+    <string name="adb_setup_title">Android Debug Bridge (ADB)</string>
+    <string name="adb_setup_description">Подключитесь к этому устройству через бесплаговую отладку для включения захвата экрана, автоматизации UI, установки приложений и инструментальных тестов.</string>
+    <string name="adb_status_disconnected">Не подключено</string>
+    <string name="adb_status_discovered">Обнаружена беспроводная отладка (порт %1$d)</string>
+    <string name="adb_status_connected">Подключено (порт %1$d)</string>
+    <string name="adb_status_error">Ошибка</string>
+    <string name="adb_pair_button">Сопряжённое устройство</string>
+    <string name="adb_connect_button">Подключить</string>
+    <string name="adb_disconnect_button">Отключить</string>
+    <string name="adb_pair_dialog_title">Сопряжение с беспроводной отладкой</string>
+    <string name="adb_pair_dialog_instructions">Откройте Настройки → Для разработчиков → Беспроводная отладка → Сопряжение устройства с кодом.</string>
+    <string name="adb_pair_port_label">Порт сопряжения</string>
+    <string name="adb_pair_code_label">Код сопряжения</string>
+    <string name="adb_pair_confirm">Сопрячь</string>
+    <string name="adb_pairing_in_progress">Сопряжение…</string>
+    <string name="adb_connecting_in_progress">Подключение…</string>
+    <string name="adb_requires_android_11">Требуется Android 11 или новее</string>
     <string name="runtime_status_not_installed">Не установлено</string>
     <string name="runtime_status_setting_up">Настройка</string>
     <string name="runtime_status_starting">Запуск</string>
@@ -613,11 +622,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -740,14 +744,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">Операция не выполнена</string>
@@ -780,7 +776,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>
@@ -860,7 +855,7 @@
     <string name="claude_permission_plan">Только планирование</string>
     <string name="claude_permission_plan_desc">Claude только читает и планирует, не изменяя файлы и не выполняя команды.</string>
     <string name="claude_permission_accept_edits">Разрешить правки</string>
-    <string name="claude_permission_accept_edits_desc">Claude может изменять файлы в рабочей области. Рекомендуется.</string>
+    <string name="claude_permission_accept_edits_desc">Claude может изменять файлы и выполнять команды в рабочей папке без подтверждения. Рекомендуется.</string>
     <string name="claude_permission_full_access">Полный доступ</string>
     <string name="claude_permission_full_access_desc">Claude может выполнять любые команды без подтверждения. Используйте осторожно.</string>
     <string name="claude_permission_mode_label">Режим разрешений</string>

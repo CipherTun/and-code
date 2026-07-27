@@ -23,7 +23,6 @@
     <string name="allow_lan_http">LAN・Tailscale内のHTTP接続を許可</string>
     <string name="test_connection">接続テスト</string>
     <string name="select">選択</string>
-    <string name="active">有効</string>
     <string name="not_set">未設定</string>
     <string name="delete">削除</string>
     <string name="cancel">キャンセル</string>
@@ -37,15 +36,12 @@
     <string name="thinking">考え中…</string>
     <string name="chat_reconnecting">ランタイムとの接続が切れました。再接続しています…</string>
     <string name="processing">処理中…</string>
-    <string name="no_connection_chat">チャットを始める前にPC接続先を追加して選択してください。</string>
     <string name="model">モデル</string>
     <string name="agent">エージェント</string>
     <string name="permission_required">操作の承認が必要です</string>
     <string name="allow_once">今回だけ許可</string>
     <string name="always_allow">常に許可</string>
     <string name="reject">拒否</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">実装、調査、ファイル操作などを依頼できます。実行中のツール操作や承認要求もここに表示されます。</string>
     <string name="reasoning_card_title">思考</string>
     <string name="tool_status_pending">保留中</string>
     <string name="tool_status_running">実行中</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">ファイル変更</string>
     <string name="file_changes_generic">ファイルが変更されました</string>
     <string name="workspace_folder_label">作業フォルダ</string>
-    <string name="default_folder">既定のフォルダ</string>
-    <string name="default_folder_description">OpenCodeサーバーの現在位置を使用</string>
     <string name="workspace_import_folder">フォルダをインポート…</string>
     <string name="workspace_clone_github">GitHubからClone…</string>
     <string name="workspace_clone_title">GitHubリポジトリをClone</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">一覧から削除</string>
     <string name="workspace_delete_files">ファイルを削除</string>
     <string name="workspace_delete_files_confirm">「%1$s」とすべてのファイルを削除しますか？元に戻せません。</string>
-    <string name="chat_options_description">チャット操作</string>
-    <string name="continue_on_other_runtime">別の実行先で続ける</string>
-    <string name="handoff_dialog_title">実行先を選択</string>
 
     <string name="recent_sessions">最近のセッション</string>
     <string name="view_all">すべて表示</string>
@@ -197,6 +188,7 @@
     <string name="todo_status_in_progress">進行中</string>
     <string name="todo_status_cancelled">取消</string>
     <string name="todo_status_pending">未着手</string>
+    <string name="todo_timeline_progress">%2$d 個中 %1$d 個の Todo が完了</string>
     <string name="priority_high">高</string>
     <string name="priority_medium">中</string>
     <string name="priority_low">低</string>
@@ -277,6 +269,23 @@
     <string name="deleting_label">削除しています</string>
     <string name="delete_runtime_completely_button">ランタイムを完全削除</string>
     <string name="delete_runtime_note">Linux環境、ダウンロードキャッシュ、ログ、ローカル作業領域をすべて削除します。</string>
+    <string name="adb_setup_title">Android Debug Bridge (ADB)</string>
+    <string name="adb_setup_description">無線デバッグでこのデバイスに接続し、画面キャプチャ、UI自動操作、アプリインストール、インストゥルメンテーションテストを有効にします。</string>
+    <string name="adb_status_disconnected">未接続</string>
+    <string name="adb_status_discovered">無線デバッグを検出（ポート %1$d）</string>
+    <string name="adb_status_connected">接続済み（ポート %1$d）</string>
+    <string name="adb_status_error">エラー</string>
+    <string name="adb_pair_button">デバイスをペアリング</string>
+    <string name="adb_connect_button">接続</string>
+    <string name="adb_disconnect_button">切断</string>
+    <string name="adb_pair_dialog_title">無線デバッグとペアリング</string>
+    <string name="adb_pair_dialog_instructions">設定 → 開発者向けオプション → 無線デバッグ → ペアリングコードでデバイスをペアリング を開いてください。</string>
+    <string name="adb_pair_port_label">ペアリングポート</string>
+    <string name="adb_pair_code_label">ペアリングコード</string>
+    <string name="adb_pair_confirm">ペアリング</string>
+    <string name="adb_pairing_in_progress">ペアリング中…</string>
+    <string name="adb_connecting_in_progress">接続中…</string>
+    <string name="adb_requires_android_11">Android 11以降が必要です</string>
     <string name="runtime_status_not_installed">未インストール</string>
     <string name="runtime_status_setting_up">セットアップ中</string>
     <string name="runtime_status_starting">起動中</string>
@@ -627,11 +636,6 @@
     <string name="cd_reasoning">推論</string>
     <string name="cd_tool">ツール</string>
     <string name="cd_file_changes">ファイル変更</string>
-    <string name="cd_compacted">コンテキスト圧縮済み</string>
-    <string name="cd_plan">プラン</string>
-    <string name="cd_task_completed">完了</string>
-    <string name="cd_task_in_progress">進行中</string>
-    <string name="cd_task_pending">保留中</string>
     <string name="cd_setup">セットアップ</string>
     <string name="cd_start">開始</string>
     <string name="cd_stop">停止</string>
@@ -754,14 +758,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">resumeコマンドをコピー</string>
-    <string name="model_default">デフォルト</string>
-    <string name="no_connected_providers">接続されたプロバイダーがありません</string>
-    <string name="tool_call_count">🔧 %1$d ツールコール</string>
-    <string name="context_compacted_marker">コンテキスト圧縮済み</string>
-    <string name="plan_card_title">プラン</string>
-    <string name="tasks_card_title">タスク</string>
-    <string name="tasks_progress">%1$d/%2$d 完了</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">操作に失敗しました</string>
@@ -794,7 +790,6 @@
     <string name="status_queued">キュー済み</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">resumeコマンドをコピーしました</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">聞き取り中…</string>
@@ -874,7 +869,7 @@
     <string name="claude_permission_plan">プランのみ</string>
     <string name="claude_permission_plan_desc">Claudeは読み取りと計画のみ行い、ファイル編集やコマンド実行はしません。</string>
     <string name="claude_permission_accept_edits">編集を許可</string>
-    <string name="claude_permission_accept_edits_desc">Claudeがワークスペース内のファイルを編集できます。推奨設定です。</string>
+    <string name="claude_permission_accept_edits_desc">Claudeがワークスペース内のファイル編集とコマンド実行を確認なしに行えます。推奨設定です。</string>
     <string name="claude_permission_full_access">フルアクセス</string>
     <string name="claude_permission_full_access_desc">Claudeが確認なしに任意のコマンドを実行します。取り扱いに注意してください。</string>
     <string name="claude_permission_mode_label">権限モード</string>

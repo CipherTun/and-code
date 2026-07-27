@@ -18,6 +18,8 @@ sealed interface TimelineEntry {
     }
 
     data class Activity(override val id: String, val parts: List<ChatPart>) : TimelineEntry
+
+    data class Todo(override val id: String, val todos: List<TodoItem>) : TimelineEntry
 }
 
 /** Broad buckets used to summarise a run of tool calls in one line. */
@@ -71,6 +73,10 @@ fun groupConversationTimeline(messages: List<ChatMessage>): List<TimelineEntry> 
         }
         message.parts.forEach { part ->
             when {
+                part is ChatPart.Tool && part.name == "todowrite" && part.todos.isNotEmpty() -> {
+                    flush()
+                    entries += TimelineEntry.Todo("todo:${part.id}", part.todos)
+                }
                 part !is ChatPart.Text -> pending += part
                 part.text.isNotBlank() -> {
                     flush()

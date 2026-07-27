@@ -118,6 +118,11 @@ fun NavGraphBuilder.workspaceNavGraph(
                             rollbackAction = app.localRuntimeController::rollback,
                             deleteAction = app.localRuntimeController::delete,
                             getString = { app.getString(it) },
+                            adbState = app.adbConnectionManager.state,
+                            adbPairAction = app.adbConnectionManager::pair,
+                            adbConnectAction = app.adbConnectionManager::connect,
+                            adbDisconnectAction = app.adbConnectionManager::disconnect,
+                            adbStartDiscovery = app.adbConnectionManager::startDiscovery,
                         )
                     },
             )
@@ -144,6 +149,11 @@ fun NavGraphBuilder.workspaceNavGraph(
             onRequestDelete = managementViewModel::requestDelete,
             onDismissDelete = managementViewModel::dismissDelete,
             onConfirmDelete = managementViewModel::confirmDelete,
+            onShowAdbPairDialog = managementViewModel::showAdbPairDialog,
+            onDismissAdbPairDialog = managementViewModel::dismissAdbPairDialog,
+            onAdbPair = managementViewModel::adbPair,
+            onAdbConnect = managementViewModel::adbConnect,
+            onAdbDisconnect = managementViewModel::adbDisconnect,
         )
     }
 

@@ -23,7 +23,6 @@
     <string name="allow_lan_http">Permitir HTTP sem criptografia em LAN/Tailscale</string>
     <string name="test_connection">Testar conexão</string>
     <string name="select">Selecionar</string>
-    <string name="active">Ativo</string>
     <string name="not_set">Não definido</string>
     <string name="delete">Excluir</string>
     <string name="cancel">Cancelar</string>
@@ -37,15 +36,12 @@
     <string name="thinking">Pensando…</string>
     <string name="chat_reconnecting">A conexão com o ambiente foi interrompida. Reconectando…</string>
     <string name="processing">Processando…</string>
-    <string name="no_connection_chat">Adicione e selecione uma conexão de PC antes de iniciar um chat.</string>
     <string name="model">Modelo</string>
     <string name="agent">Agente</string>
     <string name="permission_required">Aprovação necessária</string>
     <string name="allow_once">Permitir uma vez</string>
     <string name="always_allow">Sempre permitir</string>
     <string name="reject">Rejeitar</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">Você pode solicitar implementações, pesquisas e operações de arquivos aqui. Ações de ferramentas em execução e solicitações de aprovação são exibidas inline.</string>
     <string name="reasoning_card_title">Raciocínio</string>
     <string name="tool_status_pending">Pendente</string>
     <string name="tool_status_running">Em execução</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">Alterações de arquivos</string>
     <string name="file_changes_generic">Arquivos foram alterados</string>
     <string name="workspace_folder_label">Pasta de trabalho</string>
-    <string name="default_folder">Pasta padrão</string>
-    <string name="default_folder_description">Usar o local atual do servidor OpenCode</string>
     <string name="workspace_import_folder">Importar pasta…</string>
     <string name="workspace_clone_github">Clonar do GitHub…</string>
     <string name="workspace_clone_title">Clonar um repositório do GitHub</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">Remover da lista</string>
     <string name="workspace_delete_files">Excluir arquivos</string>
     <string name="workspace_delete_files_confirm">Excluir \"%1$s\" e todos os seus arquivos? Isso não pode ser desfeito.</string>
-    <string name="chat_options_description">Opções de chat</string>
-    <string name="continue_on_other_runtime">Continuar em outro ambiente de execução</string>
-    <string name="handoff_dialog_title">Escolher um ambiente de execução</string>
 
     <string name="recent_sessions">Sessões recentes</string>
     <string name="view_all">Ver tudo</string>
@@ -197,6 +188,7 @@
     <string name="todo_status_in_progress">Em andamento</string>
     <string name="todo_status_cancelled">Cancelado</string>
     <string name="todo_status_pending">Não iniciado</string>
+    <string name="todo_timeline_progress">%1$d de %2$d Todo concluído</string>
     <string name="priority_high">Alta</string>
     <string name="priority_medium">Média</string>
     <string name="priority_low">Baixa</string>
@@ -277,6 +269,23 @@
     <string name="deleting_label">Excluindo…</string>
     <string name="delete_runtime_completely_button">Excluir ambiente de execução completamente</string>
     <string name="delete_runtime_note">Exclui o ambiente Linux, cache de downloads, registros e espaço de trabalho local.</string>
+    <string name="adb_setup_title">Android Debug Bridge (ADB)</string>
+    <string name="adb_setup_description">Conecte-se a este dispositivo via depuração sem fio para habilitar captura de tela, automação de UI, instalação de apps e testes de instrumentação.</string>
+    <string name="adb_status_disconnected">Não conectado</string>
+    <string name="adb_status_discovered">Depuração sem fio detectada (porta %1$d)</string>
+    <string name="adb_status_connected">Conectado (porta %1$d)</string>
+    <string name="adb_status_error">Erro</string>
+    <string name="adb_pair_button">Parear dispositivo</string>
+    <string name="adb_connect_button">Conectar</string>
+    <string name="adb_disconnect_button">Desconectar</string>
+    <string name="adb_pair_dialog_title">Parear com depuração sem fio</string>
+    <string name="adb_pair_dialog_instructions">Abra Configurações → Opções do desenvolvedor → Depuração sem fio → Parear dispositivo com código de pareamento.</string>
+    <string name="adb_pair_port_label">Porta de pareamento</string>
+    <string name="adb_pair_code_label">Código de pareamento</string>
+    <string name="adb_pair_confirm">Parear</string>
+    <string name="adb_pairing_in_progress">Pareando…</string>
+    <string name="adb_connecting_in_progress">Conectando…</string>
+    <string name="adb_requires_android_11">Requer Android 11 ou posterior</string>
     <string name="runtime_status_not_installed">Não instalado</string>
     <string name="runtime_status_setting_up">Configurando</string>
     <string name="runtime_status_starting">Iniciando</string>
@@ -613,11 +622,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -740,14 +744,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">A operação falhou</string>
@@ -780,7 +776,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>
@@ -860,7 +855,7 @@
     <string name="claude_permission_plan">Apenas planejar</string>
     <string name="claude_permission_plan_desc">O Claude lê e planeja, mas nunca edita arquivos nem executa comandos.</string>
     <string name="claude_permission_accept_edits">Aceitar edições</string>
-    <string name="claude_permission_accept_edits_desc">O Claude pode editar arquivos do espaço de trabalho. Recomendado.</string>
+    <string name="claude_permission_accept_edits_desc">O Claude pode editar arquivos e executar comandos no espaço de trabalho sem perguntar. Recomendado.</string>
     <string name="claude_permission_full_access">Acesso total</string>
     <string name="claude_permission_full_access_desc">O Claude pode executar qualquer comando sem perguntar. Use com cuidado.</string>
     <string name="claude_permission_mode_label">Modo de permissão</string>
