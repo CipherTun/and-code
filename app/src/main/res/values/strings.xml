@@ -23,7 +23,6 @@
     <string name="allow_lan_http">Allow cleartext HTTP on LAN/Tailscale</string>
     <string name="test_connection">Test connection</string>
     <string name="select">Select</string>
-    <string name="active">Active</string>
     <string name="not_set">Not set</string>
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
@@ -37,15 +36,12 @@
     <string name="thinking">Thinking…</string>
     <string name="chat_reconnecting">The connection to the runtime was interrupted. Reconnecting…</string>
     <string name="processing">Processing…</string>
-    <string name="no_connection_chat">Add and select a PC connection before starting a chat.</string>
     <string name="model">Model</string>
     <string name="agent">Agent</string>
     <string name="permission_required">Approval required</string>
     <string name="allow_once">Allow once</string>
     <string name="always_allow">Always allow</string>
     <string name="reject">Reject</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">You can request implementation, research, and file operations here. Running tool actions and approval requests are shown inline.</string>
     <string name="reasoning_card_title">Reasoning</string>
     <string name="tool_status_pending">Pending</string>
     <string name="tool_status_running">Running</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">File changes</string>
     <string name="file_changes_generic">Files were changed</string>
     <string name="workspace_folder_label">Working folder</string>
-    <string name="default_folder">Default folder</string>
-    <string name="default_folder_description">Use the OpenCode server\'s current location</string>
     <string name="workspace_import_folder">Import folder…</string>
     <string name="workspace_clone_github">Clone from GitHub…</string>
     <string name="workspace_clone_title">Clone a GitHub repository</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">Remove from list</string>
     <string name="workspace_delete_files">Delete files</string>
     <string name="workspace_delete_files_confirm">Delete \"%1$s\" and all its files? This cannot be undone.</string>
-    <string name="chat_options_description">Chat options</string>
-    <string name="continue_on_other_runtime">Continue on another runtime</string>
-    <string name="handoff_dialog_title">Choose a runtime</string>
 
     <string name="recent_sessions">Recent sessions</string>
     <string name="view_all">View all</string>
@@ -197,6 +188,7 @@
     <string name="todo_status_in_progress">In progress</string>
     <string name="todo_status_cancelled">Cancelled</string>
     <string name="todo_status_pending">Not started</string>
+    <string name="todo_timeline_progress">%1$d of %2$d Todo completed</string>
     <string name="priority_high">High</string>
     <string name="priority_medium">Medium</string>
     <string name="priority_low">Low</string>
@@ -277,6 +269,23 @@
     <string name="deleting_label">Deleting…</string>
     <string name="delete_runtime_completely_button">Delete runtime completely</string>
     <string name="delete_runtime_note">Deletes the Linux environment, download cache, logs, and local workspace.</string>
+    <string name="adb_setup_title">Android Debug Bridge (ADB)</string>
+    <string name="adb_setup_description">Connect to this device via wireless debugging to enable screen capture, UI automation, app install, and instrumentation tests.</string>
+    <string name="adb_status_disconnected">Not connected</string>
+    <string name="adb_status_discovered">Wireless debugging detected (port %1$d)</string>
+    <string name="adb_status_connected">Connected (port %1$d)</string>
+    <string name="adb_status_error">Error</string>
+    <string name="adb_pair_button">Pair device</string>
+    <string name="adb_connect_button">Connect</string>
+    <string name="adb_disconnect_button">Disconnect</string>
+    <string name="adb_pair_dialog_title">Pair with wireless debugging</string>
+    <string name="adb_pair_dialog_instructions">Open Settings → Developer options → Wireless debugging → Pair device with pairing code.</string>
+    <string name="adb_pair_port_label">Pairing port</string>
+    <string name="adb_pair_code_label">Pairing code</string>
+    <string name="adb_pair_confirm">Pair</string>
+    <string name="adb_pairing_in_progress">Pairing…</string>
+    <string name="adb_connecting_in_progress">Connecting…</string>
+    <string name="adb_requires_android_11">Requires Android 11 or later</string>
     <string name="runtime_status_not_installed">Not installed</string>
     <string name="runtime_status_setting_up">Setting up</string>
     <string name="runtime_status_starting">Starting</string>
@@ -628,11 +637,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -755,14 +759,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">The operation failed</string>
@@ -795,7 +791,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>

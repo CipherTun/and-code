@@ -23,7 +23,6 @@
     <string name="allow_lan_http">允许局域网/Tailscale 上的明文 HTTP</string>
     <string name="test_connection">测试连接</string>
     <string name="select">选择</string>
-    <string name="active">活跃</string>
     <string name="not_set">未设置</string>
     <string name="delete">删除</string>
     <string name="cancel">取消</string>
@@ -37,15 +36,12 @@
     <string name="thinking">思考中…</string>
     <string name="chat_reconnecting">与运行时的连接已中断，正在重新连接…</string>
     <string name="processing">处理中…</string>
-    <string name="no_connection_chat">请先添加并选择一个电脑连接，然后再开始聊天。</string>
     <string name="model">模型</string>
     <string name="agent">代理</string>
     <string name="permission_required">需要批准</string>
     <string name="allow_once">允许一次</string>
     <string name="always_allow">始终允许</string>
     <string name="reject">拒绝</string>
-    <string name="chat_intro_title">OpenCode</string>
-    <string name="chat_intro_body">您可以在此处请求实现、研究和文件操作。正在运行的工具操作和批准请求将内联显示。</string>
     <string name="reasoning_card_title">推理</string>
     <string name="tool_status_pending">等待中</string>
     <string name="tool_status_running">运行中</string>
@@ -67,8 +63,6 @@
     <string name="file_changes_title">文件更改</string>
     <string name="file_changes_generic">文件已更改</string>
     <string name="workspace_folder_label">工作文件夹</string>
-    <string name="default_folder">默认文件夹</string>
-    <string name="default_folder_description">使用 OpenCode 服务器的当前位置</string>
     <string name="workspace_import_folder">导入文件夹…</string>
     <string name="workspace_clone_github">从 GitHub 克隆…</string>
     <string name="workspace_clone_title">克隆 GitHub 仓库</string>
@@ -85,9 +79,6 @@
     <string name="workspace_remove_from_list">从列表中移除</string>
     <string name="workspace_delete_files">删除文件</string>
     <string name="workspace_delete_files_confirm">删除\"%1$s\"及其所有文件？此操作无法撤消。</string>
-    <string name="chat_options_description">聊天选项</string>
-    <string name="continue_on_other_runtime">在其他运行时继续</string>
-    <string name="handoff_dialog_title">选择运行时</string>
 
     <string name="recent_sessions">最近的会话</string>
     <string name="view_all">查看全部</string>
@@ -197,6 +188,7 @@
     <string name="todo_status_in_progress">进行中</string>
     <string name="todo_status_cancelled">已取消</string>
     <string name="todo_status_pending">未开始</string>
+    <string name="todo_timeline_progress">%2$d 个中 %1$d 个 Todo 已完成</string>
     <string name="priority_high">高</string>
     <string name="priority_medium">中</string>
     <string name="priority_low">低</string>
@@ -277,6 +269,23 @@
     <string name="deleting_label">正在删除…</string>
     <string name="delete_runtime_completely_button">完全删除运行时</string>
     <string name="delete_runtime_note">删除 Linux 环境、下载缓存、日志和本地工作区。</string>
+    <string name="adb_setup_title">Android Debug Bridge (ADB)</string>
+    <string name="adb_setup_description">通过无线调试连接到本设备，启用屏幕截图、UI自动化、应用安装和插桩测试。</string>
+    <string name="adb_status_disconnected">未连接</string>
+    <string name="adb_status_discovered">已检测到无线调试（端口 %1$d）</string>
+    <string name="adb_status_connected">已连接（端口 %1$d）</string>
+    <string name="adb_status_error">错误</string>
+    <string name="adb_pair_button">配对设备</string>
+    <string name="adb_connect_button">连接</string>
+    <string name="adb_disconnect_button">断开</string>
+    <string name="adb_pair_dialog_title">与无线调试配对</string>
+    <string name="adb_pair_dialog_instructions">打开 设置 → 开发者选项 → 无线调试 → 使用配对码配对设备。</string>
+    <string name="adb_pair_port_label">配对端口</string>
+    <string name="adb_pair_code_label">配对码</string>
+    <string name="adb_pair_confirm">配对</string>
+    <string name="adb_pairing_in_progress">配对中…</string>
+    <string name="adb_connecting_in_progress">连接中…</string>
+    <string name="adb_requires_android_11">需要 Android 11 或更高版本</string>
     <string name="runtime_status_not_installed">未安装</string>
     <string name="runtime_status_setting_up">正在设置</string>
     <string name="runtime_status_starting">正在启动</string>
@@ -613,11 +622,6 @@
     <string name="cd_reasoning">Reasoning</string>
     <string name="cd_tool">Tool</string>
     <string name="cd_file_changes">File changes</string>
-    <string name="cd_compacted">Context compacted</string>
-    <string name="cd_plan">Plan</string>
-    <string name="cd_task_completed">Completed</string>
-    <string name="cd_task_in_progress">In progress</string>
-    <string name="cd_task_pending">Pending</string>
     <string name="cd_setup">Setup</string>
     <string name="cd_start">Start</string>
     <string name="cd_stop">Stop</string>
@@ -740,14 +744,6 @@
     <string name="code_match_counter">%1$d / %2$d</string>
 
     <!-- Chat screen -->
-    <string name="copy_resume_command">Copy resume command</string>
-    <string name="model_default">Default</string>
-    <string name="no_connected_providers">No connected providers</string>
-    <string name="tool_call_count">🔧 %1$d tool calls</string>
-    <string name="context_compacted_marker">context compacted</string>
-    <string name="plan_card_title">Plan</string>
-    <string name="tasks_card_title">Tasks</string>
-    <string name="tasks_progress">%1$d/%2$d done</string>
 
     <!-- Chat errors -->
     <string name="error_opencode_operation">操作失败</string>
@@ -780,7 +776,6 @@
     <string name="status_queued">Queued</string>
 
     <!-- Resume command -->
-    <string name="toast_resume_copied">Resume command copied</string>
 
     <!-- Voice -->
     <string name="voice_listening_placeholder">Listening…</string>

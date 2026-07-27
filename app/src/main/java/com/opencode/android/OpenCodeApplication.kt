@@ -16,6 +16,7 @@ import com.opencode.android.di.viewModelModule
 import com.opencode.android.feature.support.GitHubStarCoordinator
 import com.opencode.android.feature.support.GitHubStarService
 import com.opencode.android.runtime.RuntimeRegistry
+import com.opencode.android.runtime.local.AdbConnectionManager
 import com.opencode.android.runtime.local.AndroidClaudeMessages
 import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
 import com.opencode.android.runtime.local.ClaudeCodeController
@@ -94,6 +95,9 @@ class OpenCodeApplication : Application() {
         private set
 
     lateinit var claudeCodeController: ClaudeCodeController
+        private set
+
+    lateinit var adbConnectionManager: AdbConnectionManager
         private set
 
     lateinit var runtimeMessages: LocalRuntimeMessages
@@ -212,6 +216,7 @@ class OpenCodeApplication : Application() {
                 commandExecutor = commandRunner::run,
             )
         localRuntimeController = LocalRuntimeServiceController(this)
+        adbConnectionManager = AdbConnectionManager(this, commandRunner)
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,
