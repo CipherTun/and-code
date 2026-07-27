@@ -69,6 +69,9 @@ val appModule =
                 runtimeDirectory = runtimeDirectory,
                 portProbe = LocalRuntimeManager::defaultPortProbe,
                 githubToken = { settings.githubToken },
+                accessibilityToken = {
+                    com.yugahashimoto.andcode.accessibility.AndCodeAccessibilityService.readToken(androidContext())
+                },
                 beforeStart = { installed ->
                     runCatching { providerCredentials.syncToRuntime(installed.rootfs) }
                     runCatching {

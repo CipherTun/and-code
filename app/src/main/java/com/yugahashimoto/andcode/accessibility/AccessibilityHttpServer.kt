@@ -7,11 +7,14 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.security.SecureRandom
 import java.util.concurrent.Executors
 
 class AccessibilityHttpServer(
     private val port: Int = DEFAULT_PORT,
 ) {
+    val authToken: String = generateToken()
+
     @Volatile
     private var serverSocket: ServerSocket? = null
 
@@ -71,6 +74,22 @@ class AccessibilityHttpServer(
         val contentLength = headers["content-length"]?.toIntOrNull() ?: 0
         val body = if (contentLength > 0) reader.readChars(contentLength) else ""
         val bodyJson = if (body.isNotBlank()) runCatching { JSONObject(body) }.getOrNull() ?: JSONObject() else JSONObject()
+
+        val authorization = headers["authorization"].orEmpty()
+        if (path != "/health" && authorization != "Bearer $authToken") {
+            val bytes = """{"error":"Unauthorized"}""".toByteArray(Charsets.UTF_8)
+            output.write(
+                (
+                    "HTTP/1.1 401 Unauthorized\r\n" +
+                        "Content-Type: application/json; charset=utf-8\r\n" +
+                        "Content-Length: ${bytes.size}\r\n" +
+                        "Connection: close\r\n\r\n"
+                ).toByteArray(Charsets.UTF_8),
+            )
+            output.write(bytes)
+            output.flush()
+            return
+        }
 
         val (code, response) = route(method, path, bodyJson)
         val bytes = response.toByteArray(Charsets.UTF_8)
@@ -165,5 +184,11 @@ class AccessibilityHttpServer(
     companion object {
         const val DEFAULT_PORT = 4098
         private const val TAG = "AccessibilityHttpServer"
+
+        private fun generateToken(): String {
+            val bytes = ByteArray(32)
+            SecureRandom().nextBytes(bytes)
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
     }
 }

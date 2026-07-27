@@ -12,7 +12,7 @@ val githubClientId =
     (
         System.getenv("GITHUB_CLIENT_ID")
             ?: findProperty("GITHUB_CLIENT_ID")?.toString()
-            ?: "Ov23liTw50EzjFhS9ESg"
+            ?: ""
     ).trim()
 val generatedRuntimeAssets = rootProject.layout.buildDirectory.dir("generated/runtime-assets")
 val generatedRuntimeJni = rootProject.layout.buildDirectory.dir("generated/runtime-jni")

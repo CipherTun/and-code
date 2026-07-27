@@ -569,11 +569,7 @@ class SettingsViewModel(
         const val AUTO_OAUTH_POLL_MS = 3000L
         val WAKE_WORD_MODELS =
             listOf(
-                "alexa",
-                "computer",
-                "hey_jarvis",
                 "hey_mycroft",
-                "ok_nabu",
             )
     }
 }

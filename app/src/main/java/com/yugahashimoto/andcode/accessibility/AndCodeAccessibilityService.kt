@@ -12,6 +12,8 @@ class AndCodeAccessibilityService : AccessibilityService() {
     @Volatile
     private var lastRoot: AccessibilityNodeInfo? = null
 
+    private var httpServer: AccessibilityHttpServer? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         lastRoot = rootInActiveWindow
     }
@@ -21,11 +23,35 @@ class AndCodeAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        val server = AccessibilityHttpServer()
+        server.start()
+        httpServer = server
+        writeTokenFile(server.authToken)
     }
 
     override fun onUnbind(intent: android.content.Intent?): Boolean {
+        httpServer?.stop()
+        httpServer = null
+        deleteTokenFile()
         instance = null
         return super.onUnbind(intent)
+    }
+
+    private fun writeTokenFile(token: String) {
+        runCatching {
+            val dir = java.io.File(filesDir, "accessibility")
+            dir.mkdirs()
+            val file = java.io.File(dir, TOKEN_FILE_NAME)
+            file.writeText(token)
+            file.setReadable(true, true)
+            file.setWritable(true, true)
+        }
+    }
+
+    private fun deleteTokenFile() {
+        runCatching {
+            java.io.File(java.io.File(filesDir, "accessibility"), TOKEN_FILE_NAME).delete()
+        }
     }
 
     fun captureViewTree(): String {
@@ -105,7 +131,15 @@ class AndCodeAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        private const val TOKEN_FILE_NAME = "ui_token"
+
         @Volatile
         var instance: AndCodeAccessibilityService? = null
+
+        fun readToken(context: android.content.Context): String? =
+            runCatching {
+                val file = java.io.File(java.io.File(context.filesDir, "accessibility"), TOKEN_FILE_NAME)
+                file.takeIf { it.isFile }?.readText()?.takeIf { it.isNotBlank() }
+            }.getOrNull()
     }
 }

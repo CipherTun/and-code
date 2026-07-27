@@ -12,29 +12,37 @@
 #
 # Prerequisites: Enable the OpenCode Accessibility Service in
 # Settings > Accessibility.
+#
+# Authentication: Set ANDCODE_UI_TOKEN to the bearer token exposed by the
+# AndCode app (required for all commands except health).
 
 set -e
 HOST="http://127.0.0.1:4098"
 CMD="${1:-health}"
 shift 2>/dev/null || true
 
+AUTH_HEADER=""
+if [ -n "$ANDCODE_UI_TOKEN" ]; then
+    AUTH_HEADER="Authorization: Bearer $ANDCODE_UI_TOKEN"
+fi
+
 case "$CMD" in
     screen)
-        exec curl -s "$HOST/screen"
+        exec curl -s -H "$AUTH_HEADER" "$HOST/screen"
         ;;
     tap)
-        exec curl -s -X POST "$HOST/tap" -H 'Content-Type: application/json' -d "{\"x\":$1,\"y\":$2}"
+        exec curl -s -X POST -H "$AUTH_HEADER" "$HOST/tap" -H 'Content-Type: application/json' -d "{\"x\":$1,\"y\":$2}"
         ;;
     swipe)
         DUR="${5:-300}"
-        exec curl -s -X POST "$HOST/swipe" -H 'Content-Type: application/json' -d "{\"x1\":$1,\"y1\":$2,\"x2\":$3,\"y2\":$4,\"duration\":$DUR}"
+        exec curl -s -X POST -H "$AUTH_HEADER" "$HOST/swipe" -H 'Content-Type: application/json' -d "{\"x1\":$1,\"y1\":$2,\"x2\":$3,\"y2\":$4,\"duration\":$DUR}"
         ;;
     text)
         TEXT=$(printf '%s' "$1" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
-        exec curl -s -X POST "$HOST/text" -H 'Content-Type: application/json' -d "{\"text\":$TEXT}"
+        exec curl -s -X POST -H "$AUTH_HEADER" "$HOST/text" -H 'Content-Type: application/json' -d "{\"text\":$TEXT}"
         ;;
     key)
-        exec curl -s -X POST "$HOST/key" -H 'Content-Type: application/json' -d "{\"key\":\"$1\"}"
+        exec curl -s -X POST -H "$AUTH_HEADER" "$HOST/key" -H 'Content-Type: application/json' -d "{\"key\":\"$1\"}"
         ;;
     health)
         exec curl -s "$HOST/health"
