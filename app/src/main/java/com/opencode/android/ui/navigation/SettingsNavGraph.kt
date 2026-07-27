@@ -2,6 +2,7 @@ package com.opencode.android.ui.navigation
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,7 +18,6 @@ import com.opencode.android.feature.settings.GitHubSettingsScreen
 import com.opencode.android.feature.settings.OpenCodeAgentSettingsScreen
 import com.opencode.android.feature.settings.ProviderSettingsScreen
 import com.opencode.android.feature.settings.SettingsScreenV2
-import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.settings.SettingsViewModel
 import com.opencode.android.feature.settings.VoiceSettingsScreen
 import com.opencode.android.feature.support.GitHubSupportSheetHost
@@ -26,28 +26,30 @@ import com.opencode.android.runtime.RuntimeRegistry
 fun NavGraphBuilder.settingsNavGraph(
     navController: NavController,
     settingsViewModel: SettingsViewModel,
-    settingsState: SettingsUiState,
-    notificationsEnabled: Boolean,
+    // Getters throughout: NavHost remembers these lambdas, so anything passed as a value is frozen
+    // at the composition that built the graph and never updates again.
+    notificationsEnabled: () -> Boolean,
     onToggleNotifications: (Boolean) -> Unit,
     appVersion: String,
     onOpenDrawer: () -> Unit,
     onOpenAssistantSettings: () -> Unit,
     onShowDiagnostics: () -> Unit,
-    preferences: AppPreferences,
+    preferences: () -> AppPreferences,
     appPreferences: AppPreferencesRepository,
     runtimeRegistry: RuntimeRegistry,
     context: Context,
     hasMicrophonePermission: () -> Boolean,
-    claude: com.opencode.android.runtime.local.ClaudeCodeUiState,
+    claude: () -> com.opencode.android.runtime.local.ClaudeCodeUiState,
     claudeActions: ClaudeSettingsActions,
     onRequestWakeWordPermission: () -> Unit,
 ) {
     composable(ROUTE_SETTINGS) {
+        val settingsState by settingsViewModel.state.collectAsState()
         var showSupportSheet by remember { mutableStateOf(false) }
 
         SettingsScreenV2(
             assistantConfigured = settingsState.assistantRuntimeId != null,
-            notificationsEnabled = notificationsEnabled,
+            notificationsEnabled = notificationsEnabled(),
             onToggleNotifications = onToggleNotifications,
             appVersion = appVersion,
             onOpenDrawer = onOpenDrawer,
@@ -63,19 +65,19 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenSupport = { showSupportSheet = true },
             onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
             onOpenServerInfo = { navController.navigate(ROUTE_SETTINGS_SERVER_INFO) },
-            currentTheme = preferences.theme,
+            currentTheme = preferences().theme,
             onThemeChange = { appPreferences.setTheme(it) },
-            uiFontSize = preferences.uiFontSize,
+            uiFontSize = preferences().uiFontSize,
             onUiFontSizeChange = { appPreferences.setUiFontSize(it) },
-            codeFontSize = preferences.codeFontSize,
+            codeFontSize = preferences().codeFontSize,
             onCodeFontSizeChange = { appPreferences.setCodeFontSize(it) },
-            syntaxTheme = preferences.syntaxTheme,
+            syntaxTheme = preferences().syntaxTheme,
             onSyntaxThemeChange = { appPreferences.setSyntaxTheme(it) },
-            toolCallDetailLevel = preferences.toolCallDetailLevel,
+            toolCallDetailLevel = preferences().toolCallDetailLevel,
             onToolCallDetailLevelChange = { appPreferences.setToolCallDetailLevel(it) },
-            autoExpandReasoning = preferences.autoExpandReasoning,
+            autoExpandReasoning = preferences().autoExpandReasoning,
             onAutoExpandReasoningChange = { appPreferences.setAutoExpandReasoning(it) },
-            sendBehavior = preferences.sendBehavior,
+            sendBehavior = preferences().sendBehavior,
             onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
         )
 
@@ -88,6 +90,7 @@ fun NavGraphBuilder.settingsNavGraph(
     }
 
     composable(ROUTE_SETTINGS_VOICE) {
+        val settingsState by settingsViewModel.state.collectAsState()
         VoiceSettingsScreen(
             ttsEnabled = settingsState.ttsEnabled,
             continuousConversation = settingsState.continuousConversation,
@@ -129,7 +132,7 @@ fun NavGraphBuilder.settingsNavGraph(
 
     composable(ROUTE_SETTINGS_AGENT_CLAUDE) {
         ClaudeCodeAgentSettingsScreen(
-            claude = claude,
+            claude = claude(),
             onInstall = claudeActions.onInstall,
             onUpdate = claudeActions.onUpdate,
             onSelectPermissionMode = claudeActions.onSelectPermissionMode,
@@ -146,6 +149,9 @@ fun NavGraphBuilder.settingsNavGraph(
     }
 
     composable(ROUTE_SETTINGS_PROVIDERS) {
+        val settingsState by settingsViewModel.state.collectAsState()
+        // Re-read on open: the runtime that owns providers may have started since the last look.
+        androidx.compose.runtime.LaunchedEffect(Unit) { settingsViewModel.refreshProviderAuth() }
         ProviderSettingsScreen(
             state = settingsState,
             onOpenProviderAuth = settingsViewModel::openProviderAuth,
@@ -170,6 +176,7 @@ fun NavGraphBuilder.settingsNavGraph(
     }
 
     composable(ROUTE_SETTINGS_GITHUB) {
+        val settingsState by settingsViewModel.state.collectAsState()
         GitHubSettingsScreen(
             state = settingsState,
             onConnect = settingsViewModel::beginGitHubDeviceFlow,

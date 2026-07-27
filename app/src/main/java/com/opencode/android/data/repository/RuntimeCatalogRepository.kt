@@ -37,6 +37,16 @@ class RuntimeCatalogRepository(
     private val providerCache: ProviderCatalogCache? = null,
 ) {
     private val mutableState = MutableStateFlow(RuntimeCatalogState(runtime = registry.selected.value))
+
+    /**
+     * Last catalogue stored for [runtimeId], whatever wrote it.
+     *
+     * Provider settings ask about the runtime that owns providers, which the user may have stopped
+     * — it is not the one their chat is on. Without this the screen has nothing to show and falls
+     * back to the other agent's models, which is worse than a slightly old list.
+     */
+    fun cachedProviders(runtimeId: String): ProviderCatalog? = providerCache?.readAny(runtimeId)
+
     val state: StateFlow<RuntimeCatalogState> = mutableState.asStateFlow()
     private val refreshMutex = Mutex()
 

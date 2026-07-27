@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.opencode.android.core.api.OpenCodeAgent
 import com.opencode.android.core.api.OpenCodeProvider
 import com.opencode.android.core.api.ProviderAuthMethod
+import com.opencode.android.core.api.ProviderCatalog
 import com.opencode.android.data.connection.SecureSettingsRepository
 import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.data.repository.RuntimeCatalogState
@@ -69,6 +70,15 @@ class SettingsViewModel(
 ) : ViewModel() {
     private val settingsTick = MutableStateFlow(0)
     private val oauthState = MutableStateFlow(OAuthState())
+
+    /**
+     * Providers of the runtime that owns them, which is not always the selected one.
+     *
+     * The catalogue behind [catalog] follows the chat's runtime, as the model picker needs. Provider
+     * settings must not: with Claude Code selected the screen listed Claude Code as the only
+     * provider and hid every real one, because Claude's catalogue is its own models.
+     */
+    private val providerCatalog = MutableStateFlow<ProviderCatalog?>(null)
     private val githubState = MutableStateFlow(GitHubState())
     private var providerAuthJob: Job? = null
     private val githubAuth =
@@ -83,6 +93,7 @@ class SettingsViewModel(
         val preferences: AppPreferences,
         val targets: List<RuntimeTarget>,
         val selected: RuntimeTarget?,
+        val providerCatalog: ProviderCatalog?,
     )
 
     private data class OAuthState(
@@ -110,17 +121,24 @@ class SettingsViewModel(
 
     val state: StateFlow<SettingsUiState> =
         combine(
-            combine(catalog.state, preferences.state, registry.targets, registry.selected) { runtime, prefs, targets, selected ->
-                CoreState(runtime, prefs, targets, selected)
+            combine(
+                catalog.state,
+                preferences.state,
+                registry.targets,
+                registry.selected,
+                providerCatalog,
+            ) { runtime, prefs, targets, selected, providers ->
+                CoreState(runtime, prefs, targets, selected, providers)
             },
             settingsTick,
             oauthState,
             githubState,
         ) { core, _, oauth, github ->
-            val connected = core.runtime.providers.connected.toSet() + oauth.locallyConnected
+            val providers = core.providerCatalog ?: core.runtime.providers
+            val connected = providers.connected.toSet() + oauth.locallyConnected
             SettingsUiState(
-                providers = core.runtime.providers.all.filter { it.id in connected },
-                availableProviders = core.runtime.providers.all,
+                providers = providers.all.filter { it.id in connected },
+                availableProviders = providers.all,
                 connectedProviderIds = connected,
                 agents = core.runtime.agents.filter { it.mode == null || it.mode == "primary" },
                 providerId = core.preferences.providerId,
@@ -493,6 +511,21 @@ class SettingsViewModel(
                 return
             }
         viewModelScope.launch {
+            // Only when the chat is on another agent: otherwise the shared catalogue already holds
+            // this runtime's providers and a second fetch would be pure duplication.
+            providerCatalog.value =
+                if (target.id == registry.selected.value?.id) {
+                    null
+                } else {
+                    // A failure keeps whatever was fetched before: the runtime may simply not be
+                    // running yet, and falling back would put the other agent's models on screen,
+                    // which is the very thing this exists to prevent.
+                    runCatching { target.listProviders() }.getOrNull()
+                        ?: providerCatalog.value
+                        // The runtime may simply be stopped. Its stored catalogue is still the
+                        // truth about which providers exist and which are connected.
+                        ?: catalog.cachedProviders(target.id)
+                }
             runCatching { target.providerAuthMethods() }
                 .onSuccess { methods ->
                     oauthState.update { current -> current.copy(methods = methods, message = null) }

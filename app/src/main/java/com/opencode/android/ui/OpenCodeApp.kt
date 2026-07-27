@@ -800,8 +800,7 @@ fun OpenCodeApp(
                 settingsNavGraph(
                     navController = navController,
                     settingsViewModel = settingsViewModel,
-                    settingsState = settingsState,
-                    notificationsEnabled = notificationsEnabled,
+                    notificationsEnabled = { notificationsEnabled },
                     onToggleNotifications = { enabled ->
                         notificationsEnabled = enabled
                         if (enabled && android.os.Build.VERSION.SDK_INT >= 33) {
@@ -812,12 +811,12 @@ fun OpenCodeApp(
                     onOpenDrawer = { drawerScope.launch { drawerState.open() } },
                     onOpenAssistantSettings = onOpenAssistantSettings,
                     onShowDiagnostics = { showDiagnostics = true },
-                    preferences = preferences,
+                    preferences = { preferences },
                     appPreferences = app.preferences,
                     runtimeRegistry = app.runtimeRegistry,
                     context = context,
                     hasMicrophonePermission = { hasMicrophonePermission() },
-                    claude = workspaceState.claude,
+                    claude = { workspaceState.claude },
                     claudeActions =
                         ClaudeSettingsActions(
                             onInstall = workspaceViewModel::installClaudeCode,
