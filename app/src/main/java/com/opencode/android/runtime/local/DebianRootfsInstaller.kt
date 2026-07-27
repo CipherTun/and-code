@@ -14,6 +14,7 @@ class DebianRootfsInstaller(
     private val abi: String,
     private val downloader: VerifiedRuntimeDownloader,
     private val httpClient: OkHttpClient,
+    private val commandSuite: EmbeddedCommandSuite.Paths? = null,
 ) {
     suspend fun installInto(
         destination: File,
@@ -41,6 +42,7 @@ class DebianRootfsInstaller(
                 configure(extracted)
                 ensureGlibcLoader(extracted)
                 installPtyUtility(extracted)
+                installDevelopmentTools(extracted)
                 destination.deleteRecursively()
                 require(extracted.renameTo(destination)) { "Unable to activate Debian Antigravity rootfs" }
                 onProgress(1f)
@@ -90,6 +92,124 @@ class DebianRootfsInstaller(
         packageFile.inputStream().use { RuntimeArchive.extractDebianPackage(it, rootfs) }
         require(File(rootfs, "usr/bin/script").isFile) { "Debian PTY utility was not installed" }
         packageFile.delete()
+    }
+
+    private fun installDevelopmentTools(rootfs: File) {
+        val suite = commandSuite ?: return
+        val prootTmp = File(runtimeDirectory, "proot-tmp").apply { mkdirs() }
+        File(rootfs, "etc/apt/sources.list").apply {
+            parentFile?.mkdirs()
+            writeText(
+                "deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware\n" +
+                    "deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware\n" +
+                    "deb http://security.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware\n",
+            )
+        }
+        val command =
+            listOf(
+                suite.proot.absolutePath,
+                "--kill-on-exit",
+                "--link2symlink",
+                "-0",
+                "-r",
+                rootfs.absolutePath,
+                "-b",
+                "/dev",
+                "-b",
+                "/proc",
+                "-b",
+                "/sys",
+                "-w",
+                "/root",
+                "/bin/sh",
+                "-c",
+                "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin && " +
+                    "apt-get update -qq && " +
+                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends " +
+                    "git curl wget jq tree file less nano openssh-client ripgrep ca-certificates " +
+                    "python3 python3-pil && " +
+                    "apt-get clean && rm -rf /var/lib/apt/lists/*",
+            )
+        val installLog =
+            File(runtimeDirectory, "logs/debian-tool-install.log").apply {
+                parentFile?.mkdirs()
+                delete()
+            }
+        val process =
+            ProcessBuilder(command)
+                .redirectErrorStream(true)
+                .redirectOutput(ProcessBuilder.Redirect.to(installLog))
+                .apply {
+                    environment().putAll(suite.environment())
+                    environment()["PROOT_TMP_DIR"] = prootTmp.absolutePath
+                }
+                .start()
+        val completed = process.waitFor(10, java.util.concurrent.TimeUnit.MINUTES)
+        if (!completed) {
+            process.destroyForcibly()
+            error("Debian development tool installation timed out")
+        }
+        require(process.exitValue() == 0) {
+            "Unable to install Debian development tools: ${installLog.readText().takeLast(4000)}"
+        }
+        installGitHubCli(rootfs, suite, prootTmp)
+    }
+
+    private fun installGitHubCli(
+        rootfs: File,
+        suite: EmbeddedCommandSuite.Paths,
+        prootTmp: File,
+    ) {
+        val arch = if (abi == "arm64-v8a") "arm64" else "amd64"
+        val command =
+            listOf(
+                suite.proot.absolutePath,
+                "--kill-on-exit",
+                "--link2symlink",
+                "-0",
+                "-r",
+                rootfs.absolutePath,
+                "-b",
+                "/dev",
+                "-b",
+                "/proc",
+                "-b",
+                "/sys",
+                "-w",
+                "/root",
+                "/bin/sh",
+                "-c",
+                "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin && " +
+                    "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg " +
+                    "-o /usr/share/keyrings/githubcli-archive-keyring.gpg && " +
+                    "echo \"deb [arch=$arch signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] " +
+                    "https://cli.github.com/packages stable main\" > /etc/apt/sources.list.d/github-cli.list && " +
+                    "apt-get update -qq && " +
+                    "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends gh && " +
+                    "apt-get clean && rm -rf /var/lib/apt/lists/*",
+            )
+        val installLog =
+            File(runtimeDirectory, "logs/debian-gh-install.log").apply {
+                parentFile?.mkdirs()
+                delete()
+            }
+        val process =
+            ProcessBuilder(command)
+                .redirectErrorStream(true)
+                .redirectOutput(ProcessBuilder.Redirect.to(installLog))
+                .apply {
+                    environment().putAll(suite.environment())
+                    environment()["PROOT_TMP_DIR"] = prootTmp.absolutePath
+                }
+                .start()
+        val completed = process.waitFor(5, java.util.concurrent.TimeUnit.MINUTES)
+        if (!completed) {
+            process.destroyForcibly()
+            return
+        }
+        if (process.exitValue() != 0) {
+            android.util.Log.w("DebianRootfsInstaller", "gh install failed (non-fatal): ${installLog.readText().takeLast(500)}")
+        }
     }
 
     private fun ensureGlibcLoader(rootfs: File) {

@@ -114,7 +114,7 @@ class LocalRuntimeInstaller(
                 val antigravityRootfs =
                     if (LocalAgent.ANTIGRAVITY in requestedAgents) {
                         onProgress(0.90f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
-                        DebianRootfsInstaller(runtimeDirectory, abi, downloader, httpClient).installInto(
+                        DebianRootfsInstaller(runtimeDirectory, abi, downloader, httpClient, commandSuite).installInto(
                             File(staging, "antigravity-rootfs"),
                         ) { progress ->
                             onProgress(0.90f + progress * 0.03f, context.getString(R.string.install_step_preparing_antigravity_rootfs))

@@ -63,9 +63,7 @@ object AntigravitySandboxLauncher {
     ): Map<String, String> =
         localRuntimeEnvironment(runtime.commandSuite.environment(), tmp) +
             mapOf(
-                // PR #98's Android tool integration bind-mounts /system into the guest. Keep the
-                // guest PATH aligned so agy can find adb and other explicitly exposed host tools.
-                "PATH" to "/usr/local/bin:/usr/bin:/bin:/system/bin:/system/xbin",
+                "PATH" to "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/system/bin:/system/xbin",
                 "HOME" to "/root",
                 "TERM" to "xterm-256color",
                 "AGY_CLI_DISABLE_AUTO_UPDATE" to "1",
