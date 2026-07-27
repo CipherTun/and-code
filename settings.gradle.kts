@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "OpenCodeAndroid"
+rootProject.name = "AndroidCode"
 include(":app")
 include(":benchmark")

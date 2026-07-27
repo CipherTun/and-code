@@ -1,4 +1,4 @@
-# OpenCode Android Initial MVP Implementation Plan
+# AndroidCode Initial MVP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- App name is exactly `OpenCode Android`.
+- App name is exactly `AndroidCode`.
 - Repository name is exactly `opencode-android`.
 - Android-only; no iOS, Web, or desktop client code.
 - Package and application ID are `com.opencode.android`.
@@ -142,7 +142,7 @@ Expected: exit code 0 before feature changes.
 
 ```bash
 git add .
-git commit -m "chore: scaffold OpenCode Android app"
+git commit -m "chore: scaffold AndroidCode app"
 ```
 
 ---
@@ -409,7 +409,7 @@ Use the approved calm dark visual language. Do not implement remote-desktop imag
 
 ```bash
 git add app/src/main app/src/test
-git commit -m "feat: add OpenCode Android interface"
+git commit -m "feat: add AndroidCode interface"
 ```
 
 ---
@@ -581,5 +581,5 @@ Do not expose secrets or `local.properties`.
 
 ```bash
 git add .
-git commit -m "docs: complete OpenCode Android MVP"
+git commit -m "docs: complete AndroidCode MVP"
 ```

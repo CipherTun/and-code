@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Create a signed OpenCode Android wake-word pack manifest.
+"""Create a signed AndroidCode wake-word pack manifest.
 
-The private key is read from OPENCODE_ANDROID_WAKEWORD_SIGNING_KEY and is never
+The private key is read from ANDROIDCODE_WAKEWORD_SIGNING_KEY and is never
 written into the repository. The generated JSON matches WakeWordPackManager's
 SHA256withRSA signing payload exactly.
 """
@@ -87,9 +87,9 @@ def sign(payload: bytes, private_key: Path) -> str:
 def main() -> None:
     args = parse_args()
     validate(args)
-    key_value = os.environ.get("OPENCODE_ANDROID_WAKEWORD_SIGNING_KEY", "").strip()
+    key_value = os.environ.get("ANDROIDCODE_WAKEWORD_SIGNING_KEY", "").strip()
     if not key_value:
-        raise SystemExit("OPENCODE_ANDROID_WAKEWORD_SIGNING_KEY is required")
+        raise SystemExit("ANDROIDCODE_WAKEWORD_SIGNING_KEY is required")
     private_key = Path(key_value).expanduser()
     if not private_key.is_file():
         raise SystemExit(f"Signing key not found: {private_key}")

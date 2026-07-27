@@ -1,4 +1,4 @@
-# OpenCode Android v2 設計書
+# AndroidCode v2 設計書
 
 更新日: 2026-07-18  
 状態: 実装基準  
@@ -6,7 +6,7 @@
 
 ## 1. 目的
 
-OpenCode Androidは、OpenCodeをスマートフォンから安全かつ直感的に操作するためのネイティブAndroidクライアントである。
+AndroidCodeは、OpenCodeをスマートフォンから安全かつ直感的に操作するためのネイティブAndroidクライアントである。
 
 主な利用形態は次の2つ。
 

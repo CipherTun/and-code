@@ -1,8 +1,8 @@
-# OpenCode Android 設計書
+# AndroidCode 設計書
 
 ## 1. 目的
 
-OpenCode Androidは、OpenCodeをAndroidから快適に利用するためのAndroid専用OSSクライアントである。
+AndroidCodeは、OpenCodeをAndroidから快適に利用するためのAndroid専用OSSクライアントである。
 
 同一のAndroidアプリから次の2つの実行方式を扱う。
 
@@ -13,7 +13,7 @@ OpenCode Androidは、OpenCodeをAndroidから快適に利用するためのAndr
 
 ## 2. プロダクト定義
 
-- アプリ名: `OpenCode Android`
+- アプリ名: `AndroidCode`
 - リポジトリ名: `opencode-android`
 - 対象OS: Androidのみ
 - 最小Androidバージョン: Android 8.0 / API 26
@@ -125,7 +125,7 @@ Android OS
 ├─ VoiceInteractionService
 ├─ WakeWordForegroundService
 ├─ SpeechRecognizer / TextToSpeech
-└─ OpenCode Android App
+└─ AndroidCode App
    ├─ Compose UI
    ├─ AppState / ViewModels
    ├─ OpenCodeBackend

@@ -1,4 +1,4 @@
-# OpenCode Android 完成版チェックリスト
+# AndroidCode 完成版チェックリスト
 
 基準設計: `docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md`
 
@@ -98,7 +98,7 @@
 - [x] 署名済みRelease APK/AAB手順（docs/RELEASE.md）
 - [ ] Critical / Importantゼロの独立レビュー
 - [ ] `main`へ統合
-- [ ] GitHub公開リポジトリ`opencode-android`作成・push
+- [ ] GitHub公開リポジトリ`android-code`作成・push
 
 ## 現在の完了判定
 

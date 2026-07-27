@@ -1,4 +1,4 @@
-# OpenCode Android v2 再設計・実装計画
+# AndroidCode v2 再設計・実装計画
 
 基準設計: `docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md`
 
@@ -123,7 +123,7 @@ Connectionsはワークスペースへ統合し、Sessionsはアクティビテ�
 
 ## コミット境界
 
-1. `docs: redesign OpenCode Android v2`
+1. `docs: redesign AndroidCode v2`
 2. `refactor: remove inherited hotword stack`
 3. `refactor: reorganize OpenCode client packages`
 4. `feat: introduce runtime registry`

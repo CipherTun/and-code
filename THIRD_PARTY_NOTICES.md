@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-OpenCode Android includes or depends on the following third-party software.
+AndroidCode includes or depends on the following third-party software.
 
 ## AndroidX / Jetpack
 
@@ -62,8 +62,8 @@ OpenCode Android includes or depends on the following third-party software.
 ## OpenCode
 
 - Official musl binary downloaded at setup/update time (version pinned in manifest / GitHub Releases)
-- License: See https://github.com/anomalyco/opencode
-- OpenCode Android is an unofficial client and is not affiliated with the OpenCode project.
+- License: See https://github.com/sst/opencode
+- AndroidCode integrates OpenCode as an independent third-party coding agent runtime and is not affiliated with the OpenCode project.
 
 ## Generating an SBOM
 

@@ -1,0 +1,274 @@
+package com.yugahashimoto.androidcode.feature.chat
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class AssistantActivityGroupTest {
+    private fun tool(
+        id: String,
+        name: String,
+        status: ToolStatus = ToolStatus.COMPLETED,
+        title: String? = null,
+        todos: List<TodoItem> = emptyList(),
+    ) = ChatPart.Tool(id = id, name = name, status = status, title = title, todos = todos)
+
+    private fun assistant(
+        id: String,
+        vararg parts: ChatPart,
+    ) = ChatMessage(id = id, isUser = false, parts = parts.toList())
+
+    @Test
+    fun `collapses a consecutive run of tools into one activity entry`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        ChatPart.Reasoning("r1", "thinking"),
+                        tool("t2", "read"),
+                    ),
+                ),
+            )
+
+        assertEquals(1, entries.size)
+        val activity = entries.single() as TimelineEntry.Activity
+        assertEquals(3, activity.parts.size)
+    }
+
+    @Test
+    fun `collapses a run that spans several assistant messages`() {
+        // OpenCode opens a new assistant message per model step, so a turn that reads two files
+        // and then thinks arrives as two messages. It is still one uninterrupted run on screen.
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    ChatMessage(id = "m0", isUser = true, parts = listOf(ChatPart.Text("u1", "explain this repo"))),
+                    assistant("m1", tool("t1", "read"), tool("t2", "read")),
+                    assistant("m2", ChatPart.Reasoning("r1", "thinking"), ChatPart.Text("x1", "This repo is…")),
+                ),
+            )
+
+        assertEquals(3, entries.size)
+        assertTrue(entries[0] is TimelineEntry.UserMessage)
+        assertEquals(listOf("t1", "t2", "r1"), (entries[1] as TimelineEntry.Activity).parts.map { it.id })
+        assertEquals("This repo is…", (entries[2] as TimelineEntry.Body).part.text)
+    }
+
+    @Test
+    fun `a user message ends the preceding run`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant("m1", tool("t1", "read")),
+                    ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "next"))),
+                    assistant("m3", tool("t2", "read")),
+                ),
+            )
+
+        assertEquals(listOf("activity:t1", "user:m2", "activity:t2"), entries.map { it.id })
+    }
+
+    @Test
+    fun `body text splits activity into separate groups`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        ChatPart.Text("x1", "Exploring the codebase."),
+                        tool("t2", "edit"),
+                        tool("t3", "write"),
+                        ChatPart.Text("x2", "Done."),
+                    ),
+                ),
+            )
+
+        assertEquals(4, entries.size)
+        assertEquals(listOf("t1"), (entries[0] as TimelineEntry.Activity).parts.map { it.id })
+        assertEquals("Exploring the codebase.", (entries[1] as TimelineEntry.Body).part.text)
+        assertEquals(listOf("t2", "t3"), (entries[2] as TimelineEntry.Activity).parts.map { it.id })
+        assertEquals("Done.", (entries[3] as TimelineEntry.Body).part.text)
+    }
+
+    @Test
+    fun `blank text parts do not split a run`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        ChatPart.Text("x1", ""),
+                        tool("t2", "bash"),
+                    ),
+                    assistant(
+                        "m2",
+                        ChatPart.Text("x2", "   "),
+                        tool("t3", "bash"),
+                    ),
+                ),
+            )
+
+        assertEquals(1, entries.size)
+        assertEquals(listOf("t1", "t2", "t3"), (entries.single() as TimelineEntry.Activity).parts.map { it.id })
+    }
+
+    @Test
+    fun `activity id is the id of its first part so compose keys stay stable`() {
+        val parts = listOf(tool("first", "bash"), tool("second", "read"))
+
+        assertEquals("activity:first", groupConversationTimeline(listOf(assistant("m1", *parts.toTypedArray()))).single().id)
+        // Appending to a growing run must not change the group identity — not even when the new
+        // step lands in the next assistant message.
+        assertEquals(
+            "activity:first",
+            groupConversationTimeline(
+                listOf(assistant("m1", *parts.toTypedArray()), assistant("m2", tool("third", "read"))),
+            ).single().id,
+        )
+    }
+
+    @Test
+    fun `counts tools by category and treats patch parts as edits`() {
+        val summary =
+            summarizeActivity(
+                listOf(
+                    tool("t1", "bash"),
+                    tool("t2", "Bash"),
+                    tool("t3", "read"),
+                    tool("t4", "grep"),
+                    tool("t5", "glob"),
+                    tool("t6", "task"),
+                    tool("t7", "todowrite"),
+                    ChatPart.Patch("p1", listOf("A.kt")),
+                    ChatPart.Reasoning("r1", "thinking"),
+                ),
+            )
+
+        assertEquals(2, summary.counts[ToolCategory.COMMAND])
+        assertEquals(3, summary.counts[ToolCategory.READ])
+        assertEquals(1, summary.counts[ToolCategory.EDIT])
+        assertEquals(1, summary.counts[ToolCategory.SUBAGENT])
+        assertEquals(1, summary.counts[ToolCategory.OTHER])
+        assertEquals(1, summary.reasoningCount)
+        assertNull(summary.running)
+    }
+
+    @Test
+    fun `surfaces the first in-flight tool while the run is still executing`() {
+        val summary =
+            summarizeActivity(
+                listOf(
+                    tool("t1", "bash"),
+                    tool("t2", "bash", status = ToolStatus.RUNNING, title = "gh run watch"),
+                    tool("t3", "read", status = ToolStatus.PENDING),
+                ),
+            )
+
+        assertEquals("t2", summary.running?.id)
+        assertEquals("gh run watch", summary.running?.title)
+    }
+
+    @Test
+    fun `flags a run that contains a failed tool`() {
+        val summary = summarizeActivity(listOf(tool("t1", "bash"), tool("t2", "bash", status = ToolStatus.ERROR)))
+
+        assertTrue(summary.hasError)
+        assertNull(summary.running)
+    }
+
+    @Test
+    fun `resolves an activity group by id across messages`() {
+        val messages =
+            listOf(
+                ChatMessage(id = "m0", isUser = true, parts = listOf(ChatPart.Text("u1", "go"))),
+                ChatMessage(
+                    id = "m1",
+                    isUser = false,
+                    parts =
+                        listOf(
+                            tool("a1", "bash"),
+                            ChatPart.Text("x1", "Now editing."),
+                            tool("b1", "edit"),
+                            tool("b2", "write"),
+                        ),
+                ),
+            )
+
+        assertEquals(listOf("b1", "b2"), findActivityParts(messages, "activity:b1").map { it.id })
+        assertEquals(listOf("a1"), findActivityParts(messages, "activity:a1").map { it.id })
+        assertTrue(findActivityParts(messages, "activity:nope").isEmpty())
+    }
+
+    @Test
+    fun `resolving a group picks up steps appended while the run is still going`() {
+        val growing =
+            ChatMessage(id = "m1", isUser = false, parts = listOf(tool("a1", "bash"), tool("a2", "read")))
+
+        assertEquals(listOf("a1", "a2"), findActivityParts(listOf(growing), "activity:a1").map { it.id })
+    }
+
+    @Test
+    fun `reasoning-only run is not empty`() {
+        val summary = summarizeActivity(listOf(ChatPart.Reasoning("r1", "thinking")))
+
+        assertTrue(summary.counts.isEmpty())
+        assertEquals(1, summary.reasoningCount)
+        assertTrue(!summary.isEmpty)
+    }
+
+    @Test
+    fun `todowrite with todos is extracted into a Todo entry`() {
+        val todos =
+            listOf(
+                TodoItem("task 1", "completed", "high"),
+                TodoItem("task 2", "in_progress", "medium"),
+            )
+        val entries =
+            groupConversationTimeline(
+                listOf(assistant("m1", tool("t1", "todowrite", todos = todos))),
+            )
+
+        assertEquals(1, entries.size)
+        val todoEntry = entries.single() as TimelineEntry.Todo
+        assertEquals("todo:t1", todoEntry.id)
+        assertEquals(2, todoEntry.todos.size)
+        assertEquals("task 1", todoEntry.todos[0].content)
+    }
+
+    @Test
+    fun `todowrite with todos splits surrounding activity`() {
+        val todos = listOf(TodoItem("task 1", "completed", "high"))
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant(
+                        "m1",
+                        tool("t1", "bash"),
+                        tool("t2", "todowrite", todos = todos),
+                        tool("t3", "read"),
+                    ),
+                ),
+            )
+
+        assertEquals(3, entries.size)
+        assertEquals(listOf("t1"), (entries[0] as TimelineEntry.Activity).parts.map { it.id })
+        assertEquals("todo:t2", (entries[1] as TimelineEntry.Todo).id)
+        assertEquals(listOf("t3"), (entries[2] as TimelineEntry.Activity).parts.map { it.id })
+    }
+
+    @Test
+    fun `todowrite without todos stays in activity group`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(assistant("m1", tool("t1", "todowrite"))),
+            )
+
+        assertEquals(1, entries.size)
+        assertTrue(entries.single() is TimelineEntry.Activity)
+    }
+}

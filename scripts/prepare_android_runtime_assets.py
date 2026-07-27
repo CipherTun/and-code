@@ -557,7 +557,7 @@ def check_termux_mirror_health(termux_arch: str = "x86_64") -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Prepare Android-native command assets for OpenCode Android builds")
+    parser = argparse.ArgumentParser(description="Prepare Android-native command assets for AndroidCode builds")
     parser.add_argument("--output-dir", required=True, help="Directory where generated assets should be written")
     parser.add_argument(
         "--lock-file",

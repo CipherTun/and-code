@@ -1,8 +1,8 @@
-# OpenCode Android Product Roadmap Implementation Plan
+# AndroidCode Product Roadmap Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Bring OpenCode Android from functional MVP to release-ready dual-runtime client across security, core UX, local practicality, quality, and open-source release.
+**Goal:** Bring AndroidCode from functional MVP to release-ready dual-runtime client across security, core UX, local practicality, quality, and open-source release.
 
 **Architecture:** Single-module Compose app with RuntimeRegistry selecting Local (PRoot/Alpine/OpenCode) or Remote (`opencode serve`) backends over shared REST/SSE.
 

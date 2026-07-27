@@ -2,10 +2,10 @@
 
 ## Contributing via Weblate
 
-The easiest way to contribute translations is through our [Weblate instance](https://hosted.weblate.org/projects/opencode-android/).
+The easiest way to contribute translations is through our [Weblate instance](https://hosted.weblate.org/projects/android-code/).
 
 1. Create a free Weblate account (or use GitHub/Google sign-in).
-2. Navigate to the **OpenCode Android** project.
+2. Navigate to the **AndroidCode** project.
 3. Pick a language and start translating strings.
 4. Weblate automatically opens a pull request with your changes.
 

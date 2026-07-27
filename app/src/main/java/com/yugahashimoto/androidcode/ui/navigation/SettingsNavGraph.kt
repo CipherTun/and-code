@@ -1,0 +1,225 @@
+package com.yugahashimoto.androidcode.ui.navigation
+
+import android.content.Context
+import android.content.Intent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import com.yugahashimoto.androidcode.data.settings.AppPreferences
+import com.yugahashimoto.androidcode.data.settings.AppPreferencesRepository
+import com.yugahashimoto.androidcode.feature.settings.AgentSettingsScreen
+import com.yugahashimoto.androidcode.feature.settings.ClaudeCodeAgentSettingsScreen
+import com.yugahashimoto.androidcode.feature.settings.GitHubSettingsScreen
+import com.yugahashimoto.androidcode.feature.settings.OpenCodeAgentSettingsScreen
+import com.yugahashimoto.androidcode.feature.settings.ProviderSettingsScreen
+import com.yugahashimoto.androidcode.feature.settings.SettingsScreenV2
+import com.yugahashimoto.androidcode.feature.settings.SettingsViewModel
+import com.yugahashimoto.androidcode.feature.settings.VoiceSettingsScreen
+import com.yugahashimoto.androidcode.feature.support.GitHubSupportSheetHost
+import com.yugahashimoto.androidcode.runtime.RuntimeRegistry
+
+fun NavGraphBuilder.settingsNavGraph(
+    navController: NavController,
+    settingsViewModel: SettingsViewModel,
+    // Getters throughout: NavHost remembers these lambdas, so anything passed as a value is frozen
+    // at the composition that built the graph and never updates again.
+    notificationsEnabled: () -> Boolean,
+    onToggleNotifications: (Boolean) -> Unit,
+    appVersion: String,
+    onOpenDrawer: () -> Unit,
+    onOpenAssistantSettings: () -> Unit,
+    onShowDiagnostics: () -> Unit,
+    preferences: () -> AppPreferences,
+    appPreferences: AppPreferencesRepository,
+    runtimeRegistry: RuntimeRegistry,
+    context: Context,
+    hasMicrophonePermission: () -> Boolean,
+    claude: () -> com.yugahashimoto.androidcode.runtime.local.ClaudeCodeUiState,
+    claudeActions: ClaudeSettingsActions,
+    onRequestWakeWordPermission: () -> Unit,
+) {
+    composable(ROUTE_SETTINGS) {
+        val settingsState by settingsViewModel.state.collectAsState()
+        var showSupportSheet by remember { mutableStateOf(false) }
+
+        SettingsScreenV2(
+            assistantConfigured = settingsState.assistantRuntimeId != null,
+            notificationsEnabled = notificationsEnabled(),
+            onToggleNotifications = onToggleNotifications,
+            appVersion = appVersion,
+            onOpenDrawer = onOpenDrawer,
+            onOpenAssistantSettings = onOpenAssistantSettings,
+            onOpenVoiceSettings = { navController.navigate(ROUTE_SETTINGS_VOICE) },
+            onOpenProviderSettings = { navController.navigate(ROUTE_SETTINGS_PROVIDERS) },
+            onOpenAgentSettings = { navController.navigate(ROUTE_SETTINGS_AGENTS) },
+            onOpenGitHubSettings = { navController.navigate(ROUTE_SETTINGS_GITHUB) },
+            onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
+            onOpenRemoteConnection = { navController.navigate(ROUTE_REMOTE_CONNECTION) },
+            onOpenWorkspaces = { navController.navigate(ROUTE_WORKSPACES) },
+            onOpenDiagnostics = onShowDiagnostics,
+            onOpenSupport = { showSupportSheet = true },
+            onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
+            onOpenServerInfo = { navController.navigate(ROUTE_SETTINGS_SERVER_INFO) },
+            currentTheme = preferences().theme,
+            onThemeChange = { appPreferences.setTheme(it) },
+            uiFontSize = preferences().uiFontSize,
+            onUiFontSizeChange = { appPreferences.setUiFontSize(it) },
+            codeFontSize = preferences().codeFontSize,
+            onCodeFontSizeChange = { appPreferences.setCodeFontSize(it) },
+            syntaxTheme = preferences().syntaxTheme,
+            onSyntaxThemeChange = { appPreferences.setSyntaxTheme(it) },
+            toolCallDetailLevel = preferences().toolCallDetailLevel,
+            onToolCallDetailLevelChange = { appPreferences.setToolCallDetailLevel(it) },
+            autoExpandReasoning = preferences().autoExpandReasoning,
+            onAutoExpandReasoningChange = { appPreferences.setAutoExpandReasoning(it) },
+            sendBehavior = preferences().sendBehavior,
+            onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
+        )
+
+        if (showSupportSheet) {
+            GitHubSupportSheetHost(
+                appVersion = appVersion,
+                onDismiss = { showSupportSheet = false },
+            )
+        }
+    }
+
+    composable(ROUTE_SETTINGS_VOICE) {
+        val settingsState by settingsViewModel.state.collectAsState()
+        VoiceSettingsScreen(
+            ttsEnabled = settingsState.ttsEnabled,
+            continuousConversation = settingsState.continuousConversation,
+            wakeWordEnabled = settingsState.wakeWordEnabled,
+            onTtsChange = settingsViewModel::setTtsEnabled,
+            onContinuousChange = settingsViewModel::setContinuousConversation,
+            onWakeWordChange = { enabled ->
+                settingsViewModel.setWakeWordEnabled(enabled)
+                if (enabled) {
+                    if (hasMicrophonePermission()) {
+                        com.yugahashimoto.androidcode.feature.wakeword.WakeWordService.start(context)
+                    } else {
+                        onRequestWakeWordPermission()
+                    }
+                } else {
+                    com.yugahashimoto.androidcode.feature.wakeword.WakeWordService.stop(context)
+                }
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENTS) {
+        AgentSettingsScreen(
+            onOpenOpenCode = { navController.navigate(ROUTE_SETTINGS_AGENT_OPENCODE) },
+            onOpenClaudeCode = { navController.navigate(ROUTE_SETTINGS_AGENT_CLAUDE) },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENT_OPENCODE) {
+        OpenCodeAgentSettingsScreen(
+            onOpenProviderSettings = { navController.navigate(ROUTE_SETTINGS_PROVIDERS) },
+            onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP) },
+            onOpenLocalRuntime = { navController.navigate(LOCAL_RUNTIME_MANAGEMENT_ROUTE) },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_AGENT_CLAUDE) {
+        ClaudeCodeAgentSettingsScreen(
+            claude = claude(),
+            onInstall = claudeActions.onInstall,
+            onUpdate = claudeActions.onUpdate,
+            onSelectPermissionMode = claudeActions.onSelectPermissionMode,
+            onSignIn = claudeActions.onSignIn,
+            onSubmitCode = claudeActions.onSubmitCode,
+            onCancelSignIn = claudeActions.onCancelSignIn,
+            onSignOut = claudeActions.onSignOut,
+            onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP_CLAUDE) },
+            onOpenUrl = { url ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_PROVIDERS) {
+        val settingsState by settingsViewModel.state.collectAsState()
+        // Re-read on open: the runtime that owns providers may have started since the last look.
+        androidx.compose.runtime.LaunchedEffect(Unit) { settingsViewModel.refreshProviderAuth() }
+        ProviderSettingsScreen(
+            state = settingsState,
+            onOpenProviderAuth = settingsViewModel::openProviderAuth,
+            onSelectProviderAuthMethod = settingsViewModel::selectProviderAuthMethod,
+            onProviderAuthInput = settingsViewModel::updateProviderAuthInput,
+            onProviderApiKey = settingsViewModel::updateProviderApiKey,
+            onSubmitProviderAuth = settingsViewModel::submitProviderAuth,
+            onCompleteProviderOAuth = settingsViewModel::completeProviderOAuth,
+            onDisconnectProvider = settingsViewModel::disconnectProvider,
+            onLaunchOAuthBrowser = { url ->
+                runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)),
+                    )
+                }.onFailure { error ->
+                    settingsViewModel.reportOAuthError(error.message.orEmpty())
+                }
+            },
+            onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_GITHUB) {
+        val settingsState by settingsViewModel.state.collectAsState()
+        GitHubSettingsScreen(
+            state = settingsState,
+            onConnect = settingsViewModel::beginGitHubDeviceFlow,
+            onDisconnect = settingsViewModel::disconnectGitHub,
+            onOpenVerification = { url ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                    .onFailure { error -> settingsViewModel.reportOAuthError(error.message.orEmpty()) }
+            },
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_MCP) {
+        com.yugahashimoto.androidcode.feature.settings.McpScreen(
+            registry = runtimeRegistry,
+            agent = com.yugahashimoto.androidcode.runtime.LocalAgent.OPEN_CODE,
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_MCP_CLAUDE) {
+        com.yugahashimoto.androidcode.feature.settings.McpScreen(
+            registry = runtimeRegistry,
+            agent = com.yugahashimoto.androidcode.runtime.LocalAgent.CLAUDE_CODE,
+            onBack = { navController.popBackStack() },
+        )
+    }
+
+    composable(ROUTE_SETTINGS_SERVER_INFO) {
+        com.yugahashimoto.androidcode.feature.settings.ServerInfoScreen(
+            registry = runtimeRegistry,
+            onBack = { navController.popBackStack() },
+        )
+    }
+}
+
+/** Claude Code actions the settings graph forwards to its agent screen. */
+data class ClaudeSettingsActions(
+    val onInstall: () -> Unit,
+    val onUpdate: () -> Unit,
+    val onSelectPermissionMode: (com.yugahashimoto.androidcode.runtime.local.ClaudePermissionMode) -> Unit,
+    val onSignIn: () -> Unit,
+    val onSubmitCode: (String) -> Unit,
+    val onCancelSignIn: () -> Unit,
+    val onSignOut: () -> Unit,
+)
