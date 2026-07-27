@@ -92,8 +92,8 @@ import com.yugahashimoto.andcode.ui.navigation.ROUTE_SCHEDULE
 import com.yugahashimoto.andcode.ui.navigation.SESSION_DETAIL_ROUTE
 import com.yugahashimoto.andcode.ui.navigation.settingsNavGraph
 import com.yugahashimoto.andcode.ui.navigation.workspaceNavGraph
-import com.yugahashimoto.andcode.ui.theme.AppTheme
 import com.yugahashimoto.andcode.ui.theme.AndCodeTheme
+import com.yugahashimoto.andcode.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
