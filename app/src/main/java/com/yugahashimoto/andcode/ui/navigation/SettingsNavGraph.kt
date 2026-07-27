@@ -98,6 +98,9 @@ fun NavGraphBuilder.settingsNavGraph(
             wakeWordEnabled = settingsState.wakeWordEnabled,
             wakeWordModel = settingsState.wakeWordModel,
             availableWakeWordModels = settingsState.availableWakeWordModels,
+            assistantRuntimeId = settingsState.assistantRuntimeId,
+            availableRuntimes = settingsState.runtimeOptions,
+            assistantWorkspacePath = settingsState.assistantWorkspacePath.orEmpty(),
             onTtsChange = settingsViewModel::setTtsEnabled,
             onContinuousChange = settingsViewModel::setContinuousConversation,
             onWakeWordChange = { enabled ->
@@ -113,6 +116,12 @@ fun NavGraphBuilder.settingsNavGraph(
                 }
             },
             onWakeWordModelChange = settingsViewModel::setWakeWordModel,
+            onAssistantRuntimeChange = { runtimeId ->
+                settingsViewModel.setAssistantRuntimeId(runtimeId.takeIf { it.isNotBlank() })
+            },
+            onAssistantWorkspaceChange = { path ->
+                settingsViewModel.setAssistantWorkspacePath(path)
+            },
             onBack = { navController.popBackStack() },
         )
     }

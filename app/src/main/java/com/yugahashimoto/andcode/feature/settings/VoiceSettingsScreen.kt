@@ -51,10 +51,15 @@ fun VoiceSettingsScreen(
     wakeWordEnabled: Boolean,
     wakeWordModel: String = "hey_mycroft",
     availableWakeWordModels: List<String> = emptyList(),
+    assistantRuntimeId: String? = null,
+    availableRuntimes: List<Pair<String, String>> = emptyList(),
+    assistantWorkspacePath: String = "",
     onTtsChange: (Boolean) -> Unit,
     onContinuousChange: (Boolean) -> Unit,
     onWakeWordChange: (Boolean) -> Unit,
     onWakeWordModelChange: (String) -> Unit = {},
+    onAssistantRuntimeChange: (String) -> Unit = {},
+    onAssistantWorkspaceChange: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -133,8 +138,84 @@ fun VoiceSettingsScreen(
                     }
                 }
             }
+
+            if (availableRuntimes.isNotEmpty()) {
+                item {
+                    SettingsGroup(title = stringResource(R.string.assistant_target_section)) {
+                        AgentDropdown(
+                            selectedRuntimeId = assistantRuntimeId,
+                            runtimes = availableRuntimes,
+                            onSelect = onAssistantRuntimeChange,
+                        )
+                        VoiceDivider()
+                        WorkspaceTextField(
+                            value = assistantWorkspacePath,
+                            onValueChange = onAssistantWorkspaceChange,
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AgentDropdown(
+    selectedRuntimeId: String?,
+    runtimes: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = runtimes.firstOrNull { it.first == selectedRuntimeId }?.second ?: "Auto (current agent)"
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+    ) {
+        OutlinedTextField(
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.assistant_agent_label)) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            singleLine = true,
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.assistant_agent_auto)) },
+                onClick = {
+                    onSelect("")
+                    expanded = false
+                },
+            )
+            runtimes.forEach { (id, name) ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = {
+                        onSelect(id)
+                        expanded = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkspaceTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(R.string.assistant_workspace_label)) },
+        placeholder = { Text("/workspace") },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+        singleLine = true,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
