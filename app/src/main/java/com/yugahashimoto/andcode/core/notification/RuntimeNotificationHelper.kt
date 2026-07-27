@@ -47,7 +47,7 @@ class RuntimeNotificationHelper(private val context: Context) {
 
         val notification =
             NotificationCompat.Builder(context, CHANNEL_APPROVALS)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(
                     context.getString(R.string.notification_approval_title) + " · " +
                         (chatTitle?.takeIf(String::isNotBlank) ?: context.getString(R.string.new_chat)),
@@ -93,7 +93,7 @@ class RuntimeNotificationHelper(private val context: Context) {
             )
         val notification =
             NotificationCompat.Builder(context, CHANNEL_STATUS)
-                .setSmallIcon(android.R.drawable.stat_sys_upload_done)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(context.getString(R.string.notification_complete_title))
                 .setContentText(
                     context.getString(
@@ -123,7 +123,7 @@ class RuntimeNotificationHelper(private val context: Context) {
             )
         val notification =
             NotificationCompat.Builder(context, CHANNEL_STATUS)
-                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(context.getString(R.string.notification_error_title))
                 .setContentText(message ?: context.getString(R.string.notification_error_body))
                 .setContentIntent(intent)

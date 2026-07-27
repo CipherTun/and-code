@@ -95,7 +95,7 @@ class WakeWordService : Service() {
             NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(getString(R.string.wake_word_notification_title))
                 .setContentText(getString(R.string.wake_word_notification_text))
-                .setSmallIcon(R.drawable.ic_mic)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(tapIntent)
                 .addAction(0, getString(R.string.wake_word_notification_stop), stopIntent)
                 .setOngoing(true)
