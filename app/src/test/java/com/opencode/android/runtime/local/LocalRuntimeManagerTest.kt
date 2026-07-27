@@ -66,6 +66,25 @@ class LocalRuntimeManagerTest {
     }
 
     @Test
+    fun `a running process that missed the probe stays ready`() {
+        createRuntimeFiles()
+        temporaryFolder.newFile("metadata.json").writeText(
+            """{"version":"1.17.20","port":4096,"installedAt":123}""",
+        )
+        val manager =
+            LocalRuntimeManager(
+                runtimeDirectory = temporaryFolder.root,
+                abi = "arm64-v8a",
+                portProbe = { false },
+                processAlive = { true },
+            )
+
+        // The probe misses when the device is loaded — a Claude Code turn is enough. Calling that a
+        // dead server had the watchdog restart a healthy OpenCode, which is what looked like a crash.
+        assertEquals(LocalRuntimeStatus.Ready("1.17.20", 4096), manager.status())
+    }
+
+    @Test
     fun `metadata without a listening server is stopped`() {
         createRuntimeFiles()
         temporaryFolder.newFile("metadata.json").writeText(

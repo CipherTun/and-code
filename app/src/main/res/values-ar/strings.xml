@@ -543,6 +543,7 @@
     <string name="mcp_connect">اتصال</string>
     <string name="mcp_disconnect">قطع الاتصال</string>
     <string name="mcp_remove_auth">إزالة المصادقة</string>
+    <string name="mcp_remove_server">إزالة الخادم</string>
     <string name="mcp_tools_count">%1$d أدوات</string>
     <string name="mcp_name_hint">اسم الخادم</string>
     <string name="mcp_command_hint">الأمر (خادم محلي)</string>
@@ -905,4 +906,6 @@
     <string name="claude_error_install_failed">فشل تثبيت Claude Code</string>
     <string name="claude_error_update_failed">فشل تحديث Claude Code</string>
     <string name="setup_download_agents_description">تحضير بيئة Linux المشتركة والوكلاء الذين اخترتهم.</string>
+    <string name="settings_agents_row">الوكلاء</string>
+    <string name="settings_agents_section">الوكلاء</string>
 </resources>

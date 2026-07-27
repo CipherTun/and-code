@@ -29,9 +29,12 @@ import kotlinx.coroutines.withContext
 fun NavGraphBuilder.workspaceNavGraph(
     navController: NavController,
     workspaceViewModel: WorkspaceViewModel,
-    selectedWorkspace: WorkspaceRef?,
+    // Getters, not values: NavHost remembers the destination lambdas, so a value read here is the
+    // one that existed when the graph was built. That is how the explorer came to be unreachable —
+    // the workspace the user had just tapped still read as null and the screen popped straight back.
+    selectedWorkspace: () -> WorkspaceRef?,
     onSelectWorkspace: (WorkspaceRef?) -> Unit,
-    selectedRuntime: RuntimeTarget?,
+    selectedRuntime: () -> RuntimeTarget?,
     app: OpenCodeApplication,
     onImportFolder: () -> Unit,
     onShowCloneDialog: () -> Unit,
@@ -145,8 +148,8 @@ fun NavGraphBuilder.workspaceNavGraph(
     }
 
     composable(WORKSPACE_DETAIL_ROUTE) {
-        val workspace = selectedWorkspace
-        val runtime = selectedRuntime
+        val workspace = selectedWorkspace()
+        val runtime = selectedRuntime()
         if (workspace == null || runtime == null) {
             LaunchedEffect(Unit) { navController.popBackStack() }
         } else {

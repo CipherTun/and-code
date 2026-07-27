@@ -7,6 +7,7 @@ import android.os.Looper
 import androidx.startup.AppInitializer
 import com.opencode.android.core.notification.RuntimeNotificationHelper
 import com.opencode.android.data.connection.SecureSettingsRepository
+import com.opencode.android.data.repository.ProviderCatalogCache
 import com.opencode.android.data.repository.RuntimeActivityRepository
 import com.opencode.android.data.repository.RuntimeCatalogRepository
 import com.opencode.android.data.settings.AppPreferencesRepository
@@ -44,6 +45,7 @@ import com.opencode.android.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -239,7 +241,21 @@ class OpenCodeApplication : Application() {
                 scope = applicationScope,
                 messages = claudeMessages,
             )
-        catalogRepository = RuntimeCatalogRepository(runtimeRegistry, applicationScope)
+        catalogRepository =
+            RuntimeCatalogRepository(
+                registry = runtimeRegistry,
+                scope = applicationScope,
+                providerCache =
+                    ProviderCatalogCache(
+                        directory = File(filesDir, "catalog-cache"),
+                        json =
+                            Json {
+                                ignoreUnknownKeys = true
+                                isLenient = true
+                                encodeDefaults = true
+                            },
+                    ),
+            )
         activityRepository =
             RuntimeActivityRepository(
                 registry = runtimeRegistry,

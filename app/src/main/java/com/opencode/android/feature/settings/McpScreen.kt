@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.opencode.android.R
 import com.opencode.android.core.api.McpServer
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeRegistry
 import com.opencode.android.ui.ViewModelFactory
 import com.opencode.android.ui.components.StatusChip
@@ -52,12 +53,13 @@ import com.opencode.android.ui.components.StatusChip
 @Composable
 fun McpScreen(
     registry: RuntimeRegistry,
+    agent: LocalAgent = LocalAgent.OPEN_CODE,
     onBack: () -> Unit,
 ) {
     val viewModel: McpViewModel =
         viewModel(
-            key = "mcp",
-            factory = ViewModelFactory { McpViewModel(registry) },
+            key = "mcp-${agent.id}",
+            factory = ViewModelFactory { McpViewModel(registry, agent) },
         )
     val state by viewModel.state.collectAsState()
 
@@ -115,6 +117,7 @@ fun McpScreen(
                         onConnect = { viewModel.connect(server.name) },
                         onDisconnect = { viewModel.disconnect(server.name) },
                         onRemoveAuth = { viewModel.removeAuth(server.name) },
+                        supportsConnectToggle = state.supportsConnectToggle,
                     )
                 }
             }
@@ -152,6 +155,7 @@ private fun McpServerCard(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onRemoveAuth: () -> Unit,
+    supportsConnectToggle: Boolean,
 ) {
     val isConnected = server.status == "connected" || server.status == "running"
     Surface(
@@ -200,7 +204,19 @@ private fun McpServerCard(
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isConnected) {
+                // An agent that always connects to what it is configured with has nothing to toggle;
+                // it offers removal instead, so the label matches what the button really does.
+                if (!supportsConnectToggle) {
+                    OutlinedButton(onClick = onDisconnect) {
+                        Icon(
+                            Icons.Default.LinkOff,
+                            contentDescription = stringResource(R.string.cd_disconnect),
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.size(4.dp))
+                        Text(stringResource(R.string.mcp_remove_server))
+                    }
+                } else if (isConnected) {
                     OutlinedButton(onClick = onDisconnect) {
                         Icon(
                             Icons.Default.LinkOff,

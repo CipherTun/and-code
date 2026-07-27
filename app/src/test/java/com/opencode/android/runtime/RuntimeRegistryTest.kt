@@ -216,10 +216,56 @@ class RuntimeRegistryTest {
         }
     }
 
+    @Test
+    fun `agent settings reach their own runtime, not whichever the chat selected`() {
+        val openCode = FakeTarget("local-android", RuntimeType.LOCAL, agent = LocalAgent.OPEN_CODE)
+        val claude = FakeTarget("claude-code-local", RuntimeType.LOCAL, agent = LocalAgent.CLAUDE_CODE)
+        val registry =
+            RuntimeRegistry(
+                store = FakeStore(selectedId = "claude-code-local"),
+                localTarget = openCode,
+                additionalTargets = listOf(claude),
+            )
+
+        // The bug this guards: provider settings followed the selected runtime, so with Claude
+        // active they went to a runtime with no provider catalogue and the connect button did
+        // nothing at all.
+        assertEquals("local-android", registry.targetFor(LocalAgent.OPEN_CODE)?.id)
+        assertEquals("claude-code-local", registry.targetFor(LocalAgent.CLAUDE_CODE)?.id)
+    }
+
+    @Test
+    fun `a connected server answers for OpenCode`() {
+        val store = FakeStore(profiles = mutableListOf(profile("mac")), selectedId = "mac")
+        val registry =
+            RuntimeRegistry(
+                store = store,
+                localTarget = FakeTarget("local-android", RuntimeType.LOCAL, agent = LocalAgent.OPEN_CODE),
+                additionalTargets = listOf(FakeTarget("claude-code-local", RuntimeType.LOCAL, agent = LocalAgent.CLAUDE_CODE)),
+                remoteFactory = { FakeTarget(it.id, RuntimeType.REMOTE, it.name) },
+            )
+
+        // A remote runtime speaks OpenCode's protocol but names no agent; configuring providers
+        // while connected to a server has to reach that server, not the phone's own runtime.
+        assertEquals("mac", registry.targetFor(LocalAgent.OPEN_CODE)?.id)
+    }
+
+    @Test
+    fun `reports no runtime for an agent that is not installed`() {
+        val registry =
+            RuntimeRegistry(
+                store = FakeStore(),
+                localTarget = FakeTarget("local-android", RuntimeType.LOCAL, agent = LocalAgent.OPEN_CODE),
+            )
+
+        assertNull(registry.targetFor(LocalAgent.CLAUDE_CODE))
+    }
+
     private class FakeTarget(
         override val id: String,
         override val type: RuntimeType,
         override val displayName: String = id,
+        override val agent: LocalAgent? = null,
     ) : RuntimeTarget {
         override val state = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
         override val kind: BackendKind = if (type == RuntimeType.LOCAL) BackendKind.LOCAL else BackendKind.REMOTE

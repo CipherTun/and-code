@@ -34,6 +34,23 @@ class RuntimeRegistry(
     fun target(id: String): RuntimeTarget? = mutableTargets.value.firstOrNull { it.id == id }
 
     /**
+     * Runtime that answers for [agent].
+     *
+     * Settings screens belong to one agent — MCP servers, providers and commands are configured per
+     * agent, not per chat — so they must not read whatever the chat happens to have selected. A
+     * remote runtime speaks OpenCode's protocol, hence the preference for the selected one when it
+     * is not another agent's: a user connected to a server expects to configure that server.
+     */
+    fun targetFor(agent: LocalAgent): RuntimeTarget? {
+        val selected = mutableSelected.value
+        if (selected != null && (selected.agent == agent || (selected.agent == null && agent == LocalAgent.OPEN_CODE))) {
+            return selected
+        }
+        return mutableTargets.value.firstOrNull { it.agent == agent }
+            ?: mutableTargets.value.firstOrNull { it.agent == null && agent == LocalAgent.OPEN_CODE }
+    }
+
+    /**
      * Selects [id] as the active runtime.
      *
      * Selection is driven from UI callbacks, background collectors and persisted state that can all

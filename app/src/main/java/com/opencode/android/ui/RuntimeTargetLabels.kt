@@ -1,8 +1,10 @@
 package com.opencode.android.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.opencode.android.R
+import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeTarget
 
 /**
@@ -17,3 +19,18 @@ fun runtimeTargetLabel(target: RuntimeTarget): String {
     val agent = target.agent ?: return target.displayName
     return stringResource(R.string.local_agent_on_device, stringResource(agent.displayNameRes))
 }
+
+/**
+ * Icon standing in for a runtime.
+ *
+ * Every local runtime used to share the Android robot, which made the agents indistinguishable at a
+ * glance. Local agents now carry their own product mark; remote connections keep a generic one
+ * because they can be any OpenCode server.
+ */
+@DrawableRes
+fun runtimeAgentIcon(agent: LocalAgent?): Int =
+    when (agent) {
+        LocalAgent.CLAUDE_CODE -> R.drawable.ic_agent_claude
+        LocalAgent.OPEN_CODE -> R.drawable.ic_agent_opencode
+        null -> R.drawable.ic_runtime_remote
+    }

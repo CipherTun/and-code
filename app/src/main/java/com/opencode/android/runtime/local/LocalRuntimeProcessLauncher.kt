@@ -24,7 +24,9 @@ class LocalRuntimeProcessLauncher(
     fun start(runtime: LocalRuntimeInstaller.InstalledRuntime): Process {
         val port = runtime.metadata.port
         process?.let { current ->
-            if (current.isAlive && portProbe(port)) return current
+            // A running process is kept whether or not it answered the probe: under load it may be
+            // slow to accept a connection, and replacing it would drop the session it is serving.
+            if (current.isAlive) return current
             terminate(current)
             process = null
         }

@@ -562,6 +562,7 @@
     <string name="mcp_connect">Connect</string>
     <string name="mcp_disconnect">Disconnect</string>
     <string name="mcp_remove_auth">Remove auth</string>
+    <string name="mcp_remove_server">Remove server</string>
     <string name="mcp_tools_count">%1$d tools</string>
     <string name="mcp_name_hint">Server name</string>
     <string name="mcp_command_hint">Command (local server)</string>
@@ -919,4 +920,6 @@
     <string name="claude_error_install_failed">Claude Code installation failed</string>
     <string name="claude_error_update_failed">Claude Code update failed</string>
     <string name="setup_download_agents_description">Prepare the shared Linux environment and the agents you picked.</string>
+    <string name="settings_agents_row">Agents</string>
+    <string name="settings_agents_section">Agents</string>
 </resources>

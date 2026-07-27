@@ -169,11 +169,38 @@ class RuntimeCatalogRepositoryTest {
         }
     }
 
+    @Test
+    fun `switching runtime never shows the previous runtime's providers`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val openCode = FakeTarget("local-android", RuntimeType.LOCAL, providerId = "opencode")
+            // A runtime that cannot answer: the worst case, where the old catalogue is most tempting
+            // to keep. Claude Code models must never be listed under OpenCode, or the reverse.
+            val claude = FakeTarget("claude-code-local", RuntimeType.LOCAL, providersError = IllegalStateException("busy"))
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = "local-android"),
+                    localTarget = openCode,
+                    additionalTargets = listOf(claude),
+                )
+            val repository = RuntimeCatalogRepository(registry = registry, scope = TestScope(dispatcher))
+            advanceUntilIdle()
+            assertEquals(listOf("opencode"), repository.state.value.providers.connected)
+
+            registry.select("claude-code-local")
+            advanceUntilIdle()
+
+            assertTrue(repository.state.value.providers.all.isEmpty())
+            assertEquals("claude-code-local", repository.state.value.runtime?.id)
+        }
+
     private class FakeTarget(
         override val id: String,
         override val type: RuntimeType = RuntimeType.REMOTE,
         private val version: String = "1.18.3",
         private val connectError: Throwable? = null,
+        private val providerId: String = "opencode",
+        private val providersError: Throwable? = null,
     ) : RuntimeTarget {
         override val displayName: String = id
         override val kind: BackendKind = if (type == RuntimeType.LOCAL) BackendKind.LOCAL else BackendKind.REMOTE
@@ -199,19 +226,21 @@ class RuntimeCatalogRepositoryTest {
 
         override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
 
-        override suspend fun listProviders(): ProviderCatalog =
-            ProviderCatalog(
+        override suspend fun listProviders(): ProviderCatalog {
+            providersError?.let { throw it }
+            return ProviderCatalog(
                 all =
                     listOf(
                         OpenCodeProvider(
-                            id = "opencode",
+                            id = providerId,
                             name = "OpenCode Zen",
-                            models = mapOf("big-pickle" to OpenCodeModel("big-pickle", "opencode", "Big Pickle")),
+                            models = mapOf("big-pickle" to OpenCodeModel("big-pickle", providerId, "Big Pickle")),
                         ),
                     ),
-                default = mapOf("opencode" to "big-pickle"),
-                connected = listOf("opencode"),
+                default = mapOf(providerId to "big-pickle"),
+                connected = listOf(providerId),
             )
+        }
 
         override suspend fun listAgents(): List<OpenCodeAgent> = listOf(OpenCodeAgent("build", mode = "primary"))
 

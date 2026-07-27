@@ -543,6 +543,7 @@
     <string name="mcp_connect">Conectar</string>
     <string name="mcp_disconnect">Desconectar</string>
     <string name="mcp_remove_auth">Quitar autenticación</string>
+    <string name="mcp_remove_server">Eliminar servidor</string>
     <string name="mcp_tools_count">%1$d herramientas</string>
     <string name="mcp_name_hint">Nombre del servidor</string>
     <string name="mcp_command_hint">Comando (servidor local)</string>
@@ -905,4 +906,6 @@
     <string name="claude_error_install_failed">Falló la instalación de Claude Code</string>
     <string name="claude_error_update_failed">Falló la actualización de Claude Code</string>
     <string name="setup_download_agents_description">Prepara el entorno Linux compartido y los agentes que eligió.</string>
+    <string name="settings_agents_row">Agentes</string>
+    <string name="settings_agents_section">Agentes</string>
 </resources>

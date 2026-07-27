@@ -17,24 +17,7 @@ object ClaudeSandboxLauncher {
         pty: Boolean,
     ): List<String> =
         buildList {
-            add(runtime.commandSuite.proot.absolutePath)
-            add("--kill-on-exit")
-            add("--link2symlink")
-            add("-0")
-            add("-r")
-            add(runtime.rootfs.absolutePath)
-            add("-b")
-            add("/dev")
-            add("-b")
-            add("/proc")
-            add("-b")
-            add("/sys")
-            add("-b")
-            add("/system")
-            add("-b")
-            add("${workspaceHostDir.absolutePath}:/workspace")
-            add("-w")
-            add(workingDirectory)
+            addAll(mounts(runtime, workspaceHostDir, workingDirectory))
             if (pty) {
                 // `claude auth login` only prints its pasteable authorization URL when it believes a
                 // human is watching, so the sign-in flow needs a real terminal rather than a pipe.
@@ -47,6 +30,52 @@ object ClaudeSandboxLauncher {
                 addAll(arguments)
             }
         }
+
+    /**
+     * Runs [script] with the same mounts a chat session gets.
+     *
+     * Used for the questions Claude Code has no protocol for — the workspace's git state, the MCP
+     * server list — which the sandbox's own tools can answer. Deliberately not a login shell:
+     * `/etc/profile.d` narrows PATH to the OpenCode set, which hides `git` among others.
+     */
+    fun shellCommand(
+        runtime: LocalRuntimeInstaller.InstalledRuntime,
+        workspaceHostDir: File,
+        workingDirectory: String,
+        script: String,
+    ): List<String> =
+        buildList {
+            addAll(mounts(runtime, workspaceHostDir, workingDirectory))
+            add("/bin/sh")
+            add("-c")
+            add(script)
+        }
+
+    private fun mounts(
+        runtime: LocalRuntimeInstaller.InstalledRuntime,
+        workspaceHostDir: File,
+        workingDirectory: String,
+    ): List<String> =
+        listOf(
+            runtime.commandSuite.proot.absolutePath,
+            "--kill-on-exit",
+            "--link2symlink",
+            "-0",
+            "-r",
+            runtime.rootfs.absolutePath,
+            "-b",
+            "/dev",
+            "-b",
+            "/proc",
+            "-b",
+            "/sys",
+            "-b",
+            "/system",
+            "-b",
+            "${workspaceHostDir.absolutePath}:/workspace",
+            "-w",
+            workingDirectory,
+        )
 
     fun environment(
         runtime: LocalRuntimeInstaller.InstalledRuntime,

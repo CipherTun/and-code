@@ -9,6 +9,7 @@ import com.opencode.android.runtime.RuntimeTarget
 import com.opencode.android.runtime.WorkspaceRef
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,8 +34,19 @@ data class RuntimeCatalogState(
 class RuntimeCatalogRepository(
     private val registry: RuntimeRegistry,
     private val scope: CoroutineScope,
+    private val providerCache: ProviderCatalogCache? = null,
 ) {
     private val mutableState = MutableStateFlow(RuntimeCatalogState(runtime = registry.selected.value))
+
+    /**
+     * Last catalogue stored for [runtimeId], whatever wrote it.
+     *
+     * Provider settings ask about the runtime that owns providers, which the user may have stopped
+     * — it is not the one their chat is on. Without this the screen has nothing to show and falls
+     * back to the other agent's models, which is worse than a slightly old list.
+     */
+    fun cachedProviders(runtimeId: String): ProviderCatalog? = providerCache?.readAny(runtimeId)
+
     val state: StateFlow<RuntimeCatalogState> = mutableState.asStateFlow()
     private val refreshMutex = Mutex()
 
@@ -70,9 +82,14 @@ class RuntimeCatalogRepository(
         scope.launch {
             runCatching { target.listProviders() }
                 .onSuccess { providers ->
-                    if (registry.selected.value?.id == target.id) {
-                        mutableState.update { it.copy(providers = providers) }
-                    }
+                    if (registry.selected.value?.id != target.id) return@onSuccess
+                    mutableState.update { it.copy(providers = providers) }
+                    // The version keys the cache, and it is often still unknown here: the first
+                    // load runs before the runtime has finished starting, so its connect failed.
+                    val version =
+                        mutableState.value.health?.version
+                            ?: runCatching { target.health() }.getOrNull()?.version.orEmpty()
+                    if (version.isNotBlank()) providerCache?.write(target.id, version, providers)
                 }
         }
     }
@@ -81,10 +98,32 @@ class RuntimeCatalogRepository(
         refreshMutex.withLock {
             if (registry.selected.value?.id != target.id) return
             mutableState.update { current ->
-                current.copy(runtime = target, isRefreshing = true, error = null)
+                // Switching runtimes discards the old catalogue outright. Keeping it meant the
+                // picker showed the new agent's name over the previous agent's models for as long
+                // as the fetch took — seconds, while a stopped runtime is retried — and OpenCode
+                // models appeared under Claude Code.
+                if (current.runtime?.id != target.id) {
+                    RuntimeCatalogState(runtime = target, isRefreshing = true)
+                } else {
+                    current.copy(runtime = target, isRefreshing = true, error = null)
+                }
             }
 
-            val connection = target.connect()
+            // Show whatever was cached before even trying to connect: the runtime takes seconds to
+            // start, and an empty picker for that whole window is what made this feel slow.
+            providerCache?.readAny(target.id)?.let { cached ->
+                mutableState.update { it.copy(runtime = target, providers = cached) }
+            }
+
+            // The local runtime is usually still starting when the app opens, so a single attempt
+            // fails and nothing ever retried: the catalogue stayed empty until something else asked
+            // for it, which is what made the model picker look slow.
+            var connection = target.connect()
+            repeat(CONNECT_RETRIES) {
+                if (connection.isSuccess || registry.selected.value?.id != target.id) return@repeat
+                delay(CONNECT_RETRY_DELAY_MILLIS)
+                connection = target.connect()
+            }
             if (connection.isFailure) {
                 mutableState.value =
                     RuntimeCatalogState(
@@ -110,13 +149,26 @@ class RuntimeCatalogRepository(
                 }
 
             if (registry.selected.value?.id != target.id) return
+            connection.getOrNull()?.version?.let { version ->
+                catalog.providers.getOrNull()?.let { providers ->
+                    if (providerCache?.isStale(target.id, version, providers) != false) {
+                        providerCache?.write(target.id, version, providers)
+                    }
+                }
+            }
             val errors = catalog.failures()
             mutableState.value =
                 RuntimeCatalogState(
                     runtime = target,
                     health = connection.getOrNull(),
                     sessions = catalog.sessions.getOrDefault(emptyList()),
-                    providers = catalog.providers.getOrDefault(ProviderCatalog()),
+                    // Only this runtime's own providers: the fallback exists so a failed refresh
+                    // does not blank a list the user is looking at, never to borrow another
+                    // runtime's catalogue.
+                    providers =
+                        catalog.providers.getOrElse {
+                            mutableState.value.takeIf { it.runtime?.id == target.id }?.providers ?: ProviderCatalog()
+                        },
                     agents = catalog.agents.getOrDefault(emptyList()),
                     workspaces = catalog.workspaces.getOrDefault(emptyList()),
                     isRefreshing = false,
@@ -138,6 +190,11 @@ class RuntimeCatalogRepository(
                 agents.exceptionOrNull()?.let { "エージェント: ${it.safeMessage()}" },
                 workspaces.exceptionOrNull()?.let { "作業フォルダ: ${it.safeMessage()}" },
             )
+    }
+
+    private companion object {
+        const val CONNECT_RETRIES = 6
+        const val CONNECT_RETRY_DELAY_MILLIS = 2_500L
     }
 }
 
