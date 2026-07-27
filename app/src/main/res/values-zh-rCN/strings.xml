@@ -854,7 +854,7 @@
     <string name="claude_permission_plan">仅制定计划</string>
     <string name="claude_permission_plan_desc">Claude 只读取和规划，不会修改文件或执行命令。</string>
     <string name="claude_permission_accept_edits">允许编辑</string>
-    <string name="claude_permission_accept_edits_desc">Claude 可以修改工作区中的文件。推荐。</string>
+    <string name="claude_permission_accept_edits_desc">Claude 可在工作区内编辑文件并运行命令，无需确认。推荐。</string>
     <string name="claude_permission_full_access">完全访问</string>
     <string name="claude_permission_full_access_desc">Claude 可在不询问的情况下执行任何命令。请谨慎使用。</string>
     <string name="claude_permission_mode_label">权限模式</string>

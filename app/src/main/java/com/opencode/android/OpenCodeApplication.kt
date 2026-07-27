@@ -155,7 +155,14 @@ class OpenCodeApplication : Application() {
                 messages = AndroidLocalRuntimeMessages(this),
             )
         val claudeMessages = AndroidClaudeMessages(this)
-        claudeCodeRuntime = ClaudeCodeRuntime(runtimeDirectory, installer::installedRuntime, accessCoordinator, claudeMessages)
+        claudeCodeRuntime =
+            ClaudeCodeRuntime(
+                runtimeDirectory,
+                installer::installedRuntime,
+                accessCoordinator,
+                claudeMessages,
+                githubToken = { settings.githubToken },
+            )
         claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
         runtimeMessages = AndroidLocalRuntimeMessages(this)
         gitCloneRepository =

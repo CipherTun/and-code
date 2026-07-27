@@ -868,7 +868,7 @@
     <string name="claude_permission_plan">Plan only</string>
     <string name="claude_permission_plan_desc">Claude reads and plans but never edits files or runs commands.</string>
     <string name="claude_permission_accept_edits">Accept edits</string>
-    <string name="claude_permission_accept_edits_desc">Claude may edit files in the workspace. Recommended.</string>
+    <string name="claude_permission_accept_edits_desc">Claude may edit files and run commands in the workspace without asking. Recommended.</string>
     <string name="claude_permission_full_access">Full access</string>
     <string name="claude_permission_full_access_desc">Claude may run any command without asking. Use with care.</string>
     <string name="claude_permission_mode_label">Permission mode</string>

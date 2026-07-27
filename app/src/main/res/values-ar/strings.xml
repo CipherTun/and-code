@@ -854,7 +854,7 @@
     <string name="claude_permission_plan">التخطيط فقط</string>
     <string name="claude_permission_plan_desc">يقرأ Claude ويخطّط فقط دون تعديل الملفات أو تنفيذ الأوامر.</string>
     <string name="claude_permission_accept_edits">قبول التعديلات</string>
-    <string name="claude_permission_accept_edits_desc">يمكن لـ Claude تعديل ملفات مساحة العمل. موصى به.</string>
+    <string name="claude_permission_accept_edits_desc">يمكن لـ Claude تعديل الملفات وتنفيذ الأوامر في مساحة العمل دون سؤال. موصى به.</string>
     <string name="claude_permission_full_access">وصول كامل</string>
     <string name="claude_permission_full_access_desc">يمكن لـ Claude تنفيذ أي أمر دون سؤال. استخدمه بحذر.</string>
     <string name="claude_permission_mode_label">وضع الأذونات</string>

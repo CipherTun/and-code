@@ -23,6 +23,7 @@ class ClaudeAuthCoordinator(
     private val installedRuntimeProvider: () -> LocalRuntimeInstaller.InstalledRuntime?,
     private val accessCoordinator: LocalRuntimeAccessCoordinator = LocalRuntimeAccessCoordinator(),
     private val messages: ClaudeMessages = ClaudeMessages,
+    private val githubToken: () -> String? = { null },
 ) {
     sealed interface State {
         data object Idle : State
@@ -87,7 +88,11 @@ class ClaudeAuthCoordinator(
                     .apply {
                         environment().clear()
                         environment().putAll(
-                            ClaudeSandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                            ClaudeSandboxLauncher.environment(
+                                runtime,
+                                File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                githubToken(),
+                            ),
                         )
                     }
                     .start()

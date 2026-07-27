@@ -854,7 +854,7 @@
     <string name="claude_permission_plan">Solo planificar</string>
     <string name="claude_permission_plan_desc">Claude lee y planifica, pero nunca edita archivos ni ejecuta comandos.</string>
     <string name="claude_permission_accept_edits">Aceptar ediciones</string>
-    <string name="claude_permission_accept_edits_desc">Claude puede editar archivos del espacio de trabajo. Recomendado.</string>
+    <string name="claude_permission_accept_edits_desc">Claude puede editar archivos y ejecutar comandos en el espacio de trabajo sin preguntar. Recomendado.</string>
     <string name="claude_permission_full_access">Acceso completo</string>
     <string name="claude_permission_full_access_desc">Claude puede ejecutar cualquier comando sin preguntar. Úselo con cuidado.</string>
     <string name="claude_permission_mode_label">Modo de permisos</string>

@@ -854,7 +854,7 @@
     <string name="claude_permission_plan">Только планирование</string>
     <string name="claude_permission_plan_desc">Claude только читает и планирует, не изменяя файлы и не выполняя команды.</string>
     <string name="claude_permission_accept_edits">Разрешить правки</string>
-    <string name="claude_permission_accept_edits_desc">Claude может изменять файлы в рабочей области. Рекомендуется.</string>
+    <string name="claude_permission_accept_edits_desc">Claude может изменять файлы и выполнять команды в рабочей папке без подтверждения. Рекомендуется.</string>
     <string name="claude_permission_full_access">Полный доступ</string>
     <string name="claude_permission_full_access_desc">Claude может выполнять любые команды без подтверждения. Используйте осторожно.</string>
     <string name="claude_permission_mode_label">Режим разрешений</string>

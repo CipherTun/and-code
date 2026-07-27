@@ -868,7 +868,7 @@
     <string name="claude_permission_plan">プランのみ</string>
     <string name="claude_permission_plan_desc">Claudeは読み取りと計画のみ行い、ファイル編集やコマンド実行はしません。</string>
     <string name="claude_permission_accept_edits">編集を許可</string>
-    <string name="claude_permission_accept_edits_desc">Claudeがワークスペース内のファイルを編集できます。推奨設定です。</string>
+    <string name="claude_permission_accept_edits_desc">Claudeがワークスペース内のファイル編集とコマンド実行を確認なしに行えます。推奨設定です。</string>
     <string name="claude_permission_full_access">フルアクセス</string>
     <string name="claude_permission_full_access_desc">Claudeが確認なしに任意のコマンドを実行します。取り扱いに注意してください。</string>
     <string name="claude_permission_mode_label">権限モード</string>
