@@ -79,6 +79,7 @@ fun NavGraphBuilder.settingsNavGraph(
             onAutoExpandReasoningChange = { appPreferences.setAutoExpandReasoning(it) },
             sendBehavior = preferences().sendBehavior,
             onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
+            wakeWordEnabled = settingsState.wakeWordEnabled,
         )
 
         if (showSupportSheet) {

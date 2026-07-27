@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">اطلب من وكيلك التنفيذ أو الإصلاح أو التحقيق.</string>
     <string name="settings_wake_word_row">كلمة التنبيه</string>
     <string name="settings_wake_word_value">غير مثبت</string>
+    <string name="wake_word_active">نشط</string>
+    <string name="wake_word_inactive">معطل</string>
     <string name="setup_step_counter">الخطوة %1$d من %2$d</string>
     <string name="setup_next_action">التالي</string>
     <string name="setup_back_action">رجوع</string>

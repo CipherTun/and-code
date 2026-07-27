@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">エージェントに実装・修正・調査を依頼します。</string>
     <string name="settings_wake_word_row">ウェイクワード</string>
     <string name="settings_wake_word_value">未導入</string>
+    <string name="wake_word_active">有効</string>
+    <string name="wake_word_inactive">無効</string>
     <string name="setup_step_counter">ステップ %1$d / %2$d</string>
     <string name="setup_next_action">次へ</string>
     <string name="setup_back_action">戻る</string>

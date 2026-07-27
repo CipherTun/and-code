@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">Demandez à votre agent d’implémenter, corriger ou investiguer.</string>
     <string name="settings_wake_word_row">Mot de réveil</string>
     <string name="settings_wake_word_value">Non installé</string>
+    <string name="wake_word_active">Actif</string>
+    <string name="wake_word_inactive">Désactivé</string>
     <string name="setup_step_counter">Étape %1$d sur %2$d</string>
     <string name="setup_next_action">Suivant</string>
     <string name="setup_back_action">Retour</string>

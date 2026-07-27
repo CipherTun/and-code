@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">让智能体去实现、修复或调查。</string>
     <string name="settings_wake_word_row">唤醒词</string>
     <string name="settings_wake_word_value">未安装</string>
+    <string name="wake_word_active">已激活</string>
+    <string name="wake_word_inactive">已禁用</string>
     <string name="setup_step_counter">第 %1$d 步，共 %2$d 步</string>
     <string name="setup_next_action">下一步</string>
     <string name="setup_back_action">返回</string>

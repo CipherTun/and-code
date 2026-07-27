@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">Peça ao seu agente para implementar, corrigir ou investigar.</string>
     <string name="settings_wake_word_row">Palavra de ativação</string>
     <string name="settings_wake_word_value">Não instalado</string>
+    <string name="wake_word_active">Ativo</string>
+    <string name="wake_word_inactive">Desativado</string>
     <string name="setup_step_counter">Passo %1$d de %2$d</string>
     <string name="setup_next_action">Próximo</string>
     <string name="setup_back_action">Voltar</string>

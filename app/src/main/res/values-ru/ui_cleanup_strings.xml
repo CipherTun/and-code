@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">Попросите агента реализовать, исправить или изучить.</string>
     <string name="settings_wake_word_row">Ключевое слово</string>
     <string name="settings_wake_word_value">Не установлено</string>
+    <string name="wake_word_active">Активно</string>
+    <string name="wake_word_inactive">Отключено</string>
     <string name="setup_step_counter">Шаг %1$d из %2$d</string>
     <string name="setup_next_action">Далее</string>
     <string name="setup_back_action">Назад</string>

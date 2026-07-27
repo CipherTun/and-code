@@ -93,6 +93,7 @@ fun SettingsScreenV2(
     onAutoExpandReasoningChange: (Boolean) -> Unit = {},
     sendBehavior: String = "interrupt",
     onSendBehaviorChange: (String) -> Unit = {},
+    wakeWordEnabled: Boolean = false,
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
     var showUiFontDialog by remember { mutableStateOf(false) }
@@ -143,7 +144,7 @@ fun SettingsScreenV2(
                 SettingsRow(
                     icon = Icons.Default.Mic,
                     title = stringResource(R.string.settings_wake_word_row),
-                    value = stringResource(R.string.settings_wake_word_value),
+                    value = if (wakeWordEnabled) stringResource(R.string.wake_word_active) else stringResource(R.string.wake_word_inactive),
                     onClick = onOpenVoiceSettings,
                 )
                 SettingsDivider()
