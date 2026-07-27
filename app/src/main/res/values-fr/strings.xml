@@ -543,6 +543,7 @@
     <string name="mcp_connect">Connecter</string>
     <string name="mcp_disconnect">Déconnecter</string>
     <string name="mcp_remove_auth">Supprimer l\'authentification</string>
+    <string name="mcp_remove_server">Supprimer le serveur</string>
     <string name="mcp_tools_count">%1$d outils</string>
     <string name="mcp_name_hint">Nom du serveur</string>
     <string name="mcp_command_hint">Commande (serveur local)</string>

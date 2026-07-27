@@ -562,6 +562,7 @@
     <string name="mcp_connect">Connect</string>
     <string name="mcp_disconnect">Disconnect</string>
     <string name="mcp_remove_auth">Remove auth</string>
+    <string name="mcp_remove_server">Remove server</string>
     <string name="mcp_tools_count">%1$d tools</string>
     <string name="mcp_name_hint">Server name</string>
     <string name="mcp_command_hint">Command (local server)</string>

@@ -543,6 +543,7 @@
     <string name="mcp_connect">اتصال</string>
     <string name="mcp_disconnect">قطع الاتصال</string>
     <string name="mcp_remove_auth">إزالة المصادقة</string>
+    <string name="mcp_remove_server">إزالة الخادم</string>
     <string name="mcp_tools_count">%1$d أدوات</string>
     <string name="mcp_name_hint">اسم الخادم</string>
     <string name="mcp_command_hint">الأمر (خادم محلي)</string>

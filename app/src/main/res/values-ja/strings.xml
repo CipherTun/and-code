@@ -558,6 +558,7 @@
     <string name="mcp_connect">接続</string>
     <string name="mcp_disconnect">切断</string>
     <string name="mcp_remove_auth">認証を削除</string>
+    <string name="mcp_remove_server">サーバーを削除</string>
     <string name="mcp_tools_count">%1$dツール</string>
     <string name="mcp_name_hint">サーバー名</string>
     <string name="mcp_command_hint">コマンド（ローカルサーバー）</string>

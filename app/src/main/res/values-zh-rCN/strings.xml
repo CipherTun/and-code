@@ -543,6 +543,7 @@
     <string name="mcp_connect">连接</string>
     <string name="mcp_disconnect">断开连接</string>
     <string name="mcp_remove_auth">移除身份验证</string>
+    <string name="mcp_remove_server">移除服务器</string>
     <string name="mcp_tools_count">%1$d 个工具</string>
     <string name="mcp_name_hint">服务器名称</string>
     <string name="mcp_command_hint">命令（本地服务器）</string>

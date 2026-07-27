@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.opencode.android.core.api.McpServer
 import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.RuntimeRegistry
+import com.opencode.android.runtime.local.ClaudeCodeTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,12 @@ data class McpUiState(
     val addCommand: String = "",
     val addUrl: String = "",
     val isAdding: Boolean = false,
+    /**
+     * Whether connecting and disconnecting a configured server means anything here.
+     *
+     * Claude Code connects to every server it knows about, so it offers removal instead.
+     */
+    val supportsConnectToggle: Boolean = true,
 )
 
 /**
@@ -34,7 +41,7 @@ class McpViewModel(
     private val registry: RuntimeRegistry,
     private val agent: LocalAgent = LocalAgent.OPEN_CODE,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(McpUiState())
+    private val _state = MutableStateFlow(McpUiState(supportsConnectToggle = agent != LocalAgent.CLAUDE_CODE))
     val state: StateFlow<McpUiState> = _state.asStateFlow()
 
     init {
@@ -64,10 +71,13 @@ class McpViewModel(
         }
     }
 
+    /** Disconnects an OpenCode server, or deletes a Claude Code one — see [McpUiState.supportsConnectToggle]. */
     fun disconnect(name: String) {
         val backend = registry.targetFor(agent) ?: return
         viewModelScope.launch {
-            runCatching { backend.disconnectMcpServer(name) }
+            runCatching {
+                (backend as? ClaudeCodeTarget)?.removeMcpServer(name) ?: backend.disconnectMcpServer(name)
+            }
                 .onSuccess { refresh() }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
         }

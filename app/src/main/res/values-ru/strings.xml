@@ -543,6 +543,7 @@
     <string name="mcp_connect">Подключить</string>
     <string name="mcp_disconnect">Отключить</string>
     <string name="mcp_remove_auth">Удалить аутентификацию</string>
+    <string name="mcp_remove_server">Удалить сервер</string>
     <string name="mcp_tools_count">%1$d инструментов</string>
     <string name="mcp_name_hint">Имя сервера</string>
     <string name="mcp_command_hint">Команда (локальный сервер)</string>

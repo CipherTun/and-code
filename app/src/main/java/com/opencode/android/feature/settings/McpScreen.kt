@@ -117,6 +117,7 @@ fun McpScreen(
                         onConnect = { viewModel.connect(server.name) },
                         onDisconnect = { viewModel.disconnect(server.name) },
                         onRemoveAuth = { viewModel.removeAuth(server.name) },
+                        supportsConnectToggle = state.supportsConnectToggle,
                     )
                 }
             }
@@ -154,6 +155,7 @@ private fun McpServerCard(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onRemoveAuth: () -> Unit,
+    supportsConnectToggle: Boolean,
 ) {
     val isConnected = server.status == "connected" || server.status == "running"
     Surface(
@@ -202,7 +204,19 @@ private fun McpServerCard(
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (isConnected) {
+                // An agent that always connects to what it is configured with has nothing to toggle;
+                // it offers removal instead, so the label matches what the button really does.
+                if (!supportsConnectToggle) {
+                    OutlinedButton(onClick = onDisconnect) {
+                        Icon(
+                            Icons.Default.LinkOff,
+                            contentDescription = stringResource(R.string.cd_disconnect),
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.size(4.dp))
+                        Text(stringResource(R.string.mcp_remove_server))
+                    }
+                } else if (isConnected) {
                     OutlinedButton(onClick = onDisconnect) {
                         Icon(
                             Icons.Default.LinkOff,

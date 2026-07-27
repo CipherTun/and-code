@@ -405,7 +405,14 @@ class ClaudeCodeTarget(
         return mcpServers().firstOrNull { it.name == name } ?: McpServer(name = name)
     }
 
-    override suspend fun disconnectMcpServer(name: String): Boolean =
+    /**
+     * Deletes the server's configuration.
+     *
+     * Claude Code has no notion of connecting and disconnecting a configured server — it connects to
+     * every one it knows about — so removal is the only meaningful operation, and the UI must say
+     * so rather than offering a "disconnect" that silently deletes.
+     */
+    suspend fun removeMcpServer(name: String): Boolean =
         withContext(Dispatchers.IO) {
             runtime.runInWorkspace(defaultDirectory(), ClaudeMcpParser.removeScript(name), MCP_TIMEOUT_SECONDS) != null
         }
