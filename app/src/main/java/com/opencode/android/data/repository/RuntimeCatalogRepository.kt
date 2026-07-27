@@ -98,7 +98,15 @@ class RuntimeCatalogRepository(
         refreshMutex.withLock {
             if (registry.selected.value?.id != target.id) return
             mutableState.update { current ->
-                current.copy(runtime = target, isRefreshing = true, error = null)
+                // Switching runtimes discards the old catalogue outright. Keeping it meant the
+                // picker showed the new agent's name over the previous agent's models for as long
+                // as the fetch took — seconds, while a stopped runtime is retried — and OpenCode
+                // models appeared under Claude Code.
+                if (current.runtime?.id != target.id) {
+                    RuntimeCatalogState(runtime = target, isRefreshing = true)
+                } else {
+                    current.copy(runtime = target, isRefreshing = true, error = null)
+                }
             }
 
             // Show whatever was cached before even trying to connect: the runtime takes seconds to
@@ -154,7 +162,13 @@ class RuntimeCatalogRepository(
                     runtime = target,
                     health = connection.getOrNull(),
                     sessions = catalog.sessions.getOrDefault(emptyList()),
-                    providers = catalog.providers.getOrDefault(mutableState.value.providers),
+                    // Only this runtime's own providers: the fallback exists so a failed refresh
+                    // does not blank a list the user is looking at, never to borrow another
+                    // runtime's catalogue.
+                    providers =
+                        catalog.providers.getOrElse {
+                            mutableState.value.takeIf { it.runtime?.id == target.id }?.providers ?: ProviderCatalog()
+                        },
                     agents = catalog.agents.getOrDefault(emptyList()),
                     workspaces = catalog.workspaces.getOrDefault(emptyList()),
                     isRefreshing = false,

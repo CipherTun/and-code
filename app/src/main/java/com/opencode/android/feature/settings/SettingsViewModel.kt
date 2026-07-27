@@ -134,12 +134,18 @@ class SettingsViewModel(
             oauthState,
             githubState,
         ) { core, _, oauth, github ->
-            val providers = core.providerCatalog ?: core.runtime.providers
-            val connected = providers.connected.toSet() + oauth.locallyConnected
+            // Two different questions, two different catalogues.
+            //
+            // `providers` answers "what can this chat talk to", so it follows the selected runtime.
+            // `availableProviders` answers "whose credentials can I manage", which is always the
+            // provider-owning runtime. Serving both from one catalogue put OpenCode's models in the
+            // model picker while Claude Code was the active agent.
+            val chatConnected = core.runtime.providers.connected.toSet() + oauth.locallyConnected
+            val managed = core.providerCatalog ?: core.runtime.providers
             SettingsUiState(
-                providers = providers.all.filter { it.id in connected },
-                availableProviders = providers.all,
-                connectedProviderIds = connected,
+                providers = core.runtime.providers.all.filter { it.id in chatConnected },
+                availableProviders = managed.all,
+                connectedProviderIds = managed.connected.toSet() + oauth.locallyConnected,
                 agents = core.runtime.agents.filter { it.mode == null || it.mode == "primary" },
                 providerId = core.preferences.providerId,
                 modelId = core.preferences.modelId,

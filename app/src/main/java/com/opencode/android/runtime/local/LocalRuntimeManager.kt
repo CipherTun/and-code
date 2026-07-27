@@ -46,6 +46,8 @@ class LocalRuntimeManager(
     private val portProbe: (Int) -> Boolean = ::defaultPortProbe,
     private val installer: LocalRuntimeInstaller? = null,
     private val processLauncher: LocalRuntimeProcessLauncher? = null,
+    /** Whether the server process we started is still alive, independent of whether it answers. */
+    private val processAlive: () -> Boolean = { processLauncher?.isRunning() == true },
     private val updateEngine: LocalRuntimeUpdateEngine? = null,
     private val runtimeOperations: LocalRuntimeOperations? = null,
     private val messages: LocalRuntimeMessages = LocalRuntimeMessages,
@@ -117,7 +119,10 @@ class LocalRuntimeManager(
             ) {
                 return@withLock updateToLatestLocked()
             }
-            if (portProbe(metadata.port)) {
+            // Same reasoning as computeStatus(): only restart a server that is genuinely gone. A
+            // live process that missed a probe is busy, and stopping it here would end whatever it
+            // was busy with.
+            if (portProbe(metadata.port) || processAlive()) {
                 return@withLock Result.success(
                     LocalRuntimeStatus.Ready(metadata.version, metadata.port).also { mutableState.value = it },
                 )
@@ -507,11 +512,14 @@ class LocalRuntimeManager(
         if (metadata.version.isBlank() || metadata.port !in 1..65535) {
             return LocalRuntimeStatus.Broken("Runtime metadata contains invalid values")
         }
-        return if (portProbe(metadata.port)) {
-            LocalRuntimeStatus.Ready(metadata.version, metadata.port)
-        } else {
-            LocalRuntimeStatus.Stopped(metadata.version, metadata.port)
+        if (portProbe(metadata.port)) return LocalRuntimeStatus.Ready(metadata.version, metadata.port)
+        // A missed probe is not proof of death. Our own child process is: if it is still running,
+        // the server exists and is merely too busy to answer, and restarting it would destroy work
+        // in progress rather than recover anything.
+        if (processAlive()) {
+            return LocalRuntimeStatus.Ready(metadata.version, metadata.port)
         }
+        return LocalRuntimeStatus.Stopped(metadata.version, metadata.port)
     }
 
     private fun readMetadata(): LocalRuntimeMetadata? {
@@ -526,10 +534,22 @@ class LocalRuntimeManager(
         private const val METADATA_FILE = "metadata.json"
         private val SUPPORTED_ABIS = setOf("arm64-v8a", "x86_64")
 
+        /**
+         * Timeout for the liveness probe.
+         *
+         * A loopback connect to a listening socket returns in well under a millisecond, so a
+         * generous limit costs nothing while the server is healthy. It matters only when the device
+         * is loaded — and the heaviest load this app produces is a Claude Code turn, a 250 MB
+         * binary running under PRoot. At the previous 300 ms the probe missed under that load, the
+         * watchdog read it as a dead server, and a perfectly healthy OpenCode was killed and
+         * restarted. That is the "OpenCode keeps crashing" the logs never showed a crash for.
+         */
+        private const val PROBE_TIMEOUT_MILLIS = 2_500
+
         fun defaultPortProbe(port: Int): Boolean =
             runCatching {
                 Socket().use { socket ->
-                    socket.connect(InetSocketAddress("127.0.0.1", port), 300)
+                    socket.connect(InetSocketAddress("127.0.0.1", port), PROBE_TIMEOUT_MILLIS)
                 }
                 true
             }.getOrDefault(false)
