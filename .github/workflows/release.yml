@@ -59,10 +59,10 @@ jobs:
 
       - name: Build APKs
         env:
-          ANDROID_CODE_STORE_FILE: ${{ runner.temp }}/release.keystore
-          ANDROID_CODE_STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          ANDROID_CODE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          ANDROID_CODE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          AND_CODE_STORE_FILE: ${{ runner.temp }}/release.keystore
+          AND_CODE_STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          AND_CODE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          AND_CODE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew assembleDebug assembleRelease
 
       - name: Resolve tag
