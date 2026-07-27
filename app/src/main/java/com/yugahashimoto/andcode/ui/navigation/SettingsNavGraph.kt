@@ -96,6 +96,8 @@ fun NavGraphBuilder.settingsNavGraph(
             ttsEnabled = settingsState.ttsEnabled,
             continuousConversation = settingsState.continuousConversation,
             wakeWordEnabled = settingsState.wakeWordEnabled,
+            wakeWordModel = settingsState.wakeWordModel,
+            availableWakeWordModels = settingsState.availableWakeWordModels,
             onTtsChange = settingsViewModel::setTtsEnabled,
             onContinuousChange = settingsViewModel::setContinuousConversation,
             onWakeWordChange = { enabled ->
@@ -110,6 +112,7 @@ fun NavGraphBuilder.settingsNavGraph(
                     com.yugahashimoto.andcode.feature.wakeword.WakeWordService.stop(context)
                 }
             },
+            onWakeWordModelChange = settingsViewModel::setWakeWordModel,
             onBack = { navController.popBackStack() },
         )
     }

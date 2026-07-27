@@ -41,7 +41,7 @@ class AndCodeVoiceInteractionService : VoiceInteractionService() {
         }
         runCatching {
             showSession(Bundle(), VoiceInteractionSession.SHOW_WITH_ASSIST)
-        }.onFailure { Log.e(TAG, "Unable to show OpenCode assistant", it) }
+        }.onFailure { Log.e(TAG, "Unable to show assistant", it) }
     }
 
     companion object {

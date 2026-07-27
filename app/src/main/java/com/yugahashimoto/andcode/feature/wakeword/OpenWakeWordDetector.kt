@@ -16,7 +16,14 @@ data class WakeWordResult(
     val timestamp: Long,
 )
 
-class OpenWakeWordDetector(private val context: Context) {
+class OpenWakeWordDetector(
+    private val context: Context,
+    private val modelName: String = DEFAULT_MODEL,
+) {
+
+    val keyword: String
+        get() = modelName.replace('_', ' ').replaceFirstChar { it.uppercase() }
+
     private var melspecInterpreter: Interpreter? = null
     private var embeddingInterpreter: Interpreter? = null
     private var wakewordInterpreter: Interpreter? = null
@@ -33,7 +40,8 @@ class OpenWakeWordDetector(private val context: Context) {
         return try {
             val melspecModel = loadModel(context, "wakeword/melspectrogram.tflite")
             val embeddingModel = loadModel(context, "wakeword/embedding_model.tflite")
-            val wakewordModel = loadModel(context, "wakeword/hey_mycroft_v0.1.tflite")
+            val modelPath = "wakeword/${modelName}_v0.1.tflite"
+            val wakewordModel = loadModel(context, modelPath)
 
             melspecInterpreter = Interpreter(melspecModel, interpreterOptions())
             embeddingInterpreter = Interpreter(embeddingModel, interpreterOptions())
@@ -42,10 +50,10 @@ class OpenWakeWordDetector(private val context: Context) {
             wakewordInputFrames = wakewordInterpreter!!.getInputTensor(0).shape()[1]
 
             initialized = true
-            Log.i(TAG, "Initialized: wakewordInputFrames=$wakewordInputFrames")
+            Log.i(TAG, "Initialized: model=$modelName, inputFrames=$wakewordInputFrames")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize models", e)
+            Log.e(TAG, "Failed to initialize model '$modelName'", e)
             false
         }
     }
@@ -83,7 +91,7 @@ class OpenWakeWordDetector(private val context: Context) {
 
         val score = runWakewordModel()
         return if (score >= DETECTION_THRESHOLD) {
-            WakeWordResult("hey_opencode", score, System.currentTimeMillis())
+            WakeWordResult(keyword, score, System.currentTimeMillis())
         } else {
             null
         }
@@ -197,5 +205,6 @@ class OpenWakeWordDetector(private val context: Context) {
         private const val MAX_RAW_BUFFER = SAMPLE_RATE * 10
         private const val FEATURE_BUFFER_MAX = 120
         private const val DETECTION_THRESHOLD = 0.5f
+        const val DEFAULT_MODEL = "hey_mycroft"
     }
 }

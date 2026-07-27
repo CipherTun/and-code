@@ -191,6 +191,8 @@ class SettingsViewModel(
 
     fun setWakeWordEnabled(enabled: Boolean) = preferences.setWakeWordEnabled(enabled)
 
+    fun setWakeWordModel(model: String) = preferences.setWakeWordModel(model)
+
     fun setAutoAcceptPermissions(enabled: Boolean) = preferences.setAutoAcceptPermissions(enabled)
 
     fun toggleFavoriteModel(

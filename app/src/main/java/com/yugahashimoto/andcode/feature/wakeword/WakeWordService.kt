@@ -29,8 +29,6 @@ import kotlinx.coroutines.launch
 class WakeWordService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var listenJob: Job? = null
-    private var detector: OpenWakeWordDetector? = null
-    private var vad: VoiceActivityDetector? = null
     private var audioRecord: AudioRecord? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -38,8 +36,6 @@ class WakeWordService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        detector = OpenWakeWordDetector(this)
-        vad = VoiceActivityDetector()
     }
 
     override fun onStartCommand(
@@ -54,15 +50,14 @@ class WakeWordService : Service() {
             }
         }
 
+        val model = intent?.getStringExtra(EXTRA_MODEL) ?: OpenWakeWordDetector.DEFAULT_MODEL
         startForegroundWithNotification()
-        startListening()
+        startListening(model)
         return START_STICKY
     }
 
     override fun onDestroy() {
         stopListening()
-        detector?.release()
-        detector = null
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
         scope.cancel()
@@ -114,7 +109,7 @@ class WakeWordService : Service() {
         }
     }
 
-    private fun startListening() {
+    private fun startListening(model: String) {
         if (listenJob?.isActive == true) return
 
         val pm = getSystemService(PowerManager::class.java)
@@ -125,7 +120,7 @@ class WakeWordService : Service() {
 
         listenJob =
             scope.launch {
-                val det = detector ?: return@launch
+                val det = OpenWakeWordDetector(this@WakeWordService, model)
                 if (!det.initialize()) {
                     Log.e(TAG, "Detector initialization failed")
                     stopSelf()
@@ -169,7 +164,7 @@ class WakeWordService : Service() {
                 Log.i(TAG, "Wake word listening started")
 
                 val buffer = ShortArray(FRAME_SIZE)
-                val vadLocal = vad ?: VoiceActivityDetector()
+                val vadLocal = VoiceActivityDetector()
 
                 try {
                     while (isActive) {
@@ -211,13 +206,18 @@ class WakeWordService : Service() {
         private const val CHANNEL_ID = "wakeword_channel"
         private const val NOTIFICATION_ID = 9001
         private const val ACTION_STOP = "com.yugahashimoto.andcode.action.STOP_WAKEWORD"
+        private const val EXTRA_MODEL = "wake_word_model"
         private const val SAMPLE_RATE = 16000
         private const val FRAME_SIZE = 1280
         private const val WAKELOCK_TAG = "opencode:wakeword"
         private const val WAKELOCK_TIMEOUT = 10 * 60 * 1000L
 
-        fun start(context: Context) {
+        fun start(
+            context: Context,
+            model: String = OpenWakeWordDetector.DEFAULT_MODEL,
+        ) {
             val intent = Intent(context, WakeWordService::class.java)
+            intent.putExtra(EXTRA_MODEL, model)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {

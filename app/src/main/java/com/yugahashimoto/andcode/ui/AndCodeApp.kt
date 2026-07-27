@@ -369,10 +369,13 @@ fun AndCodeApp(
         }
     }
 
-    LaunchedEffect(preferences.wakeWordEnabled) {
+    LaunchedEffect(preferences.wakeWordEnabled, preferences.wakeWordModel) {
         if (preferences.wakeWordEnabled && hasMicrophonePermission()) {
             if (!com.yugahashimoto.andcode.feature.wakeword.WakeWordService.isRunning(context)) {
-                com.yugahashimoto.andcode.feature.wakeword.WakeWordService.start(context)
+                com.yugahashimoto.andcode.feature.wakeword.WakeWordService.start(
+                    context,
+                    model = preferences.wakeWordModel,
+                )
             }
         } else if (!preferences.wakeWordEnabled) {
             com.yugahashimoto.andcode.feature.wakeword.WakeWordService.stop(context)
