@@ -20,6 +20,7 @@ data class AntigravityAuthStart(val process: Process, val url: String? = null)
 class AntigravityAuthCoordinator(
     private val runtimeDirectory: File,
     private val installedRuntimeProvider: () -> LocalRuntimeInstaller.InstalledRuntime?,
+    private val githubToken: () -> String? = { null },
 ) {
     sealed interface State {
         data object Idle : State
@@ -57,6 +58,7 @@ class AntigravityAuthCoordinator(
                         AntigravitySandboxLauncher.environment(
                             runtime,
                             File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                            githubToken(),
                         ),
                     )
                     // Force the documented remote OAuth path. CI is intentionally removed: agy
@@ -70,6 +72,16 @@ class AntigravityAuthCoordinator(
         process = started
         transcript = StringBuilder()
         mutableState.value = State.Starting
+        // agy's first-launch TUI can wait for the initial prompt focus before it invokes the
+        // browser handoff. Give the canonical empty prompt one Enter so a headless PTY reaches
+        // the same auth path as a human launching `agy` and pressing Enter.
+        scope.launch {
+            kotlinx.coroutines.delay(750)
+            runCatching {
+                started.outputStream.write('\n'.code)
+                started.outputStream.flush()
+            }
+        }
         scope.launch {
             runCatching {
                 started.inputStream.bufferedReader().forEachChunk(::onOutput)
@@ -147,6 +159,7 @@ class AntigravityAuthCoordinator(
                             AntigravitySandboxLauncher.environment(
                                 runtime,
                                 File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                githubToken(),
                             ),
                         )
                         environment().remove("CI")
@@ -197,7 +210,11 @@ class AntigravityAuthCoordinator(
                 .redirectErrorStream(true)
                 .apply {
                     environment().putAll(
-                        AntigravitySandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                        AntigravitySandboxLauncher.environment(
+                            runtime,
+                            File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                            githubToken(),
+                        ),
                     )
                 }
                 .start()

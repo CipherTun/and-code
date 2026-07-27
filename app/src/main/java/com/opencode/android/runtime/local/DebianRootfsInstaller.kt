@@ -75,11 +75,11 @@ class DebianRootfsInstaller(
         settings.writeText(
             """
             {
-              \"altScreenMode\": \"never\",
-              \"notifications\": false,
-              \"enableTelemetry\": false,
-              \"toolPermission\": \"request-review\",
-              \"trustedWorkspaces\": [\"/workspace\"]
+              "altScreenMode": "never",
+              "notifications": false,
+              "enableTelemetry": false,
+              "toolPermission": "request-review",
+              "trustedWorkspaces": ["/workspace"]
             }
             """.trimIndent()
                 +

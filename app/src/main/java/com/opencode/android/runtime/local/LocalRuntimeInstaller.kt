@@ -122,7 +122,13 @@ class LocalRuntimeInstaller(
                     } else {
                         null
                     }
-                if (antigravityRootfs != null) copyCaCertificates(rootfs, antigravityRootfs)
+                if (antigravityRootfs != null) {
+                    copyCaCertificates(rootfs, antigravityRootfs)
+                    // Keep the Android-vision tool surface added for Claude/OpenCode available
+                    // to agy's Debian tool runner as well. The scripts still fail closed when adb
+                    // or Pillow is not installed; they are never silently replaced by a fork.
+                    installAndroidHelperScripts(antigravityRootfs)
+                }
                 // Credentials and agent config live under /root inside the rootfs. Activation swaps
                 // the whole environment directory, so without this the user is signed out of every
                 // agent whenever another one is added or the runtime is reinstalled.
@@ -328,7 +334,7 @@ class LocalRuntimeInstaller(
                 "/root",
                 "/bin/sh",
                 "-lc",
-                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /sbin/apk add --no-cache bash git curl wget jq tree file less nano openssh-client ripgrep ca-certificates libstdc++ github-cli gcompat util-linux && /usr/sbin/update-ca-certificates",
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /sbin/apk add --no-cache bash git curl wget jq tree file less nano openssh-client ripgrep ca-certificates libstdc++ github-cli android-tools openjdk17 gradle python3 py3-pillow gcompat util-linux && /usr/sbin/update-ca-certificates",
             )
         val installLog =
             File(runtimeDirectory, "logs/tool-install.log").apply {
@@ -344,7 +350,7 @@ class LocalRuntimeInstaller(
                     environment()["PROOT_TMP_DIR"] = prootTmp.absolutePath
                 }
                 .start()
-        val completed = process.waitFor(5, java.util.concurrent.TimeUnit.MINUTES)
+        val completed = process.waitFor(10, java.util.concurrent.TimeUnit.MINUTES)
         if (!completed) {
             process.destroyForcibly()
             error("Development tool installation timed out")
@@ -375,7 +381,8 @@ class LocalRuntimeInstaller(
             writeText(
                 "export HOME=/root\n" +
                     "export TMPDIR=/tmp\n" +
-                    "export PATH=/usr/local/bin:/usr/bin:/bin\n" +
+                    "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/system/bin:/system/xbin\n" +
+                    "export JAVA_HOME=/usr/lib/jvm/java-17-openjdk\n" +
                     "export OPENCODE_CONFIG_DIR=/root/.config/opencode\n",
             )
         }
@@ -387,7 +394,20 @@ class LocalRuntimeInstaller(
         if (!libApk.exists() && File(rootfs, "usr/lib/libapk.so.3.0.0").isFile) {
             Os.symlink("libapk.so.3.0.0", libApk.absolutePath)
         }
+        installAndroidHelperScripts(rootfs)
         require(suite.proot.isFile) { "PRoot launcher is unavailable" }
+    }
+
+    private fun installAndroidHelperScripts(rootfs: File) {
+        val binDir = File(rootfs, "usr/local/bin").apply { mkdirs() }
+        listOf("android-vision.sh" to "android-vision", "android-screenshot.sh" to "android-screenshot").forEach {
+                (assetName, scriptName) ->
+            val scriptFile = File(binDir, scriptName)
+            context.assets.open("scripts/$assetName").use { input ->
+                scriptFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            scriptFile.setExecutable(true, false)
+        }
     }
 
     private fun copyCaCertificates(

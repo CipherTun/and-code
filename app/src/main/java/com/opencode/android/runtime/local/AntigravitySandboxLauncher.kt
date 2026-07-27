@@ -43,6 +43,7 @@ object AntigravitySandboxLauncher {
     fun environment(
         runtime: LocalRuntimeInstaller.InstalledRuntime,
         tmp: File,
+        githubToken: String? = null,
     ): Map<String, String> =
         localRuntimeEnvironment(runtime.commandSuite.environment(), tmp) +
             mapOf(
@@ -53,5 +54,5 @@ object AntigravitySandboxLauncher {
                 "SSL_CERT_FILE" to "/etc/ssl/certs/ca-certificates.crt",
                 "SSL_CERT_DIR" to "/etc/ssl/certs",
                 "CI" to "1",
-            )
+            ) + githubToken.orEmpty().takeIf { it.isNotBlank() }?.let { mapOf("GH_TOKEN" to it) }.orEmpty()
 }

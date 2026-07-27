@@ -16,6 +16,7 @@ import com.opencode.android.di.viewModelModule
 import com.opencode.android.feature.support.GitHubStarCoordinator
 import com.opencode.android.feature.support.GitHubStarService
 import com.opencode.android.runtime.RuntimeRegistry
+import com.opencode.android.runtime.local.AdbConnectionManager
 import com.opencode.android.runtime.local.AndroidClaudeMessages
 import com.opencode.android.runtime.local.AndroidLocalRuntimeMessages
 import com.opencode.android.runtime.local.AntigravityController
@@ -100,6 +101,9 @@ class OpenCodeApplication : Application() {
     lateinit var claudeCodeController: ClaudeCodeController
         private set
 
+    lateinit var adbConnectionManager: AdbConnectionManager
+        private set
+
     lateinit var antigravityRuntime: AntigravityRuntime
         private set
 
@@ -164,9 +168,16 @@ class OpenCodeApplication : Application() {
                 messages = AndroidLocalRuntimeMessages(this),
             )
         val claudeMessages = AndroidClaudeMessages(this)
-        claudeCodeRuntime = ClaudeCodeRuntime(runtimeDirectory, installer::installedRuntime, accessCoordinator, claudeMessages)
+        claudeCodeRuntime =
+            ClaudeCodeRuntime(
+                runtimeDirectory,
+                installer::installedRuntime,
+                accessCoordinator,
+                claudeMessages,
+                githubToken = { settings.githubToken },
+            )
         claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
-        antigravityRuntime = AntigravityRuntime(runtimeDirectory, installer::installedRuntime)
+        antigravityRuntime = AntigravityRuntime(runtimeDirectory, installer::installedRuntime, githubToken = { settings.githubToken })
         antigravityTarget = AntigravityTarget(antigravityRuntime)
         antigravityController = AntigravityController(installer, antigravityTarget, applicationScope)
         runtimeMessages = AndroidLocalRuntimeMessages(this)
@@ -228,6 +239,7 @@ class OpenCodeApplication : Application() {
                 commandExecutor = commandRunner::run,
             )
         localRuntimeController = LocalRuntimeServiceController(this)
+        adbConnectionManager = AdbConnectionManager(this, commandRunner)
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,

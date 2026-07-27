@@ -28,6 +28,7 @@ data class AntigravitySessionRecord(
 class AntigravityRuntime(
     internal val runtimeDirectory: File,
     private val installedRuntimeProvider: () -> LocalRuntimeInstaller.InstalledRuntime?,
+    private val githubToken: () -> String? = { null },
 ) {
     private val events = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 128)
     private val json =
@@ -41,7 +42,7 @@ class AntigravityRuntime(
     private val messages = linkedMapOf<String, MutableList<OpenCodeMessage>>()
     private val processes = linkedMapOf<String, Process>()
     private val adapter = AntigravityTranscriptAdapter(json)
-    private val authCoordinator = AntigravityAuthCoordinator(runtimeDirectory, installedRuntimeProvider)
+    private val authCoordinator = AntigravityAuthCoordinator(runtimeDirectory, installedRuntimeProvider, githubToken)
 
     init {
         load()
@@ -68,6 +69,7 @@ class AntigravityRuntime(
                             AntigravitySandboxLauncher.environment(
                                 runtime,
                                 File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                githubToken(),
                             ),
                         )
                     }
@@ -117,7 +119,11 @@ class AntigravityRuntime(
                     )
                         .directory(runtimeDirectory).redirectErrorStream(true).apply {
                             environment().putAll(
-                                AntigravitySandboxLauncher.environment(runtime, File(runtimeDirectory, "proot-tmp").apply { mkdirs() }),
+                                AntigravitySandboxLauncher.environment(
+                                    runtime,
+                                    File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                    githubToken(),
+                                ),
                             )
                         }.start()
                 processes[sessionId] = process
