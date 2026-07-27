@@ -113,11 +113,11 @@ class LocalRuntimeInstaller(
                 configureRootfs(rootfs, commandSuite)
                 val antigravityRootfs =
                     if (LocalAgent.ANTIGRAVITY in requestedAgents) {
-                        onProgress(0.90f, "Preparing Debian Bookworm for Antigravity")
+                        onProgress(0.90f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
                         DebianRootfsInstaller(runtimeDirectory, abi, downloader, httpClient).installInto(
                             File(staging, "antigravity-rootfs"),
                         ) { progress ->
-                            onProgress(0.90f + progress * 0.03f, "Preparing Debian Bookworm for Antigravity")
+                            onProgress(0.90f + progress * 0.03f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
                         }
                     } else {
                         null
@@ -140,9 +140,9 @@ class LocalRuntimeInstaller(
                     ClaudeCodeInstaller.installInto(rootfs, commandSuite, runtimeDirectory)
                 }
                 if (LocalAgent.ANTIGRAVITY in requestedAgents) {
-                    onProgress(0.94f, "Downloading and verifying official Antigravity")
+                    onProgress(0.94f, context.getString(R.string.install_step_downloading_antigravity))
                     AntigravityInstaller(runtimeDirectory, abi, downloader).installInto(antigravityRootfs ?: rootfs) { progress ->
-                        onProgress(0.94f + progress * 0.04f, "Installing Antigravity")
+                        onProgress(0.94f + progress * 0.04f, context.getString(R.string.install_step_installing_antigravity))
                     }
                 }
 

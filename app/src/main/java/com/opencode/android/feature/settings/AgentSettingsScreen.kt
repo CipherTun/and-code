@@ -55,15 +55,43 @@ fun AgentSettingsScreen(
     }
 }
 
-/** Antigravity is installed and authenticated from the Android setup flow. */
+/** Antigravity's own settings: the same install, sign-in and permission controls as the setup guide. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AntigravityAgentSettingsScreen(
+    antigravity: com.opencode.android.runtime.local.AntigravityControllerState,
+    onInstall: () -> Unit,
+    onSelectPermissionMode: (com.opencode.android.runtime.local.AntigravityPermissionMode) -> Unit,
+    onSignIn: () -> Unit,
+    onSubmitCode: (String) -> Unit,
+    onCancelSignIn: () -> Unit,
+    onSignOut: () -> Unit,
+    onOpenMcp: () -> Unit,
+    onOpenUrl: (String) -> Unit,
     onOpenLocalRuntime: () -> Unit,
     onBack: () -> Unit,
 ) {
     AgentSettingsScaffold(title = stringResource(LocalAgent.ANTIGRAVITY.displayNameRes), onBack = onBack) {
         SettingsSection(title = stringResource(R.string.settings_agents_section)) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                com.opencode.android.feature.workspace.AntigravityCard(
+                    antigravity = antigravity,
+                    onInstall = onInstall,
+                    onSelectPermissionMode = onSelectPermissionMode,
+                    onSignIn = onSignIn,
+                    onSubmitCode = onSubmitCode,
+                    onCancelSignIn = onCancelSignIn,
+                    onSignOut = onSignOut,
+                    onOpenUrl = onOpenUrl,
+                )
+            }
+            SettingsDivider()
+            SettingsRow(
+                icon = Icons.Default.Extension,
+                title = stringResource(R.string.mcp_settings_row),
+                onClick = onOpenMcp,
+            )
+            SettingsDivider()
             SettingsRow(
                 icon = Icons.Default.Terminal,
                 title = stringResource(R.string.settings_local_runtime_row),

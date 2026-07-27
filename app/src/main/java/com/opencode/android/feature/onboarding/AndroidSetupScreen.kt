@@ -67,7 +67,6 @@ import com.opencode.android.feature.settings.SettingsUiState
 import com.opencode.android.feature.workspace.ClaudeCodeCard
 import com.opencode.android.runtime.LocalAgent
 import com.opencode.android.runtime.LocalRuntimeStatus
-import com.opencode.android.runtime.local.AntigravityAuthCoordinator
 import com.opencode.android.runtime.local.AntigravityControllerState
 import com.opencode.android.runtime.local.ClaudeCodeUiState
 import com.opencode.android.runtime.local.ClaudeInstallStatus
@@ -99,6 +98,7 @@ fun AndroidSetupScreen(
     onSubmitAntigravitySignInCode: (String) -> Unit = {},
     onCancelAntigravitySignIn: () -> Unit = {},
     onSignOutAntigravity: () -> Unit = {},
+    onSelectAntigravityPermissionMode: (com.opencode.android.runtime.local.AntigravityPermissionMode) -> Unit = {},
     onOpenUrl: (String) -> Unit,
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
@@ -275,6 +275,7 @@ fun AndroidSetupScreen(
                         onSignOutAntigravity = onSignOutAntigravity,
                         onOpenUrl = onOpenUrl,
                         onSelectClaudePermissionMode = onSelectClaudePermissionMode,
+                        onSelectAntigravityPermissionMode = onSelectAntigravityPermissionMode,
                         settingsState = settingsState,
                         onOpenProviderAuth = onOpenProviderAuth,
                         onDisconnectProvider = onDisconnectProvider,
@@ -552,14 +553,48 @@ private fun RuntimeDownloadStep(
         if (antigravitySelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_antigravity_name), fontWeight = FontWeight.SemiBold)
-                when {
-                    antigravity.busy -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    antigravity.installed -> ReadyAgentRow(antigravity.version ?: "Antigravity 1.1.7")
-                    antigravity.error != null -> Text(antigravity.error, color = MaterialTheme.colorScheme.error)
-                    else -> Text(stringResource(R.string.setup_runtime_not_installed), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                AntigravityInstallProgress(antigravity)
             }
         }
+    }
+}
+
+@Composable
+private fun AntigravityInstallProgress(antigravity: AntigravityControllerState) {
+    when (val install = antigravity.install) {
+        is com.opencode.android.runtime.local.AntigravityInstallStatus.Installing -> {
+            if (install.step.isNotBlank()) Text(install.step, fontWeight = FontWeight.Medium)
+            if (install.progress != null) {
+                LinearProgressIndicator(
+                    progress = { install.progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = "${(install.progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
+        is com.opencode.android.runtime.local.AntigravityInstallStatus.Ready ->
+            ReadyAgentRow(antigravity.version ?: install.version)
+        is com.opencode.android.runtime.local.AntigravityInstallStatus.Failed ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(install.message, color = MaterialTheme.colorScheme.error)
+            }
+        com.opencode.android.runtime.local.AntigravityInstallStatus.Idle ->
+            if (antigravity.installed) {
+                ReadyAgentRow(antigravity.version ?: "Antigravity 1.1.7")
+            } else {
+                Text(stringResource(R.string.setup_runtime_not_installed), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
     }
 }
 
@@ -705,6 +740,7 @@ private fun SignInStep(
     onSignOutAntigravity: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
+    onSelectAntigravityPermissionMode: (com.opencode.android.runtime.local.AntigravityPermissionMode) -> Unit,
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
     onDisconnectProvider: (String) -> Unit,
@@ -741,78 +777,17 @@ private fun SignInStep(
         if (antigravitySelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_antigravity_name), fontWeight = FontWeight.SemiBold)
-                AntigravitySignInCard(
-                    auth = antigravity.auth,
+                com.opencode.android.feature.workspace.AntigravityCard(
+                    antigravity = antigravity,
+                    onInstall = {},
+                    onSelectPermissionMode = onSelectAntigravityPermissionMode,
                     onSignIn = onBeginAntigravitySignIn,
                     onSubmitCode = onSubmitAntigravitySignInCode,
-                    onCancel = onCancelAntigravitySignIn,
+                    onCancelSignIn = onCancelAntigravitySignIn,
                     onSignOut = onSignOutAntigravity,
                     onOpenUrl = onOpenUrl,
+                    showInstallActions = false,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AntigravitySignInCard(
-    auth: AntigravityAuthCoordinator.State,
-    onSignIn: () -> Unit,
-    onSubmitCode: (String) -> Unit,
-    onCancel: () -> Unit,
-    onSignOut: () -> Unit,
-    onOpenUrl: (String) -> Unit,
-) {
-    var code by remember { mutableStateOf("") }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        when (auth) {
-            AntigravityAuthCoordinator.State.Idle -> {
-                Text(stringResource(R.string.antigravity_status_signed_out), style = MaterialTheme.typography.bodySmall)
-                Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.antigravity_sign_in_button)) }
-            }
-            AntigravityAuthCoordinator.State.Starting -> {
-                Text(stringResource(R.string.antigravity_auth_starting), style = MaterialTheme.typography.bodySmall)
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                TextButton(onClick = onCancel) { Text(stringResource(R.string.claude_auth_cancel)) }
-            }
-            is AntigravityAuthCoordinator.State.AwaitingBrowser -> {
-                Text(stringResource(R.string.antigravity_auth_instructions), style = MaterialTheme.typography.bodySmall)
-                Button(
-                    onClick = { onOpenUrl(auth.url) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.claude_auth_open_browser)) }
-                OutlinedTextField(value = code, onValueChange = {
-                    code = it
-                }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.claude_auth_code_hint)) })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            onSubmitCode(code)
-                        },
-                        enabled = code.isNotBlank(),
-                        modifier =
-                            Modifier.weight(
-                                1f,
-                            ),
-                    ) { Text(stringResource(R.string.claude_auth_submit_code)) }
-                    TextButton(onClick = onCancel) { Text(stringResource(R.string.claude_auth_cancel)) }
-                }
-            }
-            AntigravityAuthCoordinator.State.Verifying -> {
-                Text(stringResource(R.string.antigravity_auth_verifying), style = MaterialTheme.typography.bodySmall)
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-            is AntigravityAuthCoordinator.State.SignedIn -> {
-                Text(stringResource(R.string.antigravity_signed_in), fontWeight = FontWeight.Medium)
-                OutlinedButton(
-                    onClick = onSignOut,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.claude_sign_out_button)) }
-            }
-            is AntigravityAuthCoordinator.State.Failed -> {
-                Text(auth.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                if (auth.transcript.isNotBlank()) Text(auth.transcript, style = MaterialTheme.typography.labelSmall)
-                Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.antigravity_sign_in_button)) }
             }
         }
     }

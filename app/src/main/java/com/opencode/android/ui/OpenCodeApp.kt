@@ -659,6 +659,7 @@ fun OpenCodeApp(
                         onSubmitAntigravitySignInCode = app.antigravityController::submitAuthCode,
                         onCancelAntigravitySignIn = app.antigravityController::cancelAuth,
                         onSignOutAntigravity = app.antigravityController::logout,
+                        onSelectAntigravityPermissionMode = app.antigravityController::setPermissionMode,
                         onOpenUrl = { url ->
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
                         },
@@ -839,6 +840,16 @@ fun OpenCodeApp(
                             onSubmitCode = workspaceViewModel::submitClaudeSignInCode,
                             onCancelSignIn = workspaceViewModel::cancelClaudeSignIn,
                             onSignOut = workspaceViewModel::signOutClaude,
+                        ),
+                    antigravity = { antigravityState },
+                    antigravityActions =
+                        com.opencode.android.ui.navigation.AntigravitySettingsActions(
+                            onInstall = app.antigravityController::install,
+                            onSelectPermissionMode = app.antigravityController::setPermissionMode,
+                            onSignIn = app.antigravityController::beginAuth,
+                            onSubmitCode = app.antigravityController::submitAuthCode,
+                            onCancelSignIn = app.antigravityController::cancelAuth,
+                            onSignOut = app.antigravityController::logout,
                         ),
                     onRequestWakeWordPermission = {
                         startWakeWordAfterPermission = true

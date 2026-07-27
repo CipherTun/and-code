@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 import java.io.File
 import java.util.UUID
 
@@ -26,6 +27,24 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
     override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
     private val files = ClaudeWorkspaceFiles(File(runtime.runtimeDirectory, "workspace"))
     val auth get() = runtime.auth()
+
+    private val modeFile = File(runtime.runtimeDirectory, "antigravity-permission-mode")
+    private val mutableDefaultPermissionMode =
+        MutableStateFlow(AntigravityPermissionMode.fromCliValue(runCatching { modeFile.readText().trim() }.getOrNull()))
+    val defaultPermissionMode: StateFlow<AntigravityPermissionMode> = mutableDefaultPermissionMode.asStateFlow()
+
+    /** Applies [mode] to new sessions, and to [sessionId] when one is given - same as Claude Code. */
+    fun setPermissionMode(
+        mode: AntigravityPermissionMode,
+        sessionId: String? = null,
+    ) {
+        mutableDefaultPermissionMode.value = mode
+        runCatching {
+            modeFile.parentFile?.mkdirs()
+            modeFile.writeText(mode.cliValue)
+        }
+        if (sessionId != null) runtime.setSessionMode(sessionId, mode)
+    }
 
     override suspend fun connect(): Result<OpenCodeHealth> =
         runCatching {
@@ -68,18 +87,7 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
     override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = runtime.listMessages(sessionId)
 
     override suspend fun listProviders(): ProviderCatalog =
-        ProviderCatalog(
-            all =
-                listOf(
-                    OpenCodeProvider(
-                        "antigravity",
-                        "Antigravity",
-                        mapOf("default" to OpenCodeModel("default", "antigravity", "Account default")),
-                    ),
-                ),
-            default = mapOf("antigravity" to "default"),
-            connected = listOf("antigravity"),
-        )
+        withContext(kotlinx.coroutines.Dispatchers.IO) { AntigravityModels.catalog(runtime.models()) }
 
     override suspend fun listAgents(): List<OpenCodeAgent> = listOf(OpenCodeAgent("antigravity", "Antigravity", "primary", true))
 
@@ -88,8 +96,30 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
         request: PromptRequest,
     ) {
         val record = runtime.listSessions(null).firstOrNull { it.appSessionId == sessionId } ?: error("Antigravity session not found")
-        runtime.send(sessionId, record.workspace, request.text, record.conversationId).getOrThrow()
+        val model = request.modelId ?: record.model
+        val variant = request.variant ?: record.variant
+        if (model != record.model || variant != record.variant) runtime.setSessionModel(sessionId, model, variant)
+        val permissionMode = AntigravityPermissionMode.fromCliValue(record.permissionMode)
+        runtime.send(sessionId, record.workspace, request.text, record.conversationId, model, variant, permissionMode).getOrThrow()
     }
+
+    override suspend fun mcpServers(): List<McpServer> =
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val rootfs = runtime.currentRootfs() ?: return@withContext emptyList()
+            AntigravityMcp.read(rootfs)
+        }
+
+    override suspend fun addMcpServer(body: JsonObject): McpServer =
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val rootfs = runtime.currentRootfs() ?: error("Linux environment is not installed")
+            AntigravityMcp.add(rootfs, body)
+        }
+
+    override suspend fun disconnectMcpServer(name: String): Boolean =
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val rootfs = runtime.currentRootfs() ?: return@withContext false
+            AntigravityMcp.remove(rootfs, name)
+        }
 
     override suspend fun abortSession(sessionId: String): Boolean {
         runtime.abort(sessionId)

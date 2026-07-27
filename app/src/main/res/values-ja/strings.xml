@@ -866,6 +866,12 @@
     <string name="runtime_step_preparing_update">更新を準備しています</string>
     <string name="runtime_step_rolling_back_to">OpenCode %1$sへロールバックしています</string>
     <string name="install_step_installing_claude_code">Claude Codeを導入しています</string>
+    <string name="install_step_preparing_antigravity_rootfs">Antigravity用のDebian Bookwormを準備しています</string>
+    <string name="install_step_downloading_antigravity">公式Antigravityをダウンロードして検証しています</string>
+    <string name="install_step_installing_antigravity">Antigravityを導入しています</string>
+    <string name="antigravity_permission_plan_desc">Antigravityは読み取りと計画のみ行い、ファイル編集やコマンド実行はしません。</string>
+    <string name="antigravity_permission_accept_edits_desc">Antigravityがワークスペース内のファイル編集とコマンド実行を確認なしに行えます。推奨設定です。</string>
+    <string name="antigravity_permission_full_access_desc">Antigravityが確認なしにあらゆるコマンドを実行できます。取り扱いにご注意ください。</string>
     <string name="claude_permission_plan">プランのみ</string>
     <string name="claude_permission_plan_desc">Claudeは読み取りと計画のみ行い、ファイル編集やコマンド実行はしません。</string>
     <string name="claude_permission_accept_edits">編集を許可</string>
@@ -917,6 +923,7 @@
     <string name="setup_download_agents_description">共有のLinux環境と、選んだエージェントを準備します。</string>
     <string name="settings_agents_row">エージェント</string>
     <string name="settings_agents_section">エージェント</string>
+    <string name="antigravity_install_button">Antigravityをインストール</string>
     <string name="antigravity_status_signed_out">サインアウト済み</string>
     <string name="antigravity_sign_in_button">Antigravityにサインイン</string>
     <string name="antigravity_auth_starting">サインインを開始しています…</string>

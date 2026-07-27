@@ -23,6 +23,10 @@ data class AntigravitySessionRecord(
     val lastStep: Long = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt,
+    /** Null until the user picks one; a null model omits `--model`/`--effort` and lets agy decide. */
+    val model: String? = null,
+    val variant: String? = null,
+    val permissionMode: String = AntigravityPermissionMode.DEFAULT.cliValue,
 )
 
 class AntigravityRuntime(
@@ -43,6 +47,8 @@ class AntigravityRuntime(
     private val processes = linkedMapOf<String, Process>()
 
     @Volatile private var cachedVersion: String? = null
+
+    @Volatile private var cachedModels: List<AntigravityModels.Entry>? = null
     private val adapter = AntigravityTranscriptAdapter(json)
     private val authCoordinator = AntigravityAuthCoordinator(runtimeDirectory, installedRuntimeProvider, githubToken)
 
@@ -58,6 +64,9 @@ class AntigravityRuntime(
         installedRuntimeProvider()?.let { runtime ->
             (runtime.antigravityRootfs ?: runtime.rootfs).resolve("usr/local/bin/agy").canExecute()
         } == true
+
+    /** The rootfs `mcp_config.json` and other guest-side files live in, or null when not installed. */
+    fun currentRootfs(): File? = installedRuntimeProvider()?.let { it.antigravityRootfs ?: it.rootfs }
 
     fun version(): String? =
         runCatching {
@@ -96,11 +105,52 @@ class AntigravityRuntime(
         cachedVersion = null
     }
 
+    /**
+     * The models the signed-in account can use, from `agy models` (cached until [invalidateModels]).
+     *
+     * Runs a one-shot `agy models` the first time this is called after sign-in; a failure (not
+     * signed in yet, network error) returns an empty list rather than throwing, which
+     * [AntigravityModels.catalog] turns into the same single placeholder model shown before this
+     * existed.
+     */
+    fun models(): List<AntigravityModels.Entry> =
+        cachedModels ?: runCatching {
+            val runtime = installedRuntimeProvider() ?: return@runCatching emptyList()
+            val workspace = File(runtimeDirectory, "workspace").apply { mkdirs() }
+            val result =
+                ProcessBuilder(AntigravitySandboxLauncher.command(runtime, workspace.absolutePath, listOf("models"), false))
+                    .redirectErrorStream(true)
+                    .apply {
+                        environment().putAll(
+                            AntigravitySandboxLauncher.environment(
+                                runtime,
+                                File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                githubToken(),
+                            ),
+                        )
+                    }
+                    .start()
+            val output = result.inputStream.bufferedReader().readText()
+            if (!result.waitFor(45, java.util.concurrent.TimeUnit.SECONDS)) {
+                result.destroyForcibly()
+                return@runCatching emptyList()
+            }
+            if (result.exitValue() != 0) emptyList() else AntigravityModels.parse(output)
+        }.getOrDefault(emptyList()).also { cachedModels = it }
+
+    /** Clears the cached model list; called after sign-in and sign-out so a switched account is picked up. */
+    fun invalidateModels() {
+        cachedModels = null
+    }
+
     suspend fun send(
         sessionId: String,
         workspace: String,
         prompt: String,
         conversationId: String?,
+        model: String? = null,
+        variant: String? = null,
+        permissionMode: AntigravityPermissionMode = AntigravityPermissionMode.DEFAULT,
     ): Result<String> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -115,6 +165,8 @@ class AntigravityRuntime(
                             add("--conversation")
                             add(conversationId)
                         }
+                        addAll(AntigravityModels.cliArgs(model, variant))
+                        addAll(permissionMode.cliArgs)
                         add(prompt)
                     }
                 val process =
@@ -209,6 +261,27 @@ class AntigravityRuntime(
         workspace: String,
     ) {
         records[sessionId] = AntigravitySessionRecord(sessionId, null, workspace)
+        persist()
+    }
+
+    /** Remembers the model/variant a session's next message should use. */
+    fun setSessionModel(
+        sessionId: String,
+        model: String?,
+        variant: String?,
+    ) {
+        val record = records[sessionId] ?: return
+        records[sessionId] = record.copy(model = model, variant = variant)
+        persist()
+    }
+
+    /** Remembers the permission mode a session's next message should use. */
+    fun setSessionMode(
+        sessionId: String,
+        mode: AntigravityPermissionMode,
+    ) {
+        val record = records[sessionId] ?: return
+        records[sessionId] = record.copy(permissionMode = mode.cliValue)
         persist()
     }
 

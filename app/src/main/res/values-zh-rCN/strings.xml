@@ -852,6 +852,12 @@
     <string name="runtime_step_preparing_update">正在准备更新</string>
     <string name="runtime_step_rolling_back_to">正在回退到 OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">正在安装 Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">正在为 Antigravity 准备 Debian Bookworm</string>
+    <string name="install_step_downloading_antigravity">正在下载并验证官方 Antigravity</string>
+    <string name="install_step_installing_antigravity">正在安装 Antigravity</string>
+    <string name="antigravity_permission_plan_desc">Antigravity 只读取和规划，不会修改文件或执行命令。</string>
+    <string name="antigravity_permission_accept_edits_desc">Antigravity 可在工作区内编辑文件并运行命令，无需确认。推荐。</string>
+    <string name="antigravity_permission_full_access_desc">Antigravity 可以在不询问的情况下运行任何命令。请谨慎使用。</string>
     <string name="claude_permission_plan">仅制定计划</string>
     <string name="claude_permission_plan_desc">Claude 只读取和规划，不会修改文件或执行命令。</string>
     <string name="claude_permission_accept_edits">允许编辑</string>
@@ -903,6 +909,7 @@
     <string name="setup_download_agents_description">准备共享的 Linux 环境以及你选择的智能体。</string>
     <string name="settings_agents_row">智能体</string>
     <string name="settings_agents_section">智能体</string>
+    <string name="antigravity_install_button">安装 Antigravity</string>
     <string name="antigravity_status_signed_out">已退出登录</string>
     <string name="antigravity_sign_in_button">登录 Antigravity</string>
     <string name="antigravity_auth_starting">正在开始登录…</string>

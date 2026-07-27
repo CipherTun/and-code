@@ -42,6 +42,8 @@ fun NavGraphBuilder.settingsNavGraph(
     hasMicrophonePermission: () -> Boolean,
     claude: () -> com.opencode.android.runtime.local.ClaudeCodeUiState,
     claudeActions: ClaudeSettingsActions,
+    antigravity: () -> com.opencode.android.runtime.local.AntigravityControllerState,
+    antigravityActions: AntigravitySettingsActions,
     onRequestWakeWordPermission: () -> Unit,
 ) {
     composable(ROUTE_SETTINGS) {
@@ -152,6 +154,17 @@ fun NavGraphBuilder.settingsNavGraph(
 
     composable(ROUTE_SETTINGS_AGENT_ANTIGRAVITY) {
         AntigravityAgentSettingsScreen(
+            antigravity = antigravity(),
+            onInstall = antigravityActions.onInstall,
+            onSelectPermissionMode = antigravityActions.onSelectPermissionMode,
+            onSignIn = antigravityActions.onSignIn,
+            onSubmitCode = antigravityActions.onSubmitCode,
+            onCancelSignIn = antigravityActions.onCancelSignIn,
+            onSignOut = antigravityActions.onSignOut,
+            onOpenMcp = { navController.navigate(ROUTE_SETTINGS_MCP_ANTIGRAVITY) },
+            onOpenUrl = { url ->
+                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+            },
             onOpenLocalRuntime = { navController.navigate(ROUTE_ANDROID_SETUP) },
             onBack = { navController.popBackStack() },
         )
@@ -214,6 +227,14 @@ fun NavGraphBuilder.settingsNavGraph(
         )
     }
 
+    composable(ROUTE_SETTINGS_MCP_ANTIGRAVITY) {
+        com.opencode.android.feature.settings.McpScreen(
+            registry = runtimeRegistry,
+            agent = com.opencode.android.runtime.LocalAgent.ANTIGRAVITY,
+            onBack = { navController.popBackStack() },
+        )
+    }
+
     composable(ROUTE_SETTINGS_SERVER_INFO) {
         com.opencode.android.feature.settings.ServerInfoScreen(
             registry = runtimeRegistry,
@@ -227,6 +248,16 @@ data class ClaudeSettingsActions(
     val onInstall: () -> Unit,
     val onUpdate: () -> Unit,
     val onSelectPermissionMode: (com.opencode.android.runtime.local.ClaudePermissionMode) -> Unit,
+    val onSignIn: () -> Unit,
+    val onSubmitCode: (String) -> Unit,
+    val onCancelSignIn: () -> Unit,
+    val onSignOut: () -> Unit,
+)
+
+/** Antigravity actions the settings graph forwards to its agent screen. */
+data class AntigravitySettingsActions(
+    val onInstall: () -> Unit,
+    val onSelectPermissionMode: (com.opencode.android.runtime.local.AntigravityPermissionMode) -> Unit,
     val onSignIn: () -> Unit,
     val onSubmitCode: (String) -> Unit,
     val onCancelSignIn: () -> Unit,

@@ -852,6 +852,12 @@
     <string name="runtime_step_preparing_update">Подготовка обновления</string>
     <string name="runtime_step_rolling_back_to">Откат к OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">Установка Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">Подготовка Debian Bookworm для Antigravity</string>
+    <string name="install_step_downloading_antigravity">Загрузка и проверка официального Antigravity</string>
+    <string name="install_step_installing_antigravity">Установка Antigravity</string>
+    <string name="antigravity_permission_plan_desc">Antigravity только читает и планирует, не изменяя файлы и не выполняя команды.</string>
+    <string name="antigravity_permission_accept_edits_desc">Antigravity может изменять файлы и выполнять команды в рабочей папке без подтверждения. Рекомендуется.</string>
+    <string name="antigravity_permission_full_access_desc">Antigravity может выполнять любые команды без подтверждения. Используйте с осторожностью.</string>
     <string name="claude_permission_plan">Только планирование</string>
     <string name="claude_permission_plan_desc">Claude только читает и планирует, не изменяя файлы и не выполняя команды.</string>
     <string name="claude_permission_accept_edits">Разрешить правки</string>
@@ -903,6 +909,7 @@
     <string name="setup_download_agents_description">Подготовка общей среды Linux и выбранных агентов.</string>
     <string name="settings_agents_row">Агенты</string>
     <string name="settings_agents_section">Агенты</string>
+    <string name="antigravity_install_button">Установить Antigravity</string>
     <string name="antigravity_status_signed_out">Вы вышли из аккаунта</string>
     <string name="antigravity_sign_in_button">Войти в Antigravity</string>
     <string name="antigravity_auth_starting">Начинаем вход…</string>
