@@ -24,9 +24,9 @@ jobs:
             const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
               owner: context.repo.owner, repo: context.repo.repo, run_id: run.id, per_page: 100,
             });
-            const apk = artifacts.find((artifact) => artifact.name === 'opencode-android-debug');
+            const apk = artifacts.find((artifact) => artifact.name === 'and-code-debug');
             if (!apk) { core.setFailed('The APK artifact was not found.'); return; }
-            const marker = '<!-- opencode-debug-apk -->';
+            const marker = '<!-- and-code-debug-apk -->';
             const body = [
               marker,
               '**Debug APK built successfully**',

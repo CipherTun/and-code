@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OpenCode Android</string>
+    <string name="app_name">AndCode</string>
     <string name="unofficial_client">Неофициальный клиент с открытым исходным кодом</string>
 
     <string name="nav_home">Главная</string>
@@ -286,6 +286,12 @@
     <string name="adb_pairing_in_progress">Сопряжение…</string>
     <string name="adb_connecting_in_progress">Подключение…</string>
     <string name="adb_requires_android_11">Требуется Android 11 или новее</string>
+    <string name="accessibility_service_description">Позволяет агенту OpenCode читать экран, нажимать, свайпать и вводить текст без ADB. Предоставляет локальный HTTP-сервер на порту 4098.</string>
+    <string name="accessibility_setup_title">Служба специальных возможностей</string>
+    <string name="accessibility_setup_description">Включает чтение экрана и управление жестами без ADB. Агент может использовать curl для взаимодействия с устройством.</string>
+    <string name="accessibility_status_disconnected">Не включено</string>
+    <string name="accessibility_status_connected">Активно (порт %1$d)</string>
+    <string name="accessibility_enable_button">Включить в настройках</string>
     <string name="runtime_status_not_installed">Не установлено</string>
     <string name="runtime_status_setting_up">Настройка</string>
     <string name="runtime_status_starting">Запуск</string>
@@ -604,7 +610,7 @@
     <string name="cd_expand_dropdown">Expand dropdown</string>
     <string name="cd_expand_collapse">Expand or collapse</string>
     <string name="cd_search">Search</string>
-    <string name="cd_app_logo">OpenCode</string>
+    <string name="cd_app_logo">AndCode</string>
     <string name="cd_permission">Permission</string>
     <string name="cd_runtime_type">Runtime type</string>
     <string name="cd_new_chat">New chat</string>
@@ -833,7 +839,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">Не удалось установить локальную среду</string>
     <string name="runtime_error_reinstall_failed">Не удалось переустановить локальную среду</string>
     <string name="runtime_error_start_failed">Не удалось запустить локальный OpenCode</string>
@@ -852,12 +857,6 @@
     <string name="runtime_step_preparing_update">Подготовка обновления</string>
     <string name="runtime_step_rolling_back_to">Откат к OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">Установка Claude Code</string>
-    <string name="install_step_preparing_antigravity_rootfs">Подготовка Debian Bookworm для Antigravity</string>
-    <string name="install_step_downloading_antigravity">Загрузка и проверка официального Antigravity</string>
-    <string name="install_step_installing_antigravity">Установка Antigravity</string>
-    <string name="antigravity_permission_plan_desc">Antigravity только читает и планирует, не изменяя файлы и не выполняя команды.</string>
-    <string name="antigravity_permission_accept_edits_desc">Antigravity может изменять файлы и выполнять команды в рабочей папке без подтверждения. Рекомендуется.</string>
-    <string name="antigravity_permission_full_access_desc">Antigravity может выполнять любые команды без подтверждения. Используйте с осторожностью.</string>
     <string name="claude_permission_plan">Только планирование</string>
     <string name="claude_permission_plan_desc">Claude только читает и планирует, не изменяя файлы и не выполняя команды.</string>
     <string name="claude_permission_accept_edits">Разрешить правки</string>
@@ -891,7 +890,6 @@
     <string name="setup_agents_description">Выберите агентов программирования для установки на это устройство. Оба работают в одной среде Linux, второго можно добавить позже.</string>
     <string name="setup_agent_claude_code_desc">Войдите в аккаунт Claude через браузер. Загрузка около 80 МБ.</string>
     <string name="setup_agent_opencode_desc">Используйте собственные ключи поставщиков моделей. Загрузка около 120 МБ.</string>
-    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">Выберите хотя бы одного агента, чтобы продолжить.</string>
     <string name="setup_step_sign_in">Вход</string>
     <string name="setup_sign_in_description">Подключите учётные записи для ваших агентов.</string>
@@ -909,11 +907,4 @@
     <string name="setup_download_agents_description">Подготовка общей среды Linux и выбранных агентов.</string>
     <string name="settings_agents_row">Агенты</string>
     <string name="settings_agents_section">Агенты</string>
-    <string name="antigravity_install_button">Установить Antigravity</string>
-    <string name="antigravity_status_signed_out">Вы вышли из аккаунта</string>
-    <string name="antigravity_sign_in_button">Войти в Antigravity</string>
-    <string name="antigravity_auth_starting">Начинаем вход…</string>
-    <string name="antigravity_auth_instructions">Подтвердите запрос Google в браузере и вставьте код сюда.</string>
-    <string name="antigravity_auth_verifying">Проверка…</string>
-    <string name="antigravity_signed_in">Вход в Antigravity выполнен</string>
 </resources>

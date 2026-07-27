@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OpenCode Android</string>
+    <string name="app_name">AndCode</string>
     <string name="unofficial_client">非官方开源客户端</string>
 
     <string name="nav_home">首页</string>
@@ -286,6 +286,12 @@
     <string name="adb_pairing_in_progress">配对中…</string>
     <string name="adb_connecting_in_progress">连接中…</string>
     <string name="adb_requires_android_11">需要 Android 11 或更高版本</string>
+    <string name="accessibility_service_description">允许 OpenCode 代理在无需 ADB 的情况下读取屏幕、点击、滑动和输入文本。在端口 4098 上提供本地 HTTP API。</string>
+    <string name="accessibility_setup_title">无障碍服务</string>
+    <string name="accessibility_setup_description">无需 ADB 即可启用屏幕阅读和手势控制。代理可以通过 curl 与设备交互。</string>
+    <string name="accessibility_status_disconnected">未启用</string>
+    <string name="accessibility_status_connected">活跃（端口 %1$d）</string>
+    <string name="accessibility_enable_button">在设置中启用</string>
     <string name="runtime_status_not_installed">未安装</string>
     <string name="runtime_status_setting_up">正在设置</string>
     <string name="runtime_status_starting">正在启动</string>
@@ -604,7 +610,7 @@
     <string name="cd_expand_dropdown">Expand dropdown</string>
     <string name="cd_expand_collapse">Expand or collapse</string>
     <string name="cd_search">Search</string>
-    <string name="cd_app_logo">OpenCode</string>
+    <string name="cd_app_logo">AndCode</string>
     <string name="cd_permission">Permission</string>
     <string name="cd_runtime_type">Runtime type</string>
     <string name="cd_new_chat">New chat</string>
@@ -833,7 +839,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">无法安装本地运行时</string>
     <string name="runtime_error_reinstall_failed">无法重新安装本地运行时</string>
     <string name="runtime_error_start_failed">无法启动本地 OpenCode</string>
@@ -852,12 +857,6 @@
     <string name="runtime_step_preparing_update">正在准备更新</string>
     <string name="runtime_step_rolling_back_to">正在回退到 OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">正在安装 Claude Code</string>
-    <string name="install_step_preparing_antigravity_rootfs">正在为 Antigravity 准备 Debian Bookworm</string>
-    <string name="install_step_downloading_antigravity">正在下载并验证官方 Antigravity</string>
-    <string name="install_step_installing_antigravity">正在安装 Antigravity</string>
-    <string name="antigravity_permission_plan_desc">Antigravity 只读取和规划，不会修改文件或执行命令。</string>
-    <string name="antigravity_permission_accept_edits_desc">Antigravity 可在工作区内编辑文件并运行命令，无需确认。推荐。</string>
-    <string name="antigravity_permission_full_access_desc">Antigravity 可以在不询问的情况下运行任何命令。请谨慎使用。</string>
     <string name="claude_permission_plan">仅制定计划</string>
     <string name="claude_permission_plan_desc">Claude 只读取和规划，不会修改文件或执行命令。</string>
     <string name="claude_permission_accept_edits">允许编辑</string>
@@ -891,7 +890,6 @@
     <string name="setup_agents_description">选择要安装在此设备上的编码智能体。两者运行在同一个 Linux 环境中，之后也可以再添加另一个。</string>
     <string name="setup_agent_claude_code_desc">在浏览器中使用 Claude 账号登录。下载约 80 MB。</string>
     <string name="setup_agent_opencode_desc">使用你自己的模型提供方密钥。下载约 120 MB。</string>
-    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">请至少选择一个智能体以继续。</string>
     <string name="setup_step_sign_in">登录</string>
     <string name="setup_sign_in_description">连接智能体将使用的账号。</string>
@@ -909,11 +907,4 @@
     <string name="setup_download_agents_description">准备共享的 Linux 环境以及你选择的智能体。</string>
     <string name="settings_agents_row">智能体</string>
     <string name="settings_agents_section">智能体</string>
-    <string name="antigravity_install_button">安装 Antigravity</string>
-    <string name="antigravity_status_signed_out">已退出登录</string>
-    <string name="antigravity_sign_in_button">登录 Antigravity</string>
-    <string name="antigravity_auth_starting">正在开始登录…</string>
-    <string name="antigravity_auth_instructions">请在浏览器中批准 Google 请求，然后将显示的代码粘贴到此处。</string>
-    <string name="antigravity_auth_verifying">正在验证…</string>
-    <string name="antigravity_signed_in">已登录 Antigravity</string>
 </resources>

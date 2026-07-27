@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OpenCode Android</string>
+    <string name="app_name">AndCode</string>
     <string name="unofficial_client">Client open source non officiel</string>
 
     <string name="nav_home">Accueil</string>
@@ -286,6 +286,12 @@
     <string name="adb_pairing_in_progress">Association en cours…</string>
     <string name="adb_connecting_in_progress">Connexion en cours…</string>
     <string name="adb_requires_android_11">Nécessite Android 11 ou version ultérieure</string>
+    <string name="accessibility_service_description">Permet à l\'agent OpenCode de lire l\'écran, taper, glisser et saisir du texte sans ADB. Expose une API HTTP locale sur le port 4098.</string>
+    <string name="accessibility_setup_title">Service d\'accessibilité</string>
+    <string name="accessibility_setup_description">Active la lecture d\'écran et le contrôle par gestes sans ADB. L\'agent peut utiliser curl pour interagir avec l\'appareil.</string>
+    <string name="accessibility_status_disconnected">Non activé</string>
+    <string name="accessibility_status_connected">Actif (port %1$d)</string>
+    <string name="accessibility_enable_button">Activer dans les paramètres</string>
     <string name="runtime_status_not_installed">Non installé</string>
     <string name="runtime_status_setting_up">Configuration en cours</string>
     <string name="runtime_status_starting">Démarrage</string>
@@ -604,7 +610,7 @@
     <string name="cd_expand_dropdown">Expand dropdown</string>
     <string name="cd_expand_collapse">Expand or collapse</string>
     <string name="cd_search">Search</string>
-    <string name="cd_app_logo">OpenCode</string>
+    <string name="cd_app_logo">AndCode</string>
     <string name="cd_permission">Permission</string>
     <string name="cd_runtime_type">Runtime type</string>
     <string name="cd_new_chat">New chat</string>
@@ -833,7 +839,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">Impossible d’installer l’environnement local</string>
     <string name="runtime_error_reinstall_failed">Impossible de réinstaller l’environnement local</string>
     <string name="runtime_error_start_failed">Impossible de démarrer OpenCode local</string>
@@ -852,12 +857,6 @@
     <string name="runtime_step_preparing_update">Préparation de la mise à jour</string>
     <string name="runtime_step_rolling_back_to">Retour à OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">Installation de Claude Code</string>
-    <string name="install_step_preparing_antigravity_rootfs">Préparation de Debian Bookworm pour Antigravity</string>
-    <string name="install_step_downloading_antigravity">Téléchargement et vérification d\'Antigravity officiel</string>
-    <string name="install_step_installing_antigravity">Installation d\'Antigravity</string>
-    <string name="antigravity_permission_plan_desc">Antigravity lit et planifie, sans jamais modifier de fichiers ni exécuter de commandes.</string>
-    <string name="antigravity_permission_accept_edits_desc">Antigravity peut modifier des fichiers et exécuter des commandes dans l\'espace de travail sans demander. Recommandé.</string>
-    <string name="antigravity_permission_full_access_desc">Antigravity peut exécuter n\'importe quelle commande sans demander. À utiliser avec prudence.</string>
     <string name="claude_permission_plan">Planification seule</string>
     <string name="claude_permission_plan_desc">Claude lit et planifie, sans jamais modifier de fichiers ni exécuter de commandes.</string>
     <string name="claude_permission_accept_edits">Accepter les modifications</string>
@@ -891,7 +890,6 @@
     <string name="setup_agents_description">Choisissez les agents de codage à installer sur cet appareil. Les deux s’exécutent dans le même environnement Linux et vous pourrez ajouter l’autre plus tard.</string>
     <string name="setup_agent_claude_code_desc">Connectez-vous avec votre compte Claude dans le navigateur. Télécharge environ 80 Mo.</string>
     <string name="setup_agent_opencode_desc">Utilisez vos propres clés de fournisseurs de modèles. Télécharge environ 120 Mo.</string>
-    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">Sélectionnez au moins un agent pour continuer.</string>
     <string name="setup_step_sign_in">Connexion</string>
     <string name="setup_sign_in_description">Connectez les comptes qu’utiliseront vos agents.</string>
@@ -909,11 +907,4 @@
     <string name="setup_download_agents_description">Prépare l’environnement Linux partagé et les agents que vous avez choisis.</string>
     <string name="settings_agents_row">Agents</string>
     <string name="settings_agents_section">Agents</string>
-    <string name="antigravity_install_button">Installer Antigravity</string>
-    <string name="antigravity_status_signed_out">Déconnecté</string>
-    <string name="antigravity_sign_in_button">Se connecter à Antigravity</string>
-    <string name="antigravity_auth_starting">Démarrage de la connexion…</string>
-    <string name="antigravity_auth_instructions">Approuvez la demande Google dans le navigateur, puis collez le code ici.</string>
-    <string name="antigravity_auth_verifying">Vérification…</string>
-    <string name="antigravity_signed_in">Connecté à Antigravity</string>
 </resources>

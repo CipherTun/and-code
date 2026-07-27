@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OpenCode Android</string>
+    <string name="app_name">AndCode</string>
     <string name="unofficial_client">非公式オープンソースクライアント</string>
 
     <string name="nav_home">ホーム</string>
@@ -286,6 +286,12 @@
     <string name="adb_pairing_in_progress">ペアリング中…</string>
     <string name="adb_connecting_in_progress">接続中…</string>
     <string name="adb_requires_android_11">Android 11以降が必要です</string>
+    <string name="accessibility_service_description">OpenCodeエージェントがADBなしで画面読み取り、タップ、スワイプ、テキスト入力を行えるようにします。ローカルHTTPサーバー（ポート4098）を提供します。</string>
+    <string name="accessibility_setup_title">アクセシビリティサービス</string>
+    <string name="accessibility_setup_description">ADBなしで画面読み取りとジェスチャー制御を有効にします。エージェントはcurl経由でデバイスを操作できます。</string>
+    <string name="accessibility_status_disconnected">無効</string>
+    <string name="accessibility_status_connected">アクティブ（ポート %1$d）</string>
+    <string name="accessibility_enable_button">設定で有効にする</string>
     <string name="runtime_status_not_installed">未インストール</string>
     <string name="runtime_status_setting_up">セットアップ中</string>
     <string name="runtime_status_starting">起動中</string>
@@ -618,7 +624,7 @@
     <string name="cd_expand_dropdown">ドロップダウンを展開</string>
     <string name="cd_expand_collapse">展開または折りたたみ</string>
     <string name="cd_search">検索</string>
-    <string name="cd_app_logo">OpenCode</string>
+    <string name="cd_app_logo">AndCode</string>
     <string name="cd_permission">権限</string>
     <string name="cd_runtime_type">ランタイムタイプ</string>
     <string name="cd_new_chat">新しいチャット</string>
@@ -847,7 +853,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">ローカルランタイムの導入に失敗しました</string>
     <string name="runtime_error_reinstall_failed">ローカルランタイムの再導入に失敗しました</string>
     <string name="runtime_error_start_failed">ローカルOpenCodeを起動できません</string>
@@ -866,12 +871,6 @@
     <string name="runtime_step_preparing_update">更新を準備しています</string>
     <string name="runtime_step_rolling_back_to">OpenCode %1$sへロールバックしています</string>
     <string name="install_step_installing_claude_code">Claude Codeを導入しています</string>
-    <string name="install_step_preparing_antigravity_rootfs">Antigravity用のDebian Bookwormを準備しています</string>
-    <string name="install_step_downloading_antigravity">公式Antigravityをダウンロードして検証しています</string>
-    <string name="install_step_installing_antigravity">Antigravityを導入しています</string>
-    <string name="antigravity_permission_plan_desc">Antigravityは読み取りと計画のみ行い、ファイル編集やコマンド実行はしません。</string>
-    <string name="antigravity_permission_accept_edits_desc">Antigravityがワークスペース内のファイル編集とコマンド実行を確認なしに行えます。推奨設定です。</string>
-    <string name="antigravity_permission_full_access_desc">Antigravityが確認なしにあらゆるコマンドを実行できます。取り扱いにご注意ください。</string>
     <string name="claude_permission_plan">プランのみ</string>
     <string name="claude_permission_plan_desc">Claudeは読み取りと計画のみ行い、ファイル編集やコマンド実行はしません。</string>
     <string name="claude_permission_accept_edits">編集を許可</string>
@@ -905,7 +904,6 @@
     <string name="setup_agents_description">この端末に導入するコーディングエージェントを選んでください。どちらも同じLinux環境で動作し、後からもう一方を追加できます。</string>
     <string name="setup_agent_claude_code_desc">ブラウザでClaudeアカウントにサインインします。約80MBをダウンロードします。</string>
     <string name="setup_agent_opencode_desc">任意のモデルプロバイダーのキーを使います。約120MBをダウンロードします。</string>
-    <string name="setup_agent_antigravity_desc">公式Google CLIをブラウザOAuthで利用します。約50MBをダウンロードします。</string>
     <string name="setup_agents_required">続けるには少なくとも1つ選んでください。</string>
     <string name="setup_step_sign_in">サインイン</string>
     <string name="setup_sign_in_description">エージェントが使用するアカウントを接続します。</string>
@@ -923,11 +921,4 @@
     <string name="setup_download_agents_description">共有のLinux環境と、選んだエージェントを準備します。</string>
     <string name="settings_agents_row">エージェント</string>
     <string name="settings_agents_section">エージェント</string>
-    <string name="antigravity_install_button">Antigravityをインストール</string>
-    <string name="antigravity_status_signed_out">サインアウト済み</string>
-    <string name="antigravity_sign_in_button">Antigravityにサインイン</string>
-    <string name="antigravity_auth_starting">サインインを開始しています…</string>
-    <string name="antigravity_auth_instructions">ブラウザでGoogleのリクエストを承認し、表示されたコードをここに貼り付けてください。</string>
-    <string name="antigravity_auth_verifying">確認しています…</string>
-    <string name="antigravity_signed_in">Antigravityにサインイン済み</string>
 </resources>

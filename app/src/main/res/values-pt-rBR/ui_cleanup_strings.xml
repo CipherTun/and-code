@@ -13,6 +13,8 @@
     <string name="chat_build_subtitle_compact">Peça ao seu agente para implementar, corrigir ou investigar.</string>
     <string name="settings_wake_word_row">Palavra de ativação</string>
     <string name="settings_wake_word_value">Não instalado</string>
+    <string name="wake_word_active">Ativo</string>
+    <string name="wake_word_inactive">Desativado</string>
     <string name="setup_step_counter">Passo %1$d de %2$d</string>
     <string name="setup_next_action">Próximo</string>
     <string name="setup_back_action">Voltar</string>
@@ -31,6 +33,10 @@
     <string name="provider_saved_credentials_title">Credenciais salvas</string>
     <string name="provider_add_credentials_title">Adicionar ou atualizar uma chave API</string>
     <string name="voice_settings_intro">Configure a entrada de voz e as respostas faladas.</string>
+    <string name="assistant_target_section">Alvo do assistente</string>
+    <string name="assistant_agent_label">Agente a ativar</string>
+    <string name="assistant_agent_auto">Seguir agente atual</string>
+    <string name="assistant_workspace_label">Espaço de trabalho</string>
     <string name="voice_conversation_section">Conversa por voz</string>
     <string name="voice_response_description">Lê em voz alta as respostas do agente.</string>
     <string name="wake_word_section_title">Invocação</string>

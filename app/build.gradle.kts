@@ -12,7 +12,7 @@ val githubClientId =
     (
         System.getenv("GITHUB_CLIENT_ID")
             ?: findProperty("GITHUB_CLIENT_ID")?.toString()
-            ?: "Ov23liTw50EzjFhS9ESg"
+            ?: ""
     ).trim()
 val generatedRuntimeAssets = rootProject.layout.buildDirectory.dir("generated/runtime-assets")
 val generatedRuntimeJni = rootProject.layout.buildDirectory.dir("generated/runtime-jni")
@@ -51,26 +51,26 @@ val prepareOpenCodeRuntimeNativeLibs =
 
 val releaseStoreFile =
     (
-        System.getenv("OPENCODE_STORE_FILE")
-            ?: findProperty("OPENCODE_STORE_FILE")?.toString()
+        System.getenv("AND_CODE_STORE_FILE")
+            ?: findProperty("AND_CODE_STORE_FILE")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val releaseStorePassword =
     (
-        System.getenv("OPENCODE_STORE_PASSWORD")
-            ?: findProperty("OPENCODE_STORE_PASSWORD")?.toString()
+        System.getenv("AND_CODE_STORE_PASSWORD")
+            ?: findProperty("AND_CODE_STORE_PASSWORD")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val releaseKeyAlias =
     (
-        System.getenv("OPENCODE_KEY_ALIAS")
-            ?: findProperty("OPENCODE_KEY_ALIAS")?.toString()
+        System.getenv("AND_CODE_KEY_ALIAS")
+            ?: findProperty("AND_CODE_KEY_ALIAS")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val releaseKeyPassword =
     (
-        System.getenv("OPENCODE_KEY_PASSWORD")
-            ?: findProperty("OPENCODE_KEY_PASSWORD")?.toString()
+        System.getenv("AND_CODE_KEY_PASSWORD")
+            ?: findProperty("AND_CODE_KEY_PASSWORD")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val hasReleaseSigning =
@@ -91,15 +91,15 @@ val hasReleaseSigning =
         }
 
 android {
-    namespace = "com.opencode.android"
+    namespace = "com.yugahashimoto.andcode"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.opencode.android"
+        applicationId = "com.yugahashimoto.andcode"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.5.0"
+        versionCode = 15
+        versionName = "1.0.0"
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"$githubClientId\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -142,7 +142,7 @@ android {
         // The androidx.startup Initializers are deliberately not auto-started: the manifest removes
         // their <meta-data> entries with tools:node="remove" so they cannot run inside
         // InitializationProvider (which fires before Application.onCreate, where the dependencies
-        // they need are built). OpenCodeApplication initializes them itself instead. Without this,
+        // they need are built). AndCodeApplication initializes them itself instead. Without this,
         // lintVitalRelease fails the check and no release APK can be produced.
         disable += "EnsureInitializerMetadata"
     }
@@ -207,7 +207,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("org.tukaani:xz:1.9")
 
     // QR code scanning for connection setup
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

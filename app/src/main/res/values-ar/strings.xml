@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">OpenCode Android</string>
+    <string name="app_name">AndCode</string>
     <string name="unofficial_client">عميل مفتوح المصدر غير رسمي</string>
 
     <string name="nav_home">الرئيسية</string>
@@ -286,6 +286,12 @@
     <string name="adb_pairing_in_progress">جارٍ الإقران…</string>
     <string name="adb_connecting_in_progress">جارٍ الاتصال…</string>
     <string name="adb_requires_android_11">يتطلب Android 11 أو أحدث</string>
+    <string name="accessibility_service_description">يتيح لوكيل OpenCode قراءة الشاشة والنقر والتمرير وإدخال النص بدون ADB. يوفر خادم HTTP محلي على المنفذ 4098.</string>
+    <string name="accessibility_setup_title">خدمة إمكانية الوصول</string>
+    <string name="accessibility_setup_description">تفعيل قراءة الشاشة والتحكم بالإيماءات بدون ADB. يمكن للوكيل استخدام curl للتفاعل مع الجهاز.</string>
+    <string name="accessibility_status_disconnected">غير مفعّل</string>
+    <string name="accessibility_status_connected">نشط (المنفذ %1$d)</string>
+    <string name="accessibility_enable_button">تفعيل في الإعدادات</string>
     <string name="runtime_status_not_installed">غير مثبت</string>
     <string name="runtime_status_setting_up">جارٍ الإعداد</string>
     <string name="runtime_status_starting">جارٍ البدء</string>
@@ -604,7 +610,7 @@
     <string name="cd_expand_dropdown">Expand dropdown</string>
     <string name="cd_expand_collapse">Expand or collapse</string>
     <string name="cd_search">Search</string>
-    <string name="cd_app_logo">OpenCode</string>
+    <string name="cd_app_logo">AndCode</string>
     <string name="cd_permission">Permission</string>
     <string name="cd_runtime_type">Runtime type</string>
     <string name="cd_new_chat">New chat</string>
@@ -833,7 +839,6 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
-    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">تعذّر تثبيت بيئة التشغيل المحلية</string>
     <string name="runtime_error_reinstall_failed">تعذّرت إعادة تثبيت بيئة التشغيل المحلية</string>
     <string name="runtime_error_start_failed">تعذّر تشغيل OpenCode المحلي</string>
@@ -852,12 +857,6 @@
     <string name="runtime_step_preparing_update">جارٍ تحضير التحديث</string>
     <string name="runtime_step_rolling_back_to">جارٍ الرجوع إلى OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">جارٍ تثبيت Claude Code</string>
-    <string name="install_step_preparing_antigravity_rootfs">جارٍ تجهيز Debian Bookworm لـ Antigravity</string>
-    <string name="install_step_downloading_antigravity">جارٍ تنزيل والتحقق من Antigravity الرسمي</string>
-    <string name="install_step_installing_antigravity">جارٍ تثبيت Antigravity</string>
-    <string name="antigravity_permission_plan_desc">يقرأ Antigravity ويخطّط فقط دون تعديل الملفات أو تنفيذ الأوامر.</string>
-    <string name="antigravity_permission_accept_edits_desc">يمكن لـ Antigravity تعديل الملفات وتنفيذ الأوامر في مساحة العمل دون سؤال. موصى به.</string>
-    <string name="antigravity_permission_full_access_desc">يمكن لـ Antigravity تنفيذ أي أمر دون سؤال. استخدمه بحذر.</string>
     <string name="claude_permission_plan">التخطيط فقط</string>
     <string name="claude_permission_plan_desc">يقرأ Claude ويخطّط فقط دون تعديل الملفات أو تنفيذ الأوامر.</string>
     <string name="claude_permission_accept_edits">قبول التعديلات</string>
@@ -891,7 +890,6 @@
     <string name="setup_agents_description">اختر وكلاء البرمجة المراد تثبيتهم على هذا الجهاز. كلاهما يعمل في بيئة Linux نفسها، ويمكنك إضافة الآخر لاحقًا.</string>
     <string name="setup_agent_claude_code_desc">سجّل الدخول بحساب Claude عبر المتصفح. يتم تنزيل حوالي 80 ميغابايت.</string>
     <string name="setup_agent_opencode_desc">استخدم مفاتيح مزوّدي النماذج الخاصة بك. يتم تنزيل حوالي 120 ميغابايت.</string>
-    <string name="setup_agent_antigravity_desc">Use the official Google CLI with browser OAuth. Downloads about 50 MB.</string>
     <string name="setup_agents_required">اختر وكيلًا واحدًا على الأقل للمتابعة.</string>
     <string name="setup_step_sign_in">تسجيل الدخول</string>
     <string name="setup_sign_in_description">اربط الحسابات التي سيستخدمها وكلاؤك.</string>
@@ -909,11 +907,4 @@
     <string name="setup_download_agents_description">تحضير بيئة Linux المشتركة والوكلاء الذين اخترتهم.</string>
     <string name="settings_agents_row">الوكلاء</string>
     <string name="settings_agents_section">الوكلاء</string>
-    <string name="antigravity_install_button">تثبيت Antigravity</string>
-    <string name="antigravity_status_signed_out">تم تسجيل الخروج</string>
-    <string name="antigravity_sign_in_button">تسجيل الدخول إلى Antigravity</string>
-    <string name="antigravity_auth_starting">جارٍ بدء تسجيل الدخول…</string>
-    <string name="antigravity_auth_instructions">وافق على طلب Google في المتصفح، ثم الصق الرمز هنا.</string>
-    <string name="antigravity_auth_verifying">جارٍ التحقق…</string>
-    <string name="antigravity_signed_in">تم تسجيل الدخول إلى Antigravity</string>
 </resources>
