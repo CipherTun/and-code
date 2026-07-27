@@ -2,10 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <queries>
-        <package android:name="com.yugahashimoto.androidcode" />
+        <package android:name="com.yugahashimoto.andcode" />
     </queries>
 
     <instrumentation
         android:name="androidx.test.runner.AndroidJUnitRunner"
-        android:targetPackage="com.yugahashimoto.androidcode" />
+        android:targetPackage="com.yugahashimoto.andcode" />
 </manifest>

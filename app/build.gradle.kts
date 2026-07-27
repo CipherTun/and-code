@@ -51,26 +51,26 @@ val prepareOpenCodeRuntimeNativeLibs =
 
 val releaseStoreFile =
     (
-        System.getenv("ANDROID_CODE_STORE_FILE")
-            ?: findProperty("ANDROID_CODE_STORE_FILE")?.toString()
+        System.getenv("AND_CODE_STORE_FILE")
+            ?: findProperty("AND_CODE_STORE_FILE")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val releaseStorePassword =
     (
-        System.getenv("ANDROID_CODE_STORE_PASSWORD")
-            ?: findProperty("ANDROID_CODE_STORE_PASSWORD")?.toString()
+        System.getenv("AND_CODE_STORE_PASSWORD")
+            ?: findProperty("AND_CODE_STORE_PASSWORD")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val releaseKeyAlias =
     (
-        System.getenv("ANDROID_CODE_KEY_ALIAS")
-            ?: findProperty("ANDROID_CODE_KEY_ALIAS")?.toString()
+        System.getenv("AND_CODE_KEY_ALIAS")
+            ?: findProperty("AND_CODE_KEY_ALIAS")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val releaseKeyPassword =
     (
-        System.getenv("ANDROID_CODE_KEY_PASSWORD")
-            ?: findProperty("ANDROID_CODE_KEY_PASSWORD")?.toString()
+        System.getenv("AND_CODE_KEY_PASSWORD")
+            ?: findProperty("AND_CODE_KEY_PASSWORD")?.toString()
     )
         ?.takeIf { it.isNotBlank() }
 val hasReleaseSigning =
@@ -91,11 +91,11 @@ val hasReleaseSigning =
         }
 
 android {
-    namespace = "com.yugahashimoto.androidcode"
+    namespace = "com.yugahashimoto.andcode"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.yugahashimoto.androidcode"
+        applicationId = "com.yugahashimoto.andcode"
         minSdk = 26
         targetSdk = 35
         versionCode = 14
@@ -142,7 +142,7 @@ android {
         // The androidx.startup Initializers are deliberately not auto-started: the manifest removes
         // their <meta-data> entries with tools:node="remove" so they cannot run inside
         // InitializationProvider (which fires before Application.onCreate, where the dependencies
-        // they need are built). AndroidCodeApplication initializes them itself instead. Without this,
+        // they need are built). AndCodeApplication initializes them itself instead. Without this,
         // lintVitalRelease fails the check and no release APK can be produced.
         disable += "EnsureInitializerMetadata"
     }

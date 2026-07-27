@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-AndroidCode includes or depends on the following third-party software.
+AndCode includes or depends on the following third-party software.
 
 ## AndroidX / Jetpack
 
@@ -63,7 +63,7 @@ AndroidCode includes or depends on the following third-party software.
 
 - Official musl binary downloaded at setup/update time (version pinned in manifest / GitHub Releases)
 - License: See https://github.com/sst/opencode
-- AndroidCode integrates OpenCode as an independent third-party coding agent runtime and is not affiliated with the OpenCode project.
+- AndCode integrates OpenCode as an independent third-party coding agent runtime and is not affiliated with the OpenCode project.
 
 ## Generating an SBOM
 

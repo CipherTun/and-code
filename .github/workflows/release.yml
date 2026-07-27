@@ -45,7 +45,7 @@ jobs:
           path: |
             build/generated/runtime-assets
             build/generated/runtime-jni
-          key: android-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
+          key: and-code-runtime-${{ runner.os }}-${{ hashFiles('runtime_tools/termux_assets.lock.json', 'runtime_tools/termux_assets.py', 'scripts/prepare_android_runtime_*.py') }}
 
       - name: Decode release keystore
         env:
@@ -86,14 +86,14 @@ jobs:
               --title "$TAG" \
               --generate-notes
           fi
-           cp app/build/outputs/apk/debug/app-debug.apk "android-code-$TAG-debug.apk"
-           ASSETS=("android-code-$TAG-debug.apk")
+           cp app/build/outputs/apk/debug/app-debug.apk "and-code-$TAG-debug.apk"
+           ASSETS=("and-code-$TAG-debug.apk")
            if [ -f app/build/outputs/apk/release/app-release.apk ]; then
-             cp app/build/outputs/apk/release/app-release.apk "android-code-$TAG-release.apk"
-             ASSETS+=("android-code-$TAG-release.apk")
-             gh release delete-asset "$TAG" "android-code-$TAG-release-unsigned.apk" -y || true
+             cp app/build/outputs/apk/release/app-release.apk "and-code-$TAG-release.apk"
+             ASSETS+=("and-code-$TAG-release.apk")
+             gh release delete-asset "$TAG" "and-code-$TAG-release-unsigned.apk" -y || true
            else
-             cp app/build/outputs/apk/release/app-release-unsigned.apk "android-code-$TAG-release-unsigned.apk"
-             ASSETS+=("android-code-$TAG-release-unsigned.apk")
+             cp app/build/outputs/apk/release/app-release-unsigned.apk "and-code-$TAG-release-unsigned.apk"
+             ASSETS+=("and-code-$TAG-release-unsigned.apk")
           fi
           gh release upload "$TAG" --clobber "${ASSETS[@]}"

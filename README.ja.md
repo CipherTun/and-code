@@ -1,11 +1,11 @@
-# AndroidCode
+# AndCode
 
 **AIコーディングエージェントをAndroidのネイティブGUIでローカル実行 — ターミナル不要です。**
 
-AndroidCodeはAIコーディングエージェントをスマートフォンで使えるようにするネイティブAndroid GUIアプリです。[OpenCode](https://github.com/sst/opencode)や[Claude Code](https://github.com/anthropics/claude-code)とタッチ操作中心のインターフェースで対話できます — 端末エミュレータもSSHもPCも、オンデバイス実行には一切不要です。PRootによるオンデバイスランタイムか、PC/Mac/Linux上の既存OpenCodeサーバーへのリモート接続で動作します。
+AndCodeはAIコーディングエージェントをスマートフォンで使えるようにするネイティブAndroid GUIアプリです。[OpenCode](https://github.com/sst/opencode)や[Claude Code](https://github.com/anthropics/claude-code)とタッチ操作中心のインターフェースで対話できます — 端末エミュレータもSSHもPCも、オンデバイス実行には一切不要です。PRootによるオンデバイスランタイムか、PC/Mac/Linux上の既存OpenCodeサーバーへのリモート接続で動作します。
 
 > [!IMPORTANT]
-> AndroidCodeは独立したオープンソースプロジェクトです。OpenCodeおよびAnthropicとは一切関係ありません。
+> AndCodeは独立したオープンソースプロジェクトです。OpenCodeおよびAnthropicとは一切関係ありません。
 
 [English README](README.md)
 
@@ -40,7 +40,7 @@ AndroidCodeはAIコーディングエージェントをスマートフォンで�
 
 ## リモートOpenCode
 
-オンデバイスエージェントに加えて、AndroidCodeは追加機能としてPC/Mac/Linux上のOpenCodeに接続できます：
+オンデバイスエージェントに加えて、AndCodeは追加機能としてPC/Mac/Linux上のOpenCodeに接続できます：
 
 - **リモート接続** — LANまたはTailscale経由で接続
 - **実行先切り替え** — 会話中でもAndroidローカル／PCリモート間をシームレスに切り替え（ハンドオフ）
@@ -50,7 +50,7 @@ AndroidCodeはAIコーディングエージェントをスマートフォンで�
 
 ### オンデバイス実行（PC不要）
 
-1. [Releases](https://github.com/yuga-hashimoto/android-code/releases/latest)からAPKをインストール
+1. [Releases](https://github.com/yuga-hashimoto/and-code/releases/latest)からAPKをインストール
 2. アプリを開く → **作業先** → **このAndroid端末** → **この端末へセットアップ**
 3. ランタイムのダウンロード・インストールを待つ（約2分）
 4. コーディングエージェントを選択してチャット開始
@@ -90,7 +90,7 @@ OPENCODE_SERVER_PASSWORD='your-strong-password' \
 
 ## 設計資料
 
-- [AndroidCode v2設計書](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
+- [AndCode v2設計書](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
 - [第一完成版の実装計画](docs/superpowers/plans/2026-07-18-initial-mvp.md)
 - [Androidローカル実行設計](docs/LOCAL_RUNTIME.md)
 

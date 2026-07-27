@@ -1,18 +1,18 @@
-# AndroidCode
+# AndCode
 
 <p align="center">
-  <a href="https://github.com/yuga-hashimoto/android-code/actions/workflows/android.yml"><img src="https://github.com/yuga-hashimoto/android-code/actions/workflows/android.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/yuga-hashimoto/android-code/releases/latest"><img src="https://img.shields.io/github/v/release/yuga-hashimoto/android-code" alt="Release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/yuga-hashimoto/android-code" alt="License: MIT" /></a>
-  <a href="https://github.com/yuga-hashimoto/android-code/releases/latest"><img src="https://img.shields.io/github/downloads/yuga-hashimoto/android-code/total" alt="Downloads" /></a>
+  <a href="https://github.com/yuga-hashimoto/and-code/actions/workflows/android.yml"><img src="https://github.com/yuga-hashimoto/and-code/actions/workflows/android.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/yuga-hashimoto/and-code/releases/latest"><img src="https://img.shields.io/github/v/release/yuga-hashimoto/and-code" alt="Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/yuga-hashimoto/and-code" alt="License: MIT" /></a>
+  <a href="https://github.com/yuga-hashimoto/and-code/releases/latest"><img src="https://img.shields.io/github/downloads/yuga-hashimoto/and-code/total" alt="Downloads" /></a>
 </p>
 
 **Run coding agents locally on Android through a native GUI — no terminal required.**
 
-AndroidCode is a native Android GUI app that brings AI coding agents to your phone. Chat with [OpenCode](https://github.com/sst/opencode) and [Claude Code](https://github.com/anthropics/claude-code) through a touch-first interface — no terminal, no SSH, no PC required for on-device use. It wraps agent runtimes via PRoot (on-device) or connects remotely to your existing OpenCode server on PC/Mac/Linux.
+AndCode is a native Android GUI app that brings AI coding agents to your phone. Chat with [OpenCode](https://github.com/sst/opencode) and [Claude Code](https://github.com/anthropics/claude-code) through a touch-first interface — no terminal, no SSH, no PC required for on-device use. It wraps agent runtimes via PRoot (on-device) or connects remotely to your existing OpenCode server on PC/Mac/Linux.
 
 > [!IMPORTANT]
-> AndroidCode is an independent open-source project. It is **not** affiliated with OpenCode or Anthropic.
+> AndCode is an independent open-source project. It is **not** affiliated with OpenCode or Anthropic.
 
 [日本語のREADMEはこちら](README.ja.md)
 
@@ -47,7 +47,7 @@ On-device agents run inside an Alpine Linux environment via PRoot. Remote OpenCo
 
 ## Remote OpenCode
 
-In addition to on-device agents, AndroidCode can connect to OpenCode running on your PC/Mac/Linux as an additional feature:
+In addition to on-device agents, AndCode can connect to OpenCode running on your PC/Mac/Linux as an additional feature:
 
 - **Remote connection** — Connect over LAN or Tailscale
 - **Runtime switching** — Seamlessly switch between local and remote execution, even mid-conversation (handoff)
@@ -67,7 +67,7 @@ In addition to on-device agents, AndroidCode can connect to OpenCode running on 
 
 ### Option A: On-Device (no PC needed)
 
-1. Install the APK from [Releases](https://github.com/yuga-hashimoto/android-code/releases/latest)
+1. Install the APK from [Releases](https://github.com/yuga-hashimoto/and-code/releases/latest)
 2. Open the app → tap **Workspaces** → **This Android device** → **Set up on this device**
 3. Wait for the runtime to download and install (~2 min on a good connection)
 4. Select your coding agent and start chatting
@@ -178,7 +178,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 
 ## Design Documents
 
-- [AndroidCode v2 Design](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
+- [AndCode v2 Design](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
 - [Initial MVP Plan](docs/superpowers/plans/2026-07-18-initial-mvp.md)
 - [Local Runtime Design](docs/LOCAL_RUNTIME.md)
 

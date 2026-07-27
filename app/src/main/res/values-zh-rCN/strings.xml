@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">AndroidCode</string>
+    <string name="app_name">AndCode</string>
     <string name="unofficial_client">非官方开源客户端</string>
 
     <string name="nav_home">首页</string>
@@ -610,7 +610,7 @@
     <string name="cd_expand_dropdown">Expand dropdown</string>
     <string name="cd_expand_collapse">Expand or collapse</string>
     <string name="cd_search">Search</string>
-    <string name="cd_app_logo">AndroidCode</string>
+    <string name="cd_app_logo">AndCode</string>
     <string name="cd_permission">Permission</string>
     <string name="cd_runtime_type">Runtime type</string>
     <string name="cd_new_chat">New chat</string>

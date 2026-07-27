@@ -42,9 +42,9 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
-# AndroidCode REST payloads are matched by @SerialName, and persisted JSON must keep stable field names
+# AndCode REST payloads are matched by @SerialName, and persisted JSON must keep stable field names
 # across app updates, so these must not be renamed.
--keep class com.yugahashimoto.androidcode.core.api.** { *; }
--keep class com.yugahashimoto.androidcode.data.connection.ConnectionProfile { *; }
--keep class com.yugahashimoto.androidcode.data.settings.Draft { *; }
--keep class com.yugahashimoto.androidcode.runtime.local.LocalRuntimeMetadata { *; }
+-keep class com.yugahashimoto.andcode.core.api.** { *; }
+-keep class com.yugahashimoto.andcode.data.connection.ConnectionProfile { *; }
+-keep class com.yugahashimoto.andcode.data.settings.Draft { *; }
+-keep class com.yugahashimoto.andcode.runtime.local.LocalRuntimeMetadata { *; }

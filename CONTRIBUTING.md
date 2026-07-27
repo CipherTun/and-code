@@ -1,4 +1,4 @@
-# Contributing to AndroidCode
+# Contributing to AndCode
 
 Thank you for your interest in contributing!
 
