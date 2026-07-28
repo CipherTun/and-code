@@ -904,6 +904,7 @@
     <string name="setup_agents_required">请至少选择一个智能体以继续。</string>
     <string name="setup_step_sign_in">登录</string>
     <string name="setup_sign_in_description">连接智能体将使用的账号。</string>
+    <string name="setup_sign_in_none_installed">尚未安装任何智能体，因此没有可登录的对象。</string>
     <string name="setup_runtime_shared_note">所选智能体共用一个 Linux 环境，因此只需下载一次。</string>
     <string name="local_agent_on_device">%1$s · 本地</string>
     <string name="runtime_status_stopped_reason">本地运行时已停止</string>

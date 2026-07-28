@@ -918,6 +918,7 @@
     <string name="setup_agents_required">続けるには少なくとも1つ選んでください。</string>
     <string name="setup_step_sign_in">サインイン</string>
     <string name="setup_sign_in_description">エージェントが使用するアカウントを接続します。</string>
+    <string name="setup_sign_in_none_installed">インストール済みのエージェントがないため、サインインする対象がありません。</string>
     <string name="setup_runtime_shared_note">選んだエージェントは1つのLinux環境を共有するため、このダウンロードは一度だけです。</string>
     <string name="local_agent_on_device">%1$s・ローカル</string>
     <string name="runtime_status_stopped_reason">ローカルランタイムは停止しています</string>

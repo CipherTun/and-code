@@ -918,6 +918,7 @@
     <string name="setup_agents_required">Select at least one agent to continue.</string>
     <string name="setup_step_sign_in">Sign in</string>
     <string name="setup_sign_in_description">Connect the accounts your agents will use.</string>
+    <string name="setup_sign_in_none_installed">No agent is installed yet, so there is nothing to sign in to.</string>
     <string name="setup_runtime_shared_note">The selected agents share one Linux environment, so this download happens only once.</string>
     <string name="local_agent_on_device">%1$s · Local</string>
     <string name="runtime_status_stopped_reason">The local runtime is stopped</string>

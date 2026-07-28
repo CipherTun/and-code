@@ -904,6 +904,7 @@
     <string name="setup_agents_required">اختر وكيلًا واحدًا على الأقل للمتابعة.</string>
     <string name="setup_step_sign_in">تسجيل الدخول</string>
     <string name="setup_sign_in_description">اربط الحسابات التي سيستخدمها وكلاؤك.</string>
+    <string name="setup_sign_in_none_installed">لا يوجد وكيل مثبّت بعد، لذا لا يوجد ما يمكن تسجيل الدخول إليه.</string>
     <string name="setup_runtime_shared_note">يتشارك الوكلاء المحددون بيئة Linux واحدة، لذا تتم عملية التنزيل مرة واحدة فقط.</string>
     <string name="local_agent_on_device">%1$s · محلي</string>
     <string name="runtime_status_stopped_reason">بيئة التشغيل المحلية متوقفة</string>

@@ -904,6 +904,7 @@
     <string name="setup_agents_required">Selecione ao menos um agente para continuar.</string>
     <string name="setup_step_sign_in">Entrar</string>
     <string name="setup_sign_in_description">Conecte as contas que seus agentes vão usar.</string>
+    <string name="setup_sign_in_none_installed">Nenhum agente instalado ainda, então não há nada em que fazer login.</string>
     <string name="setup_runtime_shared_note">Os agentes selecionados compartilham um ambiente Linux, então o download acontece apenas uma vez.</string>
     <string name="local_agent_on_device">%1$s · Local</string>
     <string name="runtime_status_stopped_reason">O ambiente local está parado</string>
