@@ -117,6 +117,13 @@ object RuntimeArchive {
                 entry = tar.nextEntry
             }
         }
+        // Deepest link first, so a link to a directory is copied only once the links *inside* that
+        // directory have themselves been materialized. Debian's merged-/usr layout is exactly this
+        // case: `/bin` links to `usr/bin`, and `usr/bin/sh` links to `dash`. Resolved in archive
+        // order, `/bin` was copied while `usr/bin/sh` was still an unresolved link, so the guest
+        // ended up with no `/bin/sh` at all and every `proot ... /bin/sh -c` failed with
+        // "'/bin/sh' not found" - which is what broke the Antigravity rootfs install on device.
+        pendingSymlinks.sortByDescending { (target, _) -> target.path.count { it == File.separatorChar } }
         repeat(pendingSymlinks.size + 1) {
             var resolved = 0
             pendingSymlinks.toList().forEach { (target, linkName) ->
@@ -139,6 +146,13 @@ object RuntimeArchive {
                     }
                     source.isDirectory -> {
                         source.copyRecursively(target, overwrite = true)
+                        // `copyTo` - and so `copyRecursively` - copies bytes only. Without this the
+                        // whole of `/bin` arrived as rw-------, so even the binaries that *were*
+                        // copied could not be executed.
+                        source.walkTopDown().forEach { file ->
+                            val copy = File(target, file.relativeTo(source).path)
+                            if (file.isFile && copy.isFile) copy.setExecutable(file.canExecute(), false)
+                        }
                         resolved++
                     }
                 }

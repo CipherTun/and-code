@@ -94,9 +94,25 @@ class DebianRootfsInstaller(
         packageFile.delete()
     }
 
+    /**
+     * Drops the `/etc/alternatives` entries the extractor materialized as plain copies.
+     *
+     * [RuntimeArchive] deliberately replaces symlinks with copies of their targets, which is fine
+     * for ordinary files but not for this directory: `update-alternatives` requires each entry to
+     * be a real symlink and aborts with "cannot stat file '/etc/alternatives/pager': Invalid
+     * argument" when it finds a regular file, failing `less`'s postinst and with it the whole apt
+     * run. Removing them lets dpkg install its own links inside the guest, where symlinks work.
+     */
+    private fun resetAlternatives(rootfs: File) {
+        File(rootfs, "etc/alternatives").listFiles()?.forEach { entry ->
+            if (entry.isFile && entry.name != "README") entry.delete()
+        }
+    }
+
     private fun installDevelopmentTools(rootfs: File) {
         val suite = commandSuite ?: return
         val prootTmp = File(runtimeDirectory, "proot-tmp").apply { mkdirs() }
+        resetAlternatives(rootfs)
         File(rootfs, "etc/apt/sources.list").apply {
             parentFile?.mkdirs()
             writeText(
@@ -121,9 +137,12 @@ class DebianRootfsInstaller(
                 "/sys",
                 "-w",
                 "/root",
-                "/bin/sh",
+                // Debian 12 has a merged /usr: this is the real interpreter, and `/bin/sh` only
+                // reaches it through the `/bin` -> `usr/bin` link. Naming it directly keeps the
+                // install working even against a rootfs extracted by an older build.
+                "/usr/bin/sh",
                 "-c",
-                "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin && " +
+                GUEST_ENV +
                     "apt-get update -qq && " +
                     "DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends " +
                     "git curl wget jq tree file less nano openssh-client ripgrep ca-certificates " +
@@ -177,9 +196,10 @@ class DebianRootfsInstaller(
                 "/sys",
                 "-w",
                 "/root",
-                "/bin/sh",
+                // See installDevelopmentTools: the real interpreter lives under the merged /usr.
+                "/usr/bin/sh",
                 "-c",
-                "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin && " +
+                GUEST_ENV +
                     "curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg " +
                     "-o /usr/share/keyrings/githubcli-archive-keyring.gpg && " +
                     "echo \"deb [arch=$arch signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] " +
@@ -226,5 +246,20 @@ class DebianRootfsInstaller(
             source.copyTo(loader, overwrite = true)
             loader.setExecutable(true, false)
         }
+    }
+
+    private companion object {
+        /**
+         * Guest-side environment for every `proot ... /usr/bin/sh -c` run here.
+         *
+         * PRoot hands the child the host process's environment, so without this the guest inherits
+         * `TMPDIR` and `HOME` pointing at Android paths that do not exist inside the rootfs. That is
+         * not cosmetic: ca-certificates' postinst died with "mktemp: failed to create file via
+         * template '/data/user/0/.../command-suite/tmp/ca-certificates.tmp.XXXXXX': No such file or
+         * directory", which failed the whole apt run.
+         */
+        const val GUEST_ENV =
+            "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin " +
+                "TMPDIR=/tmp HOME=/root && "
     }
 }
