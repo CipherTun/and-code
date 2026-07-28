@@ -9,7 +9,7 @@
 
 **Run coding agents locally on Android through a native GUI — no terminal required.**
 
-AndCode is a native Android GUI app that brings AI coding agents to your phone. Chat with [OpenCode](https://github.com/sst/opencode) and [Claude Code](https://github.com/anthropics/claude-code) through a touch-first interface — no terminal, no SSH, no PC required for on-device use. It wraps agent runtimes via PRoot (on-device) or connects remotely to your existing OpenCode server on PC/Mac/Linux.
+AndCode is a native Android GUI app that brings AI coding agents to your phone. Chat with [OpenCode](https://github.com/sst/opencode), [Claude Code](https://github.com/anthropics/claude-code), and [Google Antigravity](https://github.com/google-antigravity/antigravity-cli) through a touch-first interface — no terminal, no SSH, no PC required for on-device use. It wraps agent runtimes via PRoot (on-device) or connects remotely to your existing OpenCode server on PC/Mac/Linux.
 
 > [!IMPORTANT]
 > AndCode is an independent open-source project. It is **not** affiliated with OpenCode or Anthropic.
@@ -24,8 +24,9 @@ AndCode is a native Android GUI app that brings AI coding agents to your phone. 
 |-------|:---------:|:---------:|--------|
 | [OpenCode](https://github.com/sst/opencode) | ✓ | ✓ | Stable |
 | [Claude Code](https://github.com/anthropics/claude-code) | ✓ | — | Beta |
+| [Google Antigravity](https://github.com/google-antigravity/antigravity-cli) | ✓ | — | Beta |
 
-On-device agents run inside an Alpine Linux environment via PRoot. Remote OpenCode connects to a running `opencode serve` instance on your PC, Mac, or Linux machine over LAN or Tailscale.
+On-device agents run inside an Alpine Linux environment via PRoot. Google Antigravity additionally installs a Debian Bookworm rootfs alongside Alpine, since the official `agy` binary links against glibc.
 
 ## Features
 
@@ -44,6 +45,16 @@ On-device agents run inside an Alpine Linux environment via PRoot. Remote OpenCo
 - **Digital assistant** — Register as Android's default assistant (home gesture / corner swipe)
 - **Secure storage** — Connection credentials encrypted with Android Keystore
 - **Bilingual** — English and Japanese UI
+
+## Antigravity
+
+Google Antigravity (`agy`) runs on-device inside the same PRoot environment. Unlike OpenCode and Claude Code which run in Alpine Linux, Antigravity uses a Debian Bookworm rootfs for glibc compatibility with the official CLI binary.
+
+- **OAuth sign-in** — Authenticate via the browser URL + one-time code flow; credentials are stored only in the Linux rootfs (`~/.gemini`), never in Android preferences
+- **Model selection** — Live model catalog fetched from the signed-in `agy` instance (Gemini, Claude, GPT-OSS variants)
+- **Permission modes** — Three-tier control: Plan, Accept Edits, and Full Access (`--dangerously-skip-permissions`)
+- **MCP servers** — Read/write `~/.gemini/config/mcp_config.json` directly, matching the official CLI's config format
+- **Sandbox launcher** — PTY-based process with explicit terminal geometry; `AGY_CLI_DISABLE_AUTO_UPDATE=1` keeps updates app-controlled
 
 ## Remote OpenCode
 
@@ -129,6 +140,7 @@ Pinned versions (updatable via app releases without agent changes):
 
 - Alpine Linux 3.24.1
 - OpenCode 1.18.3
+- Google Antigravity CLI 1.1.7 (Debian Bookworm rootfs)
 - Architectures: arm64-v8a, x86_64
 
 ## Handoff (Runtime Switching Mid-Conversation)
@@ -179,8 +191,10 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 ## Design Documents
 
 - [AndCode v2 Design](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
+- [Antigravity Agent Parity Design](docs/superpowers/specs/2026-07-27-antigravity-agent-parity-design.md)
 - [Initial MVP Plan](docs/superpowers/plans/2026-07-18-initial-mvp.md)
 - [Local Runtime Design](docs/LOCAL_RUNTIME.md)
+- [Antigravity Local Runtime](docs/ANTIGRAVITY.md)
 
 ## Third-Party Software
 

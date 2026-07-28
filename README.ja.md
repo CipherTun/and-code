@@ -2,7 +2,7 @@
 
 **AIコーディングエージェントをAndroidのネイティブGUIでローカル実行 — ターミナル不要です。**
 
-AndCodeはAIコーディングエージェントをスマートフォンで使えるようにするネイティブAndroid GUIアプリです。[OpenCode](https://github.com/sst/opencode)や[Claude Code](https://github.com/anthropics/claude-code)とタッチ操作中心のインターフェースで対話できます — 端末エミュレータもSSHもPCも、オンデバイス実行には一切不要です。PRootによるオンデバイスランタイムか、PC/Mac/Linux上の既存OpenCodeサーバーへのリモート接続で動作します。
+AndCodeはAIコーディングエージェントをスマートフォンで使えるようにするネイティブAndroid GUIアプリです。[OpenCode](https://github.com/sst/opencode)、[Claude Code](https://github.com/anthropics/claude-code)、[Google Antigravity](https://github.com/google-antigravity/antigravity-cli)とタッチ操作中心のインターフェースで対話できます — 端末エミュレータもSSHもPCも、オンデバイス実行には一切不要です。PRootによるオンデバイスランタイムか、PC/Mac/Linux上の既存OpenCodeサーバーへのリモート接続で動作します。
 
 > [!IMPORTANT]
 > AndCodeは独立したオープンソースプロジェクトです。OpenCodeおよびAnthropicとは一切関係ありません。
@@ -17,8 +17,9 @@ AndCodeはAIコーディングエージェントをスマートフォンで使�
 |-------------|:---------:|:---------:|------|
 | [OpenCode](https://github.com/sst/opencode) | ✓ | ✓ | 安定版 |
 | [Claude Code](https://github.com/anthropics/claude-code) | ✓ | — | ベータ |
+| [Google Antigravity](https://github.com/google-antigravity/antigravity-cli) | ✓ | — | ベータ |
 
-オンデバイスエージェントはPRoot経由でAlpine Linux環境内で実行されます。リモートOpenCodeはLANまたはTailscale経由でPC/Mac/Linux上の`opencode serve`インスタンスに接続します。
+オンデバイスエージェントはPRoot経由でLinux環境内で実行されます。OpenCodeとClaude CodeはAlpine Linuxを使用し、Google Antigravityは公式`agy`バイナリのglibc互換性のためDebian Bookworm rootfsを導入します。
 
 ## 主な機能
 
@@ -37,6 +38,16 @@ AndCodeはAIコーディングエージェントをスマートフォンで使�
 - **デジタルアシスタント** — Androidの既定アシスタントとして登録（ホームジェスチャー／コーナースワイプ）
 - **安全な保存** — 接続情報をAndroid Keystoreで暗号化
 - **バイリンガル** — 日本語・英語UI
+
+## Antigravity
+
+Google Antigravity（`agy`）は同じPRoot環境内でオンデバイス実行されます。OpenCodeやClaude CodeがAlpine Linuxを使用するのに対し、Antigravityは公式CLIバイナリのglibc互換性のためDebian Bookworm rootfsを導入します。
+
+- **OAuthサインイン** — ブラウザURLとワンタイムコードによる認証フロー。認証情報はLinux rootfs内（`~/.gemini`）にのみ保存され、Androidの設定領域には保存されません
+- **モデル選択** — サインイン済み`agy`インスタンスから動的取得したモデル一覧（Gemini、Claude、GPT-OSSの各バリアント）
+- **権限モード** — 3段階の制御：Plan、Accept Edits、Full Access（`--dangerously-skip-permissions`）
+- **MCPサーバー** — `~/.gemini/config/mcp_config.json`を直接読み書きし、公式CLIと同じ設定形式に対応
+- **サンドボックス起動** — 明示的な端末サイズを持つPTYベースのプロセス。`AGY_CLI_DISABLE_AUTO_UPDATE=1`によりバージョン更新はアプリ側で制御
 
 ## リモートOpenCode
 
@@ -91,8 +102,10 @@ OPENCODE_SERVER_PASSWORD='your-strong-password' \
 ## 設計資料
 
 - [AndCode v2設計書](docs/superpowers/specs/2026-07-18-opencode-android-v2-design.md)
+- [Antigravityエージェント同等機能設計書](docs/superpowers/specs/2026-07-27-antigravity-agent-parity-design.md)
 - [第一完成版の実装計画](docs/superpowers/plans/2026-07-18-initial-mvp.md)
 - [Androidローカル実行設計](docs/LOCAL_RUNTIME.md)
+- [Antigravityローカルランタイム](docs/ANTIGRAVITY.md)
 
 ## 第三者ソフトウェア
 
