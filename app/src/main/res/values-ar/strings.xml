@@ -421,6 +421,9 @@
     <string name="github_git_operations">عمليات GitHub Git</string>
     <string name="github_not_connected">غير متصل</string>
     <string name="github_connect">الاتصال بـ GitHub</string>
+    <string name="github_screen_title">GitHub / عمليات Git</string>
+    <string name="github_intro">اربط GitHub لعمليات المستودعات وGit وطلبات السحب وسير عمل Actions.</string>
+    <string name="github_client_id_missing">لا تحتوي هذه النسخة على معرّف عميل GitHub، لذا لا يمكن بدء تسجيل الدخول. أعد البناء مع ضبط GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">قطع الاتصال بـ GitHub</string>
     <string name="github_verification_code">أدخل الرمز: %1$s</string>
     <string name="github_waiting_for_authorization">في انتظار التفويض…</string>

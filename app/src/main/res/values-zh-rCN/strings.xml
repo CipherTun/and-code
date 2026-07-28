@@ -421,6 +421,9 @@
     <string name="github_git_operations">GitHub Git 操作</string>
     <string name="github_not_connected">未连接</string>
     <string name="github_connect">连接 GitHub</string>
+    <string name="github_screen_title">GitHub / Git 操作</string>
+    <string name="github_intro">连接 GitHub 以进行仓库、Git、拉取请求和 Actions 工作流操作。</string>
+    <string name="github_client_id_missing">此版本未包含 GitHub 客户端 ID，因此无法开始登录。请设置 GITHUB_CLIENT_ID 后重新构建。</string>
     <string name="github_disconnect">断开 GitHub</string>
     <string name="github_verification_code">输入代码：%1$s</string>
     <string name="github_waiting_for_authorization">等待授权…</string>

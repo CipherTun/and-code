@@ -36,7 +36,7 @@ fun GitHubSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("GitHub / Git Operations") },
+                title = { Text(stringResource(R.string.github_screen_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
@@ -50,9 +50,15 @@ fun GitHubSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Icon(Icons.Default.Code, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Text("Connect GitHub for repository, Git, pull request, and Actions workflow operations.")
+            Text(stringResource(R.string.github_intro))
             Text(state.githubLogin ?: stringResource(R.string.github_not_connected))
             state.githubMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            // Without a client ID the connect button below is disabled forever, and a dead button
+            // with no explanation is indistinguishable from a broken screen. The ID is not baked
+            // into the repo any more, so a build that was not given one cannot do device flow.
+            if (!state.githubConfigured) {
+                Text(stringResource(R.string.github_client_id_missing), color = MaterialTheme.colorScheme.error)
+            }
             state.githubUserCode?.let { code ->
                 GithubDeviceCodeCard(code, state.githubVerificationUrl, onOpenVerification)
             } ?: if (state.githubLogin == null) {

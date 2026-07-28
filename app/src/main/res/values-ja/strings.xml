@@ -423,6 +423,9 @@
     <string name="github_git_operations">GitHub Git 操作</string>
     <string name="github_not_connected">未接続</string>
     <string name="github_connect">GitHubに接続</string>
+    <string name="github_screen_title">GitHub / Git操作</string>
+    <string name="github_intro">リポジトリ、Git、プルリクエスト、Actionsワークフローの操作のためにGitHubを接続します。</string>
+    <string name="github_client_id_missing">このビルドにはGitHubクライアントIDが含まれていないため、サインインを開始できません。GITHUB_CLIENT_IDを指定してビルドし直してください。</string>
     <string name="github_disconnect">GitHubの接続を解除</string>
     <string name="github_verification_code">認証コード: %1$s</string>
     <string name="github_waiting_for_authorization">認証を待機中…</string>

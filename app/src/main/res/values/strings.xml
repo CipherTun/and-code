@@ -423,6 +423,9 @@
     <string name="github_git_operations">GitHub Git operations</string>
     <string name="github_not_connected">Not connected</string>
     <string name="github_connect">Connect GitHub</string>
+    <string name="github_screen_title">GitHub / Git Operations</string>
+    <string name="github_intro">Connect GitHub for repository, Git, pull request, and Actions workflow operations.</string>
+    <string name="github_client_id_missing">This build has no GitHub client ID, so it cannot start the sign-in. Rebuild with GITHUB_CLIENT_ID set.</string>
     <string name="github_disconnect">Disconnect GitHub</string>
     <string name="github_verification_code">Enter code: %1$s</string>
     <string name="github_waiting_for_authorization">Waiting for authorization…</string>

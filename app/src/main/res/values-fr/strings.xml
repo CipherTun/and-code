@@ -421,6 +421,9 @@
     <string name="github_git_operations">Opérations Git GitHub</string>
     <string name="github_not_connected">Non connecté</string>
     <string name="github_connect">Connecter GitHub</string>
+    <string name="github_screen_title">GitHub / Opérations Git</string>
+    <string name="github_intro">Connectez GitHub pour les opérations de dépôt, Git, pull requests et workflows Actions.</string>
+    <string name="github_client_id_missing">Cette version ne contient pas d’ID client GitHub et ne peut donc pas lancer la connexion. Recompilez avec GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">Déconnecter GitHub</string>
     <string name="github_verification_code">Saisissez le code : %1$s</string>
     <string name="github_waiting_for_authorization">En attente d\'autorisation…</string>

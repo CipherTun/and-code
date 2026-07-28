@@ -421,6 +421,9 @@
     <string name="github_git_operations">Операции GitHub Git</string>
     <string name="github_not_connected">Не подключено</string>
     <string name="github_connect">Подключить GitHub</string>
+    <string name="github_screen_title">GitHub / Операции Git</string>
+    <string name="github_intro">Подключите GitHub для работы с репозиториями, Git, пул-реквестами и рабочими процессами Actions.</string>
+    <string name="github_client_id_missing">В этой сборке нет идентификатора клиента GitHub, поэтому вход невозможен. Пересоберите с заданным GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">Отключить GitHub</string>
     <string name="github_verification_code">Введите код: %1$s</string>
     <string name="github_waiting_for_authorization">Ожидание авторизации…</string>
