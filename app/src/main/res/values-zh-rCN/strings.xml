@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">最近的聊天</string>
     <string name="drawer_project_default">默认</string>
     <string name="drawer_projects_title">项目</string>
+    <string name="drawer_agents_title">智能体</string>
     <string name="drawer_add_project">添加项目</string>
     <string name="drawer_pinned">已固定</string>
     <string name="drawer_pinned_sample_1">重要对话</string>
@@ -421,6 +422,9 @@
     <string name="github_git_operations">GitHub Git 操作</string>
     <string name="github_not_connected">未连接</string>
     <string name="github_connect">连接 GitHub</string>
+    <string name="github_screen_title">GitHub / Git 操作</string>
+    <string name="github_intro">连接 GitHub 以进行仓库、Git、拉取请求和 Actions 工作流操作。</string>
+    <string name="github_client_id_missing">此版本未包含 GitHub 客户端 ID，因此无法开始登录。请设置 GITHUB_CLIENT_ID 后重新构建。</string>
     <string name="github_disconnect">断开 GitHub</string>
     <string name="github_verification_code">输入代码：%1$s</string>
     <string name="github_waiting_for_authorization">等待授权…</string>
@@ -449,7 +453,7 @@
     <string name="this_android">此 Android</string>
     <string name="picker_no_providers">暂无已连接的提供商</string>
 
-    <string name="onboarding_welcome_title">欢迎使用 OpenCode</string>
+    <string name="onboarding_welcome_title">欢迎使用 %1$s</string>
     <string name="onboarding_subtitle">编写、修复和理解代码。要开始使用，只需选择一种执行路径。</string>
     <string name="onboarding_recommended_badge">推荐</string>
     <string name="onboarding_android_title">从此 Android 开始</string>
@@ -841,6 +845,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">无法安装本地运行时</string>
     <string name="runtime_error_reinstall_failed">无法重新安装本地运行时</string>
     <string name="runtime_error_start_failed">无法启动本地 OpenCode</string>
@@ -859,6 +864,12 @@
     <string name="runtime_step_preparing_update">正在准备更新</string>
     <string name="runtime_step_rolling_back_to">正在回退到 OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">正在安装 Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">正在为 Antigravity 准备 Debian Bookworm</string>
+    <string name="install_step_downloading_antigravity">正在下载并验证官方 Antigravity</string>
+    <string name="install_step_installing_antigravity">正在安装 Antigravity</string>
+    <string name="antigravity_permission_plan_desc">Antigravity 只读取和规划，不会修改文件或执行命令。</string>
+    <string name="antigravity_permission_accept_edits_desc">Antigravity 可在工作区内编辑文件并运行命令，无需确认。推荐。</string>
+    <string name="antigravity_permission_full_access_desc">Antigravity 可以在不询问的情况下运行任何命令。请谨慎使用。</string>
     <string name="claude_permission_plan">仅制定计划</string>
     <string name="claude_permission_plan_desc">Claude 只读取和规划，不会修改文件或执行命令。</string>
     <string name="claude_permission_accept_edits">允许编辑</string>
@@ -874,6 +885,7 @@
     <string name="claude_step_downloading_package">正在下载 Claude Code（约 80 MB）</string>
     <string name="claude_step_verifying">正在验证安装</string>
     <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="antigravity_installed_version">Antigravity %1$s</string>
     <string name="claude_status_not_installed">未安装</string>
     <string name="claude_status_installing">安装中</string>
     <string name="claude_status_ready">可用</string>
@@ -889,13 +901,15 @@
     <string name="claude_auth_verifying">正在验证…</string>
     <string name="claude_auth_cancel">取消登录</string>
     <string name="setup_step_agents">选择智能体</string>
-    <string name="setup_agents_description">选择要安装在此设备上的编码智能体。两者运行在同一个 Linux 环境中，之后也可以再添加另一个。</string>
+    <string name="setup_agents_description">选择要安装在此设备上的编码智能体。它们都运行在同一个 Linux 环境中，之后也可以再添加其他的。</string>
     <string name="setup_agent_claude_code_desc">在浏览器中使用 Claude 账号登录。下载约 80 MB。</string>
-    <string name="setup_agent_opencode_desc">使用你自己的模型提供方密钥。下载约 120 MB。</string>
+    <string name="setup_agent_opencode_desc">使用你自己的模型提供方 API 密钥登录。下载约 120 MB。</string>
+    <string name="setup_agent_antigravity_desc">在浏览器中使用 Google 账号登录。下载约 50 MB。</string>
     <string name="setup_agents_required">请至少选择一个智能体以继续。</string>
     <string name="setup_step_sign_in">登录</string>
     <string name="setup_sign_in_description">连接智能体将使用的账号。</string>
-    <string name="setup_runtime_shared_note">两个智能体共用一个 Linux 环境，因此只需下载一次。</string>
+    <string name="setup_sign_in_none_installed">尚未安装任何智能体，因此没有可登录的对象。</string>
+    <string name="setup_runtime_shared_note">所选智能体共用一个 Linux 环境，因此只需下载一次。</string>
     <string name="local_agent_on_device">%1$s · 本地</string>
     <string name="runtime_status_stopped_reason">本地运行时已停止</string>
     <string name="runtime_status_connecting_reason">正在连接本地运行时</string>
@@ -909,6 +923,13 @@
     <string name="setup_download_agents_description">准备共享的 Linux 环境以及你选择的智能体。</string>
     <string name="settings_agents_row">智能体</string>
     <string name="settings_agents_section">智能体</string>
+    <string name="antigravity_install_button">安装 Antigravity</string>
+    <string name="antigravity_status_signed_out">未登录</string>
+    <string name="antigravity_sign_in_button">登录 Antigravity</string>
+    <string name="antigravity_auth_starting">正在开始登录…</string>
+    <string name="antigravity_auth_instructions">请在浏览器中批准 Google 请求，然后将显示的代码粘贴到此处。</string>
+    <string name="antigravity_auth_verifying">正在验证…</string>
+    <string name="antigravity_signed_in">已登录 Antigravity</string>
     <string name="chat_response_duration">%1$d min</string>
     <string name="chat_response_duration_under_minute">&lt;1 min</string>
 </resources>

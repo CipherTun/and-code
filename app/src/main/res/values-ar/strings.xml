@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">الدردشات الأخيرة</string>
     <string name="drawer_project_default">افتراضي</string>
     <string name="drawer_projects_title">المشاريع</string>
+    <string name="drawer_agents_title">الوكلاء</string>
     <string name="drawer_add_project">إضافة مشروع</string>
     <string name="drawer_pinned">مثبت</string>
     <string name="drawer_pinned_sample_1">محادثة مهمة</string>
@@ -421,6 +422,9 @@
     <string name="github_git_operations">عمليات GitHub Git</string>
     <string name="github_not_connected">غير متصل</string>
     <string name="github_connect">الاتصال بـ GitHub</string>
+    <string name="github_screen_title">GitHub / عمليات Git</string>
+    <string name="github_intro">اربط GitHub لعمليات المستودعات وGit وطلبات السحب وسير عمل Actions.</string>
+    <string name="github_client_id_missing">لا تحتوي هذه النسخة على معرّف عميل GitHub، لذا لا يمكن بدء تسجيل الدخول. أعد البناء مع ضبط GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">قطع الاتصال بـ GitHub</string>
     <string name="github_verification_code">أدخل الرمز: %1$s</string>
     <string name="github_waiting_for_authorization">في انتظار التفويض…</string>
@@ -449,7 +453,7 @@
     <string name="this_android">هذا Android</string>
     <string name="picker_no_providers">لا يوجد موفرون متصلون بعد</string>
 
-    <string name="onboarding_welcome_title">مرحبًا بك في OpenCode</string>
+    <string name="onboarding_welcome_title">مرحبًا بك في %1$s</string>
     <string name="onboarding_subtitle">اكتب وأصلح وافهم الكود. للبدء، ما عليك سوى اختيار مسار تنفيذ واحد.</string>
     <string name="onboarding_recommended_badge">موصى به</string>
     <string name="onboarding_android_title">البدء مع هذا Android</string>
@@ -841,6 +845,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">تعذّر تثبيت بيئة التشغيل المحلية</string>
     <string name="runtime_error_reinstall_failed">تعذّرت إعادة تثبيت بيئة التشغيل المحلية</string>
     <string name="runtime_error_start_failed">تعذّر تشغيل OpenCode المحلي</string>
@@ -859,6 +864,12 @@
     <string name="runtime_step_preparing_update">جارٍ تحضير التحديث</string>
     <string name="runtime_step_rolling_back_to">جارٍ الرجوع إلى OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">جارٍ تثبيت Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">جارٍ تجهيز Debian Bookworm لـ Antigravity</string>
+    <string name="install_step_downloading_antigravity">جارٍ تنزيل والتحقق من Antigravity الرسمي</string>
+    <string name="install_step_installing_antigravity">جارٍ تثبيت Antigravity</string>
+    <string name="antigravity_permission_plan_desc">يقرأ Antigravity ويخطّط فقط دون تعديل الملفات أو تنفيذ الأوامر.</string>
+    <string name="antigravity_permission_accept_edits_desc">يمكن لـ Antigravity تعديل الملفات وتنفيذ الأوامر في مساحة العمل دون سؤال. موصى به.</string>
+    <string name="antigravity_permission_full_access_desc">يمكن لـ Antigravity تنفيذ أي أمر دون سؤال. استخدمه بحذر.</string>
     <string name="claude_permission_plan">التخطيط فقط</string>
     <string name="claude_permission_plan_desc">يقرأ Claude ويخطّط فقط دون تعديل الملفات أو تنفيذ الأوامر.</string>
     <string name="claude_permission_accept_edits">قبول التعديلات</string>
@@ -874,6 +885,7 @@
     <string name="claude_step_downloading_package">جارٍ تنزيل Claude Code (حوالي 80 ميغابايت)</string>
     <string name="claude_step_verifying">جارٍ التحقق من التثبيت</string>
     <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="antigravity_installed_version">Antigravity %1$s</string>
     <string name="claude_status_not_installed">غير مثبّت</string>
     <string name="claude_status_installing">جارٍ التثبيت</string>
     <string name="claude_status_ready">جاهز</string>
@@ -889,13 +901,15 @@
     <string name="claude_auth_verifying">جارٍ التحقق…</string>
     <string name="claude_auth_cancel">إلغاء تسجيل الدخول</string>
     <string name="setup_step_agents">اختر وكيلك</string>
-    <string name="setup_agents_description">اختر وكلاء البرمجة المراد تثبيتهم على هذا الجهاز. كلاهما يعمل في بيئة Linux نفسها، ويمكنك إضافة الآخر لاحقًا.</string>
+    <string name="setup_agents_description">اختر وكلاء البرمجة المراد تثبيتهم على هذا الجهاز. جميعهم يعملون في بيئة Linux نفسها، ويمكنك إضافة الباقي لاحقًا.</string>
     <string name="setup_agent_claude_code_desc">سجّل الدخول بحساب Claude عبر المتصفح. يتم تنزيل حوالي 80 ميغابايت.</string>
-    <string name="setup_agent_opencode_desc">استخدم مفاتيح مزوّدي النماذج الخاصة بك. يتم تنزيل حوالي 120 ميغابايت.</string>
+    <string name="setup_agent_opencode_desc">سجّل الدخول بمفتاح واجهة مزوّد النماذج الخاص بك. يتم تنزيل حوالي 120 ميغابايت.</string>
+    <string name="setup_agent_antigravity_desc">سجّل الدخول بحساب Google عبر المتصفح. يتم تنزيل حوالي 50 ميغابايت.</string>
     <string name="setup_agents_required">اختر وكيلًا واحدًا على الأقل للمتابعة.</string>
     <string name="setup_step_sign_in">تسجيل الدخول</string>
     <string name="setup_sign_in_description">اربط الحسابات التي سيستخدمها وكلاؤك.</string>
-    <string name="setup_runtime_shared_note">يتشارك الوكيلان بيئة Linux واحدة، لذا تتم عملية التنزيل مرة واحدة فقط.</string>
+    <string name="setup_sign_in_none_installed">لا يوجد وكيل مثبّت بعد، لذا لا يوجد ما يمكن تسجيل الدخول إليه.</string>
+    <string name="setup_runtime_shared_note">يتشارك الوكلاء المحددون بيئة Linux واحدة، لذا تتم عملية التنزيل مرة واحدة فقط.</string>
     <string name="local_agent_on_device">%1$s · محلي</string>
     <string name="runtime_status_stopped_reason">بيئة التشغيل المحلية متوقفة</string>
     <string name="runtime_status_connecting_reason">جارٍ الاتصال ببيئة التشغيل المحلية</string>
@@ -909,6 +923,13 @@
     <string name="setup_download_agents_description">تحضير بيئة Linux المشتركة والوكلاء الذين اخترتهم.</string>
     <string name="settings_agents_row">الوكلاء</string>
     <string name="settings_agents_section">الوكلاء</string>
+    <string name="antigravity_install_button">تثبيت Antigravity</string>
+    <string name="antigravity_status_signed_out">لم يتم تسجيل الدخول</string>
+    <string name="antigravity_sign_in_button">تسجيل الدخول إلى Antigravity</string>
+    <string name="antigravity_auth_starting">جارٍ بدء تسجيل الدخول…</string>
+    <string name="antigravity_auth_instructions">وافق على طلب Google في المتصفح، ثم الصق الرمز هنا.</string>
+    <string name="antigravity_auth_verifying">جارٍ التحقق…</string>
+    <string name="antigravity_signed_in">تم تسجيل الدخول إلى Antigravity</string>
     <string name="chat_response_duration">%1$d min</string>
     <string name="chat_response_duration_under_minute">&lt;1 min</string>
 </resources>

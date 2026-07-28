@@ -19,6 +19,7 @@ class VerifiedRuntimeDownloader(
         destination: File,
         expectedSha256: String,
         expectedSizeBytes: Long? = null,
+        headers: Map<String, String> = emptyMap(),
         onProgress: (Float?) -> Unit = {},
     ) = operationMutex.withLock {
         withContext(Dispatchers.IO) {
@@ -27,6 +28,7 @@ class VerifiedRuntimeDownloader(
                 destination = destination,
                 expectedSha256 = expectedSha256,
                 expectedSizeBytes = expectedSizeBytes,
+                headers = headers,
                 onProgress = onProgress,
             )
         }
@@ -37,6 +39,7 @@ class VerifiedRuntimeDownloader(
         destination: File,
         expectedSha256: String,
         expectedSizeBytes: Long?,
+        headers: Map<String, String>,
         onProgress: (Float?) -> Unit,
     ) {
         val parsedUrl = url.toHttpUrl()
@@ -54,7 +57,9 @@ class VerifiedRuntimeDownloader(
         recoverBackupIfDestinationMissing(destination, backup)
 
         try {
-            val request = Request.Builder().url(parsedUrl).get().build()
+            val requestBuilder = Request.Builder().url(parsedUrl).get()
+            headers.forEach { (name, value) -> requestBuilder.header(name, value) }
+            val request = requestBuilder.build()
             var downloaded = 0L
             httpClient.newCall(request).execute().use { response ->
                 require(response.isSuccessful) {

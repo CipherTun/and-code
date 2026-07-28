@@ -193,7 +193,8 @@ class WorkspaceViewModel(
         return runCatching { OpenCodeApiClient(form.toProfile()).health() }
     }
 
-    fun setupLocalRuntime() = localRuntimeController.installAndStart()
+    /** [agents] is the setup guide's selection; every other caller means OpenCode alone. */
+    fun setupLocalRuntime(agents: Set<LocalAgent> = setOf(LocalAgent.OPEN_CODE)) = localRuntimeController.installAndStart(agents)
 
     fun startLocalRuntime() = localRuntimeController.start()
 
@@ -217,6 +218,9 @@ class WorkspaceViewModel(
     fun cancelClaudeSignIn() = claudeCode?.cancelSignIn() ?: Unit
 
     fun signOutClaude() = claudeCode?.signOut() ?: Unit
+
+    /** Re-reads whether Claude Code is installed, after an install this app did not run itself. */
+    fun refreshClaudeCode() = claudeCode?.refresh() ?: Unit
 
     fun refresh() {
         registry.refresh()

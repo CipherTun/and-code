@@ -207,6 +207,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp-sse:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.tukaani:xz:1.9")
 
     // QR code scanning for connection setup
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

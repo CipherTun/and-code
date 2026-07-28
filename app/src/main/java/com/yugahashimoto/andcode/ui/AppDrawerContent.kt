@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,12 +47,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yugahashimoto.andcode.R
+import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.WorkspaceRef
 import com.yugahashimoto.andcode.ui.components.SessionStatus
 import com.yugahashimoto.andcode.ui.components.StatusDot
@@ -68,6 +69,16 @@ data class DrawerRecentSession(
     val hasUnread: Boolean = false,
     val status: SessionStatus = SessionStatus.IDLE,
     val hasAttention: Boolean = false,
+    /** The runtime that owns this chat - opening it has to switch to that runtime first. */
+    val runtimeId: String? = null,
+    /** Null for a remote runtime, which is not one of the three local agents. */
+    val agent: LocalAgent? = null,
+)
+
+/** An agent offered by the drawer's switcher. */
+data class DrawerAgent(
+    val runtimeId: String,
+    val agent: LocalAgent,
 )
 
 private fun DrawerRecentSession.projectKey(): String =
@@ -83,14 +94,17 @@ fun AppDrawerContent(
     selectedWorkspacePath: String?,
     onNewChat: () -> Unit,
     onSelectProject: (WorkspaceRef) -> Unit,
-    onOpenSession: (String, String) -> Unit,
+    /** Session id, title, and the runtime that owns it. */
+    onOpenSession: (String, String, String?) -> Unit,
     onNavigate: (String) -> Unit,
+    /** Installed agents, offered as a switcher only when there is more than one. */
+    agents: List<DrawerAgent> = emptyList(),
+    selectedRuntimeId: String? = null,
+    onSelectAgent: (DrawerAgent) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
     onArchiveSession: (String) -> Unit = {},
     onBatchDelete: (Set<String>) -> Unit = {},
     onBatchArchive: (Set<String>) -> Unit = {},
-    sidebarGrouping: String = "project",
-    onGroupingChange: (String) -> Unit = {},
     collapsedSections: Set<String> = emptySet(),
     onToggleSection: (String) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -132,16 +146,46 @@ fun AppDrawerContent(
                 DrawerHeader()
                 NewChatRow(onClick = onNewChat)
 
-                DrawerSectionHeader(stringResource(R.string.drawer_projects_title))
-                workspaces.forEach { workspace ->
-                    DrawerProjectRow(
-                        label = workspace.name,
-                        path = workspace.path,
-                        selected = workspace.path == selectedWorkspacePath,
-                        onClick = { onSelectProject(workspace) },
+                // Only worth a switcher when there is something to switch between.
+                if (agents.size > 1) {
+                    DrawerSectionHeader(
+                        text = stringResource(R.string.drawer_agents_title),
+                        collapsed = collapsedSections.contains("agents"),
+                        onToggle = { onToggleSection("agents") },
                     )
+                    AnimatedVisibility(visible = !collapsedSections.contains("agents")) {
+                        Column {
+                            agents.forEach { agent ->
+                                DrawerAgentRow(
+                                    agent = agent,
+                                    selected = agent.runtimeId == selectedRuntimeId,
+                                    onClick = { onSelectAgent(agent) },
+                                )
+                            }
+                        }
+                    }
                 }
-                DrawerAddProjectRow(onClick = { onNavigate("workspaces") })
+
+                // Collapsible like every other section: this header took the same composable but was
+                // never given the parameters, so it alone could not be folded away.
+                DrawerSectionHeader(
+                    text = stringResource(R.string.drawer_projects_title),
+                    collapsed = collapsedSections.contains("projects"),
+                    onToggle = { onToggleSection("projects") },
+                )
+                AnimatedVisibility(visible = !collapsedSections.contains("projects")) {
+                    Column {
+                        workspaces.forEach { workspace ->
+                            DrawerProjectRow(
+                                label = workspace.name,
+                                path = workspace.path,
+                                selected = workspace.path == selectedWorkspacePath,
+                                onClick = { onSelectProject(workspace) },
+                            )
+                        }
+                        DrawerAddProjectRow(onClick = { onNavigate("workspaces") })
+                    }
+                }
 
                 if (recentSessions.isNotEmpty()) {
                     val defaultLabel = stringResource(R.string.drawer_project_default)
@@ -163,93 +207,41 @@ fun AppDrawerContent(
                                     onDelete = { showDeleteConfirm = true },
                                 )
                             }
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                FilterChip(
-                                    selected = sidebarGrouping == "project",
-                                    onClick = { onGroupingChange("project") },
-                                    label = { Text(stringResource(R.string.grouping_project)) },
-                                )
-                                FilterChip(
-                                    selected = sidebarGrouping == "status",
-                                    onClick = { onGroupingChange("status") },
-                                    label = { Text(stringResource(R.string.grouping_status)) },
-                                )
-                            }
-                            if (sidebarGrouping == "status") {
-                                val statusGroups =
-                                    listOf(
-                                        stringResource(R.string.status_group_running) to setOf(SessionStatus.RUNNING),
-                                        stringResource(R.string.status_group_waiting) to setOf(SessionStatus.WAITING),
-                                        stringResource(
-                                            R.string.status_group_done,
-                                        ) to setOf(SessionStatus.COMPLETED_UNREAD, SessionStatus.IDLE),
-                                        stringResource(R.string.status_group_error) to setOf(SessionStatus.ERROR),
-                                    )
-                                statusGroups.forEach { (label, statuses) ->
-                                    val sessions = recentSessions.filter { it.status in statuses }
-                                    if (sessions.isNotEmpty()) {
-                                        val sectionKey = "status_$label"
-                                        DrawerRecentProjectHeader(
-                                            label = label,
-                                            collapsed = collapsedSections.contains(sectionKey),
-                                            onToggle = { onToggleSection(sectionKey) },
-                                        )
-                                        AnimatedVisibility(visible = !collapsedSections.contains(sectionKey)) {
-                                            Column {
-                                                sessions.forEach { session ->
-                                                    DrawerChatRow(
-                                                        title = session.title.ifBlank { session.id },
-                                                        status = session.status,
-                                                        hasAttention = session.hasAttention,
-                                                        isActive = session.isActive,
-                                                        hasUnread = session.hasUnread,
-                                                        isSelected = session.id in selectedSessionIds,
-                                                        selectionMode = selectionMode,
-                                                        onClick = { onOpenSession(session.id, session.title) },
-                                                        onLongClick = { enterSelectionMode(session.id) },
-                                                        onToggleSelection = { toggleSelection(session.id) },
-                                                    )
-                                                }
-                                            }
-                                        }
+                            // Grouped by project, always. The project/status switch that used to sit
+                            // here made the drawer ask a question before it answered one, and the
+                            // status a chat is in already shows on its own row.
+                            val grouped =
+                                recentSessions
+                                    .groupBy { it.projectKey() }
+                                    .toList()
+                                    .sortedByDescending { (_, sessions) ->
+                                        sessions.firstOrNull()?.let { recentSessions.indexOf(it) } ?: Int.MAX_VALUE
                                     }
-                                }
-                            } else {
-                                val grouped =
-                                    recentSessions
-                                        .groupBy { it.projectKey() }
-                                        .toList()
-                                        .sortedByDescending { (_, sessions) ->
-                                            sessions.firstOrNull()?.let { recentSessions.indexOf(it) } ?: Int.MAX_VALUE
-                                        }
-                                grouped.forEach { (key, sessions) ->
-                                    val sectionKey = "project_$key"
-                                    val sorted = sessions.sortedByDescending { it.hasAttention }
-                                    DrawerRecentProjectHeader(
-                                        label = sessions.first().projectLabel(defaultLabel),
-                                        collapsed = collapsedSections.contains(sectionKey),
-                                        onToggle = { onToggleSection(sectionKey) },
-                                    )
-                                    AnimatedVisibility(visible = !collapsedSections.contains(sectionKey)) {
-                                        Column {
-                                            sorted.forEach { session ->
-                                                DrawerChatRow(
-                                                    title = session.title.ifBlank { session.id },
-                                                    status = session.status,
-                                                    hasAttention = session.hasAttention,
-                                                    isActive = session.isActive,
-                                                    hasUnread = session.hasUnread,
-                                                    isSelected = session.id in selectedSessionIds,
-                                                    selectionMode = selectionMode,
-                                                    indented = true,
-                                                    onClick = { onOpenSession(session.id, session.title) },
-                                                    onLongClick = { enterSelectionMode(session.id) },
-                                                    onToggleSelection = { toggleSelection(session.id) },
-                                                )
-                                            }
+                            grouped.forEach { (key, sessions) ->
+                                val sectionKey = "project_$key"
+                                val sorted = sessions.sortedByDescending { it.hasAttention }
+                                DrawerRecentProjectHeader(
+                                    label = sessions.first().projectLabel(defaultLabel),
+                                    collapsed = collapsedSections.contains(sectionKey),
+                                    onToggle = { onToggleSection(sectionKey) },
+                                )
+                                AnimatedVisibility(visible = !collapsedSections.contains(sectionKey)) {
+                                    Column {
+                                        sorted.forEach { session ->
+                                            DrawerChatRow(
+                                                title = session.title.ifBlank { session.id },
+                                                status = session.status,
+                                                hasAttention = session.hasAttention,
+                                                isActive = session.isActive,
+                                                hasUnread = session.hasUnread,
+                                                isSelected = session.id in selectedSessionIds,
+                                                selectionMode = selectionMode,
+                                                indented = true,
+                                                agent = session.agent,
+                                                onClick = { onOpenSession(session.id, session.title, session.runtimeId) },
+                                                onLongClick = { enterSelectionMode(session.id) },
+                                                onToggleSelection = { toggleSelection(session.id) },
+                                            )
                                         }
                                     }
                                 }
@@ -427,6 +419,53 @@ private fun DrawerSectionHeader(
 }
 
 @Composable
+private fun DrawerAgentRow(
+    agent: DrawerAgent,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 2.dp)
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color =
+            if (selected) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            } else {
+                Color.Transparent
+            },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                painter = painterResource(agent.agent.iconRes),
+                contentDescription = null,
+                tint =
+                    if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(agent.agent.displayNameRes),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
 private fun DrawerProjectRow(
     label: String,
     path: String?,
@@ -560,6 +599,8 @@ private fun DrawerChatRow(
     isSelected: Boolean = false,
     selectionMode: Boolean = false,
     indented: Boolean = false,
+    /** Null for a remote runtime; the list now spans every agent, so rows have to say which. */
+    agent: LocalAgent? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit = {},
     onToggleSelection: () -> Unit = {},
@@ -604,6 +645,14 @@ private fun DrawerChatRow(
                         .size(6.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.error),
+            )
+        }
+        if (agent != null) {
+            Icon(
+                painter = painterResource(agent.iconRes),
+                contentDescription = stringResource(agent.displayNameRes),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp),
             )
         }
     }
@@ -655,7 +704,7 @@ private fun AppDrawerContentPreview() {
             selectedWorkspacePath = "/workspace/android-code",
             onNewChat = {},
             onSelectProject = {},
-            onOpenSession = { _, _ -> },
+            onOpenSession = { _, _, _ -> },
             onNavigate = {},
         )
     }

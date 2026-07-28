@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import com.yugahashimoto.andcode.AndCodeApplication
 import com.yugahashimoto.andcode.MainActivity
 import com.yugahashimoto.andcode.R
+import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.LocalRuntimeStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,20 @@ internal fun localRuntimeServiceCommand(action: String?): LocalRuntimeServiceCom
         else -> LocalRuntimeServiceCommand.Ignore
     }
 
+/**
+ * The agents an [LocalRuntimeService.ACTION_INSTALL_AND_START] intent asks for, from its
+ * [LocalRuntimeService.EXTRA_AGENTS] extra.
+ *
+ * Falls back to OpenCode alone, which is what every caller that carries no selection means - the
+ * runtime notification's restart, the watchdog, and the workspace picker's own button. Takes the
+ * raw array rather than the Intent so the mapping is testable without an Android runtime.
+ */
+internal fun localRuntimeInstallAgents(ids: Array<String>?): Set<LocalAgent> =
+    ids?.mapNotNull { id -> LocalAgent.entries.firstOrNull { it.id == id } }
+        ?.toSet()
+        ?.takeIf(Set<LocalAgent>::isNotEmpty)
+        ?: setOf(LocalAgent.OPEN_CODE)
+
 class LocalRuntimeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var operation: Job? = null
@@ -78,7 +93,8 @@ class LocalRuntimeService : Service() {
         when (localRuntimeServiceCommand(intent?.action)) {
             LocalRuntimeServiceCommand.InstallAndStart -> {
                 autoRestartEnabled = true
-                launchOperation { manager.installAndStart() }
+                val agents = localRuntimeInstallAgents(intent?.getStringArrayExtra(EXTRA_AGENTS))
+                launchOperation { manager.installAndStart(agents) }
             }
             LocalRuntimeServiceCommand.Start -> {
                 autoRestartEnabled = true
@@ -261,18 +277,29 @@ class LocalRuntimeService : Service() {
         const val ACTION_ROLLBACK = "com.yugahashimoto.andcode.local.ROLLBACK"
         const val ACTION_DELETE = "com.yugahashimoto.andcode.local.DELETE"
 
+        /** Ids of the agents an install should provision; see [LocalRuntimeInstaller.install]. */
+        const val EXTRA_AGENTS = "com.yugahashimoto.andcode.local.AGENTS"
+
         fun send(
             context: Context,
             action: String,
+            agents: Set<LocalAgent> = emptySet(),
         ) {
             val intent = Intent(context, LocalRuntimeService::class.java).setAction(action)
+            if (agents.isNotEmpty()) intent.putExtra(EXTRA_AGENTS, agents.map(LocalAgent::id).toTypedArray())
             ContextCompat.startForegroundService(context, intent)
         }
     }
 }
 
 class LocalRuntimeServiceController(private val context: Context) {
-    fun installAndStart() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_INSTALL_AND_START)
+    /**
+     * [agents] is the setup guide's selection, and provisioning them in this one install is what
+     * makes ticking Claude Code or Antigravity alongside OpenCode actually install them: their own
+     * installers would otherwise have to race this one for the same staging directory.
+     */
+    fun installAndStart(agents: Set<LocalAgent> = setOf(LocalAgent.OPEN_CODE)) =
+        LocalRuntimeService.send(context, LocalRuntimeService.ACTION_INSTALL_AND_START, agents)
 
     fun start() = LocalRuntimeService.send(context, LocalRuntimeService.ACTION_START)
 

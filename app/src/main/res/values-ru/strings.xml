@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">Недавние чаты</string>
     <string name="drawer_project_default">По умолчанию</string>
     <string name="drawer_projects_title">Проекты</string>
+    <string name="drawer_agents_title">Агенты</string>
     <string name="drawer_add_project">Добавить проект</string>
     <string name="drawer_pinned">Закреплённые</string>
     <string name="drawer_pinned_sample_1">Важный разговор</string>
@@ -421,6 +422,9 @@
     <string name="github_git_operations">Операции GitHub Git</string>
     <string name="github_not_connected">Не подключено</string>
     <string name="github_connect">Подключить GitHub</string>
+    <string name="github_screen_title">GitHub / Операции Git</string>
+    <string name="github_intro">Подключите GitHub для работы с репозиториями, Git, пул-реквестами и рабочими процессами Actions.</string>
+    <string name="github_client_id_missing">В этой сборке нет идентификатора клиента GitHub, поэтому вход невозможен. Пересоберите с заданным GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">Отключить GitHub</string>
     <string name="github_verification_code">Введите код: %1$s</string>
     <string name="github_waiting_for_authorization">Ожидание авторизации…</string>
@@ -449,7 +453,7 @@
     <string name="this_android">Этот Android</string>
     <string name="picker_no_providers">Подключённых провайдеров пока нет</string>
 
-    <string name="onboarding_welcome_title">Добро пожаловать в OpenCode</string>
+    <string name="onboarding_welcome_title">Добро пожаловать в %1$s</string>
     <string name="onboarding_subtitle">Пишите, исправляйте и понимайте код. Для начала просто выберите путь выполнения.</string>
     <string name="onboarding_recommended_badge">Рекомендуется</string>
     <string name="onboarding_android_title">Начать с этого Android</string>
@@ -841,6 +845,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">Не удалось установить локальную среду</string>
     <string name="runtime_error_reinstall_failed">Не удалось переустановить локальную среду</string>
     <string name="runtime_error_start_failed">Не удалось запустить локальный OpenCode</string>
@@ -859,6 +864,12 @@
     <string name="runtime_step_preparing_update">Подготовка обновления</string>
     <string name="runtime_step_rolling_back_to">Откат к OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">Установка Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">Подготовка Debian Bookworm для Antigravity</string>
+    <string name="install_step_downloading_antigravity">Загрузка и проверка официального Antigravity</string>
+    <string name="install_step_installing_antigravity">Установка Antigravity</string>
+    <string name="antigravity_permission_plan_desc">Antigravity только читает и планирует, не изменяя файлы и не выполняя команды.</string>
+    <string name="antigravity_permission_accept_edits_desc">Antigravity может изменять файлы и выполнять команды в рабочей папке без подтверждения. Рекомендуется.</string>
+    <string name="antigravity_permission_full_access_desc">Antigravity может выполнять любые команды без подтверждения. Используйте с осторожностью.</string>
     <string name="claude_permission_plan">Только планирование</string>
     <string name="claude_permission_plan_desc">Claude только читает и планирует, не изменяя файлы и не выполняя команды.</string>
     <string name="claude_permission_accept_edits">Разрешить правки</string>
@@ -874,6 +885,7 @@
     <string name="claude_step_downloading_package">Загрузка Claude Code (около 80 МБ)</string>
     <string name="claude_step_verifying">Проверка установки</string>
     <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="antigravity_installed_version">Antigravity %1$s</string>
     <string name="claude_status_not_installed">Не установлено</string>
     <string name="claude_status_installing">Установка</string>
     <string name="claude_status_ready">Готово</string>
@@ -889,13 +901,15 @@
     <string name="claude_auth_verifying">Проверка…</string>
     <string name="claude_auth_cancel">Отменить вход</string>
     <string name="setup_step_agents">Выберите агента</string>
-    <string name="setup_agents_description">Выберите агентов программирования для установки на это устройство. Оба работают в одной среде Linux, второго можно добавить позже.</string>
+    <string name="setup_agents_description">Выберите агентов программирования для установки на это устройство. Все они работают в одной среде Linux, остальных можно добавить позже.</string>
     <string name="setup_agent_claude_code_desc">Войдите в аккаунт Claude через браузер. Загрузка около 80 МБ.</string>
-    <string name="setup_agent_opencode_desc">Используйте собственные ключи поставщиков моделей. Загрузка около 120 МБ.</string>
+    <string name="setup_agent_opencode_desc">Войдите с собственным API-ключом поставщика моделей. Загрузка около 120 МБ.</string>
+    <string name="setup_agent_antigravity_desc">Войдите в аккаунт Google через браузер. Загрузка около 50 МБ.</string>
     <string name="setup_agents_required">Выберите хотя бы одного агента, чтобы продолжить.</string>
     <string name="setup_step_sign_in">Вход</string>
     <string name="setup_sign_in_description">Подключите учётные записи для ваших агентов.</string>
-    <string name="setup_runtime_shared_note">Оба агента используют одну среду Linux, поэтому загрузка выполняется один раз.</string>
+    <string name="setup_sign_in_none_installed">Ни один агент ещё не установлен, поэтому входить некуда.</string>
+    <string name="setup_runtime_shared_note">Выбранные агенты используют одну среду Linux, поэтому загрузка выполняется один раз.</string>
     <string name="local_agent_on_device">%1$s · Локально</string>
     <string name="runtime_status_stopped_reason">Локальная среда остановлена</string>
     <string name="runtime_status_connecting_reason">Подключение к локальной среде</string>
@@ -909,6 +923,13 @@
     <string name="setup_download_agents_description">Подготовка общей среды Linux и выбранных агентов.</string>
     <string name="settings_agents_row">Агенты</string>
     <string name="settings_agents_section">Агенты</string>
+    <string name="antigravity_install_button">Установить Antigravity</string>
+    <string name="antigravity_status_signed_out">Вход не выполнен</string>
+    <string name="antigravity_sign_in_button">Войти в Antigravity</string>
+    <string name="antigravity_auth_starting">Начинаем вход…</string>
+    <string name="antigravity_auth_instructions">Подтвердите запрос Google в браузере и вставьте код сюда.</string>
+    <string name="antigravity_auth_verifying">Проверка…</string>
+    <string name="antigravity_signed_in">Вход в Antigravity выполнен</string>
     <string name="chat_response_duration">%1$d min</string>
     <string name="chat_response_duration_under_minute">&lt;1 min</string>
 </resources>

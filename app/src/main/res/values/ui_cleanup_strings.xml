@@ -20,7 +20,7 @@
     <string name="setup_back_action">Back</string>
     <string name="setup_skip_action">Skip for now</string>
     <string name="setup_download_description">Prepare the runtime required to run OpenCode directly on this device.</string>
-    <string name="setup_runtime_not_installed">The runtime is not installed yet.</string>
+    <string name="setup_runtime_not_installed">Not installed</string>
     <string name="setup_runtime_ready">The runtime is ready</string>
     <string name="setup_provider_optional_description">Connect an AI provider to start chatting. This step is optional — you can skip it and connect any provider later from Settings.</string>
     <string name="setup_provider_loading">Loading providers…</string>

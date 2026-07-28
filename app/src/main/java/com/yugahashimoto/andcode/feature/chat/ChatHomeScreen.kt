@@ -167,6 +167,8 @@ fun ChatHomeScreen(
     onCancelQuestion: (String) -> Unit = {},
     onDismissQuestion: (String) -> Unit = {},
     autoAcceptPermissions: Boolean = false,
+    /** False for a runtime that never raises permission prompts, so the auto-accept chip is hidden. */
+    supportsPermissions: Boolean = true,
     onToggleAutoAccept: (Boolean) -> Unit = {},
     sendBehavior: String = "interrupt",
     onSendMessage: (String) -> Unit,
@@ -485,6 +487,7 @@ fun ChatHomeScreen(
                     onAttach = onAttach,
                     onRemoveAttachment = onRemoveAttachment,
                     autoAcceptPermissions = autoAcceptPermissions,
+                    supportsPermissions = supportsPermissions,
                     claudePermissionMode = claudePermissionMode,
                     onSelectClaudePermissionMode = onSelectClaudePermissionMode,
                     onToggleAutoAccept = onToggleAutoAccept,
@@ -912,6 +915,7 @@ private fun ChatComposer(
     onAttach: () -> Unit,
     onRemoveAttachment: (Int) -> Unit,
     autoAcceptPermissions: Boolean,
+    supportsPermissions: Boolean,
     onToggleAutoAccept: (Boolean) -> Unit,
     claudePermissionMode: ClaudePermissionMode?,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
@@ -1215,10 +1219,15 @@ private fun ChatComposer(
                     selectedAgentId = selectedAgentId,
                     onSelect = onSelectAgent,
                 )
-                AutoAcceptChip(
-                    enabled = autoAcceptPermissions,
-                    onToggle = onToggleAutoAccept,
-                )
+                // Auto-accept answers permission prompts, so it only means something on a runtime
+                // that asks for permission. Antigravity decides permissions per invocation from its
+                // mode flag and never raises a prompt, which made this a switch that did nothing.
+                if (supportsPermissions) {
+                    AutoAcceptChip(
+                        enabled = autoAcceptPermissions,
+                        onToggle = onToggleAutoAccept,
+                    )
+                }
             }
             if (thinkingOptions.isNotEmpty()) {
                 ThinkingChip(

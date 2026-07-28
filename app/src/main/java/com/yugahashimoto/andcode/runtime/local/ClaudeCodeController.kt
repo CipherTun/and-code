@@ -84,7 +84,7 @@ class ClaudeCodeController(
                 runCatching {
                     if (installer.installedRuntime() == null) {
                         report(ClaudeInstallStatus.Installing(R.string.claude_step_preparing_runtime))
-                        installer.install(agents = setOf(LocalAgent.CLAUDE_CODE)) { _, _ -> }
+                        installer.install(agents = setOf(LocalAgent.CLAUDE_CODE)) { _, _, _ -> }
                     }
                     report(ClaudeInstallStatus.Installing(R.string.claude_step_adding_repository))
                     target.install { step ->

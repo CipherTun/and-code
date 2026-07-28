@@ -1,5 +1,6 @@
 package com.yugahashimoto.andcode.runtime.local
 
+import com.yugahashimoto.andcode.runtime.LocalAgent
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -40,5 +41,27 @@ class LocalRuntimeServiceCommandTest {
     @Test
     fun `unknown action is ignored`() {
         assertEquals(LocalRuntimeServiceCommand.Ignore, localRuntimeServiceCommand("unknown"))
+    }
+
+    /**
+     * The setup guide's selection has to survive the trip through the service intent. It used not to
+     * be carried at all, so ticking Claude Code or Antigravity next to OpenCode installed neither.
+     */
+    @Test
+    fun `an install carries the selected agents`() {
+        assertEquals(
+            setOf(LocalAgent.OPEN_CODE, LocalAgent.CLAUDE_CODE, LocalAgent.ANTIGRAVITY),
+            localRuntimeInstallAgents(
+                arrayOf(LocalAgent.OPEN_CODE.id, LocalAgent.CLAUDE_CODE.id, LocalAgent.ANTIGRAVITY.id),
+            ),
+        )
+    }
+
+    /** Callers with no selection - the notification's restart, the watchdog - mean OpenCode alone. */
+    @Test
+    fun `an install with no selection means OpenCode`() {
+        assertEquals(setOf(LocalAgent.OPEN_CODE), localRuntimeInstallAgents(null))
+        assertEquals(setOf(LocalAgent.OPEN_CODE), localRuntimeInstallAgents(emptyArray()))
+        assertEquals(setOf(LocalAgent.OPEN_CODE), localRuntimeInstallAgents(arrayOf("not-an-agent")))
     }
 }

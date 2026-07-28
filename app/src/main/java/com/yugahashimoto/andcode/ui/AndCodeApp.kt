@@ -78,6 +78,7 @@ import com.yugahashimoto.andcode.feature.settings.DiagnosticsSheet
 import com.yugahashimoto.andcode.feature.settings.GitHubRepo
 import com.yugahashimoto.andcode.feature.settings.SettingsViewModel
 import com.yugahashimoto.andcode.feature.workspace.WorkspaceViewModel
+import com.yugahashimoto.andcode.runtime.RuntimeState
 import com.yugahashimoto.andcode.runtime.WorkspaceRef
 import com.yugahashimoto.andcode.runtime.local.GitCloneResult
 import com.yugahashimoto.andcode.ui.components.SessionStatus
@@ -156,8 +157,8 @@ fun AndCodeApp(
     val selectedRuntime by app.runtimeRegistry.selected.collectAsState()
     val runtimeTargets by app.runtimeRegistry.targets.collectAsState()
     val preferences by app.preferences.state.collectAsState()
+    val antigravityState by app.antigravityController.state.collectAsState()
 
-    var sidebarGrouping by remember { mutableStateOf(preferences.sidebarGrouping) }
     var collapsedSections by remember { mutableStateOf(setOf<String>()) }
 
     val workspaceViewModel: WorkspaceViewModel =
@@ -422,6 +423,22 @@ fun AndCodeApp(
         )
     }
 
+    // What the composer falls back to before the chat has a selection of its own.
+    //
+    // The global preference is not usable as-is: it belongs to whichever runtime the user last
+    // picked a model on, so after switching agent it names a model this runtime has never heard of.
+    // selectConfiguration above already drops such a value from the chat state - and the composer
+    // then fell straight back to the same stale preference, which is why the chip still read
+    // Claude's "sonnet" under OpenCode. Validated against the active runtime's own catalogue, with
+    // its default as the last resort.
+    val activeProvider = settingsState.providers.firstOrNull { it.id == preferences.providerId }
+    val fallbackProviderId =
+        preferences.providerId?.takeIf { activeProvider != null }
+            ?: settingsState.providers.firstOrNull()?.id
+    val fallbackModelId =
+        preferences.modelId?.takeIf { activeProvider?.models?.containsKey(it) == true }
+            ?: settingsState.providers.firstOrNull { it.id == fallbackProviderId }?.models?.keys?.firstOrNull()
+
     LaunchedEffect(preferences.autoAcceptPermissions) {
         chatViewModel.setAutoAcceptPermissions(preferences.autoAcceptPermissions)
     }
@@ -471,11 +488,15 @@ fun AndCodeApp(
             }.getOrNull().orEmpty()
         }
 
+    // Every runtime's chats, not just the selected one's: switching agent used to look like the
+    // history had been wiped. Each row carries the runtime that owns it so opening one can switch.
+    val allSessions by app.catalogRepository.allSessions.collectAsState()
     val recentSessions =
-        remember(activityState.sessions, activityState.activeSessionIds, activityState.completedSessionIds) {
-            activityState.sessions
-                .filter { it.parentId == null }
-                .take(25).map { session ->
+        remember(allSessions, activityState.activeSessionIds, activityState.completedSessionIds) {
+            allSessions
+                .filter { it.session.parentId == null }
+                .take(25).map { ref ->
+                    val session = ref.session
                     DrawerRecentSession(
                         id = session.id,
                         title = session.title.ifBlank { session.slug ?: session.id },
@@ -489,8 +510,18 @@ fun AndCodeApp(
                                 session.id in activityState.completedSessionIds -> SessionStatus.COMPLETED_UNREAD
                                 else -> SessionStatus.IDLE
                             },
+                        runtimeId = ref.runtimeId,
+                        agent = ref.agent,
                     )
                 }
+        }
+
+    // Local agents that are actually provisioned. A target reports Unavailable while its agent is
+    // missing, which is exactly the case the switcher must not offer.
+    val drawerAgents =
+        runtimeTargets.mapNotNull { target ->
+            val agent = target.agent ?: return@mapNotNull null
+            DrawerAgent(target.id, agent).takeIf { target.state.value !is RuntimeState.Unavailable }
         }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -559,8 +590,24 @@ fun AndCodeApp(
                             chatViewModel.selectWorkspace(workspace.path)
                             navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
                         },
-                        onOpenSession = { id, title ->
+                        agents = drawerAgents,
+                        selectedRuntimeId = selectedRuntime?.id,
+                        onSelectAgent = { agent ->
                             closeDrawer()
+                            if (agent.runtimeId != selectedRuntime?.id) {
+                                app.runtimeRegistry.select(agent.runtimeId)
+                                pendingSession = null
+                                chatViewModel.newSession()
+                            }
+                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                        },
+                        onOpenSession = { id, title, runtimeId ->
+                            closeDrawer()
+                            // The list spans every agent, so the chat may belong to one that is not
+                            // selected; opening it has to move to its runtime first.
+                            if (runtimeId != null && runtimeId != selectedRuntime?.id) {
+                                app.runtimeRegistry.select(runtimeId)
+                            }
                             app.activityRepository.markSessionRead(id)
                             pendingSession = id to title
                             navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
@@ -603,8 +650,6 @@ fun AndCodeApp(
                                 app.catalogRepository.refreshSessionsOnly()
                             }
                         },
-                        sidebarGrouping = sidebarGrouping,
-                        onGroupingChange = { sidebarGrouping = it },
                         collapsedSections = collapsedSections,
                         onToggleSection = { section ->
                             collapsedSections =
@@ -634,13 +679,20 @@ fun AndCodeApp(
                     AndroidSetupScreen(
                         runtimeStatus = localRuntimeStatus,
                         claude = workspaceState.claude,
+                        antigravity = antigravityState,
                         onStartSetup = { agents ->
+                            // Ticking Claude Code or Antigravity next to OpenCode used to install
+                            // neither of them: the two branches below were guarded on OpenCode
+                            // *not* being selected, and the OpenCode path never received the
+                            // selection at all, so it provisioned OpenCode alone. One install now
+                            // carries the whole selection, which is what LocalRuntimeInstaller
+                            // already knew how to do - and it must stay one install, because a
+                            // second one would race it for the same staging directory.
                             if (com.yugahashimoto.andcode.runtime.LocalAgent.OPEN_CODE in agents) {
-                                workspaceViewModel.setupLocalRuntime()
-                            }
-                            if (com.yugahashimoto.andcode.runtime.LocalAgent.CLAUDE_CODE in agents &&
-                                com.yugahashimoto.andcode.runtime.LocalAgent.OPEN_CODE !in agents
-                            ) {
+                                workspaceViewModel.setupLocalRuntime(agents)
+                            } else if (com.yugahashimoto.andcode.runtime.LocalAgent.ANTIGRAVITY in agents) {
+                                app.antigravityController.install(agents)
+                            } else if (com.yugahashimoto.andcode.runtime.LocalAgent.CLAUDE_CODE in agents) {
                                 workspaceViewModel.installClaudeCode()
                             }
                         },
@@ -651,6 +703,11 @@ fun AndCodeApp(
                         onSubmitClaudeSignInCode = workspaceViewModel::submitClaudeSignInCode,
                         onCancelClaudeSignIn = workspaceViewModel::cancelClaudeSignIn,
                         onSignOutClaude = workspaceViewModel::signOutClaude,
+                        onBeginAntigravitySignIn = app.antigravityController::beginAuth,
+                        onSubmitAntigravitySignInCode = app.antigravityController::submitAuthCode,
+                        onCancelAntigravitySignIn = app.antigravityController::cancelAuth,
+                        onSignOutAntigravity = app.antigravityController::logout,
+                        onSelectAntigravityPermissionMode = app.antigravityController::setPermissionMode,
                         onOpenUrl = { url ->
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
                         },
@@ -665,6 +722,8 @@ fun AndCodeApp(
                         onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
                         onRefreshProviderAuth = settingsViewModel::refreshProviderAuth,
                         onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
+                        onRefreshClaudeState = workspaceViewModel::refreshClaudeCode,
+                        onRefreshAntigravityState = app.antigravityController::refresh,
                         onConnectGitHub = { settingsViewModel.beginGitHubDeviceFlow() },
                         onOpenGitHubVerification = { url ->
                             context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
@@ -694,8 +753,8 @@ fun AndCodeApp(
                         state = chatState,
                         providers = settingsState.providers,
                         agents = settingsState.agents,
-                        selectedProviderId = chatState.selectedProviderId ?: settingsState.providerId,
-                        selectedModelId = chatState.selectedModelId ?: settingsState.modelId,
+                        selectedProviderId = chatState.selectedProviderId ?: fallbackProviderId,
+                        selectedModelId = chatState.selectedModelId ?: fallbackModelId,
                         selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
                         runtimeTargets = runtimeTargets,
                         selectedRuntimeId = selectedRuntime?.id,
@@ -703,6 +762,7 @@ fun AndCodeApp(
                             workspaceState.claude
                                 .takeIf { selectedRuntime?.agent == com.yugahashimoto.andcode.runtime.LocalAgent.CLAUDE_CODE }
                                 ?.permissionMode,
+                        supportsPermissions = selectedRuntime?.capabilities?.permissions != false,
                         onSelectClaudePermissionMode = { mode ->
                             workspaceViewModel.setClaudePermissionMode(mode, chatState.sessionId)
                         },
@@ -831,6 +891,16 @@ fun AndCodeApp(
                             onSubmitCode = workspaceViewModel::submitClaudeSignInCode,
                             onCancelSignIn = workspaceViewModel::cancelClaudeSignIn,
                             onSignOut = workspaceViewModel::signOutClaude,
+                        ),
+                    antigravity = { antigravityState },
+                    antigravityActions =
+                        com.yugahashimoto.andcode.ui.navigation.AntigravitySettingsActions(
+                            onInstall = app.antigravityController::install,
+                            onSelectPermissionMode = app.antigravityController::setPermissionMode,
+                            onSignIn = app.antigravityController::beginAuth,
+                            onSubmitCode = app.antigravityController::submitAuthCode,
+                            onCancelSignIn = app.antigravityController::cancelAuth,
+                            onSignOut = app.antigravityController::logout,
                         ),
                     onRequestWakeWordPermission = {
                         startWakeWordAfterPermission = true

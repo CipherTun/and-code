@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">Chats recientes</string>
     <string name="drawer_project_default">Predeterminado</string>
     <string name="drawer_projects_title">Proyectos</string>
+    <string name="drawer_agents_title">Agentes</string>
     <string name="drawer_add_project">Añadir proyecto</string>
     <string name="drawer_pinned">Fijado</string>
     <string name="drawer_pinned_sample_1">Conversación importante</string>
@@ -421,6 +422,9 @@
     <string name="github_git_operations">Operaciones Git de GitHub</string>
     <string name="github_not_connected">No conectado</string>
     <string name="github_connect">Conectar GitHub</string>
+    <string name="github_screen_title">GitHub / Operaciones de Git</string>
+    <string name="github_intro">Conecte GitHub para operaciones de repositorio, Git, pull requests y flujos de trabajo de Actions.</string>
+    <string name="github_client_id_missing">Esta compilación no incluye un ID de cliente de GitHub, así que no puede iniciar sesión. Vuelva a compilar con GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">Desconectar GitHub</string>
     <string name="github_verification_code">Introduce el código: %1$s</string>
     <string name="github_waiting_for_authorization">Esperando autorización…</string>
@@ -449,7 +453,7 @@
     <string name="this_android">Este Android</string>
     <string name="picker_no_providers">Aún no hay proveedores conectados</string>
 
-    <string name="onboarding_welcome_title">Bienvenido a OpenCode</string>
+    <string name="onboarding_welcome_title">Bienvenido a %1$s</string>
     <string name="onboarding_subtitle">Escribe, corrige y entiende código. Para empezar, solo elige una ruta de ejecución.</string>
     <string name="onboarding_recommended_badge">Recomendado</string>
     <string name="onboarding_android_title">Empezar con este Android</string>
@@ -841,6 +845,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">No se pudo instalar el entorno local</string>
     <string name="runtime_error_reinstall_failed">No se pudo reinstalar el entorno local</string>
     <string name="runtime_error_start_failed">No se pudo iniciar OpenCode local</string>
@@ -859,6 +864,12 @@
     <string name="runtime_step_preparing_update">Preparando la actualización</string>
     <string name="runtime_step_rolling_back_to">Volviendo a OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">Instalando Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">Preparando Debian Bookworm para Antigravity</string>
+    <string name="install_step_downloading_antigravity">Descargando y verificando Antigravity oficial</string>
+    <string name="install_step_installing_antigravity">Instalando Antigravity</string>
+    <string name="antigravity_permission_plan_desc">Antigravity lee y planifica, pero nunca edita archivos ni ejecuta comandos.</string>
+    <string name="antigravity_permission_accept_edits_desc">Antigravity puede editar archivos y ejecutar comandos en el espacio de trabajo sin preguntar. Recomendado.</string>
+    <string name="antigravity_permission_full_access_desc">Antigravity puede ejecutar cualquier comando sin preguntar. Úsalo con cuidado.</string>
     <string name="claude_permission_plan">Solo planificar</string>
     <string name="claude_permission_plan_desc">Claude lee y planifica, pero nunca edita archivos ni ejecuta comandos.</string>
     <string name="claude_permission_accept_edits">Aceptar ediciones</string>
@@ -874,6 +885,7 @@
     <string name="claude_step_downloading_package">Descargando Claude Code (unos 80 MB)</string>
     <string name="claude_step_verifying">Verificando la instalación</string>
     <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="antigravity_installed_version">Antigravity %1$s</string>
     <string name="claude_status_not_installed">No instalado</string>
     <string name="claude_status_installing">Instalando</string>
     <string name="claude_status_ready">Listo</string>
@@ -889,13 +901,15 @@
     <string name="claude_auth_verifying">Verificando…</string>
     <string name="claude_auth_cancel">Cancelar el inicio de sesión</string>
     <string name="setup_step_agents">Elija su agente</string>
-    <string name="setup_agents_description">Elija los agentes de programación que instalar en este dispositivo. Ambos se ejecutan en el mismo entorno Linux y puede añadir el otro más adelante.</string>
+    <string name="setup_agents_description">Elija los agentes de programación que instalar en este dispositivo. Todos se ejecutan en el mismo entorno Linux y puede añadir los demás más adelante.</string>
     <string name="setup_agent_claude_code_desc">Inicie sesión con su cuenta de Claude en el navegador. Descarga unos 80 MB.</string>
-    <string name="setup_agent_opencode_desc">Use sus propias claves de proveedores de modelos. Descarga unos 120 MB.</string>
+    <string name="setup_agent_opencode_desc">Inicie sesión con su propia clave de API de proveedor de modelos. Descarga unos 120 MB.</string>
+    <string name="setup_agent_antigravity_desc">Inicie sesión con su cuenta de Google en el navegador. Descarga unos 50 MB.</string>
     <string name="setup_agents_required">Seleccione al menos un agente para continuar.</string>
     <string name="setup_step_sign_in">Iniciar sesión</string>
     <string name="setup_sign_in_description">Conecte las cuentas que usarán sus agentes.</string>
-    <string name="setup_runtime_shared_note">Ambos agentes comparten un entorno Linux, por lo que esta descarga ocurre una sola vez.</string>
+    <string name="setup_sign_in_none_installed">Aún no hay ningún agente instalado, así que no hay nada a lo que iniciar sesión.</string>
+    <string name="setup_runtime_shared_note">Los agentes seleccionados comparten un entorno Linux, por lo que esta descarga ocurre una sola vez.</string>
     <string name="local_agent_on_device">%1$s · Local</string>
     <string name="runtime_status_stopped_reason">El entorno local está detenido</string>
     <string name="runtime_status_connecting_reason">Conectando con el entorno local</string>
@@ -909,6 +923,13 @@
     <string name="setup_download_agents_description">Prepara el entorno Linux compartido y los agentes que eligió.</string>
     <string name="settings_agents_row">Agentes</string>
     <string name="settings_agents_section">Agentes</string>
+    <string name="antigravity_install_button">Instalar Antigravity</string>
+    <string name="antigravity_status_signed_out">Sin iniciar sesión</string>
+    <string name="antigravity_sign_in_button">Iniciar sesión en Antigravity</string>
+    <string name="antigravity_auth_starting">Iniciando sesión…</string>
+    <string name="antigravity_auth_instructions">Aprueba la solicitud de Google en el navegador y pega aquí el código.</string>
+    <string name="antigravity_auth_verifying">Verificando…</string>
+    <string name="antigravity_signed_in">Sesión iniciada en Antigravity</string>
     <string name="chat_response_duration">%1$d min</string>
     <string name="chat_response_duration_under_minute">&lt;1 min</string>
 </resources>

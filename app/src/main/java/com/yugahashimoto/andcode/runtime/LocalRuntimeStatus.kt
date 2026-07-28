@@ -3,7 +3,13 @@ package com.yugahashimoto.andcode.runtime
 sealed interface LocalRuntimeStatus {
     data object NotInstalled : LocalRuntimeStatus
 
-    data class Installing(val progress: Float?, val step: String) : LocalRuntimeStatus
+    /**
+     * [agent] is the agent [step] belongs to, or null for the shared Linux environment.
+     *
+     * One install provisions every selected agent, so without this the setup guide put every
+     * step under the OpenCode heading - including "Installing Claude Code".
+     */
+    data class Installing(val progress: Float?, val step: String, val agent: LocalAgent? = null) : LocalRuntimeStatus
 
     data class Stopped(val version: String, val port: Int) : LocalRuntimeStatus
 

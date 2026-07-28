@@ -8,6 +8,8 @@ import com.yugahashimoto.andcode.data.repository.RuntimeCatalogRepository
 import com.yugahashimoto.andcode.data.settings.AppPreferencesRepository
 import com.yugahashimoto.andcode.data.settings.DraftRepository
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
+import com.yugahashimoto.andcode.runtime.local.AntigravityRuntime
+import com.yugahashimoto.andcode.runtime.local.AntigravityTarget
 import com.yugahashimoto.andcode.runtime.local.DefaultLocalRuntimeUpdateEngine
 import com.yugahashimoto.andcode.runtime.local.GitCredentialHelper
 import com.yugahashimoto.andcode.runtime.local.LocalProviderCredentialStore
@@ -146,6 +148,12 @@ val appModule =
             RuntimeRegistry(
                 store = get(),
                 localTarget = LocalRuntimeTarget(get()),
+                additionalTargets =
+                    listOf(
+                        AntigravityTarget(
+                            AntigravityRuntime(get(), (get<LocalRuntimeInstaller>())::installedRuntime),
+                        ),
+                    ),
             )
         }
 

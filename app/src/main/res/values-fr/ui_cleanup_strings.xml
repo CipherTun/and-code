@@ -20,7 +20,7 @@
     <string name="setup_back_action">Retour</string>
     <string name="setup_skip_action">Passer pour l\'instant</string>
     <string name="setup_download_description">Préparez le runtime nécessaire pour exécuter OpenCode directement sur cet appareil.</string>
-    <string name="setup_runtime_not_installed">Le runtime n\'est pas encore installé.</string>
+    <string name="setup_runtime_not_installed">Non installé</string>
     <string name="setup_runtime_ready">Le runtime est prêt</string>
     <string name="setup_provider_optional_description">Connectez un fournisseur d\'IA pour commencer à discuter. Cette étape est facultative — vous pouvez la passer et connecter un fournisseur plus tard depuis les Paramètres.</string>
     <string name="setup_provider_loading">Chargement des fournisseurs…</string>

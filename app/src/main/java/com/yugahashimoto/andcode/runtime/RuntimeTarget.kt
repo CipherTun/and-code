@@ -95,6 +95,9 @@ interface RuntimeTarget : OpenCodeBackend {
     val agent: LocalAgent?
         get() = null
 
+    val capabilities: RuntimeCapabilities
+        get() = RuntimeCapabilities()
+
     suspend fun connect(): Result<OpenCodeHealth>
 
     fun disconnect()

@@ -30,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -67,6 +68,7 @@ import com.yugahashimoto.andcode.feature.settings.SettingsUiState
 import com.yugahashimoto.andcode.feature.workspace.ClaudeCodeCard
 import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.LocalRuntimeStatus
+import com.yugahashimoto.andcode.runtime.local.AntigravityControllerState
 import com.yugahashimoto.andcode.runtime.local.ClaudeCodeUiState
 import com.yugahashimoto.andcode.runtime.local.ClaudeInstallStatus
 import com.yugahashimoto.andcode.runtime.local.ClaudePermissionMode
@@ -86,12 +88,18 @@ private const val TOTAL_STEPS = 4
 fun AndroidSetupScreen(
     runtimeStatus: LocalRuntimeStatus,
     claude: ClaudeCodeUiState,
+    antigravity: AntigravityControllerState = AntigravityControllerState(),
     onStartSetup: (Set<LocalAgent>) -> Unit,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
     onBeginClaudeSignIn: () -> Unit,
     onSubmitClaudeSignInCode: (String) -> Unit,
     onCancelClaudeSignIn: () -> Unit,
     onSignOutClaude: () -> Unit,
+    onBeginAntigravitySignIn: () -> Unit = {},
+    onSubmitAntigravitySignInCode: (String) -> Unit = {},
+    onCancelAntigravitySignIn: () -> Unit = {},
+    onSignOutAntigravity: () -> Unit = {},
+    onSelectAntigravityPermissionMode: (com.yugahashimoto.andcode.runtime.local.AntigravityPermissionMode) -> Unit = {},
     onOpenUrl: (String) -> Unit,
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
@@ -104,6 +112,9 @@ fun AndroidSetupScreen(
     onDismissProviderAuth: () -> Unit,
     onRefreshProviderAuth: () -> Unit,
     onRefreshCatalog: () -> Unit,
+    /** Re-reads whether the agent is installed after the runtime service provisioned it. */
+    onRefreshClaudeState: () -> Unit,
+    onRefreshAntigravityState: () -> Unit,
     onConnectGitHub: () -> Unit = {},
     onOpenGitHubVerification: (String) -> Unit = {},
     onDisconnectGitHub: () -> Unit = {},
@@ -117,22 +128,45 @@ fun AndroidSetupScreen(
                 save = { agents -> agents.map(LocalAgent::id) },
                 restore = { ids -> ids.mapNotNull(LocalAgent::fromId).toSet() },
             ),
-    ) { mutableStateOf(setOf(LocalAgent.CLAUDE_CODE)) }
+        // OpenCode, the runtime every other install path in the app already defaults to. This used
+        // to pre-tick Claude Code, which arrived as a side effect of the commit that added agent
+        // selection while Claude Code was the subject of that work - never a decision about what a
+        // new user should get. Leaving nothing ticked is worse: the step shows "select at least one
+        // agent" in red the moment it opens.
+    ) { mutableStateOf(setOf(LocalAgent.OPEN_CODE)) }
 
     val openCodeSelected = LocalAgent.OPEN_CODE in selectedAgents
     val claudeSelected = LocalAgent.CLAUDE_CODE in selectedAgents
+    val antigravitySelected = LocalAgent.ANTIGRAVITY in selectedAgents
     val openCodeReady = runtimeStatus is LocalRuntimeStatus.Ready || runtimeStatus is LocalRuntimeStatus.Stopped
-    val installComplete = (!openCodeSelected || openCodeReady) && (!claudeSelected || claude.installed)
+    val antigravityReady = antigravitySelected && antigravity.installed && !antigravity.busy
+    val installComplete = (!openCodeSelected || openCodeReady) && (!claudeSelected || claude.installed) && (!antigravitySelected || antigravityReady)
+
+    // Only what is selected *and* actually on the device: an agent whose binary is missing has no
+    // sign-in to offer, and Claude Code's card would shell out to /usr/bin/claude and fail there.
+    // OpenCode, Claude Code, Antigravity - the same order the picker lists them in, so the guide
+    // does not reshuffle the agents between the step that chooses them and the step that signs in.
+    val signInAgents =
+        listOfNotNull(
+            LocalAgent.OPEN_CODE.takeIf { openCodeSelected && openCodeReady },
+            LocalAgent.CLAUDE_CODE.takeIf { claudeSelected && claude.installed },
+            LocalAgent.ANTIGRAVITY.takeIf { antigravitySelected && antigravity.installed },
+        )
+    var signInIndex by rememberSaveable { mutableIntStateOf(0) }
+    val signInAgent = signInAgents.getOrNull(signInIndex.coerceAtMost(signInAgents.lastIndex.coerceAtLeast(0)))
 
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
 
-    // With both agents selected the sandbox is built once for OpenCode and Claude Code is added to
-    // it, so the second install only starts after the first has produced a usable runtime.
-    LaunchedEffect(openCodeReady, claudeSelected, claude.installed, claude.install) {
-        if (!claudeSelected || !openCodeSelected) return@LaunchedEffect
-        if (openCodeReady && !claude.installed && claude.install is ClaudeInstallStatus.Idle) {
-            onStartSetup(setOf(LocalAgent.CLAUDE_CODE))
-        }
+    // One install provisions every selected agent, so the guide no longer chains a second and third
+    // install off this screen once the first finishes. It used to, and that made the outcome depend
+    // on the screen staying in composition: leave the guide during the several-minute OpenCode
+    // download and the agents queued behind it were simply never installed, which is how a setup
+    // that reported success could still leave Claude Code missing. What is left is a re-read of the
+    // install state, because the runtime service - not these controllers - ran the install.
+    LaunchedEffect(openCodeReady) {
+        if (!openCodeReady) return@LaunchedEffect
+        if (claudeSelected) onRefreshClaudeState()
+        if (antigravitySelected) onRefreshAntigravityState()
     }
 
     LaunchedEffect(installComplete) {
@@ -161,12 +195,20 @@ fun AndroidSetupScreen(
             2 ->
                 if (installComplete) {
                     SetupPrimaryAction(stringResource(R.string.setup_next_action), true) { currentStep = 3 }
-                } else if (runtimeStatus is LocalRuntimeStatus.Broken || claude.install is ClaudeInstallStatus.Failed) {
-                    SetupPrimaryAction(stringResource(R.string.claude_retry_install_button), true) { onStartSetup(selectedAgents) }
+                } else if (runtimeStatus is LocalRuntimeStatus.Broken || claude.install is ClaudeInstallStatus.Failed || antigravity.error != null) {
+                    SetupPrimaryAction(stringResource(R.string.claude_retry_install_button), true) {
+                        onStartSetup(if (antigravity.error != null) setOf(LocalAgent.ANTIGRAVITY) else selectedAgents)
+                    }
                 } else {
                     null
                 }
-            3 -> SetupPrimaryAction(stringResource(R.string.setup_next_action), true) { currentStep = 4 }
+            // "Next" walks the sign-in tabs before it leaves the step, so signing in to three
+            // agents is three taps of one button rather than a hunt for the chip the user has not
+            // visited yet.
+            3 ->
+                SetupPrimaryAction(stringResource(R.string.setup_next_action), true) {
+                    if (signInIndex < signInAgents.lastIndex) signInIndex++ else currentStep = 4
+                }
             else -> SetupPrimaryAction(stringResource(R.string.setup_complete_button), true, onFinish)
         }
 
@@ -232,20 +274,29 @@ fun AndroidSetupScreen(
                     RuntimeDownloadStep(
                         runtimeStatus = runtimeStatus,
                         claude = claude,
+                        antigravity = antigravity,
                         openCodeSelected = openCodeSelected,
                         claudeSelected = claudeSelected,
+                        antigravitySelected = antigravitySelected,
                     )
                 3 ->
                     SignInStep(
-                        claudeSelected = claudeSelected,
-                        openCodeSelected = openCodeSelected,
+                        agents = signInAgents,
+                        current = signInAgent,
+                        onSelectAgent = { agent -> signInIndex = signInAgents.indexOf(agent).coerceAtLeast(0) },
                         claude = claude,
+                        antigravity = antigravity,
                         onBeginClaudeSignIn = onBeginClaudeSignIn,
                         onSubmitClaudeSignInCode = onSubmitClaudeSignInCode,
                         onCancelClaudeSignIn = onCancelClaudeSignIn,
                         onSignOutClaude = onSignOutClaude,
+                        onBeginAntigravitySignIn = onBeginAntigravitySignIn,
+                        onSubmitAntigravitySignInCode = onSubmitAntigravitySignInCode,
+                        onCancelAntigravitySignIn = onCancelAntigravitySignIn,
+                        onSignOutAntigravity = onSignOutAntigravity,
                         onOpenUrl = onOpenUrl,
                         onSelectClaudePermissionMode = onSelectClaudePermissionMode,
+                        onSelectAntigravityPermissionMode = onSelectAntigravityPermissionMode,
                         settingsState = settingsState,
                         onOpenProviderAuth = onOpenProviderAuth,
                         onDisconnectProvider = onDisconnectProvider,
@@ -423,6 +474,13 @@ private fun AgentSelectionStep(
             title = stringResource(R.string.setup_step_agents),
             description = stringResource(R.string.setup_agents_description),
         )
+        // OpenCode, Claude Code, Antigravity - and the sign-in step follows the same order.
+        AgentOption(
+            title = stringResource(R.string.agent_opencode_name),
+            description = stringResource(R.string.setup_agent_opencode_desc),
+            selected = LocalAgent.OPEN_CODE in selectedAgents,
+            onToggle = { onToggle(LocalAgent.OPEN_CODE) },
+        )
         AgentOption(
             title = stringResource(R.string.agent_claude_code_name),
             description = stringResource(R.string.setup_agent_claude_code_desc),
@@ -430,12 +488,12 @@ private fun AgentSelectionStep(
             onToggle = { onToggle(LocalAgent.CLAUDE_CODE) },
         )
         AgentOption(
-            title = stringResource(R.string.agent_opencode_name),
-            description = stringResource(R.string.setup_agent_opencode_desc),
-            selected = LocalAgent.OPEN_CODE in selectedAgents,
-            onToggle = { onToggle(LocalAgent.OPEN_CODE) },
+            title = stringResource(R.string.agent_antigravity_name),
+            description = stringResource(R.string.setup_agent_antigravity_desc),
+            selected = LocalAgent.ANTIGRAVITY in selectedAgents,
+            onToggle = { onToggle(LocalAgent.ANTIGRAVITY) },
         )
-        if (selectedAgents.size == 2) {
+        if (selectedAgents.size >= 2) {
             Text(
                 text = stringResource(R.string.setup_runtime_shared_note),
                 style = MaterialTheme.typography.labelSmall,
@@ -492,9 +550,18 @@ private fun AgentOption(
 private fun RuntimeDownloadStep(
     runtimeStatus: LocalRuntimeStatus,
     claude: ClaudeCodeUiState,
+    antigravity: AntigravityControllerState,
     openCodeSelected: Boolean,
     claudeSelected: Boolean,
+    antigravitySelected: Boolean,
 ) {
+    // One install provisions the whole selection and reports through the shared runtime status, so
+    // each step is shown under the agent it names. Without this the OpenCode panel displayed
+    // "Installing Claude Code" while the Claude Code panel below it still read "Not installed".
+    val installing = runtimeStatus as? LocalRuntimeStatus.Installing
+    val sharedStep = installing?.takeIf { it.agent == null }
+    val stepFor = { agent: LocalAgent -> installing?.takeIf { it.agent == agent } }
+
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
             title = stringResource(R.string.setup_step_download),
@@ -503,15 +570,89 @@ private fun RuntimeDownloadStep(
         if (openCodeSelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_opencode_name), fontWeight = FontWeight.SemiBold)
-                OpenCodeRuntimeProgress(runtimeStatus)
+                // While another agent's step is running, OpenCode is neither idle nor the subject of
+                // that step, so it keeps a bar under the generic setting-up label.
+                val generic = stringResource(R.string.runtime_status_setting_up)
+                OpenCodeRuntimeProgress(
+                    if (installing != null && sharedStep == null) installing.copy(step = generic) else runtimeStatus,
+                )
             }
         }
         if (claudeSelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_claude_code_name), fontWeight = FontWeight.SemiBold)
-                ClaudeInstallProgress(claude)
+                val step = stepFor(LocalAgent.CLAUDE_CODE)
+                if (step != null) SharedInstallProgress(step) else ClaudeInstallProgress(claude)
             }
         }
+        if (antigravitySelected) {
+            SetupPanel {
+                Text(stringResource(R.string.agent_antigravity_name), fontWeight = FontWeight.SemiBold)
+                val step = stepFor(LocalAgent.ANTIGRAVITY)
+                if (step != null) SharedInstallProgress(step) else AntigravityInstallProgress(antigravity)
+            }
+        }
+    }
+}
+
+/** A step of the one shared install, shown under whichever agent it belongs to. */
+@Composable
+private fun SharedInstallProgress(status: LocalRuntimeStatus.Installing) {
+    Text(status.step, fontWeight = FontWeight.Medium)
+    if (status.progress != null) {
+        LinearProgressIndicator(progress = { status.progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+    } else {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun AntigravityInstallProgress(antigravity: AntigravityControllerState) {
+    when (val install = antigravity.install) {
+        is com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Installing -> {
+            if (install.step.isNotBlank()) Text(install.step, fontWeight = FontWeight.Medium)
+            if (install.progress != null) {
+                LinearProgressIndicator(
+                    progress = { install.progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text = "${(install.progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
+        is com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Ready ->
+            // Name and version, the way the OpenCode and Claude Code cards read. This showed a bare
+            // "1.1.7" next to "OpenCode 1.18.5" and "Claude Code 2.1.212".
+            ReadyAgentRow(
+                stringResource(R.string.antigravity_installed_version, antigravity.version ?: install.version),
+            )
+        is com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Failed ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(
+                    Icons.Default.Error,
+                    contentDescription = stringResource(R.string.cd_error),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(install.message, color = MaterialTheme.colorScheme.error)
+            }
+        com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Idle ->
+            if (antigravity.installed) {
+                // The pinned release is the fallback rather than a literal, so the version here can
+                // never drift from the one the installer actually writes.
+                ReadyAgentRow(
+                    stringResource(
+                        R.string.antigravity_installed_version,
+                        antigravity.version ?: com.yugahashimoto.andcode.runtime.local.AntigravityManifest.VERSION,
+                    ),
+                )
+            } else {
+                Text(stringResource(R.string.setup_runtime_not_installed), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
     }
 }
 
@@ -552,8 +693,11 @@ private fun ClaudeInstallProgress(claude: ClaudeCodeUiState) {
             if (claude.installed) {
                 ReadyAgentRow(stringResource(R.string.claude_installed_version, claude.version.orEmpty()))
             } else {
+                // The same string as the OpenCode and Antigravity cards above: this screen listed
+                // one "not installed" state in three different wordings, two of them full
+                // sentences, next to each other in the same list.
                 Text(
-                    stringResource(R.string.claude_status_not_installed),
+                    stringResource(R.string.setup_runtime_not_installed),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -640,17 +784,35 @@ private fun ReadyAgentRow(detail: String) {
     }
 }
 
+/**
+ * One agent's sign-in at a time, picked from a chip row.
+ *
+ * [agents] are the ones that are both selected and actually installed, and nothing else is offered.
+ * Offering sign-in for an agent that is not installed is not merely untidy: Claude Code's sign-in
+ * shells out to `/usr/bin/claude`, so the card ran it and reported "Claude Code sign-in finished
+ * (exit code 127) - bash: /usr/bin/claude: No such file or directory" to the user.
+ *
+ * Stacking all three vertically also made the step unusable - each card carries its own permission
+ * mode list, so the sign-in the user came for sat several screens down.
+ */
 @Composable
 private fun SignInStep(
-    claudeSelected: Boolean,
-    openCodeSelected: Boolean,
+    agents: List<LocalAgent>,
+    current: LocalAgent?,
+    onSelectAgent: (LocalAgent) -> Unit,
     claude: ClaudeCodeUiState,
+    antigravity: AntigravityControllerState,
     onBeginClaudeSignIn: () -> Unit,
     onSubmitClaudeSignInCode: (String) -> Unit,
     onCancelClaudeSignIn: () -> Unit,
     onSignOutClaude: () -> Unit,
+    onBeginAntigravitySignIn: () -> Unit,
+    onSubmitAntigravitySignInCode: (String) -> Unit,
+    onCancelAntigravitySignIn: () -> Unit,
+    onSignOutAntigravity: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
+    onSelectAntigravityPermissionMode: (com.yugahashimoto.andcode.runtime.local.AntigravityPermissionMode) -> Unit,
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
     onDisconnectProvider: (String) -> Unit,
@@ -660,29 +822,60 @@ private fun SignInStep(
             title = stringResource(R.string.setup_step_sign_in),
             description = stringResource(R.string.setup_sign_in_description),
         )
-        if (claudeSelected) {
-            SetupPanel {
-                Text(stringResource(R.string.agent_claude_code_name), fontWeight = FontWeight.SemiBold)
-                ClaudeCodeCard(
-                    claude = claude,
-                    onInstall = {},
-                    onUpdate = {},
-                    onSelectPermissionMode = onSelectClaudePermissionMode,
-                    onSignIn = onBeginClaudeSignIn,
-                    onSubmitCode = onSubmitClaudeSignInCode,
-                    onCancelSignIn = onCancelClaudeSignIn,
-                    onSignOut = onSignOutClaude,
-                    onOpenUrl = onOpenUrl,
-                    showInstallActions = false,
-                )
+        if (current == null) {
+            Text(
+                text = stringResource(R.string.setup_sign_in_none_installed),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@Column
+        }
+        if (agents.size > 1) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                agents.forEach { agent ->
+                    FilterChip(
+                        selected = agent == current,
+                        onClick = { onSelectAgent(agent) },
+                        label = { Text(stringResource(agent.displayNameRes)) },
+                    )
+                }
             }
         }
-        if (openCodeSelected) {
-            ProviderConnectionStep(
-                settingsState = settingsState,
-                onOpenProviderAuth = onOpenProviderAuth,
-                onDisconnectProvider = onDisconnectProvider,
-            )
+        SetupPanel {
+            Text(stringResource(current.displayNameRes), fontWeight = FontWeight.SemiBold)
+            when (current) {
+                LocalAgent.CLAUDE_CODE ->
+                    ClaudeCodeCard(
+                        claude = claude,
+                        onInstall = {},
+                        onUpdate = {},
+                        onSelectPermissionMode = onSelectClaudePermissionMode,
+                        onSignIn = onBeginClaudeSignIn,
+                        onSubmitCode = onSubmitClaudeSignInCode,
+                        onCancelSignIn = onCancelClaudeSignIn,
+                        onSignOut = onSignOutClaude,
+                        onOpenUrl = onOpenUrl,
+                        showInstallActions = false,
+                    )
+                LocalAgent.ANTIGRAVITY ->
+                    com.yugahashimoto.andcode.feature.workspace.AntigravityCard(
+                        antigravity = antigravity,
+                        onInstall = {},
+                        onSelectPermissionMode = onSelectAntigravityPermissionMode,
+                        onSignIn = onBeginAntigravitySignIn,
+                        onSubmitCode = onSubmitAntigravitySignInCode,
+                        onCancelSignIn = onCancelAntigravitySignIn,
+                        onSignOut = onSignOutAntigravity,
+                        onOpenUrl = onOpenUrl,
+                        showInstallActions = false,
+                    )
+                LocalAgent.OPEN_CODE ->
+                    ProviderConnectionStep(
+                        settingsState = settingsState,
+                        onOpenProviderAuth = onOpenProviderAuth,
+                        onDisconnectProvider = onDisconnectProvider,
+                        header = false,
+                    )
+            }
         }
     }
 }
@@ -692,14 +885,18 @@ private fun ProviderConnectionStep(
     settingsState: SettingsUiState,
     onOpenProviderAuth: (String) -> Unit,
     onDisconnectProvider: (String) -> Unit,
+    /** False inside the sign-in step's own panel, which already names the agent above this. */
+    header: Boolean = true,
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        StepHeader(
-            title = stringResource(R.string.setup_step_provider),
-            description = stringResource(R.string.setup_provider_optional_description),
-        )
+        if (header) {
+            StepHeader(
+                title = stringResource(R.string.setup_step_provider),
+                description = stringResource(R.string.setup_provider_optional_description),
+            )
+        }
 
         if (settingsState.availableProviders.isEmpty()) {
             Row(
@@ -930,6 +1127,8 @@ private fun AndroidSetupScreenPreview() {
             onDismissProviderAuth = {},
             onRefreshProviderAuth = {},
             onRefreshCatalog = {},
+            onRefreshClaudeState = {},
+            onRefreshAntigravityState = {},
             onBack = {},
             onFinish = {},
         )
@@ -986,6 +1185,8 @@ private fun AndroidSetupProviderStepPreview() {
             onDismissProviderAuth = {},
             onRefreshProviderAuth = {},
             onRefreshCatalog = {},
+            onRefreshClaudeState = {},
+            onRefreshAntigravityState = {},
             onBack = {},
             onFinish = {},
         )

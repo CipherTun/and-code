@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">Chats recentes</string>
     <string name="drawer_project_default">Padrão</string>
     <string name="drawer_projects_title">Projetos</string>
+    <string name="drawer_agents_title">Agentes</string>
     <string name="drawer_add_project">Adicionar projeto</string>
     <string name="drawer_pinned">Fixado</string>
     <string name="drawer_pinned_sample_1">Conversa importante</string>
@@ -421,6 +422,9 @@
     <string name="github_git_operations">Operações Git do GitHub</string>
     <string name="github_not_connected">Não conectado</string>
     <string name="github_connect">Conectar GitHub</string>
+    <string name="github_screen_title">GitHub / Operações Git</string>
+    <string name="github_intro">Conecte o GitHub para operações de repositório, Git, pull requests e workflows do Actions.</string>
+    <string name="github_client_id_missing">Esta compilação não tem um ID de cliente do GitHub, então não é possível iniciar o login. Recompile definindo GITHUB_CLIENT_ID.</string>
     <string name="github_disconnect">Desconectar GitHub</string>
     <string name="github_verification_code">Insira o código: %1$s</string>
     <string name="github_waiting_for_authorization">Aguardando autorização…</string>
@@ -449,7 +453,7 @@
     <string name="this_android">Este Android</string>
     <string name="picker_no_providers">Nenhum provedor conectado ainda</string>
 
-    <string name="onboarding_welcome_title">Bem-vindo ao OpenCode</string>
+    <string name="onboarding_welcome_title">Bem-vindo ao %1$s</string>
     <string name="onboarding_subtitle">Escreva, corrija e entenda código. Para começar, basta escolher um caminho de execução.</string>
     <string name="onboarding_recommended_badge">Recomendado</string>
     <string name="onboarding_android_title">Começar com este Android</string>
@@ -841,6 +845,7 @@
     <!-- Claude Code agent and agent selection -->
     <string name="agent_opencode_name">OpenCode</string>
     <string name="agent_claude_code_name">Claude Code</string>
+    <string name="agent_antigravity_name">Antigravity</string>
     <string name="runtime_error_install_failed">Não foi possível instalar o ambiente local</string>
     <string name="runtime_error_reinstall_failed">Não foi possível reinstalar o ambiente local</string>
     <string name="runtime_error_start_failed">Não foi possível iniciar o OpenCode local</string>
@@ -859,6 +864,12 @@
     <string name="runtime_step_preparing_update">Preparando a atualização</string>
     <string name="runtime_step_rolling_back_to">Revertendo para o OpenCode %1$s</string>
     <string name="install_step_installing_claude_code">Instalando o Claude Code</string>
+    <string name="install_step_preparing_antigravity_rootfs">Preparando o Debian Bookworm para o Antigravity</string>
+    <string name="install_step_downloading_antigravity">Baixando e verificando o Antigravity oficial</string>
+    <string name="install_step_installing_antigravity">Instalando o Antigravity</string>
+    <string name="antigravity_permission_plan_desc">O Antigravity lê e planeja, mas nunca edita arquivos nem executa comandos.</string>
+    <string name="antigravity_permission_accept_edits_desc">O Antigravity pode editar arquivos e executar comandos no espaço de trabalho sem perguntar. Recomendado.</string>
+    <string name="antigravity_permission_full_access_desc">O Antigravity pode executar qualquer comando sem perguntar. Use com cuidado.</string>
     <string name="claude_permission_plan">Apenas planejar</string>
     <string name="claude_permission_plan_desc">O Claude lê e planeja, mas nunca edita arquivos nem executa comandos.</string>
     <string name="claude_permission_accept_edits">Aceitar edições</string>
@@ -874,6 +885,7 @@
     <string name="claude_step_downloading_package">Baixando o Claude Code (cerca de 80 MB)</string>
     <string name="claude_step_verifying">Verificando a instalação</string>
     <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="antigravity_installed_version">Antigravity %1$s</string>
     <string name="claude_status_not_installed">Não instalado</string>
     <string name="claude_status_installing">Instalando</string>
     <string name="claude_status_ready">Pronto</string>
@@ -889,13 +901,15 @@
     <string name="claude_auth_verifying">Verificando…</string>
     <string name="claude_auth_cancel">Cancelar o login</string>
     <string name="setup_step_agents">Escolha seu agente</string>
-    <string name="setup_agents_description">Escolha os agentes de programação a instalar neste dispositivo. Ambos rodam no mesmo ambiente Linux e você pode adicionar o outro depois.</string>
+    <string name="setup_agents_description">Escolha os agentes de programação a instalar neste dispositivo. Todos rodam no mesmo ambiente Linux e você pode adicionar os outros depois.</string>
     <string name="setup_agent_claude_code_desc">Faça login com sua conta Claude no navegador. Baixa cerca de 80 MB.</string>
-    <string name="setup_agent_opencode_desc">Use suas próprias chaves de provedores de modelos. Baixa cerca de 120 MB.</string>
+    <string name="setup_agent_opencode_desc">Faça login com sua própria chave de API de provedor de modelos. Baixa cerca de 120 MB.</string>
+    <string name="setup_agent_antigravity_desc">Faça login com sua conta Google no navegador. Baixa cerca de 50 MB.</string>
     <string name="setup_agents_required">Selecione ao menos um agente para continuar.</string>
     <string name="setup_step_sign_in">Entrar</string>
     <string name="setup_sign_in_description">Conecte as contas que seus agentes vão usar.</string>
-    <string name="setup_runtime_shared_note">Os dois agentes compartilham um ambiente Linux, então o download acontece apenas uma vez.</string>
+    <string name="setup_sign_in_none_installed">Nenhum agente instalado ainda, então não há nada em que fazer login.</string>
+    <string name="setup_runtime_shared_note">Os agentes selecionados compartilham um ambiente Linux, então o download acontece apenas uma vez.</string>
     <string name="local_agent_on_device">%1$s · Local</string>
     <string name="runtime_status_stopped_reason">O ambiente local está parado</string>
     <string name="runtime_status_connecting_reason">Conectando ao ambiente local</string>
@@ -909,6 +923,13 @@
     <string name="setup_download_agents_description">Prepara o ambiente Linux compartilhado e os agentes escolhidos.</string>
     <string name="settings_agents_row">Agentes</string>
     <string name="settings_agents_section">Agentes</string>
+    <string name="antigravity_install_button">Instalar o Antigravity</string>
+    <string name="antigravity_status_signed_out">Sem login</string>
+    <string name="antigravity_sign_in_button">Entrar no Antigravity</string>
+    <string name="antigravity_auth_starting">Iniciando login…</string>
+    <string name="antigravity_auth_instructions">Aprove a solicitação do Google no navegador e cole o código aqui.</string>
+    <string name="antigravity_auth_verifying">Verificando…</string>
+    <string name="antigravity_signed_in">Conectado ao Antigravity</string>
     <string name="chat_response_duration">%1$d min</string>
     <string name="chat_response_duration_under_minute">&lt;1 min</string>
 </resources>

@@ -259,6 +259,7 @@ fun WorkspacesScreen(
                                 when (target.agent) {
                                     LocalAgent.CLAUDE_CODE -> state.claude.installed
                                     LocalAgent.OPEN_CODE -> state.localStatus is LocalRuntimeStatus.Ready
+                                    LocalAgent.ANTIGRAVITY -> target.state is RuntimeState.Connected
                                     null -> true
                                 },
                         ) {
@@ -306,7 +307,7 @@ fun WorkspacesScreen(
                             onSignOut = onSignOutClaude,
                             onOpenUrl = onOpenUrl,
                         )
-                    } else if (target.type == RuntimeType.LOCAL) {
+                    } else if (target.type == RuntimeType.LOCAL && target.agent != LocalAgent.ANTIGRAVITY) {
                         Spacer(Modifier.height(12.dp))
                         when (val local = state.localStatus) {
                             LocalRuntimeStatus.NotInstalled -> {
@@ -688,6 +689,18 @@ private fun targetSubtitle(
             is RuntimeState.Unavailable -> stringResource(R.string.claude_status_not_installed)
             RuntimeState.Connecting -> stringResource(R.string.claude_status_installing)
             RuntimeState.Disconnected -> stringResource(R.string.claude_status_not_installed)
+        }
+    } else if (target.agent == LocalAgent.ANTIGRAVITY) {
+        when (val runtimeState = target.state) {
+            // Both of these now read like the OpenCode and Claude Code rows, which they did not: an
+            // installed Antigravity showed a bare "1.1.7" beside "OpenCode 1.18.5", and an
+            // uninstalled one showed the target's raw English reason ("Antigravity is not installed
+            // or incompatible with this ABI") where Claude Code shows "Not installed".
+            is RuntimeState.Connected -> stringResource(R.string.antigravity_installed_version, runtimeState.version)
+            RuntimeState.Connecting -> stringResource(R.string.claude_status_installing)
+            is RuntimeState.Failed -> compactRuntimeError(runtimeState.message)
+            is RuntimeState.Unavailable -> stringResource(R.string.runtime_status_not_installed)
+            RuntimeState.Disconnected -> stringResource(R.string.runtime_status_not_installed)
         }
     } else {
         when (target.type) {

@@ -20,7 +20,7 @@
     <string name="setup_back_action">رجوع</string>
     <string name="setup_skip_action">تخطي الآن</string>
     <string name="setup_download_description">جهّز runtime المطلوب لتشغيل OpenCode مباشرة على هذا الجهاز.</string>
-    <string name="setup_runtime_not_installed">لم يتم تثبيت runtime بعد.</string>
+    <string name="setup_runtime_not_installed">غير مثبّت</string>
     <string name="setup_runtime_ready">runtime جاهز</string>
     <string name="setup_provider_optional_description">اربط مزود ذكاء اصطناعي لبدء المحادثة. هذه الخطوة اختيارية — يمكنك تخطيها وربط أي مزود لاحقًا من الإعدادات.</string>
     <string name="setup_provider_loading">جارٍ تحميل المزودين…</string>

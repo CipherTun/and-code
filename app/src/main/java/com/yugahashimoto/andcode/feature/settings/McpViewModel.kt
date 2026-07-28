@@ -26,7 +26,8 @@ data class McpUiState(
     /**
      * Whether connecting and disconnecting a configured server means anything here.
      *
-     * Claude Code connects to every server it knows about, so it offers removal instead.
+     * Claude Code and Antigravity both connect to every server they know about, so they offer
+     * removal instead of a live toggle.
      */
     val supportsConnectToggle: Boolean = true,
 )
@@ -41,7 +42,8 @@ class McpViewModel(
     private val registry: RuntimeRegistry,
     private val agent: LocalAgent = LocalAgent.OPEN_CODE,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(McpUiState(supportsConnectToggle = agent != LocalAgent.CLAUDE_CODE))
+    private val _state =
+        MutableStateFlow(McpUiState(supportsConnectToggle = agent !in setOf(LocalAgent.CLAUDE_CODE, LocalAgent.ANTIGRAVITY)))
     val state: StateFlow<McpUiState> = _state.asStateFlow()
 
     init {

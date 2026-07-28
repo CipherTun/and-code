@@ -19,6 +19,9 @@ import com.yugahashimoto.andcode.runtime.RuntimeRegistry
 import com.yugahashimoto.andcode.runtime.local.AdbConnectionManager
 import com.yugahashimoto.andcode.runtime.local.AndroidClaudeMessages
 import com.yugahashimoto.andcode.runtime.local.AndroidLocalRuntimeMessages
+import com.yugahashimoto.andcode.runtime.local.AntigravityController
+import com.yugahashimoto.andcode.runtime.local.AntigravityRuntime
+import com.yugahashimoto.andcode.runtime.local.AntigravityTarget
 import com.yugahashimoto.andcode.runtime.local.ClaudeCodeController
 import com.yugahashimoto.andcode.runtime.local.ClaudeCodeRuntime
 import com.yugahashimoto.andcode.runtime.local.ClaudeCodeTarget
@@ -43,6 +46,7 @@ import com.yugahashimoto.andcode.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -98,6 +102,15 @@ class AndCodeApplication : Application() {
         private set
 
     lateinit var adbConnectionManager: AdbConnectionManager
+        private set
+
+    lateinit var antigravityRuntime: AntigravityRuntime
+        private set
+
+    lateinit var antigravityTarget: AntigravityTarget
+        private set
+
+    lateinit var antigravityController: AntigravityController
         private set
 
     lateinit var runtimeMessages: LocalRuntimeMessages
@@ -164,6 +177,9 @@ class AndCodeApplication : Application() {
                 githubToken = { settings.githubToken },
             )
         claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
+        antigravityRuntime = AntigravityRuntime(runtimeDirectory, installer::installedRuntime, githubToken = { settings.githubToken })
+        antigravityTarget = AntigravityTarget(antigravityRuntime)
+        antigravityController = AntigravityController(installer, antigravityTarget, applicationScope)
         runtimeMessages = AndroidLocalRuntimeMessages(this)
         gitCloneRepository =
             GitCloneRepository(
@@ -228,8 +244,11 @@ class AndCodeApplication : Application() {
             RuntimeRegistry(
                 store = settings,
                 localTarget = LocalRuntimeTarget(localRuntimeManager, messages = runtimeMessages),
-                additionalTargets = listOf(claudeCodeTarget),
+                additionalTargets = listOf(claudeCodeTarget, antigravityTarget),
             )
+        // Surface the installed/version state to the workspace picker without waiting for the
+        // first chat to touch Antigravity.
+        applicationScope.launch { antigravityTarget.connect() }
         claudeCodeController =
             ClaudeCodeController(
                 target = claudeCodeTarget,
