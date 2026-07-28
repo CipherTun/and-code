@@ -881,6 +881,7 @@
     <string name="claude_step_downloading_package">Téléchargement de Claude Code (environ 80 Mo)</string>
     <string name="claude_step_verifying">Vérification de l’installation</string>
     <string name="claude_installed_version">Claude Code %1$s</string>
+    <string name="antigravity_installed_version">Antigravity %1$s</string>
     <string name="claude_status_not_installed">Non installé</string>
     <string name="claude_status_installing">Installation en cours</string>
     <string name="claude_status_ready">Prêt</string>

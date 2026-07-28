@@ -579,7 +579,11 @@ private fun AntigravityInstallProgress(antigravity: AntigravityControllerState) 
             }
         }
         is com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Ready ->
-            ReadyAgentRow(antigravity.version ?: install.version)
+            // Name and version, the way the OpenCode and Claude Code cards read. This showed a bare
+            // "1.1.7" next to "OpenCode 1.18.5" and "Claude Code 2.1.212".
+            ReadyAgentRow(
+                stringResource(R.string.antigravity_installed_version, antigravity.version ?: install.version),
+            )
         is com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Failed ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(
@@ -591,7 +595,14 @@ private fun AntigravityInstallProgress(antigravity: AntigravityControllerState) 
             }
         com.yugahashimoto.andcode.runtime.local.AntigravityInstallStatus.Idle ->
             if (antigravity.installed) {
-                ReadyAgentRow(antigravity.version ?: "Antigravity 1.1.7")
+                // The pinned release is the fallback rather than a literal, so the version here can
+                // never drift from the one the installer actually writes.
+                ReadyAgentRow(
+                    stringResource(
+                        R.string.antigravity_installed_version,
+                        antigravity.version ?: com.yugahashimoto.andcode.runtime.local.AntigravityManifest.VERSION,
+                    ),
+                )
             } else {
                 Text(stringResource(R.string.setup_runtime_not_installed), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -635,8 +646,11 @@ private fun ClaudeInstallProgress(claude: ClaudeCodeUiState) {
             if (claude.installed) {
                 ReadyAgentRow(stringResource(R.string.claude_installed_version, claude.version.orEmpty()))
             } else {
+                // The same string as the OpenCode and Antigravity cards above: this screen listed
+                // one "not installed" state in three different wordings, two of them full
+                // sentences, next to each other in the same list.
                 Text(
-                    stringResource(R.string.claude_status_not_installed),
+                    stringResource(R.string.setup_runtime_not_installed),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())

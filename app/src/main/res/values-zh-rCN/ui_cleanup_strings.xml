@@ -20,7 +20,7 @@
     <string name="setup_back_action">返回</string>
     <string name="setup_skip_action">暂时跳过</string>
     <string name="setup_download_description">准备在此设备上直接运行 OpenCode 所需的运行时。</string>
-    <string name="setup_runtime_not_installed">运行时尚未安装。</string>
+    <string name="setup_runtime_not_installed">未安装</string>
     <string name="setup_runtime_ready">运行时已就绪</string>
     <string name="setup_provider_optional_description">连接 AI 提供商以开始聊天。此步骤为可选——您可以跳过，稍后在设置中连接任何提供商。</string>
     <string name="setup_provider_loading">加载提供商中…</string>
