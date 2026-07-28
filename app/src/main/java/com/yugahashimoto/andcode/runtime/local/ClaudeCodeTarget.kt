@@ -9,6 +9,7 @@ import com.yugahashimoto.andcode.core.api.OpenCodeFileContent
 import com.yugahashimoto.andcode.core.api.OpenCodeFileNode
 import com.yugahashimoto.andcode.core.api.OpenCodeHealth
 import com.yugahashimoto.andcode.core.api.OpenCodeMessage
+import com.yugahashimoto.andcode.core.api.OpenCodeModelReference
 import com.yugahashimoto.andcode.core.api.OpenCodeSearchMatch
 import com.yugahashimoto.andcode.core.api.OpenCodeSession
 import com.yugahashimoto.andcode.core.api.OpenCodeSkill
@@ -199,7 +200,26 @@ class ClaudeCodeTarget(
         return session
     }
 
-    override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = runtime.listMessages(sessionId)
+    /**
+     * The transcript, with each assistant turn marked with the model this session uses.
+     *
+     * Reopening a chat restores its model from the newest message that names one, and Claude Code's
+     * stream names the resolved build ("claude-sonnet-4-5-...") rather than the id the picker offers
+     * ("sonnet"), which the picker cannot match. The session's own remembered model is that id, so
+     * it fills the gap here - including for chats that were held before this existed.
+     */
+    override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> {
+        val messages = runtime.listMessages(sessionId)
+        val model = records[sessionId]?.model ?: return messages
+        val reference = OpenCodeModelReference(ClaudeModels.PROVIDER_ID, model)
+        return messages.map { message ->
+            if (message.info.role == "assistant" && message.info.model == null) {
+                message.copy(info = message.info.copy(model = reference))
+            } else {
+                message
+            }
+        }
+    }
 
     override suspend fun listProviders() = ClaudeModels.catalog(runtime.resolvedModels().value)
 

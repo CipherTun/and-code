@@ -92,13 +92,27 @@ class AppPreferencesRepository(
         val current = mutableState.value
         val connected = catalog.connected.toSet()
         val providers = catalog.all.filter { it.id in connected }
+        // Nothing to reconcile against yet. Rewriting the selection from an empty catalogue - which
+        // is what the state holds for the moment between switching runtime and its providers
+        // arriving - would blank a choice that is about to become valid again.
+        if (providers.isEmpty()) return
+        // The last model the user picked *on this runtime*, which is the one to come back to when
+        // the agent changes: the current selection belongs to the agent being left and its id means
+        // nothing here, so without this the picker kept showing e.g. Claude's "sonnet" under
+        // OpenCode.
+        val recent =
+            settings.recentModelKeys.asSequence()
+                .mapNotNull { key -> key.substringBefore('/').takeIf { it in connected }?.to(key.substringAfter('/')) }
+                .firstOrNull { (provider, model) -> model in providers.firstOrNull { it.id == provider }?.models.orEmpty() }
         val providerId =
             current.providerId?.takeIf { it in connected }
+                ?: recent?.first
                 ?: "opencode".takeIf { it in connected }
                 ?: providers.firstOrNull()?.id
         val provider = providers.firstOrNull { it.id == providerId }
         val modelId =
             current.modelId?.takeIf { it in provider?.models.orEmpty() }
+                ?: recent?.second?.takeIf { providerId == recent.first && it in provider?.models.orEmpty() }
                 ?: providerId?.let { catalog.default[it] }?.takeIf { it in provider?.models.orEmpty() }
                 ?: provider?.models?.values
                     ?.firstOrNull { it.status == null || it.status == "active" }

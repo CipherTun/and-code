@@ -3,6 +3,7 @@ package com.yugahashimoto.andcode.runtime.local
 import com.yugahashimoto.andcode.core.api.OpenCodeEvent
 import com.yugahashimoto.andcode.core.api.OpenCodeMessage
 import com.yugahashimoto.andcode.core.api.OpenCodeMessageInfo
+import com.yugahashimoto.andcode.core.api.OpenCodeModelReference
 import com.yugahashimoto.andcode.core.api.OpenCodePart
 import com.yugahashimoto.andcode.core.api.OpenCodeTime
 import kotlinx.coroutines.Dispatchers
@@ -226,7 +227,18 @@ class AntigravityRuntime(
                             // Leaving it null kept the composer on "thinking" until the two minute
                             // timeout even though the reply was already written and on disk.
                             // `--print` is one-shot, so the reply is complete the moment it lands.
-                            OpenCodeMessageInfo(assistantId, sessionId, "assistant", OpenCodeTime(now, now, now), agent = "antigravity"),
+                            // The model is recorded on the message because that is where the chat
+                            // reads it back when a session is reopened - it takes the newest message
+                            // that names one. Without it, reopening any Antigravity chat showed
+                            // whatever model happened to be selected globally.
+                            OpenCodeMessageInfo(
+                                assistantId,
+                                sessionId,
+                                "assistant",
+                                OpenCodeTime(now, now, now),
+                                agent = "antigravity",
+                                model = model?.let { OpenCodeModelReference(AntigravityModels.PROVIDER_ID, it) },
+                            ),
                             listOf(OpenCodePart(id = "$assistantId-text", type = "text", text = output)),
                         ),
                     )

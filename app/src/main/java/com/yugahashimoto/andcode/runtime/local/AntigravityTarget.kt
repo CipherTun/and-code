@@ -103,7 +103,19 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
         )
     }
 
-    override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = runtime.listMessages(sessionId)
+    /** Same as [ClaudeCodeTarget.listMessages]: names the model for chats held before it was stored. */
+    override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> {
+        val messages = runtime.listMessages(sessionId)
+        val model = runtime.listSessions(null).firstOrNull { it.appSessionId == sessionId }?.model ?: return messages
+        val reference = OpenCodeModelReference(AntigravityModels.PROVIDER_ID, model)
+        return messages.map { message ->
+            if (message.info.role == "assistant" && message.info.model == null) {
+                message.copy(info = message.info.copy(model = reference))
+            } else {
+                message
+            }
+        }
+    }
 
     override suspend fun listProviders(): ProviderCatalog =
         withContext(kotlinx.coroutines.Dispatchers.IO) { AntigravityModels.catalog(runtime.models()) }
