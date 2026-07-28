@@ -423,6 +423,22 @@ fun AndCodeApp(
         )
     }
 
+    // What the composer falls back to before the chat has a selection of its own.
+    //
+    // The global preference is not usable as-is: it belongs to whichever runtime the user last
+    // picked a model on, so after switching agent it names a model this runtime has never heard of.
+    // selectConfiguration above already drops such a value from the chat state - and the composer
+    // then fell straight back to the same stale preference, which is why the chip still read
+    // Claude's "sonnet" under OpenCode. Validated against the active runtime's own catalogue, with
+    // its default as the last resort.
+    val activeProvider = settingsState.providers.firstOrNull { it.id == preferences.providerId }
+    val fallbackProviderId =
+        preferences.providerId?.takeIf { activeProvider != null }
+            ?: settingsState.providers.firstOrNull()?.id
+    val fallbackModelId =
+        preferences.modelId?.takeIf { activeProvider?.models?.containsKey(it) == true }
+            ?: settingsState.providers.firstOrNull { it.id == fallbackProviderId }?.models?.keys?.firstOrNull()
+
     LaunchedEffect(preferences.autoAcceptPermissions) {
         chatViewModel.setAutoAcceptPermissions(preferences.autoAcceptPermissions)
     }
@@ -737,8 +753,8 @@ fun AndCodeApp(
                         state = chatState,
                         providers = settingsState.providers,
                         agents = settingsState.agents,
-                        selectedProviderId = chatState.selectedProviderId ?: settingsState.providerId,
-                        selectedModelId = chatState.selectedModelId ?: settingsState.modelId,
+                        selectedProviderId = chatState.selectedProviderId ?: fallbackProviderId,
+                        selectedModelId = chatState.selectedModelId ?: fallbackModelId,
                         selectedAgentId = chatState.selectedAgentId ?: settingsState.agentId,
                         runtimeTargets = runtimeTargets,
                         selectedRuntimeId = selectedRuntime?.id,
