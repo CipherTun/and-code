@@ -22,6 +22,7 @@ import com.yugahashimoto.andcode.core.util.safeMessage
 import com.yugahashimoto.andcode.data.connection.ConnectionProfile
 import com.yugahashimoto.andcode.runtime.BackendKind
 import com.yugahashimoto.andcode.runtime.PermissionResponse
+import com.yugahashimoto.andcode.runtime.RuntimeCapabilities
 import com.yugahashimoto.andcode.runtime.RuntimeState
 import com.yugahashimoto.andcode.runtime.RuntimeTarget
 import com.yugahashimoto.andcode.runtime.RuntimeType
@@ -41,6 +42,7 @@ class RemoteRuntimeTarget(
     override val displayName: String = profile.name
     override val type: RuntimeType = RuntimeType.REMOTE
     override val kind: BackendKind = BackendKind.REMOTE
+    override val capabilities = RuntimeCapabilities(permissions = true)
 
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
     override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
