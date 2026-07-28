@@ -68,8 +68,27 @@ class ClaudeCodeRuntime(
 
     private val sessions = linkedMapOf<String, SessionProcess>()
 
-    /** Claude Code's own session ids, so a relaunched process resumes rather than starts over. */
-    private val resumeIds = mutableMapOf<String, String>()
+    /**
+     * Claude Code's own session ids, so a relaunched process resumes rather than starts over.
+     *
+     * On disk, because Claude Code's session store outlives this app's process while this map used
+     * not to. A first launch passes `--session-id <id>`, which *creates* that session in the CLI's
+     * store; every later launch has to pass `--resume <id>` instead. After the app was restarted
+     * this map was empty, so an existing chat was started with `--session-id` again and the CLI
+     * refused it - "Error: Session ID ... is already in use." went to the stderr log, the process
+     * exited immediately, and the chat accepted messages and never answered any of them.
+     */
+    private val resumeIdsFile = File(runtimeDirectory, "claude-resume-ids.json")
+    private val resumeIds: MutableMap<String, String> =
+        runCatching { json.decodeFromString<Map<String, String>>(resumeIdsFile.readText()).toMutableMap() }
+            .getOrDefault(mutableMapOf())
+
+    private fun persistResumeIds() {
+        runCatching {
+            resumeIdsFile.parentFile?.mkdirs()
+            resumeIdsFile.writeText(json.encodeToString(MapSerializer(String.serializer(), String.serializer()), resumeIds.toMap()))
+        }
+    }
 
     /**
      * The plan Claude is working to, per session.
@@ -210,6 +229,7 @@ class ClaudeCodeRuntime(
     fun deleteSessionData(sessionId: String) {
         stop(sessionId)
         resumeIds.remove(sessionId)
+        persistResumeIds()
         todos.remove(sessionId)
         messageStore.remove(sessionId)
     }
@@ -308,7 +328,12 @@ class ClaudeCodeRuntime(
                 add("--effort")
                 add(it)
             }
-            val resumeId = resumeIds[sessionId]
+            // `--session-id` *creates* the session in Claude Code's store, so it is only right the
+            // first time; after that the CLI rejects it as already in use. A chat that already has
+            // messages has been started before, and the app started it under this very id, so its
+            // id in the CLI's store is the same one. That covers chats begun before these ids were
+            // persisted, which would otherwise never be answerable again.
+            val resumeId = resumeIds[sessionId] ?: sessionId.takeIf { messageStore.list(it).isNotEmpty() }
             if (resumeId != null) {
                 add("--resume")
                 add(resumeId)
@@ -351,7 +376,12 @@ class ClaudeCodeRuntime(
         if (line.isBlank()) return
         val parsed = parser.parse(line)
         parsed.claudeSessionId?.let { claudeSessionId ->
-            synchronized(this) { resumeIds[sessionId] = claudeSessionId }
+            synchronized(this) {
+                if (resumeIds[sessionId] != claudeSessionId) {
+                    resumeIds[sessionId] = claudeSessionId
+                    persistResumeIds()
+                }
+            }
         }
         if (requestedModel != null) parsed.resolvedModel?.let { rememberResolvedModel(requestedModel, it) }
         parsed.todos?.let { synchronized(this) { todos[sessionId] = it } }
