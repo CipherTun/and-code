@@ -458,7 +458,7 @@
     <string name="model_visibility_caption">Uncheck models to hide them from the model picker.</string>
 
     <!-- Redesign: onboarding -->
-    <string name="onboarding_welcome_title">Welcome to OpenCode</string>
+    <string name="onboarding_welcome_title">Welcome to %1$s</string>
     <string name="onboarding_subtitle">Write, fix, and understand code. To get started, just choose one execution path.</string>
     <string name="onboarding_recommended_badge">Recommended</string>
     <string name="onboarding_android_title">Start with this Android</string>

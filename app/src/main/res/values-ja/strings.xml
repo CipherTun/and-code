@@ -458,7 +458,7 @@
     <string name="model_visibility_caption">チェックを外したモデルはモデル一覧から非表示になります。</string>
 
     <!-- Redesign: onboarding -->
-    <string name="onboarding_welcome_title">OpenCodeへようこそ</string>
+    <string name="onboarding_welcome_title">%1$sへようこそ</string>
     <string name="onboarding_subtitle">コードを書く・修正する・理解する。はじめるには、いずれか1つの実行パスを選ぶだけです。</string>
     <string name="onboarding_recommended_badge">おすすめ</string>
     <string name="onboarding_android_title">このAndroidで始める</string>

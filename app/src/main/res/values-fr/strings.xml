@@ -449,7 +449,7 @@
     <string name="this_android">Cet Android</string>
     <string name="picker_no_providers">Aucun fournisseur connecté pour le moment</string>
 
-    <string name="onboarding_welcome_title">Bienvenue sur OpenCode</string>
+    <string name="onboarding_welcome_title">Bienvenue sur %1$s</string>
     <string name="onboarding_subtitle">Écrivez, corrigez et comprenez du code. Pour commencer, choisissez simplement un chemin d\'exécution.</string>
     <string name="onboarding_recommended_badge">Recommandé</string>
     <string name="onboarding_android_title">Commencer avec cet Android</string>

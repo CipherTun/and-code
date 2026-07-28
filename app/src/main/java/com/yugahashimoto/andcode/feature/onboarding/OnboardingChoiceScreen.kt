@@ -77,7 +77,9 @@ fun OnboardingChoiceScreen(
         }
         Spacer(Modifier.height(18.dp))
         Text(
-            text = stringResource(R.string.onboarding_welcome_title),
+            // The app's own name, not a literal in eight translations: this greeting still said
+            // "Welcome to OpenCode" after the app was renamed, in every language.
+            text = stringResource(R.string.onboarding_welcome_title, stringResource(R.string.app_name)),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,

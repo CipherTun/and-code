@@ -449,7 +449,7 @@
     <string name="this_android">Этот Android</string>
     <string name="picker_no_providers">Подключённых провайдеров пока нет</string>
 
-    <string name="onboarding_welcome_title">Добро пожаловать в OpenCode</string>
+    <string name="onboarding_welcome_title">Добро пожаловать в %1$s</string>
     <string name="onboarding_subtitle">Пишите, исправляйте и понимайте код. Для начала просто выберите путь выполнения.</string>
     <string name="onboarding_recommended_badge">Рекомендуется</string>
     <string name="onboarding_android_title">Начать с этого Android</string>
