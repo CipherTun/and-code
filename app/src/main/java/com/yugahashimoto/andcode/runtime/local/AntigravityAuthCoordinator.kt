@@ -355,8 +355,25 @@ class AntigravityAuthCoordinator(
         }
     }
 
-    private companion object {
-        const val MAX_TRANSCRIPT = 16_000
+    internal companion object {
+        /**
+         * How many screens of TUI output the transcript keeps.
+         *
+         * agy is a full-screen Bubble Tea program: every repaint rewrites the whole screen, so one
+         * repaint alone is [AntigravitySandboxLauncher.PTY_ROWS] x
+         * [AntigravitySandboxLauncher.PTY_COLUMNS] characters before escape sequences. The sign-in
+         * URL has to still be in the buffer when [AntigravityAuthParser.findOAuthUrl] looks for it,
+         * and that lookup is anchored on the URL's `https://accounts.google.com/...` beginning.
+         *
+         * This buffer used to be a flat 16,000 characters while the PTY is 24x1000 - so a *single*
+         * repaint was half again larger than the whole buffer, and the line carrying the start of
+         * the URL was dropped the moment the TUI redrew. What survived was the wrapped tail, which
+         * matches nothing, so sign-in sat in Starting until the discovery watchdog killed it 120
+         * seconds later. Whether it worked at all was a race against the next repaint.
+         */
+        const val TRANSCRIPT_SCREENS = 4
+
+        const val MAX_TRANSCRIPT = TRANSCRIPT_SCREENS * AntigravitySandboxLauncher.PTY_ROWS * AntigravitySandboxLauncher.PTY_COLUMNS
         const val VISIBLE_TRANSCRIPT = 1_200
         const val POLL_INTERVAL_MS = 400L
         const val MENU_TIMEOUT_MS = 90_000L
