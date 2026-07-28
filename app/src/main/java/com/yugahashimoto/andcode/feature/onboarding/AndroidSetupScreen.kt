@@ -111,6 +111,9 @@ fun AndroidSetupScreen(
     onDismissProviderAuth: () -> Unit,
     onRefreshProviderAuth: () -> Unit,
     onRefreshCatalog: () -> Unit,
+    /** Re-reads whether the agent is installed after the runtime service provisioned it. */
+    onRefreshClaudeState: () -> Unit,
+    onRefreshAntigravityState: () -> Unit,
     onConnectGitHub: () -> Unit = {},
     onOpenGitHubVerification: (String) -> Unit = {},
     onDisconnectGitHub: () -> Unit = {},
@@ -135,23 +138,16 @@ fun AndroidSetupScreen(
 
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
 
-    // With both agents selected the sandbox is built once for OpenCode and Claude Code is added to
-    // it, so the second install only starts after the first has produced a usable runtime.
-    LaunchedEffect(openCodeReady, claudeSelected, claude.installed, claude.install) {
-        if (!claudeSelected || !openCodeSelected) return@LaunchedEffect
-        if (openCodeReady && !claude.installed && claude.install is ClaudeInstallStatus.Idle) {
-            onStartSetup(setOf(LocalAgent.CLAUDE_CODE))
-        }
-    }
-
-    LaunchedEffect(openCodeReady, claude.installed, antigravitySelected, antigravity.installed, antigravity.busy, antigravity.error) {
-        if (!antigravitySelected || antigravity.installed || antigravity.busy || antigravity.error != null) return@LaunchedEffect
-        // The shared rootfs must be activated before the official agy asset is copied into it.
-        // When OpenCode was selected, its service owns the first install; add Antigravity after it
-        // reports a usable environment. With Antigravity alone, start its installer immediately.
-        if (openCodeSelected && !openCodeReady) return@LaunchedEffect
-        if (!openCodeSelected && claudeSelected && !claude.installed) return@LaunchedEffect
-        onStartSetup(setOf(LocalAgent.ANTIGRAVITY))
+    // One install provisions every selected agent, so the guide no longer chains a second and third
+    // install off this screen once the first finishes. It used to, and that made the outcome depend
+    // on the screen staying in composition: leave the guide during the several-minute OpenCode
+    // download and the agents queued behind it were simply never installed, which is how a setup
+    // that reported success could still leave Claude Code missing. What is left is a re-read of the
+    // install state, because the runtime service - not these controllers - ran the install.
+    LaunchedEffect(openCodeReady) {
+        if (!openCodeReady) return@LaunchedEffect
+        if (claudeSelected) onRefreshClaudeState()
+        if (antigravitySelected) onRefreshAntigravityState()
     }
 
     LaunchedEffect(installComplete) {
@@ -1050,6 +1046,8 @@ private fun AndroidSetupScreenPreview() {
             onDismissProviderAuth = {},
             onRefreshProviderAuth = {},
             onRefreshCatalog = {},
+            onRefreshClaudeState = {},
+            onRefreshAntigravityState = {},
             onBack = {},
             onFinish = {},
         )
@@ -1106,6 +1104,8 @@ private fun AndroidSetupProviderStepPreview() {
             onDismissProviderAuth = {},
             onRefreshProviderAuth = {},
             onRefreshCatalog = {},
+            onRefreshClaudeState = {},
+            onRefreshAntigravityState = {},
             onBack = {},
             onFinish = {},
         )

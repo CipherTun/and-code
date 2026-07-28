@@ -81,14 +81,14 @@ class LocalRuntimeManager(
 
     fun isHealthy(): Boolean = installedPort()?.let(portProbe) == true
 
-    suspend fun installAndStart(): Result<LocalRuntimeStatus.Ready> =
+    suspend fun installAndStart(agents: Set<LocalAgent> = setOf(LocalAgent.OPEN_CODE)): Result<LocalRuntimeStatus.Ready> =
         operationMutex.withLock {
             val configuredInstaller =
                 installer
                     ?: return@withLock Result.failure(IllegalStateException("Local runtime installer is not configured"))
             runCatching {
                 val installed =
-                    configuredInstaller.install { progress, step ->
+                    configuredInstaller.install(agents) { progress, step ->
                         mutableState.value = LocalRuntimeStatus.Installing(progress, step)
                     }
                 mutableState.value = LocalRuntimeStatus.Stopped(installed.metadata.version, installed.metadata.port)

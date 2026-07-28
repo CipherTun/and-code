@@ -637,18 +637,19 @@ fun AndCodeApp(
                         claude = workspaceState.claude,
                         antigravity = antigravityState,
                         onStartSetup = { agents ->
+                            // Ticking Claude Code or Antigravity next to OpenCode used to install
+                            // neither of them: the two branches below were guarded on OpenCode
+                            // *not* being selected, and the OpenCode path never received the
+                            // selection at all, so it provisioned OpenCode alone. One install now
+                            // carries the whole selection, which is what LocalRuntimeInstaller
+                            // already knew how to do - and it must stay one install, because a
+                            // second one would race it for the same staging directory.
                             if (com.yugahashimoto.andcode.runtime.LocalAgent.OPEN_CODE in agents) {
-                                workspaceViewModel.setupLocalRuntime()
-                            }
-                            if (com.yugahashimoto.andcode.runtime.LocalAgent.CLAUDE_CODE in agents &&
-                                com.yugahashimoto.andcode.runtime.LocalAgent.OPEN_CODE !in agents
-                            ) {
+                                workspaceViewModel.setupLocalRuntime(agents)
+                            } else if (com.yugahashimoto.andcode.runtime.LocalAgent.ANTIGRAVITY in agents) {
+                                app.antigravityController.install(agents)
+                            } else if (com.yugahashimoto.andcode.runtime.LocalAgent.CLAUDE_CODE in agents) {
                                 workspaceViewModel.installClaudeCode()
-                            }
-                            if (com.yugahashimoto.andcode.runtime.LocalAgent.ANTIGRAVITY in agents &&
-                                com.yugahashimoto.andcode.runtime.LocalAgent.OPEN_CODE !in agents
-                            ) {
-                                app.antigravityController.install()
                             }
                         },
                         onSelectClaudePermissionMode = { mode ->
@@ -677,6 +678,8 @@ fun AndCodeApp(
                         onDismissProviderAuth = settingsViewModel::dismissProviderAuth,
                         onRefreshProviderAuth = settingsViewModel::refreshProviderAuth,
                         onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
+                        onRefreshClaudeState = workspaceViewModel::refreshClaudeCode,
+                        onRefreshAntigravityState = app.antigravityController::refresh,
                         onConnectGitHub = { settingsViewModel.beginGitHubDeviceFlow() },
                         onOpenGitHubVerification = { url ->
                             context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))

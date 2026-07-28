@@ -50,27 +50,7 @@ class AntigravityController(
         }.stateIn(scope, SharingStarted.Eagerly, AntigravityControllerState())
 
     init {
-        scope.launch {
-            // Rehydrate after process death/restart. The controller is UI state, while the
-            // metadata and rootfs on disk are the source of truth for an already downloaded CLI.
-            val installed = installer.installedRuntime()
-            val rootfs = installed?.antigravityRootfs
-            val binaryInstalled = rootfs?.resolve("usr/local/bin/agy")?.let { it.isFile && it.canExecute() } == true
-            if (binaryInstalled) {
-                val version = target.runtime.version()
-                mutableState.value =
-                    mutableState.value.copy(
-                        installed = true,
-                        version = version,
-                        install = version?.let(AntigravityInstallStatus::Ready) ?: AntigravityInstallStatus.Idle,
-                    )
-                // The token lives in the guest rootfs, so a restarted app is still signed in even
-                // though the in-memory coordinator starts at Idle. `models()` answers that and fills
-                // the picker's catalogue in the same launch - asking twice would mean two agy runs,
-                // and two of those overlapping is what previously hung both of them.
-                if (target.runtime.models().isNotEmpty()) target.auth.markSignedIn()
-            }
-        }
+        refresh()
         scope.launch {
             target.auth.state.collect { auth ->
                 // A model list fetched while signed out is just the placeholder; refresh once
@@ -80,12 +60,46 @@ class AntigravityController(
         }
     }
 
-    fun install() {
+    /**
+     * Re-reads whether the CLI is installed, from the metadata and rootfs on disk.
+     *
+     * Called on construction to rehydrate after process death, and again whenever an install this
+     * controller did not run itself may have provisioned Antigravity - the setup guide's single
+     * install goes through the runtime service, so without this the guide would sit on "installing"
+     * forever even though the binary is already in the guest.
+     */
+    fun refresh() {
+        scope.launch {
+            val installed = installer.installedRuntime()
+            val rootfs = installed?.antigravityRootfs
+            val binaryInstalled = rootfs?.resolve("usr/local/bin/agy")?.let { it.isFile && it.canExecute() } == true
+            if (!binaryInstalled) return@launch
+            val version = target.runtime.version()
+            mutableState.value =
+                mutableState.value.copy(
+                    installed = true,
+                    version = version,
+                    install = version?.let(AntigravityInstallStatus::Ready) ?: AntigravityInstallStatus.Idle,
+                )
+            // The token lives in the guest rootfs, so a restarted app is still signed in even
+            // though the in-memory coordinator starts at Idle. `models()` answers that and fills
+            // the picker's catalogue in the same launch - asking twice would mean two agy runs,
+            // and two of those overlapping is what previously hung both of them.
+            if (target.runtime.models().isNotEmpty()) target.auth.markSignedIn()
+        }
+    }
+
+    /**
+     * [agents] lets the setup guide provision its whole selection in this one install when OpenCode
+     * is not among it. Two installs would race each other for the same staging directory, so the
+     * guide has exactly one entry point per run and this is it whenever Antigravity is selected.
+     */
+    fun install(agents: Set<LocalAgent> = setOf(LocalAgent.ANTIGRAVITY)) {
         if (mutableState.value.install is AntigravityInstallStatus.Installing) return
         mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(0f, ""))
         scope.launch {
             runCatching {
-                installer.install(setOf(LocalAgent.ANTIGRAVITY)) { progress, step ->
+                installer.install(agents + LocalAgent.ANTIGRAVITY) { progress, step ->
                     mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(progress, step))
                 }
             }
