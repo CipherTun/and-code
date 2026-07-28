@@ -13,10 +13,12 @@ enum class LocalAgent(
     val id: String,
     val displayNameRes: Int,
     val targetId: String,
+    /** Marks which agent a row belongs to where the name does not fit - drawer chats, for one. */
+    val iconRes: Int,
 ) {
-    OPEN_CODE("opencode", R.string.agent_opencode_name, "local-android"),
-    CLAUDE_CODE("claude-code", R.string.agent_claude_code_name, "claude-code-local"),
-    ANTIGRAVITY("antigravity", R.string.agent_antigravity_name, "antigravity-local"),
+    OPEN_CODE("opencode", R.string.agent_opencode_name, "local-android", R.drawable.ic_agent_opencode),
+    CLAUDE_CODE("claude-code", R.string.agent_claude_code_name, "claude-code-local", R.drawable.ic_agent_claude),
+    ANTIGRAVITY("antigravity", R.string.agent_antigravity_name, "antigravity-local", R.drawable.ic_agent_antigravity),
     ;
 
     companion object {

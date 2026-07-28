@@ -4,6 +4,7 @@ import com.yugahashimoto.andcode.core.api.OpenCodeAgent
 import com.yugahashimoto.andcode.core.api.OpenCodeHealth
 import com.yugahashimoto.andcode.core.api.OpenCodeSession
 import com.yugahashimoto.andcode.core.api.ProviderCatalog
+import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
 import com.yugahashimoto.andcode.runtime.RuntimeTarget
 import com.yugahashimoto.andcode.runtime.WorkspaceRef
@@ -19,6 +20,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+/** A chat together with the runtime that owns it; see [RuntimeCatalogRepository.allSessions]. */
+data class RuntimeSessionRef(
+    val runtimeId: String,
+    val agent: LocalAgent?,
+    val session: OpenCodeSession,
+)
 
 data class RuntimeCatalogState(
     val runtime: RuntimeTarget? = null,
@@ -50,6 +58,17 @@ class RuntimeCatalogRepository(
     val state: StateFlow<RuntimeCatalogState> = mutableState.asStateFlow()
     private val refreshMutex = Mutex()
 
+    private val mutableAllSessions = MutableStateFlow<List<RuntimeSessionRef>>(emptyList())
+
+    /**
+     * Every runtime's chats in one list, newest first.
+     *
+     * [state] carries only the selected runtime's sessions, which is right for a chat screen but
+     * wrong for the drawer: switching agent there made the whole history appear to vanish. Each
+     * entry keeps the runtime it came from so a chat can be opened on the agent that owns it.
+     */
+    val allSessions: StateFlow<List<RuntimeSessionRef>> = mutableAllSessions.asStateFlow()
+
     init {
         scope.launch {
             registry.selected.collectLatest { target ->
@@ -57,11 +76,15 @@ class RuntimeCatalogRepository(
                 if (target != null) load(target)
             }
         }
+        scope.launch {
+            registry.targets.collectLatest { refreshAllSessions() }
+        }
     }
 
     fun refresh() {
         val target = registry.selected.value ?: return
         scope.launch { load(target) }
+        refreshAllSessions()
     }
 
     /** Refresh only the session list for surfaces that show recent chats. */
@@ -74,6 +97,32 @@ class RuntimeCatalogRepository(
                         mutableState.update { it.copy(sessions = sessions) }
                     }
                 }
+        }
+        refreshAllSessions()
+    }
+
+    /**
+     * Asks every runtime for its chats, in parallel and independently.
+     *
+     * A runtime that is stopped or unreachable contributes nothing rather than failing the whole
+     * list - the local agents answer from their own on-disk records and cost almost nothing, while
+     * a remote endpoint may simply be off.
+     */
+    fun refreshAllSessions() {
+        scope.launch {
+            val targets = registry.targets.value
+            val loaded =
+                supervisorScope {
+                    targets
+                        .map { target -> async { target to runCatching { target.listSessions() }.getOrDefault(emptyList()) } }
+                        .map { it.await() }
+                }
+            mutableAllSessions.value =
+                loaded
+                    .flatMap { (target, sessions) ->
+                        sessions.map { session -> RuntimeSessionRef(target.id, target.agent, session) }
+                    }
+                    .sortedByDescending { it.session.time.updated ?: it.session.time.created }
         }
     }
 

@@ -396,6 +396,7 @@
     <string name="drawer_recent_chats">Recent chats</string>
     <string name="drawer_project_default">Default</string>
     <string name="drawer_projects_title">Projects</string>
+    <string name="drawer_agents_title">Agents</string>
     <string name="drawer_add_project">Add project</string>
     <string name="drawer_pinned">Pinned</string>
     <string name="drawer_pinned_sample_1">Important conversation</string>

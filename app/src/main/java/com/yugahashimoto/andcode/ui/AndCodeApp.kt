@@ -78,6 +78,7 @@ import com.yugahashimoto.andcode.feature.settings.DiagnosticsSheet
 import com.yugahashimoto.andcode.feature.settings.GitHubRepo
 import com.yugahashimoto.andcode.feature.settings.SettingsViewModel
 import com.yugahashimoto.andcode.feature.workspace.WorkspaceViewModel
+import com.yugahashimoto.andcode.runtime.RuntimeState
 import com.yugahashimoto.andcode.runtime.WorkspaceRef
 import com.yugahashimoto.andcode.runtime.local.GitCloneResult
 import com.yugahashimoto.andcode.ui.components.SessionStatus
@@ -158,7 +159,6 @@ fun AndCodeApp(
     val preferences by app.preferences.state.collectAsState()
     val antigravityState by app.antigravityController.state.collectAsState()
 
-    var sidebarGrouping by remember { mutableStateOf(preferences.sidebarGrouping) }
     var collapsedSections by remember { mutableStateOf(setOf<String>()) }
 
     val workspaceViewModel: WorkspaceViewModel =
@@ -472,11 +472,15 @@ fun AndCodeApp(
             }.getOrNull().orEmpty()
         }
 
+    // Every runtime's chats, not just the selected one's: switching agent used to look like the
+    // history had been wiped. Each row carries the runtime that owns it so opening one can switch.
+    val allSessions by app.catalogRepository.allSessions.collectAsState()
     val recentSessions =
-        remember(activityState.sessions, activityState.activeSessionIds, activityState.completedSessionIds) {
-            activityState.sessions
-                .filter { it.parentId == null }
-                .take(25).map { session ->
+        remember(allSessions, activityState.activeSessionIds, activityState.completedSessionIds) {
+            allSessions
+                .filter { it.session.parentId == null }
+                .take(25).map { ref ->
+                    val session = ref.session
                     DrawerRecentSession(
                         id = session.id,
                         title = session.title.ifBlank { session.slug ?: session.id },
@@ -490,8 +494,18 @@ fun AndCodeApp(
                                 session.id in activityState.completedSessionIds -> SessionStatus.COMPLETED_UNREAD
                                 else -> SessionStatus.IDLE
                             },
+                        runtimeId = ref.runtimeId,
+                        agent = ref.agent,
                     )
                 }
+        }
+
+    // Local agents that are actually provisioned. A target reports Unavailable while its agent is
+    // missing, which is exactly the case the switcher must not offer.
+    val drawerAgents =
+        runtimeTargets.mapNotNull { target ->
+            val agent = target.agent ?: return@mapNotNull null
+            DrawerAgent(target.id, agent).takeIf { target.state.value !is RuntimeState.Unavailable }
         }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -560,8 +574,24 @@ fun AndCodeApp(
                             chatViewModel.selectWorkspace(workspace.path)
                             navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
                         },
-                        onOpenSession = { id, title ->
+                        agents = drawerAgents,
+                        selectedRuntimeId = selectedRuntime?.id,
+                        onSelectAgent = { agent ->
                             closeDrawer()
+                            if (agent.runtimeId != selectedRuntime?.id) {
+                                app.runtimeRegistry.select(agent.runtimeId)
+                                pendingSession = null
+                                chatViewModel.newSession()
+                            }
+                            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+                        },
+                        onOpenSession = { id, title, runtimeId ->
+                            closeDrawer()
+                            // The list spans every agent, so the chat may belong to one that is not
+                            // selected; opening it has to move to its runtime first.
+                            if (runtimeId != null && runtimeId != selectedRuntime?.id) {
+                                app.runtimeRegistry.select(runtimeId)
+                            }
                             app.activityRepository.markSessionRead(id)
                             pendingSession = id to title
                             navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
@@ -604,8 +634,6 @@ fun AndCodeApp(
                                 app.catalogRepository.refreshSessionsOnly()
                             }
                         },
-                        sidebarGrouping = sidebarGrouping,
-                        onGroupingChange = { sidebarGrouping = it },
                         collapsedSections = collapsedSections,
                         onToggleSection = { section ->
                             collapsedSections =

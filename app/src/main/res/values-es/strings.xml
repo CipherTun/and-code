@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">Chats recientes</string>
     <string name="drawer_project_default">Predeterminado</string>
     <string name="drawer_projects_title">Proyectos</string>
+    <string name="drawer_agents_title">Agentes</string>
     <string name="drawer_add_project">Añadir proyecto</string>
     <string name="drawer_pinned">Fijado</string>
     <string name="drawer_pinned_sample_1">Conversación importante</string>

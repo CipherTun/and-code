@@ -395,6 +395,7 @@
     <string name="drawer_recent_chats">الدردشات الأخيرة</string>
     <string name="drawer_project_default">افتراضي</string>
     <string name="drawer_projects_title">المشاريع</string>
+    <string name="drawer_agents_title">الوكلاء</string>
     <string name="drawer_add_project">إضافة مشروع</string>
     <string name="drawer_pinned">مثبت</string>
     <string name="drawer_pinned_sample_1">محادثة مهمة</string>
