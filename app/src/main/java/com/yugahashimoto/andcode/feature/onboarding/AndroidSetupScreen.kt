@@ -128,7 +128,12 @@ fun AndroidSetupScreen(
                 save = { agents -> agents.map(LocalAgent::id) },
                 restore = { ids -> ids.mapNotNull(LocalAgent::fromId).toSet() },
             ),
-    ) { mutableStateOf(setOf(LocalAgent.CLAUDE_CODE)) }
+        // OpenCode, the runtime every other install path in the app already defaults to. This used
+        // to pre-tick Claude Code, which arrived as a side effect of the commit that added agent
+        // selection while Claude Code was the subject of that work - never a decision about what a
+        // new user should get. Leaving nothing ticked is worse: the step shows "select at least one
+        // agent" in red the moment it opens.
+    ) { mutableStateOf(setOf(LocalAgent.OPEN_CODE)) }
 
     val openCodeSelected = LocalAgent.OPEN_CODE in selectedAgents
     val claudeSelected = LocalAgent.CLAUDE_CODE in selectedAgents
@@ -550,6 +555,13 @@ private fun RuntimeDownloadStep(
     claudeSelected: Boolean,
     antigravitySelected: Boolean,
 ) {
+    // One install provisions the whole selection and reports through the shared runtime status, so
+    // each step is shown under the agent it names. Without this the OpenCode panel displayed
+    // "Installing Claude Code" while the Claude Code panel below it still read "Not installed".
+    val installing = runtimeStatus as? LocalRuntimeStatus.Installing
+    val sharedStep = installing?.takeIf { it.agent == null }
+    val stepFor = { agent: LocalAgent -> installing?.takeIf { it.agent == agent } }
+
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
             title = stringResource(R.string.setup_step_download),
@@ -558,21 +570,39 @@ private fun RuntimeDownloadStep(
         if (openCodeSelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_opencode_name), fontWeight = FontWeight.SemiBold)
-                OpenCodeRuntimeProgress(runtimeStatus)
+                // While another agent's step is running, OpenCode is neither idle nor the subject of
+                // that step, so it keeps a bar under the generic setting-up label.
+                val generic = stringResource(R.string.runtime_status_setting_up)
+                OpenCodeRuntimeProgress(
+                    if (installing != null && sharedStep == null) installing.copy(step = generic) else runtimeStatus,
+                )
             }
         }
         if (claudeSelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_claude_code_name), fontWeight = FontWeight.SemiBold)
-                ClaudeInstallProgress(claude)
+                val step = stepFor(LocalAgent.CLAUDE_CODE)
+                if (step != null) SharedInstallProgress(step) else ClaudeInstallProgress(claude)
             }
         }
         if (antigravitySelected) {
             SetupPanel {
                 Text(stringResource(R.string.agent_antigravity_name), fontWeight = FontWeight.SemiBold)
-                AntigravityInstallProgress(antigravity)
+                val step = stepFor(LocalAgent.ANTIGRAVITY)
+                if (step != null) SharedInstallProgress(step) else AntigravityInstallProgress(antigravity)
             }
         }
+    }
+}
+
+/** A step of the one shared install, shown under whichever agent it belongs to. */
+@Composable
+private fun SharedInstallProgress(status: LocalRuntimeStatus.Installing) {
+    Text(status.step, fontWeight = FontWeight.Medium)
+    if (status.progress != null) {
+        LinearProgressIndicator(progress = { status.progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+    } else {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
     }
 }
 

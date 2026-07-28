@@ -66,6 +66,12 @@ class AntigravityAuthCoordinator(
      */
     @Synchronized
     fun start(): AntigravityAuthStart {
+        // Before anything blocking. Everything below - killing a previous process, repairing the
+        // guest settings, and above all the already-signed-in check, which is a whole `agy models`
+        // run behind a gate that waits up to a minute - happens before the TUI exists, and the state
+        // used to be published only after all of it. Pressing "Sign in" therefore did nothing
+        // visible for tens of seconds.
+        mutableState.value = State.Starting
         cancel()
         val runtime = installedRuntimeProvider() ?: error("Linux environment is not installed")
         AntigravityGuestSettings.repair(runtime)
@@ -217,6 +223,18 @@ class AntigravityAuthCoordinator(
     /** Restores the signed-in state discovered from the guest token store after an app restart. */
     fun markSignedIn() {
         if (mutableState.value is State.Idle) mutableState.value = State.SignedIn()
+    }
+
+    /**
+     * Publishes [State.Starting] without taking [start]'s lock, so the button reacts on the tap.
+     *
+     * [start] is `@Synchronized` and everything it does before publishing a state is slow - killing
+     * a previous process, and an already-signed-in check that is a whole `agy models` run behind a
+     * gate that waits up to a minute. Its own first line cannot report anything until it holds the
+     * lock, so the press has to be acknowledged from outside it.
+     */
+    fun markStarting() {
+        mutableState.value = State.Starting
     }
 
     private fun launchTui(runtime: LocalRuntimeInstaller.InstalledRuntime): Process {

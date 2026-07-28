@@ -99,7 +99,7 @@ class AntigravityController(
         mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(0f, ""))
         scope.launch {
             runCatching {
-                installer.install(agents + LocalAgent.ANTIGRAVITY) { progress, step ->
+                installer.install(agents + LocalAgent.ANTIGRAVITY) { progress, step, _ ->
                     mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(progress, step))
                 }
             }
@@ -137,6 +137,9 @@ class AntigravityController(
      * code because it is dispatched onto [scope] here.
      */
     fun beginAuth() {
+        // On the click, and through the coordinator: [state] takes its auth from the coordinator's
+        // own flow, so setting it on this controller's state would be overwritten immediately.
+        target.auth.markStarting()
         scope.launch {
             runCatching { target.auth.start() }
                 .onFailure { error ->

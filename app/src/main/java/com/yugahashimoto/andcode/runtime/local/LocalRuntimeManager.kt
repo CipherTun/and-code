@@ -88,8 +88,8 @@ class LocalRuntimeManager(
                     ?: return@withLock Result.failure(IllegalStateException("Local runtime installer is not configured"))
             runCatching {
                 val installed =
-                    configuredInstaller.install(agents) { progress, step ->
-                        mutableState.value = LocalRuntimeStatus.Installing(progress, step)
+                    configuredInstaller.install(agents) { progress, step, agent ->
+                        mutableState.value = LocalRuntimeStatus.Installing(progress, step, agent)
                     }
                 mutableState.value = LocalRuntimeStatus.Stopped(installed.metadata.version, installed.metadata.port)
                 startInstalled(installed)
@@ -175,8 +175,8 @@ class LocalRuntimeManager(
                     ?: return@withLock Result.failure(IllegalStateException("Local runtime installer is not configured"))
             runCatching {
                 val installed =
-                    configuredInstaller.install { progress, step ->
-                        mutableState.value = LocalRuntimeStatus.Installing(progress, step)
+                    configuredInstaller.install { progress, step, agent ->
+                        mutableState.value = LocalRuntimeStatus.Installing(progress, step, agent)
                     }
                 startInstalled(installed)
             }.onFailure { error ->

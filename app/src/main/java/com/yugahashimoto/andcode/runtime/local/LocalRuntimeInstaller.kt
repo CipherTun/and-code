@@ -46,11 +46,21 @@ class LocalRuntimeInstaller(
      */
     suspend fun install(
         agents: Set<LocalAgent> = setOf(LocalAgent.OPEN_CODE),
-        onProgress: (Float?, String) -> Unit = { _, _ -> },
+        /**
+         * Progress, the step to show, and which agent that step belongs to - null for the shared
+         * Alpine environment every agent runs in. One install provisions the whole selection, so
+         * without the third argument the setup guide attributed every step to OpenCode and showed
+         * "Installing Claude Code" underneath the OpenCode heading.
+         */
+        onProgress: (Float?, String, LocalAgent?) -> Unit = { _, _, _ -> },
     ): InstalledRuntime =
         withContext(Dispatchers.IO) {
+            // The shared environment's own steps, which belong to no single agent.
+            val onShared: (Float?, String) -> Unit = { progress, step -> onProgress(progress, step, null) }
+            val onClaude: (Float?, String) -> Unit = { progress, step -> onProgress(progress, step, LocalAgent.CLAUDE_CODE) }
+            val onAntigravity: (Float?, String) -> Unit = { progress, step -> onProgress(progress, step, LocalAgent.ANTIGRAVITY) }
             runtimeDirectory.mkdirs()
-            onProgress(0.02f, context.getString(R.string.install_step_preparing_command_env))
+            onShared(0.02f, context.getString(R.string.install_step_preparing_command_env))
             val requestedAgents =
                 agents + (
                     installedMetadata()?.let {
@@ -85,7 +95,7 @@ class LocalRuntimeInstaller(
                     0.05f,
                     0.22f,
                     context.getString(R.string.install_step_downloading_alpine),
-                    onProgress,
+                    onShared,
                 )
                 val withOpenCode = LocalAgent.OPEN_CODE in requestedAgents
                 val openCodeArchive =
@@ -97,27 +107,27 @@ class LocalRuntimeInstaller(
                             0.24f,
                             0.72f,
                             context.getString(R.string.install_step_downloading_opencode),
-                            onProgress,
+                            onShared,
                         )
                     }
 
                 val rootfs = File(staging, "rootfs").apply { mkdirs() }
-                onProgress(0.75f, context.getString(R.string.install_step_extracting_linux_env))
+                onShared(0.75f, context.getString(R.string.install_step_extracting_linux_env))
                 alpineArchive.inputStream().use { RuntimeArchive.extractTarGz(it, rootfs) }
 
                 val openCodeBinary =
                     openCodeArchive?.let { archive ->
-                        onProgress(0.85f, context.getString(R.string.install_step_extracting_opencode))
+                        onShared(0.85f, context.getString(R.string.install_step_extracting_opencode))
                         extractOpenCode(archive, staging, rootfs)
                     }
                 configureRootfs(rootfs, commandSuite)
                 val antigravityRootfs =
                     if (LocalAgent.ANTIGRAVITY in requestedAgents) {
-                        onProgress(0.90f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
+                        onAntigravity(0.90f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
                         DebianRootfsInstaller(runtimeDirectory, abi, downloader, httpClient, commandSuite).installInto(
                             File(staging, "antigravity-rootfs"),
                         ) { progress ->
-                            onProgress(0.90f + progress * 0.03f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
+                            onAntigravity(0.90f + progress * 0.03f, context.getString(R.string.install_step_preparing_antigravity_rootfs))
                         }
                     } else {
                         null
@@ -133,16 +143,16 @@ class LocalRuntimeInstaller(
                 // the whole environment directory, so without this the user is signed out of every
                 // agent whenever another one is added or the runtime is reinstalled.
                 carryOverHomeDirectory(File(active, "rootfs"), rootfs)
-                onProgress(0.91f, context.getString(R.string.install_step_installing_dev_tools))
+                onShared(0.91f, context.getString(R.string.install_step_installing_dev_tools))
                 installDevelopmentTools(rootfs, commandSuite)
                 if (LocalAgent.CLAUDE_CODE in requestedAgents) {
-                    onProgress(0.93f, context.getString(R.string.install_step_installing_claude_code))
+                    onClaude(0.93f, context.getString(R.string.install_step_installing_claude_code))
                     ClaudeCodeInstaller.installInto(rootfs, commandSuite, runtimeDirectory)
                 }
                 if (LocalAgent.ANTIGRAVITY in requestedAgents) {
-                    onProgress(0.94f, context.getString(R.string.install_step_downloading_antigravity))
+                    onAntigravity(0.94f, context.getString(R.string.install_step_downloading_antigravity))
                     AntigravityInstaller(runtimeDirectory, abi, downloader).installInto(antigravityRootfs ?: rootfs) { progress ->
-                        onProgress(0.94f + progress * 0.04f, context.getString(R.string.install_step_installing_antigravity))
+                        onAntigravity(0.94f + progress * 0.04f, context.getString(R.string.install_step_installing_antigravity))
                     }
                 }
 
@@ -156,7 +166,7 @@ class LocalRuntimeInstaller(
                         components = requestedAgents.map(LocalAgent::id).toSet(),
                     )
                 File(staging, METADATA_FILE).writeText(json.encodeToString(metadata))
-                onProgress(0.96f, context.getString(R.string.install_step_activating_runtime))
+                onShared(0.96f, context.getString(R.string.install_step_activating_runtime))
                 accessCoordinator.write {
                     activateRuntimeEnvironment(
                         active = active,
@@ -170,7 +180,7 @@ class LocalRuntimeInstaller(
                         },
                     )
                 }
-                onProgress(1f, context.getString(R.string.install_step_done))
+                onShared(1f, context.getString(R.string.install_step_done))
                 InstalledRuntime(
                     metadata,
                     commandSuite,
