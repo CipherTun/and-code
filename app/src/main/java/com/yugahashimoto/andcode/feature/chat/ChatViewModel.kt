@@ -75,6 +75,7 @@ data class ChatMessage(
     val attachments: List<PromptAttachment> = emptyList(),
     val imagePreviews: List<Bitmap> = emptyList(),
     val timestamp: Long = System.currentTimeMillis(),
+    val completedAt: Long? = null,
     val isStreaming: Boolean = false,
 ) {
     val text: String
@@ -686,7 +687,6 @@ class ChatViewModel(
                     .onSuccess { title ->
                         if (title.isNotBlank()) _uiState.update { it.copy(sessionTitle = title) }
                     }
-                _uiState.value.imagePreviews.forEach { bmp -> if (!bmp.isRecycled) bmp.recycle() }
                 _uiState.update { it.copy(attachments = emptyList(), imagePreviews = emptyList()) }
                 clearDraft(targetSessionId)
                 var sessionCompleted = false
@@ -1238,6 +1238,7 @@ class ChatViewModel(
             parts = parts,
             attachments = attachments,
             timestamp = message.info.time.created,
+            completedAt = message.info.time.completed,
             isStreaming = false,
         )
     }

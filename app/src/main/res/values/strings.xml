@@ -104,6 +104,8 @@
     <string name="notification_channel_approvals">Approvals</string>
     <string name="notification_channel_status">Task status</string>
     <string name="notification_approval_title">Approval needed</string>
+    <string name="notification_question_title">Answer needed</string>
+    <string name="notification_question_body">The agent is asking a question</string>
     <string name="notification_complete_title">Run finished</string>
     <string name="notification_complete_body">Chat %1$s is idle</string>
     <string name="permission_chat_confirmation">This chat is waiting for your approval. Choose what the agent may do:</string>
@@ -936,4 +938,6 @@
     <string name="antigravity_auth_instructions">Approve the Google request in your browser, then paste the code it shows back here.</string>
     <string name="antigravity_auth_verifying">Verifying…</string>
     <string name="antigravity_signed_in">Signed in to Antigravity</string>
+    <string name="chat_response_duration">%1$d min</string>
+    <string name="chat_response_duration_under_minute">&lt;1 min</string>
 </resources>

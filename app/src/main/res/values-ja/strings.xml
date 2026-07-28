@@ -104,6 +104,8 @@
     <string name="notification_channel_approvals">承認</string>
     <string name="notification_channel_status">タスク状態</string>
     <string name="notification_approval_title">承認が必要です</string>
+    <string name="notification_question_title">回答が必要です</string>
+    <string name="notification_question_body">エージェントが質問しています</string>
     <string name="notification_complete_title">実行が完了しました</string>
     <string name="notification_complete_body">チャット「%1$s」が待機中です</string>
     <string name="permission_chat_confirmation">このチャットは承認待ちです。エージェントに許可する操作を選んでください:</string>
@@ -936,4 +938,6 @@
     <string name="antigravity_auth_instructions">ブラウザでGoogleのリクエストを承認し、表示されたコードをここに貼り付けてください。</string>
     <string name="antigravity_auth_verifying">確認しています…</string>
     <string name="antigravity_signed_in">Antigravityにサインイン済み</string>
+    <string name="chat_response_duration">%1$d分</string>
+    <string name="chat_response_duration_under_minute">1分未満</string>
 </resources>
