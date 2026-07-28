@@ -9,6 +9,9 @@ import com.yugahashimoto.andcode.data.repository.RuntimeCatalogRepository
 import com.yugahashimoto.andcode.data.repository.RuntimeEventLog
 import com.yugahashimoto.andcode.runtime.PermissionResponse
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -105,14 +108,22 @@ class ActivityViewModel(
     }
 
     fun deleteSession(sessionId: String) {
-        val backend = registry.selected.value ?: return
         actionError.value = null
         viewModelScope.launch {
-            runCatching { backend.deleteSession(sessionId) }
-                .onSuccess { catalog.refresh() }
-                .onFailure { error ->
-                    actionError.value = error.message ?: "Failed to delete session"
-                }
+            val targets = registry.targets.value
+            val results = coroutineScope {
+                targets.map { target ->
+                    async { runCatching { target.deleteSession(sessionId) } }
+                }.awaitAll()
+            }
+            val deleted = results.any { it.getOrDefault(false) }
+            val errors = results.mapNotNull { it.exceptionOrNull() }
+            catalog.refresh()
+            if (!deleted && errors.isNotEmpty()) {
+                actionError.value =
+                    errors.mapNotNull { it.message }.distinct().joinToString("; ")
+                        .ifBlank { "Failed to delete session" }
+            }
         }
     }
 }

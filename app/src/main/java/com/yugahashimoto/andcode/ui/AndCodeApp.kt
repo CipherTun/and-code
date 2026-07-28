@@ -97,6 +97,9 @@ import com.yugahashimoto.andcode.ui.theme.AndCodeTheme
 import com.yugahashimoto.andcode.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -624,28 +627,48 @@ fun AndCodeApp(
                         },
                         onDeleteSession = { sessionId ->
                             voiceScope.launch {
-                                runCatching { selectedRuntime?.deleteSession(sessionId) }
+                                val targets = app.runtimeRegistry.targets.value
+                                coroutineScope {
+                                    targets.map { target ->
+                                        async { runCatching { target.deleteSession(sessionId) } }
+                                    }.awaitAll()
+                                }
                                 app.catalogRepository.refreshSessionsOnly()
                             }
                         },
                         onArchiveSession = { sessionId ->
                             voiceScope.launch {
-                                runCatching { selectedRuntime?.archiveSession(sessionId) }
+                                val targets = app.runtimeRegistry.targets.value
+                                coroutineScope {
+                                    targets.map { target ->
+                                        async { runCatching { target.archiveSession(sessionId) } }
+                                    }.awaitAll()
+                                }
                                 app.catalogRepository.refreshSessionsOnly()
                             }
                         },
                         onBatchDelete = { sessionIds ->
                             voiceScope.launch {
-                                sessionIds.forEach { id ->
-                                    runCatching { selectedRuntime?.deleteSession(id) }
+                                val targets = app.runtimeRegistry.targets.value
+                                coroutineScope {
+                                    sessionIds.flatMap { id ->
+                                        targets.map { target ->
+                                            async { runCatching { target.deleteSession(id) } }
+                                        }
+                                    }.awaitAll()
                                 }
                                 app.catalogRepository.refreshSessionsOnly()
                             }
                         },
                         onBatchArchive = { sessionIds ->
                             voiceScope.launch {
-                                sessionIds.forEach { id ->
-                                    runCatching { selectedRuntime?.archiveSession(id) }
+                                val targets = app.runtimeRegistry.targets.value
+                                coroutineScope {
+                                    sessionIds.flatMap { id ->
+                                        targets.map { target ->
+                                            async { runCatching { target.archiveSession(id) } }
+                                        }
+                                    }.awaitAll()
                                 }
                                 app.catalogRepository.refreshSessionsOnly()
                             }
