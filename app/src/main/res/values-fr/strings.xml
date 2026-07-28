@@ -920,7 +920,7 @@
     <string name="settings_agents_row">Agents</string>
     <string name="settings_agents_section">Agents</string>
     <string name="antigravity_install_button">Installer Antigravity</string>
-    <string name="antigravity_status_signed_out">Déconnecté</string>
+    <string name="antigravity_status_signed_out">Non connecté</string>
     <string name="antigravity_sign_in_button">Se connecter à Antigravity</string>
     <string name="antigravity_auth_starting">Démarrage de la connexion…</string>
     <string name="antigravity_auth_instructions">Approuvez la demande Google dans le navigateur, puis collez le code ici.</string>

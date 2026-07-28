@@ -139,12 +139,16 @@ fun AndroidSetupScreen(
 
     // Only what is selected *and* actually on the device: an agent whose binary is missing has no
     // sign-in to offer, and Claude Code's card would shell out to /usr/bin/claude and fail there.
+    // OpenCode, Claude Code, Antigravity - the same order the picker lists them in, so the guide
+    // does not reshuffle the agents between the step that chooses them and the step that signs in.
     val signInAgents =
         listOfNotNull(
-            LocalAgent.CLAUDE_CODE.takeIf { claudeSelected && claude.installed },
             LocalAgent.OPEN_CODE.takeIf { openCodeSelected && openCodeReady },
+            LocalAgent.CLAUDE_CODE.takeIf { claudeSelected && claude.installed },
             LocalAgent.ANTIGRAVITY.takeIf { antigravitySelected && antigravity.installed },
         )
+    var signInIndex by rememberSaveable { mutableIntStateOf(0) }
+    val signInAgent = signInAgents.getOrNull(signInIndex.coerceAtMost(signInAgents.lastIndex.coerceAtLeast(0)))
 
     var currentStep by rememberSaveable { mutableIntStateOf(1) }
 
@@ -193,7 +197,13 @@ fun AndroidSetupScreen(
                 } else {
                     null
                 }
-            3 -> SetupPrimaryAction(stringResource(R.string.setup_next_action), true) { currentStep = 4 }
+            // "Next" walks the sign-in tabs before it leaves the step, so signing in to three
+            // agents is three taps of one button rather than a hunt for the chip the user has not
+            // visited yet.
+            3 ->
+                SetupPrimaryAction(stringResource(R.string.setup_next_action), true) {
+                    if (signInIndex < signInAgents.lastIndex) signInIndex++ else currentStep = 4
+                }
             else -> SetupPrimaryAction(stringResource(R.string.setup_complete_button), true, onFinish)
         }
 
@@ -267,6 +277,8 @@ fun AndroidSetupScreen(
                 3 ->
                     SignInStep(
                         agents = signInAgents,
+                        current = signInAgent,
+                        onSelectAgent = { agent -> signInIndex = signInAgents.indexOf(agent).coerceAtLeast(0) },
                         claude = claude,
                         antigravity = antigravity,
                         onBeginClaudeSignIn = onBeginClaudeSignIn,
@@ -457,17 +469,18 @@ private fun AgentSelectionStep(
             title = stringResource(R.string.setup_step_agents),
             description = stringResource(R.string.setup_agents_description),
         )
-        AgentOption(
-            title = stringResource(R.string.agent_claude_code_name),
-            description = stringResource(R.string.setup_agent_claude_code_desc),
-            selected = LocalAgent.CLAUDE_CODE in selectedAgents,
-            onToggle = { onToggle(LocalAgent.CLAUDE_CODE) },
-        )
+        // OpenCode, Claude Code, Antigravity - and the sign-in step follows the same order.
         AgentOption(
             title = stringResource(R.string.agent_opencode_name),
             description = stringResource(R.string.setup_agent_opencode_desc),
             selected = LocalAgent.OPEN_CODE in selectedAgents,
             onToggle = { onToggle(LocalAgent.OPEN_CODE) },
+        )
+        AgentOption(
+            title = stringResource(R.string.agent_claude_code_name),
+            description = stringResource(R.string.setup_agent_claude_code_desc),
+            selected = LocalAgent.CLAUDE_CODE in selectedAgents,
+            onToggle = { onToggle(LocalAgent.CLAUDE_CODE) },
         )
         AgentOption(
             title = stringResource(R.string.agent_antigravity_name),
@@ -755,6 +768,8 @@ private fun ReadyAgentRow(detail: String) {
 @Composable
 private fun SignInStep(
     agents: List<LocalAgent>,
+    current: LocalAgent?,
+    onSelectAgent: (LocalAgent) -> Unit,
     claude: ClaudeCodeUiState,
     antigravity: AntigravityControllerState,
     onBeginClaudeSignIn: () -> Unit,
@@ -772,11 +787,6 @@ private fun SignInStep(
     onOpenProviderAuth: (String) -> Unit,
     onDisconnectProvider: (String) -> Unit,
 ) {
-    var shown by rememberSaveable(agents.map(LocalAgent::id).joinToString()) {
-        mutableStateOf(agents.firstOrNull()?.id.orEmpty())
-    }
-    val current = agents.firstOrNull { it.id == shown } ?: agents.firstOrNull()
-
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         StepHeader(
             title = stringResource(R.string.setup_step_sign_in),
@@ -794,7 +804,7 @@ private fun SignInStep(
                 agents.forEach { agent ->
                     FilterChip(
                         selected = agent == current,
-                        onClick = { shown = agent.id },
+                        onClick = { onSelectAgent(agent) },
                         label = { Text(stringResource(agent.displayNameRes)) },
                     )
                 }

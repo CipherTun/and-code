@@ -920,7 +920,7 @@
     <string name="settings_agents_row">الوكلاء</string>
     <string name="settings_agents_section">الوكلاء</string>
     <string name="antigravity_install_button">تثبيت Antigravity</string>
-    <string name="antigravity_status_signed_out">تم تسجيل الخروج</string>
+    <string name="antigravity_status_signed_out">لم يتم تسجيل الدخول</string>
     <string name="antigravity_sign_in_button">تسجيل الدخول إلى Antigravity</string>
     <string name="antigravity_auth_starting">جارٍ بدء تسجيل الدخول…</string>
     <string name="antigravity_auth_instructions">وافق على طلب Google في المتصفح، ثم الصق الرمز هنا.</string>

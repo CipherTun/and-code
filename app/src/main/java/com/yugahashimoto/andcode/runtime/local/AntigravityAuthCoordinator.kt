@@ -264,6 +264,11 @@ class AntigravityAuthCoordinator(
             is State.SignedIn -> return
             // Verification owns the terminal state once a code has been submitted.
             is State.Verifying -> return
+            // A reason is already known - the discovery watchdog sets one and *then* kills the
+            // process, so overwriting it here replaced "did not print a Google sign-in URL" with
+            // the bare "stopped (exit code 137)" of the kill this coordinator had just issued,
+            // which is the least informative description of its own action.
+            is State.Failed -> return
             else -> Unit
         }
         mutableState.value =

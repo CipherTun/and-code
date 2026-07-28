@@ -92,4 +92,23 @@ class AntigravityAuthParserTest {
         assertFalse(redacted.contains("state=rGNljQ3DYOQBW1BbqzHU4Q"))
         assertTrue(redacted.contains("Open the URL below in your browser:"))
     }
+
+    /**
+     * The coordinator keeps only the tail of the transcript, so the line carrying the URL's scheme
+     * and host scrolls out of that window while the wrapped remainder stays. Anchoring redaction on
+     * the prefix alone let that remainder through, and a failed sign-in put the live authorization
+     * request's `state` parameter on screen.
+     */
+    @Test
+    fun `redacts a url fragment whose beginning has scrolled away`() {
+        val clean =
+            "  Antigravity sign-in stopped\n" +
+                "2Fauth%2Fexperimentsandconfigs+openid&state=udbUy49jTO5hAqC6bci_MA\n" +
+                " After authenticating, copy the code displayed in the browser and paste it below:\n"
+        val redacted = AntigravityAuthParser.redact(clean)
+        assertFalse(redacted.contains("udbUy49jTO5hAqC6bci_MA"))
+        assertFalse(redacted.contains("%2F"))
+        assertTrue(redacted.contains("Antigravity sign-in stopped"))
+        assertTrue(redacted.contains("After authenticating"))
+    }
 }

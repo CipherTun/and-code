@@ -934,7 +934,7 @@
     <string name="settings_agents_row">Agents</string>
     <string name="settings_agents_section">Agents</string>
     <string name="antigravity_install_button">Install Antigravity</string>
-    <string name="antigravity_status_signed_out">Signed out</string>
+    <string name="antigravity_status_signed_out">Not signed in</string>
     <string name="antigravity_sign_in_button">Sign in to Antigravity</string>
     <string name="antigravity_auth_starting">Starting sign-in…</string>
     <string name="antigravity_auth_instructions">Approve the Google request in your browser, then paste the code it shows back here.</string>

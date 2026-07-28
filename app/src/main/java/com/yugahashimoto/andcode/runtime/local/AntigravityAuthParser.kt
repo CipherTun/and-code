@@ -77,7 +77,15 @@ object AntigravityAuthParser {
             lines[block.first] = head.take(head.indexOf(OAUTH_PREFIX)) + REDACTED_URL
             for (index in block.first + 1..block.last) lines[index] = ""
         }
-        return lines.joinToString("\n")
+        // A second, content-based pass, because anchoring on the prefix alone is not enough: the
+        // coordinator keeps only the tail of the transcript, so once the line carrying
+        // `https://accounts.google.com/o/oauth2/auth?` scrolls out of that window the wrapped
+        // remainder survives with nothing to anchor to. That is not hypothetical - a failed sign-in
+        // put "...%2Fauth%2Fexperimentsandconfigs+openid&state=udbUy49jTO5hAqC6bci_MA" on screen,
+        // which is the CSRF state parameter of a live authorization request.
+        return lines.joinToString("\n") { line ->
+            if (QUERY_MARKERS.any { marker -> line.contains(marker, ignoreCase = true) }) REDACTED_URL else line
+        }
     }
 
     private data class UrlBlock(val first: Int, val last: Int, val url: String)
@@ -110,4 +118,21 @@ object AntigravityAuthParser {
 
     private const val MAX_REDACTIONS = 16
     private const val REDACTED_URL = "<oauth url redacted>"
+
+    /**
+     * Query material that identifies a fragment of an authorization request even with no scheme or
+     * host left on the line. `state` and `code_challenge` are the parts worth protecting; the rest
+     * are here because a line carrying them is part of the same URL.
+     */
+    private val QUERY_MARKERS =
+        listOf(
+            "state=",
+            "code_challenge",
+            "client_id=",
+            "redirect_uri=",
+            "response_type=",
+            "access_type=",
+            "scope=",
+            "%2F",
+        )
 }
