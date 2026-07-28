@@ -1,5 +1,6 @@
 package com.yugahashimoto.andcode.feature.chat
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +70,7 @@ fun ModelAndRuntimePickerSheet(
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
+    var runtimesExpanded by remember { mutableStateOf(false) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -102,15 +106,39 @@ fun ModelAndRuntimePickerSheet(
                 )
             }
 
-            item {
-                SheetSectionHeader(stringResource(R.string.section_runtime))
-            }
-            items(runtimeTargets, key = { "runtime-${it.id}" }) { target ->
-                RuntimeRow(
-                    target = target,
-                    selected = target.id == selectedRuntimeId,
-                    onClick = { onSelectRuntime(target.id) },
-                )
+            item(key = "section_runtime") {
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { runtimesExpanded = !runtimesExpanded }
+                            .padding(top = 12.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = if (runtimesExpanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                        contentDescription = stringResource(R.string.cd_expand_collapse),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.section_runtime),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                AnimatedVisibility(visible = runtimesExpanded) {
+                    Column {
+                        runtimeTargets.forEach { target ->
+                            RuntimeRow(
+                                target = target,
+                                selected = target.id == selectedRuntimeId,
+                                onClick = { onSelectRuntime(target.id) },
+                            )
+                        }
+                    }
+                }
             }
 
             item {
