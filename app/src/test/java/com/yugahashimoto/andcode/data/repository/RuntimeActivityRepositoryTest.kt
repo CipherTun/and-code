@@ -269,6 +269,59 @@ class RuntimeActivityRepositoryTest {
             assertEquals(listOf("q-1"), asked.map { it.id })
         }
 
+    @Test
+    fun `session idle raises the completion callback for top-level sessions`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val target = FakeTarget(requireConnected = false)
+            target.sessions = listOf(OpenCodeSession(id = "ses_1", title = "Main"))
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val completed = mutableListOf<String>()
+            RuntimeActivityRepository(
+                registry = registry,
+                scope = TestScope(dispatcher),
+                onSessionIdle = { sessionId, _ -> completed += sessionId },
+            )
+            advanceUntilIdle()
+
+            target.eventFlow.emit(OpenCodeEvent.SessionIdle("ses_1"))
+            advanceUntilIdle()
+
+            assertEquals(listOf("ses_1"), completed)
+        }
+
+    @Test
+    fun `session idle suppresses the completion callback for subagent sessions`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val target = FakeTarget(requireConnected = false)
+            target.sessions =
+                listOf(OpenCodeSession(id = "child_1", parentId = "ses_1", title = "Explore"))
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val completed = mutableListOf<String>()
+            RuntimeActivityRepository(
+                registry = registry,
+                scope = TestScope(dispatcher),
+                onSessionIdle = { sessionId, _ -> completed += sessionId },
+            )
+            advanceUntilIdle()
+
+            target.eventFlow.emit(OpenCodeEvent.SessionIdle("child_1"))
+            advanceUntilIdle()
+
+            assertTrue(completed.isEmpty())
+        }
+
     private class FakeUnreadStore(
         override var unreadSessionIds: Set<String>,
     ) : UnreadSessionStore
@@ -303,7 +356,9 @@ class RuntimeActivityRepositoryTest {
 
         override suspend fun health(): OpenCodeHealth = error("unused")
 
-        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
+        var sessions: List<OpenCodeSession> = emptyList()
+
+        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = sessions
 
         override suspend fun createSession(
             title: String?,

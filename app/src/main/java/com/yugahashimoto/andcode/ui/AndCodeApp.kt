@@ -547,16 +547,12 @@ fun AndCodeApp(
         remember(activityState.sessions, chatState.sessionId, activityState.activeSessionIds) {
             val parentId = chatState.sessionId ?: return@remember emptyList()
             activityState.sessions
-                .filter { it.parentId == parentId }
+                .filter { it.parentId == parentId && it.id in activityState.activeSessionIds }
                 .map { session ->
                     SubagentInfo(
                         id = session.id,
                         name = session.title.ifBlank { session.slug ?: session.id.take(8) },
-                        status =
-                            when {
-                                session.id in activityState.activeSessionIds -> "running"
-                                else -> "idle"
-                            },
+                        status = "running",
                         providerId = "",
                     )
                 }

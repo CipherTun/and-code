@@ -240,7 +240,12 @@ class RuntimeActivityRepository(
                     )
                 }
                 appendLog("実行完了", null, event.sessionId)
-                onSessionIdle?.invoke(event.sessionId, sessionTitle(target, event.sessionId))
+                val isSubagent =
+                    runCatching { target.session(event.sessionId).parentId != null }
+                        .getOrDefault(false)
+                if (!isSubagent) {
+                    onSessionIdle?.invoke(event.sessionId, sessionTitle(target, event.sessionId))
+                }
             }
             is OpenCodeEvent.MessageUpdated -> {
                 mutableState.update { current ->
