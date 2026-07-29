@@ -12,6 +12,37 @@ import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.net.UnknownHostException
+
+/** Attempts before [retryOnUnknownHost] gives up and lets the [UnknownHostException] through. */
+private const val DNS_RETRY_ATTEMPTS = 3
+private const val DNS_RETRY_DELAY_MS = 800L
+
+/**
+ * Retries [block] when it fails with [UnknownHostException] - a transient DNS resolution blip.
+ *
+ * Confirmed on a real device: connecting GitHub failed with "Unable to resolve host github.com:
+ * No address associated with hostname" on the first attempt, then succeeded moments later with no
+ * other change - a DNS lookup that failed once but would have worked if retried. Without this, a
+ * user had to notice the failure and tap "Connect" again themselves; this absorbs that blip
+ * automatically instead. Retrying is only safe for this specific exception: an HTTP error (checked
+ * separately via `response.isSuccessful`) or any other failure is a real problem and must not be
+ * retried.
+ */
+internal suspend fun <T> retryOnUnknownHost(
+    attempts: Int = DNS_RETRY_ATTEMPTS,
+    delayMillis: Long = DNS_RETRY_DELAY_MS,
+    block: () -> T,
+): T {
+    repeat(attempts - 1) {
+        try {
+            return block()
+        } catch (_: UnknownHostException) {
+            delay(delayMillis)
+        }
+    }
+    return block()
+}
 
 @Serializable
 data class GitHubDeviceCode(
@@ -83,7 +114,7 @@ class GitHubAuthRepository(
                         "https://github.com/login/oauth/access_token",
                     ).post(body).header("Accept", "application/json").build()
                 val responseBody =
-                    client.newCall(request).execute().use { response ->
+                    retryOnUnknownHost { client.newCall(request).execute() }.use { response ->
                         check(response.isSuccessful) { "GitHub request failed: ${response.code}" }
                         response.body?.string().orEmpty()
                     }
@@ -116,7 +147,7 @@ class GitHubAuthRepository(
                     .header("Authorization", "Bearer $accessToken")
                     .header("Accept", "application/vnd.github+json")
                     .build()
-            client.newCall(request).execute().use { response ->
+            retryOnUnknownHost { client.newCall(request).execute() }.use { response ->
                 if (!response.isSuccessful) return@withContext null
                 val account = json.decodeFromString<GitHubAccount>(response.body?.string().orEmpty())
                 settings.githubLogin = account.login
@@ -133,7 +164,7 @@ class GitHubAuthRepository(
                     .header("Authorization", "Bearer $accessToken")
                     .header("Accept", "application/vnd.github+json")
                     .build()
-            client.newCall(request).execute().use { response ->
+            retryOnUnknownHost { client.newCall(request).execute() }.use { response ->
                 if (!response.isSuccessful) return@withContext emptyList()
                 json.decodeFromString<List<GitHubRepo>>(response.body?.string().orEmpty())
             }
@@ -156,12 +187,12 @@ class GitHubAuthRepository(
         settings.githubStarStatusCheckedAt = 0L
     }
 
-    private inline fun <reified T> executeJson(
+    private suspend inline fun <reified T> executeJson(
         url: String,
         body: FormBody,
     ): T {
         val request = Request.Builder().url(url).post(body).header("Accept", "application/json").build()
-        client.newCall(request).execute().use { response ->
+        retryOnUnknownHost { client.newCall(request).execute() }.use { response ->
             check(response.isSuccessful) { "GitHub request failed: ${response.code}" }
             return json.decodeFromString<T>(response.body?.string().orEmpty())
         }
