@@ -71,4 +71,29 @@ class AntigravityProcessGateTest {
         threads.forEach { it.join() }
         assertEquals(3, order.size)
     }
+
+    @Test
+    fun `serialize queues a second send behind an in-flight one instead of failing`() {
+        val events = mutableListOf<String>()
+        val first =
+            Thread {
+                AntigravityProcessGate.serialize {
+                    events.add("first-start")
+                    Thread.sleep(150)
+                    events.add("first-end")
+                }
+            }
+        first.start()
+        // Let the first sender take the gate, then a second send must wait for it to finish rather
+        // than run concurrently (the on-device hang) or fail fast (what `exclusive` would do).
+        Thread.sleep(20)
+        val secondResult =
+            AntigravityProcessGate.serialize {
+                events.add("second")
+                "done"
+            }
+        first.join()
+        assertEquals("done", secondResult)
+        assertEquals(listOf("first-start", "first-end", "second"), events)
+    }
 }

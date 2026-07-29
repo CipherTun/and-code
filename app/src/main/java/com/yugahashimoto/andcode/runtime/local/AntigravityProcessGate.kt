@@ -13,10 +13,18 @@ import java.util.concurrent.locks.ReentrantLock
  * trajectory store, a keyring session), and that appears not to be safe for two guest processes to
  * race through at once. Every caller in this file blocks only from a background dispatcher thread;
  * nothing here is safe to call from the UI thread.
+ *
+ * The hang is specific to the PRoot/Android deployment, not the binary itself: measured on a native
+ * host, three simultaneous one-shot `agy` runs all completed in about ten seconds with no
+ * contention, and `lsof` showed the CLI holding only read-only config files and network sockets, no
+ * exclusive lock. Because the deadlock cannot be reproduced or fixed from outside PRoot, the app
+ * keeps serializing every launch; [serialize] lets a chat send queue behind an in-flight one rather
+ * than fail, while [exclusive] keeps short probes like `models` fail-fast.
  */
 object AntigravityProcessGate {
     private val lock = ReentrantLock()
     private const val MAX_WAIT_MS = 60_000L
+    private const val SEND_MAX_WAIT_MS = 10 * 60_000L
 
     /**
      * Runs [block] with the gate held, or returns null without running it if the gate is still busy
@@ -30,6 +38,21 @@ object AntigravityProcessGate {
      */
     fun <T> exclusive(block: () -> T): T? {
         if (!lock.tryLock(MAX_WAIT_MS, TimeUnit.MILLISECONDS)) return null
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    /**
+     * Runs [block] once the gate is free, waiting up to [SEND_MAX_WAIT_MS] for an in-flight launch to
+     * finish. A chat turn can run for minutes, so a second session's send must queue behind it rather
+     * than fail fast the way [exclusive] does for short probes. Null means even that long wait elapsed
+     * without the gate freeing up; callers report that as "busy".
+     */
+    fun <T> serialize(block: () -> T): T? {
+        if (!lock.tryLock(SEND_MAX_WAIT_MS, TimeUnit.MILLISECONDS)) return null
         try {
             return block()
         } finally {

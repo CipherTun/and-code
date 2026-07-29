@@ -22,11 +22,11 @@ class AntigravityTarget(internal val runtime: AntigravityRuntime) : RuntimeTarge
     override val kind = BackendKind.LOCAL
     override val type = RuntimeType.LOCAL
     override val capabilities =
-        // The parser and hook schema are deliberately kept behind this boundary until they are
-        // wired to a long-lived agy PTY. Advertising a capability here makes the UI send replies
-        // to a process that does not exist (the current bridge is one-shot --print), so keep the
-        // state honest and let the UI fall back to plain text chat.
-        RuntimeCapabilities()
+        // The one-shot --print bridge now reads `--output-format stream-json`, so the reply streams
+        // in and tool calls surface as parts; toolEvents advertises exactly that. Permission prompts
+        // and questions are still no-ops (respond()/answer() return false), so those stay off rather
+        // than make the UI offer interactions the process cannot answer.
+        RuntimeCapabilities(toolEvents = true)
     private val mutableState = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
     override val state: StateFlow<RuntimeState> = mutableState.asStateFlow()
     private val files = ClaudeWorkspaceFiles(File(runtime.runtimeDirectory, "workspace"))

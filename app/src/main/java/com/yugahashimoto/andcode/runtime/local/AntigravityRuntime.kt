@@ -156,96 +156,126 @@ class AntigravityRuntime(
                 require(isInstalled()) { "Antigravity is not installed" }
                 AntigravityGuestSettings.repair(runtime)
                 processes.remove(sessionId)?.let { terminate(it) }
-                // `--print` takes the prompt as its value, so it must come last with the prompt
-                // immediately after it. Every other flag goes first: with `--print` leading, the CLI
-                // took the *next* token as the prompt, so a message sent with any flag set asked the
-                // model about "--conversation" or "--mode" instead of what the user typed.
-                val args =
-                    buildList {
-                        if (conversationId != null) {
-                            add("--conversation")
-                            add(conversationId)
+                // Concurrent agy launches hang on the PRoot/Android deployment (see
+                // AntigravityProcessGate), so a send queues behind any in-flight launch and the two
+                // run one at a time instead of racing each other into a deadlock.
+                AntigravityProcessGate.serialize {
+                    // `--print` takes the prompt as its value, so it must come last with the prompt
+                    // immediately after it. Every other flag goes first: with `--print` leading, the CLI
+                    // took the *next* token as the prompt, so a message sent with any flag set asked the
+                    // model about "--conversation" or "--mode" instead of what the user typed.
+                    val args =
+                        buildList {
+                            add("--output-format")
+                            add("stream-json")
+                            if (conversationId != null) {
+                                add("--conversation")
+                                add(conversationId)
+                            }
+                            addAll(AntigravityModels.cliArgs(model, variant))
+                            addAll(permissionMode.cliArgs)
+                            add("--print")
+                            add(prompt)
                         }
-                        addAll(AntigravityModels.cliArgs(model, variant))
-                        addAll(permissionMode.cliArgs)
-                        add("--print")
-                        add(prompt)
-                    }
-                val process =
-                    ProcessBuilder(
-                        AntigravitySandboxLauncher.command(
-                            runtime,
-                            File(runtimeDirectory, "workspace").apply {
-                                mkdirs()
-                            }.absolutePath,
-                            args,
-                            false,
-                        ),
-                    )
-                        .directory(runtimeDirectory).redirectErrorStream(true).apply {
-                            environment().putAll(
-                                AntigravitySandboxLauncher.environment(
-                                    runtime,
-                                    File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
-                                    githubToken(),
-                                ),
-                            )
-                        }.start()
-                processes[sessionId] = process
-                val output = process.inputStream.bufferedReader().readText().trim()
-                process.waitFor()
-                processes.remove(sessionId)
-                require(process.exitValue() == 0) { output.ifBlank { "agy exited with ${process.exitValue()}" } }
-                val record = records[sessionId] ?: AntigravitySessionRecord(sessionId, null, workspace)
-                val discoveredConversationId = CONVERSATION_ID_PATTERN.find(output)?.groupValues?.getOrNull(1)
-                records[sessionId] =
-                    record.copy(
-                        // Never invent a conversation id: --conversation must only be used with
-                        // an id emitted by the official CLI, otherwise a cold resume can attach
-                        // to an unrelated conversation.
-                        conversationId = discoveredConversationId ?: record.conversationId,
-                        updatedAt = System.currentTimeMillis(),
-                        lastStep = record.lastStep + 1,
-                    )
-                val now = System.currentTimeMillis()
-                val userId = "$sessionId-user-${record.lastStep}"
-                val assistantId = "$sessionId-assistant-${record.lastStep}"
-                messages.getOrPut(sessionId) { mutableListOf() }.apply {
-                    add(
+                    val stderrLog = File(runtimeDirectory, "logs/agy-stderr.log").also { it.parentFile?.mkdirs() }
+                    val process =
+                        ProcessBuilder(
+                            AntigravitySandboxLauncher.command(
+                                runtime,
+                                File(runtimeDirectory, "workspace").apply {
+                                    mkdirs()
+                                }.absolutePath,
+                                args,
+                                false,
+                            ),
+                        )
+                            .directory(runtimeDirectory)
+                            // Diagnostics go to a log, not into stdout: a progress line on stderr would
+                            // corrupt the NDJSON the parser reads line by line below.
+                            .redirectError(ProcessBuilder.Redirect.appendTo(stderrLog)).apply {
+                                environment().putAll(
+                                    AntigravitySandboxLauncher.environment(
+                                        runtime,
+                                        File(runtimeDirectory, "proot-tmp").apply { mkdirs() },
+                                        githubToken(),
+                                    ),
+                                )
+                            }.start()
+                    processes[sessionId] = process
+                    val parser = AntigravityStreamJsonParser(sessionId, json)
+                    val record0 = records[sessionId] ?: AntigravitySessionRecord(sessionId, null, workspace)
+                    val turnNow = System.currentTimeMillis()
+                    val userId = "$sessionId-user-${record0.lastStep}"
+                    // Persist the user turn before the stream starts. The chat redraws from
+                    // listMessages the moment it sees SessionIdle, and the composer's optimistic
+                    // bubble is replaced by that snapshot - so a user turn that only lands at the
+                    // end of the send would vanish from the screen (and never reappear on a failed
+                    // result, which persisted nothing for it).
+                    messages.getOrPut(sessionId) { mutableListOf() }.add(
                         OpenCodeMessage(
-                            OpenCodeMessageInfo(userId, sessionId, "user", OpenCodeTime(now, now, now)),
+                            OpenCodeMessageInfo(userId, sessionId, "user", OpenCodeTime(turnNow, turnNow, turnNow)),
                             // A part without an id is dropped when the chat maps the transcript for
-                            // display, so an id-less part is invisible however well the run went -
-                            // and the empty result then replaced the whole transcript on screen.
+                            // display, so an id-less part is invisible however well the run went.
                             listOf(OpenCodePart(id = "$userId-text", type = "text", text = prompt)),
                         ),
                     )
-                    add(
-                        OpenCodeMessage(
-                            // `completed` is how the chat decides a turn is over: it polls the
-                            // transcript and only stops on an assistant message that carries one.
-                            // Leaving it null kept the composer on "thinking" until the two minute
-                            // timeout even though the reply was already written and on disk.
-                            // `--print` is one-shot, so the reply is complete the moment it lands.
-                            // The model is recorded on the message because that is where the chat
-                            // reads it back when a session is reopened - it takes the newest message
-                            // that names one. Without it, reopening any Antigravity chat showed
-                            // whatever model happened to be selected globally.
-                            OpenCodeMessageInfo(
-                                assistantId,
-                                sessionId,
-                                "assistant",
-                                OpenCodeTime(now, now, now),
-                                agent = "antigravity",
-                                model = model?.let { OpenCodeModelReference(AntigravityModels.PROVIDER_ID, it) },
-                            ),
-                            listOf(OpenCodePart(id = "$assistantId-text", type = "text", text = output)),
-                        ),
-                    )
-                }
-                persist()
-                events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
-                output
+                    persist()
+                    var discoveredConversationId: String? = null
+                    var turnFinished = false
+                    var turnError: String? = null
+                    var finalText: String? = null
+                    process.inputStream.bufferedReader().forEachLine { line ->
+                        if (line.isBlank()) return@forEachLine
+                        val parsed = parser.parse(line)
+                        parsed.conversationId?.let { discoveredConversationId = it }
+                        // Persist the assistant message before emitting its events. The chat's
+                        // SessionIdle handler clears the live stream buffer and reloads the
+                        // transcript with listMessages; if the turn is not on disk yet, that reload
+                        // paints the previous turn and the just-streamed reply disappears - the
+                        // one-turn lag seen on device. Claude Code avoids this by upserting before
+                        // it emits, so the assistant reply (and its tool parts) land first here too.
+                        parsed.messages.forEach { assistant ->
+                            messages.getOrPut(sessionId) { mutableListOf() }.add(
+                                assistant.copy(
+                                    info =
+                                        assistant.info.copy(
+                                            model = model?.let { OpenCodeModelReference(AntigravityModels.PROVIDER_ID, it) },
+                                        ),
+                                ),
+                            )
+                            persist()
+                        }
+                        parsed.events.forEach(events::tryEmit)
+                        if (parsed.turnFinished) {
+                            turnFinished = true
+                            turnError = parsed.errorMessage
+                            finalText = parsed.finalText
+                        }
+                    }
+                    process.waitFor()
+                    processes.remove(sessionId)
+                    records[sessionId] =
+                        record0.copy(
+                            // Never invent a conversation id: --conversation must only be used with
+                            // an id emitted by the official CLI, otherwise a cold resume can attach
+                            // to an unrelated conversation. The id now comes straight from the stream's
+                            // top-level conversation_id rather than being scraped out of the prose.
+                            conversationId = discoveredConversationId ?: record0.conversationId,
+                            updatedAt = System.currentTimeMillis(),
+                            lastStep = record0.lastStep + 1,
+                        )
+                    persist()
+                    if (turnFinished) {
+                        // On a failed result the parser already emitted SessionError then SessionIdle;
+                        // the user turn is persisted above, and there is no assistant reply to add.
+                        return@serialize finalText.orEmpty()
+                    }
+                    // No result event arrived: the CLI died mid-turn. Surface that as an error unless it
+                    // somehow exited cleanly, in which case idle is the honest state.
+                    require(process.exitValue() == 0) { "agy exited with ${process.exitValue()}" }
+                    events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
+                    finalText.orEmpty()
+                } ?: error("Antigravity is busy and the turn could not be scheduled")
             }.onFailure {
                 events.tryEmit(OpenCodeEvent.SessionError(sessionId, it.message))
                 events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
@@ -407,10 +437,6 @@ class AntigravityRuntime(
     }
 
     private companion object {
-        // Keep this deliberately narrow. A UUID-shaped value in arbitrary model text is not
-        // enough to claim resume support, but this lets a future official --print transcript
-        // bridge persist an explicitly emitted conversation id without fabricating one.
-        val CONVERSATION_ID_PATTERN = Regex("(?:conversation(?:Id|_id)|conversation)\\s*[:=]\\s*[\\\"']?([0-9a-fA-F-]{16,})")
         val VERSION_PATTERN = Regex("\\b\\d+\\.\\d+\\.\\d+\\b")
         const val MODELS_READ_TIMEOUT_MS = 45_000L
         const val TITLE_READ_TIMEOUT_MS = 45_000L
