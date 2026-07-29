@@ -65,13 +65,53 @@ internal fun localRuntimeInstallAgents(ids: Array<String>?): Set<LocalAgent> =
         ?.takeIf(Set<LocalAgent>::isNotEmpty)
         ?: setOf(LocalAgent.OPEN_CODE)
 
+internal class RestartBackoff(
+    private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val baseDelayMs: Long = 1_000L,
+    private val maxDelayMs: Long = 60_000L,
+    private val resetWindowMs: Long = 30_000L,
+) {
+    private var consecutiveCrashes = 0
+    private var lastCrashAtMillis = 0L
+
+    fun recordCrash(): Long {
+        val now = nowMillis()
+        if (now - lastCrashAtMillis > resetWindowMs) {
+            consecutiveCrashes = 1
+        } else {
+            consecutiveCrashes++
+        }
+        lastCrashAtMillis = now
+        return delayMillis()
+    }
+
+    fun reset() {
+        consecutiveCrashes = 0
+        lastCrashAtMillis = 0L
+    }
+
+    fun recordUptime(uptimeMillis: Long) {
+        if (uptimeMillis >= resetWindowMs) {
+            reset()
+        }
+    }
+
+    private fun delayMillis(): Long {
+        if (consecutiveCrashes <= 1) return 0L
+        val delay = baseDelayMs * (1L shl (consecutiveCrashes - 2).coerceAtMost(6))
+        return delay.coerceAtMost(maxDelayMs)
+    }
+}
+
 class LocalRuntimeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var operation: Job? = null
     private var watchdogJob: Job? = null
+    private var exitMonitorJob: Job? = null
 
     @Volatile private var autoRestartEnabled = false
     private lateinit var manager: LocalRuntimeManager
+    private val backoff = RestartBackoff()
 
     override fun onCreate() {
         super.onCreate()
@@ -82,7 +122,22 @@ class LocalRuntimeService : Service() {
             manager.state.collectLatest { status ->
                 getSystemService(NotificationManager::class.java)
                     .notify(NOTIFICATION_ID, notification(status))
+                if (status is LocalRuntimeStatus.Ready) {
+                    backoff.reset()
+                }
             }
+        }
+        manager.setOnExit { exitCode, pid, uptime ->
+            if (!autoRestartEnabled) return@setOnExit
+            backoff.recordUptime(uptime)
+            val delayMs = backoff.recordCrash()
+            exitMonitorJob?.cancel()
+            exitMonitorJob =
+                scope.launch(Dispatchers.IO) {
+                    if (delayMs > 0) delay(delayMs)
+                    if (!isActive || !autoRestartEnabled) return@launch
+                    manager.ensureRunning()
+                }
         }
         startWatchdog()
     }
@@ -150,7 +205,9 @@ class LocalRuntimeService : Service() {
 
     override fun onDestroy() {
         autoRestartEnabled = false
+        manager.setOnExit(null)
         operation?.cancel()
+        exitMonitorJob?.cancel()
         watchdogJob?.cancel()
         scope.cancel()
         super.onDestroy()
