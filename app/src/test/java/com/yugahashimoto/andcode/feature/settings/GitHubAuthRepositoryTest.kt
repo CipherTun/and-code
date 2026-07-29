@@ -78,7 +78,11 @@ class GitHubAuthRepositoryTest {
     fun `retryOnUnknownHost succeeds immediately without retrying when there is no failure`() =
         runTest {
             var attempts = 0
-            val result = retryOnUnknownHost(attempts = 3, delayMillis = 10) { attempts++; "ok" }
+            val result =
+                retryOnUnknownHost(attempts = 3, delayMillis = 10) {
+                    attempts++
+                    "ok"
+                }
 
             assertEquals("ok", result)
             assertEquals(1, attempts)
