@@ -63,7 +63,18 @@ jobs:
           AND_CODE_STORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           AND_CODE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           AND_CODE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew assembleDebug assembleRelease
+          # Not itself secret (an OAuth App client ID is meant to be public - it's the value sent
+          # in the browser's authorize URL), but named with the AND_CODE_ prefix because GitHub
+          # Actions rejects any repo variable/secret starting with GITHUB_. Without this, the app's
+          # BuildConfig.GITHUB_CLIENT_ID (app/build.gradle.kts) is baked in empty and every APK this
+          # workflow publishes shows "GitHubクライアントIDが含まれていない" with no way to sign in.
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
+        run: |
+          if [ -z "$GITHUB_CLIENT_ID" ]; then
+            echo "AND_CODE_GITHUB_CLIENT_ID repo variable is not set - the published APK would have no GitHub sign-in" >&2
+            exit 1
+          fi
+          ./gradlew assembleDebug assembleRelease
 
       - name: Resolve tag
         id: tag

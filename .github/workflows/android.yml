@@ -110,6 +110,11 @@ jobs:
           PY
 
       - name: Test and build debug APK
+        # See release.yml for why this is AND_CODE_-prefixed rather than GITHUB_CLIENT_ID directly
+        # (GitHub Actions rejects that prefix for repo variables/secrets); without it this job's
+        # own debug APK artifact would have no GitHub sign-in either.
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug
 
       # assembleRelease runs R8 with minification and resource shrinking, which is the single
@@ -118,6 +123,8 @@ jobs:
       # covers on every merge.
       - name: Build release APK
         if: github.event_name == 'push'
+        env:
+          GITHUB_CLIENT_ID: ${{ vars.AND_CODE_GITHUB_CLIENT_ID }}
         run: ./gradlew :app:assembleRelease
 
       - name: Upload debug APK
