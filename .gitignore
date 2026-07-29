@@ -7,6 +7,7 @@ __pycache__/
 *.keystore
 *.jks
 .kotlin/
+.worktree/
 .env
 *.apk
 *.aab
