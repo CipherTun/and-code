@@ -13,12 +13,20 @@ import com.yugahashimoto.andcode.core.api.PromptAttachment
 import com.yugahashimoto.andcode.core.api.PromptRequest
 import com.yugahashimoto.andcode.core.api.ProviderCatalog
 import com.yugahashimoto.andcode.runtime.BackendKind
+import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.OpenCodeBackend
 import com.yugahashimoto.andcode.runtime.PermissionResponse
+import com.yugahashimoto.andcode.runtime.RuntimeCapabilities
+import com.yugahashimoto.andcode.runtime.RuntimeState
+import com.yugahashimoto.andcode.runtime.RuntimeTarget
+import com.yugahashimoto.andcode.runtime.RuntimeType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -616,6 +624,39 @@ class ChatViewModelTest {
             assertFalse(viewModel.uiState.value.isRunning)
         }
 
+    /**
+     * Antigravity runs each turn as a one-shot process (see AntigravityRuntime.send); the default
+     * "interrupt" send behavior would kill that process mid-turn, which surfaced to the user as
+     * "agy exited with 137" instead of a clean cancellation. RuntimeCapabilities.forcesQueue makes
+     * such a runtime behave like the "queue" setting regardless of what sendBehavior is set to, so a
+     * message sent while one is running waits instead of interrupting it.
+     */
+    @Test
+    fun `a runtime that forces queue never interrupts a running turn`() =
+        runTest(dispatcher) {
+            val backend = FakeQueueForcingBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("first")
+            advanceUntilIdle()
+            assertTrue(viewModel.uiState.value.isRunning)
+
+            viewModel.sendMessage("second")
+            advanceUntilIdle()
+
+            // Still running, and the second message was queued rather than sent - it must not have
+            // interrupted (killed) the first turn's process.
+            assertTrue(viewModel.uiState.value.isRunning)
+            assertEquals(listOf("first"), backend.sentPrompts.map { it.second.text })
+
+            // The turn finishing drains the queue and sends the second message for real.
+            backend.events.tryEmit(OpenCodeEvent.SessionIdle("s1"))
+            advanceUntilIdle()
+
+            assertEquals(listOf("first", "second"), backend.sentPrompts.map { it.second.text })
+        }
+
     @Test
     fun `switching sessions mid-poll does not corrupt the newly opened session`() =
         runTest(dispatcher) {
@@ -826,6 +867,63 @@ class ChatViewModelTest {
             permissionResponses += PermissionRecord(sessionId, permissionId, response, remember)
             return true
         }
+
+        override fun events(): Flow<OpenCodeEvent> = events
+    }
+
+    /**
+     * A [RuntimeTarget] whose [RuntimeCapabilities.forcesQueue] is set - the same shape
+     * [com.yugahashimoto.andcode.runtime.local.AntigravityTarget] exposes - to verify the chat
+     * ViewModel queues a send instead of interrupting a running turn for such a backend, independent
+     * of whatever the user's sendBehavior preference is set to.
+     */
+    private class FakeQueueForcingBackend : RuntimeTarget {
+        override val id: String = "fake-queue-forcing"
+        override val displayName: String = "Fake queue-forcing"
+        override val kind: BackendKind = BackendKind.LOCAL
+        override val type: RuntimeType = RuntimeType.LOCAL
+        override val agent: LocalAgent? = null
+        override val capabilities: RuntimeCapabilities = RuntimeCapabilities(forcesQueue = true)
+        override val state: StateFlow<RuntimeState> = MutableStateFlow<RuntimeState>(RuntimeState.Connected("test")).asStateFlow()
+        val events = MutableSharedFlow<OpenCodeEvent>(extraBufferCapacity = 20)
+        val sentPrompts = mutableListOf<Pair<String, PromptRequest>>()
+
+        override suspend fun connect(): Result<OpenCodeHealth> = Result.success(OpenCodeHealth(true, "test"))
+
+        override fun disconnect() = Unit
+
+        override suspend fun listWorkspaces(): List<com.yugahashimoto.andcode.runtime.WorkspaceRef> = emptyList()
+
+        override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
+
+        override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
+
+        override suspend fun createSession(
+            title: String?,
+            directory: String?,
+        ): OpenCodeSession = OpenCodeSession(id = "s1", title = title ?: "", directory = directory, time = OpenCodeTime(created = 1))
+
+        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
+
+        override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
+
+        override suspend fun listAgents(): List<OpenCodeAgent> = emptyList()
+
+        override suspend fun sendMessage(
+            sessionId: String,
+            request: PromptRequest,
+        ) {
+            sentPrompts += sessionId to request
+        }
+
+        override suspend fun abortSession(sessionId: String): Boolean = true
+
+        override suspend fun respondToPermission(
+            sessionId: String,
+            permissionId: String,
+            response: PermissionResponse,
+            remember: Boolean,
+        ): Boolean = true
 
         override fun events(): Flow<OpenCodeEvent> = events
     }

@@ -54,6 +54,9 @@ class AntigravityRuntime(
     private val messages = linkedMapOf<String, MutableList<OpenCodeMessage>>()
     private val processes = linkedMapOf<String, Process>()
 
+    /** See [AntigravityAbortTracker] for why an intentional kill must not be reported as a crash. */
+    private val abortTracker = AntigravityAbortTracker()
+
     @Volatile private var cachedVersion: String? = null
 
     @Volatile private var cachedModels: List<AntigravityModels.Entry>? = null
@@ -155,7 +158,14 @@ class AntigravityRuntime(
                 val runtime = installedRuntimeProvider() ?: error("Linux environment is not installed")
                 require(isInstalled()) { "Antigravity is not installed" }
                 AntigravityGuestSettings.repair(runtime)
-                processes.remove(sessionId)?.let { terminate(it) }
+                // Normally unreachable now that the app always queues a send behind a running
+                // Antigravity turn (see RuntimeCapabilities.forcesQueue) - kept as a safety net for
+                // e.g. two clients racing the same session. Marking the kill as intentional here is
+                // what stops the superseded call's own send() below from reporting it as a crash.
+                processes.remove(sessionId)?.let {
+                    abortTracker.markIntentional(sessionId)
+                    terminate(it)
+                }
                 // Concurrent agy launches hang on the PRoot/Android deployment (see
                 // AntigravityProcessGate), so a send queues behind any in-flight launch and the two
                 // run one at a time instead of racing each other into a deadlock.
@@ -254,6 +264,11 @@ class AntigravityRuntime(
                     }
                     process.waitFor()
                     processes.remove(sessionId)
+                    // Consumed unconditionally, even when the turn actually finished cleanly (an
+                    // abort can race a completion that was already on its way): leaving the flag set
+                    // would make an unrelated later crash on this same session silently swallowed as
+                    // "clean idle" instead of surfacing as an error.
+                    val wasKilledIntentionally = abortTracker.consumeIntentional(sessionId)
                     records[sessionId] =
                         record0.copy(
                             // Never invent a conversation id: --conversation must only be used with
@@ -270,6 +285,13 @@ class AntigravityRuntime(
                         // the user turn is persisted above, and there is no assistant reply to add.
                         return@serialize finalText.orEmpty()
                     }
+                    if (wasKilledIntentionally) {
+                        // Killed on purpose - the stop button, or a same-session supersede above -
+                        // not a crash. The process's exit code is 137 (SIGKILL) either way, so this
+                        // flag is the only thing that tells the two apart; idle is the honest state.
+                        events.tryEmit(OpenCodeEvent.SessionIdle(sessionId))
+                        return@serialize finalText.orEmpty()
+                    }
                     // No result event arrived: the CLI died mid-turn. Surface that as an error unless it
                     // somehow exited cleanly, in which case idle is the honest state.
                     require(process.exitValue() == 0) { "agy exited with ${process.exitValue()}" }
@@ -284,6 +306,10 @@ class AntigravityRuntime(
 
     fun abort(sessionId: String) {
         processes[sessionId]?.let { process ->
+            // Marked before either the graceful ESC or the SIGKILL fallback below: whichever one
+            // actually ends the process, the exit code should not be read as a crash by the send()
+            // call still blocked reading its stdout. See AntigravityAbortTracker.
+            abortTracker.markIntentional(sessionId)
             runCatching {
                 process.outputStream.write(27)
                 process.outputStream.flush()

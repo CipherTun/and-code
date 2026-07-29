@@ -19,6 +19,7 @@ import com.yugahashimoto.andcode.data.settings.Draft
 import com.yugahashimoto.andcode.data.settings.DraftRepository
 import com.yugahashimoto.andcode.runtime.OpenCodeBackend
 import com.yugahashimoto.andcode.runtime.PermissionResponse
+import com.yugahashimoto.andcode.runtime.RuntimeTarget
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -613,7 +614,11 @@ class ChatViewModel(
             return
         }
 
-        if (_sendBehavior.value == "queue" && _uiState.value.isRunning) {
+        // Some runtimes (Antigravity) must always queue behind a running turn rather than interrupt
+        // it - interrupting there kills the in-flight one-shot process instead of cancelling a
+        // request, which surfaced as a crash. See RuntimeCapabilities.forcesQueue.
+        val mustQueue = (currentBackend as? RuntimeTarget)?.capabilities?.forcesQueue == true
+        if ((_sendBehavior.value == "queue" || mustQueue) && _uiState.value.isRunning) {
             messageQueue.update { it + normalized }
             return
         }
