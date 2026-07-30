@@ -11,6 +11,14 @@
 
 AndCode is a native Android GUI app that brings AI coding agents to your phone. Chat with [OpenCode](https://github.com/sst/opencode), [Claude Code](https://github.com/anthropics/claude-code), and [Google Antigravity](https://github.com/google-antigravity/antigravity-cli) through a touch-first interface — no terminal, no SSH, no PC required for on-device use. It wraps agent runtimes via PRoot (on-device) or connects remotely to your existing OpenCode server on PC/Mac/Linux.
 
+<p align="center">
+  <img src="screenshots/navigation.png" width="240" alt="Navigation drawer with agents, projects, and recent chats" />
+  &nbsp;
+  <img src="screenshots/chat.png" width="240" alt="Chat with streaming response, todo progress, and model switching" />
+  &nbsp;
+  <img src="screenshots/model-picker.png" width="240" alt="Model and runtime picker with favorites" />
+</p>
+
 > [!IMPORTANT]
 > AndCode is an independent open-source project. It is **not** affiliated with OpenCode or Anthropic.
 
@@ -65,14 +73,6 @@ In addition to on-device agents, AndCode can connect to OpenCode running on your
 - **Discovery** — Find PCs via QR code or mDNS (zero-config LAN discovery)
 
 ## Screens
-
-<p align="center">
-  <img src="screenshots/navigation.png" width="240" alt="Navigation drawer with agents, projects, and recent chats" />
-  &nbsp;
-  <img src="screenshots/chat.png" width="240" alt="Chat with streaming response, todo progress, and model switching" />
-  &nbsp;
-  <img src="screenshots/model-picker.png" width="240" alt="Model and runtime picker with favorites" />
-</p>
 
 | Screen | Description |
 |--------|-------------|

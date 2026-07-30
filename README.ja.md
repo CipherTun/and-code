@@ -4,6 +4,14 @@
 
 AndCodeはAIコーディングエージェントをスマートフォンで使えるようにするネイティブAndroid GUIアプリです。[OpenCode](https://github.com/sst/opencode)、[Claude Code](https://github.com/anthropics/claude-code)、[Google Antigravity](https://github.com/google-antigravity/antigravity-cli)とタッチ操作中心のインターフェースで対話できます — 端末エミュレータもSSHもPCも、オンデバイス実行には一切不要です。PRootによるオンデバイスランタイムか、PC/Mac/Linux上の既存OpenCodeサーバーへのリモート接続で動作します。
 
+<p align="center">
+  <img src="screenshots/navigation.png" width="240" alt="エージェント・プロジェクト・最近のチャットを表示するナビゲーションドロワー" />
+  &nbsp;
+  <img src="screenshots/chat.png" width="240" alt="ストリーミング回答・Todo進行・モデル切替を表示するチャット画面" />
+  &nbsp;
+  <img src="screenshots/model-picker.png" width="240" alt="お気に入り付きのモデル・実行先ピッカー" />
+</p>
+
 > [!IMPORTANT]
 > AndCodeは独立したオープンソースプロジェクトです。OpenCodeおよびAnthropicとは一切関係ありません。
 
@@ -56,16 +64,6 @@ Google Antigravity（`agy`）は同じPRoot環境内でオンデバイス実行�
 - **リモート接続** — LANまたはTailscale経由で接続
 - **実行先切り替え** — 会話中でもAndroidローカル／PCリモート間をシームレスに切り替え（ハンドオフ）
 - **自動検出** — QRコードまたはmDNS（ゼロ設定LAN検出）でPCを検索
-
-## スクリーンショット
-
-<p align="center">
-  <img src="screenshots/navigation.png" width="240" alt="エージェント・プロジェクト・最近のチャットを表示するナビゲーションドロワー" />
-  &nbsp;
-  <img src="screenshots/chat.png" width="240" alt="ストリーミング回答・Todo進行・モデル切替を表示するチャット画面" />
-  &nbsp;
-  <img src="screenshots/model-picker.png" width="240" alt="お気に入り付きのモデル・実行先ピッカー" />
-</p>
 
 ## クイックスタート
 
