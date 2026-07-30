@@ -66,6 +66,14 @@ In addition to on-device agents, AndCode can connect to OpenCode running on your
 
 ## Screens
 
+<p align="center">
+  <img src="screenshots/navigation.png" width="240" alt="Navigation drawer with agents, projects, and recent chats" />
+  &nbsp;
+  <img src="screenshots/chat.png" width="240" alt="Chat with streaming response, todo progress, and model switching" />
+  &nbsp;
+  <img src="screenshots/model-picker.png" width="240" alt="Model and runtime picker with favorites" />
+</p>
+
 | Screen | Description |
 |--------|-------------|
 | Home | Current runtime, model, agent, recent sessions |

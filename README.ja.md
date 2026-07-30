@@ -57,6 +57,16 @@ Google Antigravity（`agy`）は同じPRoot環境内でオンデバイス実行�
 - **実行先切り替え** — 会話中でもAndroidローカル／PCリモート間をシームレスに切り替え（ハンドオフ）
 - **自動検出** — QRコードまたはmDNS（ゼロ設定LAN検出）でPCを検索
 
+## スクリーンショット
+
+<p align="center">
+  <img src="screenshots/navigation.png" width="240" alt="エージェント・プロジェクト・最近のチャットを表示するナビゲーションドロワー" />
+  &nbsp;
+  <img src="screenshots/chat.png" width="240" alt="ストリーミング回答・Todo進行・モデル切替を表示するチャット画面" />
+  &nbsp;
+  <img src="screenshots/model-picker.png" width="240" alt="お気に入り付きのモデル・実行先ピッカー" />
+</p>
+
 ## クイックスタート
 
 ### オンデバイス実行（PC不要）
