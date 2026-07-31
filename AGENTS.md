@@ -19,6 +19,17 @@ Then:
 3. After creating the worktree, ALL subsequent tool calls (read, edit, grep, glob, bash) MUST use the worktree absolute path as their base directory. The default working directory (`/workspace/and-code`) is the main tree and must NEVER be used for file operations after worktree creation. Verify by running `pwd` or checking paths before the first edit.
 4. Once the branch's pull request is merged, clean up immediately: remove the worktree (`git worktree remove <path>`) and delete the local branch (`git branch -D <branch-name>`). Never leave a merged worktree or its branch behind.
 
+## Session Todo
+
+When working on a multi-step task, use the todo feature to track progress.
+
+**Keep the todo list in sync with reality — update it as you go:**
+
+- Mark items `in_progress` immediately before starting them, not after finishing.
+- Mark items `completed` as soon as the required work (including verification) is done.
+- Update the todo list at every natural checkpoint: after each tool-call batch, after finishing a sub-task, and before replying to the user.
+- Do not leave todo items `pending` or stale `in_progress` when the session message ends. The final state of the todo list must always reflect what was actually done.
+
 ## PR Workflow
 
 When work is complete:
