@@ -516,6 +516,7 @@
     <string name="send_behavior_row">Send behavior</string>
     <string name="send_behavior_interrupt">Interrupt</string>
     <string name="send_behavior_queue">Queue</string>
+    <string name="enter_to_send_row">Enter sends message</string>
 
     <!-- Drawer session actions -->
     <string name="drawer_archive_session">Archive</string>

@@ -171,6 +171,7 @@ fun ChatHomeScreen(
     supportsPermissions: Boolean = true,
     onToggleAutoAccept: (Boolean) -> Unit = {},
     sendBehavior: String = "interrupt",
+    enterToSend: Boolean = false,
     onSendMessage: (String) -> Unit,
     onPermission: (String, PermissionResponse, Boolean) -> Unit,
     onAbort: () -> Unit,
@@ -493,6 +494,7 @@ fun ChatHomeScreen(
                     onSelectClaudePermissionMode = onSelectClaudePermissionMode,
                     onToggleAutoAccept = onToggleAutoAccept,
                     sendBehavior = sendBehavior,
+                    enterToSend = enterToSend,
                     contextTokensUsed = state.contextTokensUsed,
                     contextLimit =
                         providers
@@ -921,6 +923,7 @@ private fun ChatComposer(
     claudePermissionMode: ClaudePermissionMode?,
     onSelectClaudePermissionMode: (ClaudePermissionMode) -> Unit,
     sendBehavior: String,
+    enterToSend: Boolean,
     contextTokensUsed: Long,
     contextLimit: Long,
     showSlashCommands: Boolean,
@@ -1056,8 +1059,19 @@ private fun ChatComposer(
                                 fontSize = MaterialTheme.typography.bodyLarge.fontSize,
                                 lineHeight = MaterialTheme.typography.bodyLarge.lineHeight,
                             ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                        keyboardActions = KeyboardActions(onSend = { onSend() }),
+                        keyboardOptions =
+                            KeyboardOptions(
+                                imeAction =
+                                    if (enterToSend) ImeAction.Send else ImeAction.Default,
+                            ),
+                        keyboardActions =
+                            KeyboardActions(
+                                onSend = {
+                                    if (enterToSend) {
+                                        onSend()
+                                    }
+                                },
+                            ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     )
                 }

@@ -327,6 +327,10 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         get() = preferences.getString(KEY_SEND_BEHAVIOR, "interrupt") ?: "interrupt"
         set(value) = preferences.edit().putString(KEY_SEND_BEHAVIOR, value).apply()
 
+    var enterToSend: Boolean
+        get() = preferences.getBoolean(KEY_ENTER_TO_SEND, false)
+        set(value) = preferences.edit().putBoolean(KEY_ENTER_TO_SEND, value).apply()
+
     var sidebarGrouping: String
         get() = preferences.getString(KEY_SIDEBAR_GROUPING, "project") ?: "project"
         set(value) = preferences.edit().putString(KEY_SIDEBAR_GROUPING, value).apply()
@@ -398,6 +402,7 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         private const val KEY_TOOL_CALL_DETAIL_LEVEL = "tool_call_detail_level"
         private const val KEY_AUTO_EXPAND_REASONING = "auto_expand_reasoning"
         private const val KEY_SEND_BEHAVIOR = "send_behavior"
+        private const val KEY_ENTER_TO_SEND = "enter_to_send"
         private const val KEY_SIDEBAR_GROUPING = "sidebar_grouping"
         private const val KEY_WORKSPACE_TITLE_SOURCE = "workspace_title_source"
         private const val KEY_LANGUAGE = "language"

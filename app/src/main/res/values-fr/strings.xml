@@ -500,6 +500,7 @@
     <string name="send_behavior_row">Comportement d\'envoi</string>
     <string name="send_behavior_interrupt">Interrompre</string>
     <string name="send_behavior_queue">File d\'attente</string>
+    <string name="enter_to_send_row">Entrée envoie le message</string>
 
     <string name="drawer_archive_session">Archiver</string>
     <string name="drawer_selected_count">%1$d sélectionné(s)</string>

@@ -500,6 +500,7 @@
     <string name="send_behavior_row">Поведение отправки</string>
     <string name="send_behavior_interrupt">Прервать</string>
     <string name="send_behavior_queue">В очередь</string>
+    <string name="enter_to_send_row">Enter отправляет сообщение</string>
 
     <string name="drawer_archive_session">Архивировать</string>
     <string name="drawer_selected_count">Выбрано: %1$d</string>

@@ -500,6 +500,7 @@
     <string name="send_behavior_row">发送行为</string>
     <string name="send_behavior_interrupt">中断</string>
     <string name="send_behavior_queue">排队</string>
+    <string name="enter_to_send_row">回车键发送消息</string>
 
     <string name="drawer_archive_session">归档</string>
     <string name="drawer_selected_count">已选 %1$d 项</string>
