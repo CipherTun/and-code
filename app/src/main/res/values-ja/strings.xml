@@ -512,6 +512,7 @@
     <string name="send_behavior_row">送信動作</string>
     <string name="send_behavior_interrupt">割り込み</string>
     <string name="send_behavior_queue">キュー</string>
+    <string name="enter_to_send_row">Enter で送信</string>
 
     <!-- Drawer session actions -->
     <string name="drawer_archive_session">アーカイブ</string>

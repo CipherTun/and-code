@@ -500,6 +500,7 @@
     <string name="send_behavior_row">سلوك الإرسال</string>
     <string name="send_behavior_interrupt">مقاطعة</string>
     <string name="send_behavior_queue">قائمة انتظار</string>
+    <string name="enter_to_send_row">الإدخال يرسل الرسالة</string>
 
     <string name="drawer_archive_session">أرشفة</string>
     <string name="drawer_selected_count">%1$d محدد</string>
