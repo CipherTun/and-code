@@ -117,7 +117,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.core.api.OpenCodeAgent
+import com.yugahashimoto.andcode.core.api.OpenCodeCommand
 import com.yugahashimoto.andcode.core.api.OpenCodeProvider
+import com.yugahashimoto.andcode.core.api.OpenCodeSkill
 import com.yugahashimoto.andcode.core.api.PromptAttachment
 import com.yugahashimoto.andcode.feature.workspace.GitHubAutoAttachChips
 import com.yugahashimoto.andcode.feature.workspace.GitHubReference
@@ -502,8 +504,10 @@ fun ChatHomeScreen(
                             ?.models?.get(selectedModelId)
                             ?.limit?.context ?: 0L,
                     showSlashCommands = showSlashCommands,
-                    onSlashCommandSelect = { command ->
-                        input = command.name + " "
+                    slashCommands = state.slashCommands,
+                    slashSkills = state.slashSkills,
+                    onSlashCommandSelect = { suggestion ->
+                        input = suggestion.name + " "
                         showSlashCommands = false
                     },
                     githubRefs = githubRefs,
@@ -927,7 +931,9 @@ private fun ChatComposer(
     contextTokensUsed: Long,
     contextLimit: Long,
     showSlashCommands: Boolean,
-    onSlashCommandSelect: (SlashCommand) -> Unit,
+    slashCommands: List<OpenCodeCommand>,
+    slashSkills: List<OpenCodeSkill>,
+    onSlashCommandSelect: (SlashSuggestion) -> Unit,
     githubRefs: List<GitHubReference>,
     attachedImages: List<Bitmap>,
     onRemoveImage: (Int) -> Unit,
@@ -945,7 +951,7 @@ private fun ChatComposer(
                 .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         if (showSlashCommands) {
-            val filtered = SlashCommandRegistry.filter(input)
+            val filtered = SlashCommandRegistry.suggestions(input, slashCommands, slashSkills)
             if (filtered.isNotEmpty()) {
                 Card(
                     modifier =
@@ -955,7 +961,7 @@ private fun ChatComposer(
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                        filtered.forEach { command ->
+                        filtered.forEach { suggestion ->
                             DropdownMenuItem(
                                 text = {
                                     Row(
@@ -963,18 +969,18 @@ private fun ChatComposer(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = command.name,
+                                            text = suggestion.name,
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.SemiBold,
                                         )
                                         Text(
-                                            text = command.description,
+                                            text = suggestion.description,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 },
-                                onClick = { onSlashCommandSelect(command) },
+                                onClick = { onSlashCommandSelect(suggestion) },
                             )
                         }
                     }

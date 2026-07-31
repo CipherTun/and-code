@@ -1,12 +1,14 @@
 package com.yugahashimoto.andcode.feature.chat
 
 import com.yugahashimoto.andcode.core.api.OpenCodeAgent
+import com.yugahashimoto.andcode.core.api.OpenCodeCommand
 import com.yugahashimoto.andcode.core.api.OpenCodeEvent
 import com.yugahashimoto.andcode.core.api.OpenCodeHealth
 import com.yugahashimoto.andcode.core.api.OpenCodeMessage
 import com.yugahashimoto.andcode.core.api.OpenCodeMessageInfo
 import com.yugahashimoto.andcode.core.api.OpenCodePart
 import com.yugahashimoto.andcode.core.api.OpenCodeSession
+import com.yugahashimoto.andcode.core.api.OpenCodeSkill
 import com.yugahashimoto.andcode.core.api.OpenCodeTime
 import com.yugahashimoto.andcode.core.api.PermissionRequest
 import com.yugahashimoto.andcode.core.api.PromptAttachment
@@ -189,6 +191,85 @@ class ChatViewModelTest {
             assertEquals("/root/demo", backend.lastCreateDirectory)
             assertEquals("/root/demo", viewModel.uiState.value.selectedWorkspacePath)
         }
+
+    @Test
+    fun `slash command for a known backend command is executed as a command`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("/changelog v1.0")
+            advanceUntilIdle()
+
+            assertEquals(0, backend.sentPrompts.size)
+            assertEquals(1, backend.executedCommands.size)
+            assertEquals("changelog", backend.executedCommands.single().command)
+            assertEquals("v1.0", backend.executedCommands.single().arguments)
+            assertEquals(1, backend.createSessionCalls)
+            assertEquals("/changelog v1.0", viewModel.uiState.value.messages.single().text)
+        }
+
+    @Test
+    fun `slash command for a known skill is executed as a command`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("/git-release")
+            advanceUntilIdle()
+
+            assertEquals(0, backend.sentPrompts.size)
+            assertEquals(1, backend.executedCommands.size)
+            assertEquals("git-release", backend.executedCommands.single().command)
+            assertEquals("", backend.executedCommands.single().arguments)
+        }
+
+    @Test
+    fun `slash command that is not known is sent as a plain prompt`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("/nonexistent")
+            advanceUntilIdle()
+
+            assertEquals(1, backend.sentPrompts.size)
+            assertEquals("/nonexistent", backend.sentPrompts.single().second.text)
+            assertEquals(0, backend.executedCommands.size)
+        }
+
+    @Test
+    fun `refresh slash catalog loads commands and skills`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val viewModel = ChatViewModel(backend)
+            advanceUntilIdle()
+
+            viewModel.refreshSlashCatalog()
+            advanceUntilIdle()
+
+            assertEquals(listOf("changelog"), viewModel.uiState.value.slashCommands.map { it.name })
+            assertEquals(listOf("git-release"), viewModel.uiState.value.slashSkills.map { it.name })
+        }
+
+    @Test
+    fun `slash suggestions merge app commands with backend commands and skills`() {
+        val suggestions =
+            SlashCommandRegistry.suggestions(
+                query = "/",
+                backendCommands = listOf(OpenCodeCommand("commit", "Write commit")),
+                backendSkills = listOf(OpenCodeSkill("git-release", "Create a release", "release")),
+            )
+        val names = suggestions.map { it.name }
+        assertTrue("/new" in names)
+        assertTrue("/commit" in names)
+        assertTrue("/git-release" in names)
+        val skill = suggestions.filterIsInstance<SlashSuggestion.Backend>().first { it.name == "/git-release" }
+        assertTrue(skill.isSkill)
+    }
 
     @Test
     fun `auto accept approves permissions without showing card`() =
@@ -877,6 +958,9 @@ class ChatViewModelTest {
         val abortedSessions = mutableListOf<String>()
         var healthFailuresRemaining = 0
         var failCreateSession = false
+        val commands = mutableListOf(OpenCodeCommand("changelog", "Draft changelog", "Write the changelog for the release"))
+        val skills = mutableListOf(OpenCodeSkill("git-release", "Create a release", "release"))
+        val executedCommands = mutableListOf<CommandCall>()
 
         override suspend fun health(): OpenCodeHealth {
             if (healthFailuresRemaining > 0) {
@@ -911,6 +995,18 @@ class ChatViewModelTest {
         override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
 
         override suspend fun listAgents(): List<OpenCodeAgent> = emptyList()
+
+        override suspend fun commands(): List<OpenCodeCommand> = commands
+
+        override suspend fun skills(): List<OpenCodeSkill> = skills
+
+        override suspend fun executeCommand(
+            sessionId: String,
+            command: String,
+            arguments: String,
+        ) {
+            executedCommands += CommandCall(sessionId, command, arguments)
+        }
 
         override suspend fun sendMessage(
             sessionId: String,
@@ -999,5 +1095,11 @@ class ChatViewModelTest {
         val permissionId: String,
         val third: PermissionResponse,
         val remember: Boolean,
+    )
+
+    private data class CommandCall(
+        val sessionId: String,
+        val command: String,
+        val arguments: String,
     )
 }

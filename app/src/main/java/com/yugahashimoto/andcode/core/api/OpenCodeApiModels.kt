@@ -371,6 +371,7 @@ data class OpenCodeCommand(
     val name: String,
     val description: String? = null,
     val template: String? = null,
+    val source: String? = null,
 )
 
 @Serializable

@@ -6,9 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yugahashimoto.andcode.core.api.ConnectionQuality
 import com.yugahashimoto.andcode.core.api.ConnectionQualityMonitor
+import com.yugahashimoto.andcode.core.api.OpenCodeCommand
 import com.yugahashimoto.andcode.core.api.OpenCodeEvent
 import com.yugahashimoto.andcode.core.api.OpenCodeMessage
 import com.yugahashimoto.andcode.core.api.OpenCodePart
+import com.yugahashimoto.andcode.core.api.OpenCodeSkill
 import com.yugahashimoto.andcode.core.api.PermissionRequest
 import com.yugahashimoto.andcode.core.api.PromptAttachment
 import com.yugahashimoto.andcode.core.api.PromptRequest
@@ -255,6 +257,8 @@ data class ChatUiState(
     val selectedModelId: String? = null,
     val selectedAgentId: String? = null,
     val selectedWorkspacePath: String? = null,
+    val slashCommands: List<OpenCodeCommand> = emptyList(),
+    val slashSkills: List<OpenCodeSkill> = emptyList(),
     val offlineQueue: List<String> = emptyList(),
     val isOfflineQueued: Boolean = false,
     val connectionQuality: ConnectionQuality? = null,
@@ -367,6 +371,7 @@ class ChatViewModel(
                                     error = null,
                                 )
                             }
+                            refreshSlashCatalog()
                             return@launch
                         }
                         .onFailure { error -> lastError = error.safeMessage() }
@@ -382,6 +387,27 @@ class ChatViewModel(
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Loads the backend's slash commands and skills so the composer's `/` popup can offer them.
+     */
+    fun refreshSlashCatalog() {
+        val currentBackend = backend ?: return
+        viewModelScope.launch {
+            runCatching { currentBackend.commands() }
+                .onSuccess { commands ->
+                    if (backend == currentBackend) {
+                        _uiState.update { it.copy(slashCommands = commands) }
+                    }
+                }
+            runCatching { currentBackend.skills() }
+                .onSuccess { skills ->
+                    if (backend == currentBackend) {
+                        _uiState.update { it.copy(slashSkills = skills) }
+                    }
+                }
         }
     }
 
@@ -617,6 +643,14 @@ class ChatViewModel(
             return
         }
 
+        // A known backend command or skill is executed through the runtime's own command handling
+        // (OpenCode expands the template server-side) rather than sent as a plain prompt.
+        val slashCommand = matchSlashCommand(normalized)
+        if (slashCommand != null) {
+            sendSlashCommand(slashCommand.first, slashCommand.second)
+            return
+        }
+
         if (!_uiState.value.isConnected) {
             offlineMessageQueue.update { it + normalized }
             val userMessage =
@@ -790,6 +824,185 @@ class ChatViewModel(
                 reportError(error)
             }
         }
+    }
+
+    /**
+     * Sends a slash command or skill through the runtime's command handling.
+     *
+     * OpenCode expands the command's template server-side and runs it as a turn; Claude Code and
+     * Antigravity receive `/name` as a prompt and interpret it themselves. The turn is completed and
+     * polled exactly like [sendMessage], so the same completion signals drive the UI.
+     */
+    fun sendSlashCommand(
+        command: String,
+        arguments: String,
+    ) {
+        val currentBackend = backend
+        if (currentBackend == null) {
+            _uiState.update { it.copy(error = "OpenCode connection is not configured") }
+            return
+        }
+        val displayText = "/$command${arguments.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()}"
+        val messageIdsBeforeSend = _uiState.value.messages.map { it.id }.toSet()
+
+        if (!_uiState.value.isConnected) {
+            offlineMessageQueue.update { it + displayText }
+            val userMessage =
+                ChatMessage(
+                    isUser = true,
+                    parts = listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = displayText)),
+                )
+            _uiState.update {
+                it.copy(
+                    messages = it.messages + userMessage,
+                    offlineQueue = it.offlineQueue + displayText,
+                    isOfflineQueued = true,
+                )
+            }
+            return
+        }
+
+        val mustQueue = (currentBackend as? RuntimeTarget)?.capabilities?.forcesQueue == true
+        if ((_sendBehavior.value == "queue" || mustQueue) && _uiState.value.isRunning) {
+            messageQueue.update { it + displayText }
+            return
+        }
+
+        val userMessage =
+            ChatMessage(
+                isUser = true,
+                parts = listOf(ChatPart.Text(id = UUID.randomUUID().toString(), text = displayText)),
+            )
+        _uiState.update {
+            it.copy(
+                messages = it.messages + userMessage,
+                isRunning = true,
+                isThinking = true,
+                partialText = "",
+                error = null,
+            )
+        }
+
+        viewModelScope.launch {
+            var capturedSessionId: String? = null
+            runCatching {
+                val existingSessionId = _uiState.value.sessionId
+                val session =
+                    if (existingSessionId == null) {
+                        currentBackend.createSession(
+                            title = null,
+                            directory = _uiState.value.selectedWorkspacePath,
+                        )
+                    } else {
+                        null
+                    }
+                val targetSessionId = existingSessionId ?: requireNotNull(session).id
+                capturedSessionId = targetSessionId
+                if (session != null) {
+                    _uiState.update {
+                        it.copy(sessionId = session.id, sessionTitle = session.title)
+                    }
+                    onSessionCreated()
+                }
+
+                // The command endpoint on OpenCode runs the whole turn before answering, so it is
+                // fired in its own coroutine: the poll loop below (and the SSE stream) drive the UI
+                // without waiting on an HTTP call that may outlive a long turn.
+                viewModelScope.launch {
+                    runCatching {
+                        currentBackend.executeCommand(
+                            sessionId = targetSessionId,
+                            command = command,
+                            arguments = arguments,
+                        )
+                    }.onFailure { error -> reportError(error) }
+                }
+
+                runCatching { currentBackend.session(targetSessionId).title }
+                    .onSuccess { title ->
+                        if (title.isNotBlank()) _uiState.update { it.copy(sessionTitle = title) }
+                    }
+                clearDraft(targetSessionId)
+                var sessionCompleted = false
+
+                fun isStillActive() = _uiState.value.sessionId == targetSessionId
+                val pollFinished =
+                    withTimeoutOrNull(RESPONSE_POLL_TIMEOUT_MS) {
+                        while (isStillActive() && _uiState.value.isRunning) {
+                            delay(RESPONSE_POLL_INTERVAL_MS)
+                            if (!isStillActive()) return@withTimeoutOrNull
+                            runCatching { currentBackend.listMessages(targetSessionId) }
+                                .onSuccess { serverMessages ->
+                                    if (!isStillActive()) return@onSuccess
+                                    val uiMessages = serverMessages.mapNotNull(::toUiMessage)
+                                    if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
+                                        _uiState.update { it.copy(messages = uiMessages) }
+                                    }
+                                    if (turnFinished(serverMessages, messageIdsBeforeSend)) {
+                                        sessionCompleted = true
+                                        _uiState.update { it.copy(isRunning = false, isThinking = false) }
+                                    }
+                                }
+                        }
+                    }
+                if (isStillActive() && (sessionCompleted || pollFinished == null)) {
+                    runCatching { currentBackend.listMessages(targetSessionId) }
+                        .onSuccess { serverMessages ->
+                            if (!isStillActive()) return@onSuccess
+                            val hasResponse =
+                                serverMessages.any { message ->
+                                    message.info.role == "assistant" && message.info.id !in messageIdsBeforeSend
+                                }
+                            if (!sessionCompleted && !hasResponse) return@onSuccess
+                            streamedParts.clear()
+                            _uiState.update {
+                                it.copy(
+                                    messages = serverMessages.mapNotNull(::toUiMessage),
+                                    isRunning = false,
+                                    isThinking = false,
+                                )
+                            }
+                            refreshContextUsage(targetSessionId)
+                        }
+                }
+            }.onFailure { error ->
+                if (capturedSessionId == null || _uiState.value.sessionId == capturedSessionId) {
+                    _uiState.update {
+                        it.copy(
+                            isRunning = false,
+                            isThinking = false,
+                        )
+                    }
+                }
+                reportError(error)
+            }
+        }
+    }
+
+    /**
+     * If [text] invokes a command or skill the backend knows about, returns it as `(name, arguments)`.
+     *
+     * App-level commands (`/new`, `/clear`, …) are not backend commands, so they are left alone and
+     * keep their existing handling.
+     */
+    private fun matchSlashCommand(text: String): Pair<String, String>? {
+        if (!text.startsWith("/")) return null
+        val firstLineEnd = text.indexOf('\n')
+        val firstLine = if (firstLineEnd == -1) text else text.substring(0, firstLineEnd)
+        val tokens = firstLine.split(" ")
+        val rawName = tokens.firstOrNull()?.trimStart('/')?.trim().orEmpty()
+        if (rawName.isEmpty()) return null
+        val restOfLine = tokens.drop(1).joinToString(" ")
+        val restOfInput = if (firstLineEnd == -1) "" else text.substring(firstLineEnd + 1)
+        val arguments =
+            when {
+                restOfLine.isNotEmpty() && restOfInput.isNotEmpty() -> "$restOfLine\n$restOfInput"
+                else -> restOfLine + restOfInput
+            }
+        val state = _uiState.value
+        val known =
+            state.slashCommands.any { it.name == rawName } || state.slashSkills.any { it.name == rawName }
+        return if (known) rawName to arguments else null
     }
 
     /**

@@ -118,6 +118,21 @@ class OpenCodeApiClientTest {
         }
 
     @Test
+    fun `executes a slash command with arguments`() =
+        runBlocking {
+            server.enqueue(MockResponse().setResponseCode(204))
+            val client = client()
+
+            client.executeCommand(sessionId = "s1", command = "changelog", arguments = "v1.0")
+
+            val request = server.takeRequest()
+            assertEquals("/session/s1/command", request.path)
+            val json = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+            assertEquals("changelog", json["command"]!!.jsonPrimitive.content)
+            assertEquals("v1.0", json["arguments"]!!.jsonPrimitive.content)
+        }
+
+    @Test
     fun `summarizes a session with the selected model`() =
         runBlocking {
             server.enqueue(MockResponse().setBody("true"))

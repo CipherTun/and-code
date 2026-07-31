@@ -239,6 +239,12 @@ class LocalOpenCodeBackend(
 
     override suspend fun skills(): List<OpenCodeSkill> = delegate().skills()
 
+    override suspend fun executeCommand(
+        sessionId: String,
+        command: String,
+        arguments: String,
+    ) = delegate().executeCommand(sessionId, command, arguments)
+
     override fun events(): Flow<OpenCodeEvent> = delegate().events()
 
     private data class CachedDelegate(

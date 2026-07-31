@@ -207,6 +207,21 @@ interface OpenCodeBackend {
 
     suspend fun skills(): List<OpenCodeSkill> = unsupported("skills")
 
+    /**
+     * Executes a slash command or skill by name in [sessionId].
+     *
+     * OpenCode expands the command's template server-side and runs it as a prompt. For runtimes
+     * without a command endpoint (Claude Code, Antigravity) the name is sent as a message instead,
+     * letting the CLI's own slash-command handling pick it up.
+     */
+    suspend fun executeCommand(
+        sessionId: String,
+        command: String,
+        arguments: String,
+    ) {
+        sendMessage(sessionId, PromptRequest(text = "/$command${arguments.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()}"))
+    }
+
     fun events(): Flow<OpenCodeEvent>
 
     private fun unsupported(capability: String): Nothing =
