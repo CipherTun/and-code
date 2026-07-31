@@ -35,6 +35,7 @@ data class AppPreferences(
     val toolCallDetailLevel: String = "detailed",
     val autoExpandReasoning: Boolean = false,
     val sendBehavior: String = "interrupt",
+    val enterToSend: Boolean = false,
     val sidebarGrouping: String = "project",
     val workspaceTitleSource: String = "title",
     val language: String = "system",
@@ -73,6 +74,7 @@ class AppPreferencesRepository(
                 toolCallDetailLevel = settings.toolCallDetailLevel,
                 autoExpandReasoning = settings.autoExpandReasoning,
                 sendBehavior = settings.sendBehavior,
+                enterToSend = settings.enterToSend,
                 sidebarGrouping = settings.sidebarGrouping,
                 workspaceTitleSource = settings.workspaceTitleSource,
                 language = settings.language,
@@ -267,6 +269,11 @@ class AppPreferencesRepository(
     fun setSendBehavior(behavior: String) {
         settings.sendBehavior = behavior
         mutableState.update { it.copy(sendBehavior = behavior) }
+    }
+
+    fun setEnterToSend(enabled: Boolean) {
+        settings.enterToSend = enabled
+        mutableState.update { it.copy(enterToSend = enabled) }
     }
 
     fun setSidebarGrouping(grouping: String) {

@@ -93,6 +93,8 @@ fun SettingsScreenV2(
     onAutoExpandReasoningChange: (Boolean) -> Unit = {},
     sendBehavior: String = "interrupt",
     onSendBehaviorChange: (String) -> Unit = {},
+    enterToSend: Boolean = false,
+    onEnterToSendChange: (Boolean) -> Unit = {},
     wakeWordEnabled: Boolean = false,
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -217,6 +219,13 @@ fun SettingsScreenV2(
                             if (sendBehavior == "interrupt") "queue" else "interrupt",
                         )
                     },
+                )
+                SettingsDivider()
+                SettingsToggleRow(
+                    icon = Icons.Default.Chat,
+                    title = stringResource(R.string.enter_to_send_row),
+                    checked = enterToSend,
+                    onCheckedChange = onEnterToSendChange,
                 )
             }
 

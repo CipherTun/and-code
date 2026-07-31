@@ -84,6 +84,8 @@ fun NavGraphBuilder.settingsNavGraph(
             onAutoExpandReasoningChange = { appPreferences.setAutoExpandReasoning(it) },
             sendBehavior = preferences().sendBehavior,
             onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
+            enterToSend = preferences().enterToSend,
+            onEnterToSendChange = { appPreferences.setEnterToSend(it) },
             wakeWordEnabled = settingsState.wakeWordEnabled,
         )
 
