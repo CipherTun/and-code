@@ -15,7 +15,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -88,7 +90,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,6 +102,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
@@ -203,7 +205,6 @@ fun ChatHomeScreen(
     val coroutineScope = rememberCoroutineScope()
     var showSlashCommands by remember { mutableStateOf(false) }
     var showSidePanel by remember { mutableStateOf(false) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
     val attachedImages = remember { mutableStateListOf<Bitmap>() }
     DisposableEffect(Unit) {
         onDispose {
@@ -283,19 +284,31 @@ fun ChatHomeScreen(
         modifier =
             Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { change, dragAmount ->
-                        val atEdge = change.position.x > size.width - 80f || showSidePanel
-                        if (!atEdge) return@detectHorizontalDragGestures
-                        change.consume()
-                        dragOffset += dragAmount
-                        if (dragOffset < -100f && change.position.x > size.width - 80f) {
-                            showSidePanel = true
-                            dragOffset = 0f
-                        }
-                        if (dragOffset > 100f && showSidePanel) {
-                            showSidePanel = false
-                            dragOffset = 0f
+                .pointerInput(showSidePanel) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val onRightEdge = down.position.x > size.width - 80f || showSidePanel
+                        if (!onRightEdge) return@awaitEachGesture
+                        awaitHorizontalTouchSlopOrCancellation(down.id) { change, _ ->
+                            change.consume()
+                        } ?: return@awaitEachGesture
+                        var offset = 0f
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) break
+                            val dragAmount = change.positionChange().x
+                            if (dragAmount == 0f) continue
+                            change.consume()
+                            offset += dragAmount
+                            if (offset < -100f) {
+                                showSidePanel = true
+                                break
+                            }
+                            if (offset > 100f && showSidePanel) {
+                                showSidePanel = false
+                                break
+                            }
                         }
                     }
                 },
