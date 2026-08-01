@@ -208,5 +208,19 @@ class RemoteOpenCodeBackend(
 
     override suspend fun skills(): List<OpenCodeSkill> = client.skills()
 
+    override suspend fun executeCommand(
+        sessionId: String,
+        command: String,
+        arguments: String,
+    ) {
+        client.executeCommand(
+            sessionId = sessionId,
+            command = command,
+            arguments = arguments,
+            agent = null,
+            model = null,
+        )
+    }
+
     override fun events(): Flow<OpenCodeEvent> = client.events()
 }

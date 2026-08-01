@@ -397,6 +397,25 @@ class OpenCodeApiClient(
 
     suspend fun skills(): List<OpenCodeSkill> = getList("skill")
 
+    suspend fun executeCommand(
+        sessionId: String,
+        command: String,
+        arguments: String = "",
+        agent: String? = null,
+        model: String? = null,
+        variant: String? = null,
+    ) {
+        val body =
+            buildJsonObject {
+                put("command", command)
+                put("arguments", arguments)
+                agent?.takeIf { it.isNotBlank() }?.let { put("agent", it) }
+                model?.takeIf { it.isNotBlank() }?.let { put("model", it) }
+                variant?.takeIf { it.isNotBlank() }?.let { put("variant", it) }
+            }
+        postWithoutResponse("session/${encodePath(sessionId)}/command", body)
+    }
+
     suspend fun respondPermission(
         sessionId: String,
         permissionId: String,

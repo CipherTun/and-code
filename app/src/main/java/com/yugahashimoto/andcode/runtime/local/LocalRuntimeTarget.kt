@@ -270,6 +270,12 @@ class LocalRuntimeTarget(
 
     override suspend fun skills(): List<com.yugahashimoto.andcode.core.api.OpenCodeSkill> = backend.skills()
 
+    override suspend fun executeCommand(
+        sessionId: String,
+        command: String,
+        arguments: String,
+    ) = backend.executeCommand(sessionId, command, arguments)
+
     override suspend fun summarizeSession(
         sessionId: String,
         providerId: String,
