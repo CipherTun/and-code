@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,6 +63,9 @@ import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.core.api.PermissionRequest
 import com.yugahashimoto.andcode.runtime.PermissionResponse
 import com.yugahashimoto.andcode.ui.theme.AndCodeWarning
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -354,14 +358,32 @@ private fun MarkdownText(
                         codeBackground = codeInlineBackground,
                         onFilePathClick = onFilePathClick,
                     )
-                is MarkdownBlock.Paragraph ->
-                    InlineText(
-                        inlines = block.inlines,
-                        style = bodyStyle,
-                        linkColor = linkColor,
-                        codeBackground = codeInlineBackground,
-                        onFilePathClick = onFilePathClick,
-                    )
+                is MarkdownBlock.Paragraph -> {
+                    val currentInlines = mutableListOf<MarkdownInline>()
+
+                    @Composable
+                    fun flushInlines() {
+                        if (currentInlines.isNotEmpty()) {
+                            InlineText(
+                                inlines = currentInlines.toList(),
+                                style = bodyStyle,
+                                linkColor = linkColor,
+                                codeBackground = codeInlineBackground,
+                                onFilePathClick = onFilePathClick,
+                            )
+                            currentInlines.clear()
+                        }
+                    }
+                    block.inlines.forEach { inline ->
+                        if (inline is MarkdownInline.Image) {
+                            flushInlines()
+                            MarkdownImageView(inline)
+                        } else {
+                            currentInlines += inline
+                        }
+                    }
+                    flushInlines()
+                }
                 is MarkdownBlock.CodeBlock ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -497,6 +519,78 @@ private fun decodeDataImage(url: String): android.graphics.Bitmap? {
     }.getOrNull()
 }
 
+internal fun decodeImageFromUrlOrPath(url: String): Bitmap? {
+    if (url.startsWith("data:")) {
+        return decodeDataImage(url)
+    }
+    val rawPath = if (url.startsWith("file://")) url.removePrefix("file://") else url
+    val path = if (rawPath.startsWith("/")) rawPath else "/$rawPath"
+    if (!File(path).exists()) return null
+    return runCatching {
+        val options =
+            BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+        BitmapFactory.decodeFile(path, options)
+        if (options.outWidth <= 0 || options.outHeight <= 0) return null
+
+        val maxDim = 1024
+        var sampleSize = 1
+        while (options.outWidth / sampleSize > maxDim || options.outHeight / sampleSize > maxDim) {
+            sampleSize *= 2
+        }
+        val decodeOptions =
+            BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+            }
+        BitmapFactory.decodeFile(path, decodeOptions)
+    }.getOrNull()
+}
+
+@Composable
+private fun MarkdownImageView(image: MarkdownInline.Image) {
+    val bitmapState =
+        produceState<Bitmap?>(initialValue = null, key1 = image.url) {
+            value =
+                withContext(Dispatchers.IO) {
+                    decodeImageFromUrlOrPath(image.url)
+                }
+        }
+    val bitmap = bitmapState.value
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = image.text.ifBlank { stringResource(R.string.cd_image_preview) },
+            modifier =
+                Modifier
+                    .widthIn(max = 320.dp)
+                    .heightIn(max = 320.dp)
+                    .padding(vertical = 4.dp),
+            contentScale = ContentScale.Fit,
+        )
+    } else {
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            modifier = Modifier.padding(vertical = 4.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(10.dp),
+            ) {
+                Icon(Icons.Default.ImageIcon, contentDescription = null)
+                Text(
+                    text = image.text.ifBlank { image.url },
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun ImagePartView(part: ChatPart.Image) {
     val bitmap = remember(part.url) { decodeDataImage(part.url) }
@@ -587,6 +681,13 @@ private fun renderInline(
                     withStyle(
                         SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
                     ) { append(inline.text) }
+                    addStringAnnotation("link", inline.url, start, length)
+                }
+                is MarkdownInline.Image -> {
+                    val start = length
+                    withStyle(
+                        SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline),
+                    ) { append(inline.text.ifBlank { "[Image]" }) }
                     addStringAnnotation("link", inline.url, start, length)
                 }
             }
