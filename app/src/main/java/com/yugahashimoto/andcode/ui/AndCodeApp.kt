@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,6 +130,7 @@ fun AndCodeApp(
     targetSessionId: String? = null,
 ) {
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val app = context.applicationContext as AndCodeApplication
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -552,8 +554,17 @@ fun AndCodeApp(
                 }
         }
 
+    fun openDrawer() {
+        keyboardController?.hide()
+        drawerScope.launch { drawerState.open() }
+    }
+
     fun closeDrawer() {
         drawerScope.launch { drawerState.close() }
+    }
+
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) keyboardController?.hide()
     }
 
     AndCodeTheme(
@@ -830,7 +841,7 @@ fun AndCodeApp(
                         onRefreshCatalog = app.catalogRepository::refreshProvidersOnly,
                         onOpenDrawer = {
                             app.catalogRepository.refreshSessionsOnly()
-                            drawerScope.launch { drawerState.open() }
+                            openDrawer()
                         },
                         subagents = subagentInfos,
                         onSubagentClick = { childSessionId ->
@@ -863,7 +874,7 @@ fun AndCodeApp(
                         }
                     },
                     appVersion = appVersion,
-                    onOpenDrawer = { drawerScope.launch { drawerState.open() } },
+                    onOpenDrawer = { openDrawer() },
                     onOpenAssistantSettings = onOpenAssistantSettings,
                     assistantActive = { assistantActive },
                     onShowDiagnostics = { showDiagnostics = true },
