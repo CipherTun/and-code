@@ -8,6 +8,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21" apply false
     id("com.google.devtools.ksp") version "2.0.21-1.0.28" apply false
     id("androidx.baselineprofile") version "1.3.3" apply false
+    id("com.google.gms.google-services") version "4.5.0" apply false
+    id("com.google.firebase.crashlytics") version "3.0.7" apply false
     id("io.gitlab.arturbosch.detekt") version "1.23.6"
     id("com.diffplug.spotless") version "6.25.0"
     id("jacoco")

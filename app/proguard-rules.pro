@@ -48,3 +48,7 @@
 -keep class com.yugahashimoto.andcode.data.connection.ConnectionProfile { *; }
 -keep class com.yugahashimoto.andcode.data.settings.Draft { *; }
 -keep class com.yugahashimoto.andcode.runtime.local.LocalRuntimeMetadata { *; }
+
+# Firebase Crashlytics
+-keep class com.google.firebase.crashlytics.** { *; }
+-dontwarn com.google.firebase.crashlytics.**
