@@ -72,6 +72,11 @@ fun NavGraphBuilder.settingsNavGraph(
             onOpenServerInfo = { navController.navigate(ROUTE_SETTINGS_SERVER_INFO) },
             currentTheme = preferences().theme,
             onThemeChange = { appPreferences.setTheme(it) },
+            currentLanguage = preferences().language,
+            onLanguageChange = { language ->
+                appPreferences.setLanguage(language)
+                (context as? android.app.Activity)?.recreate()
+            },
             uiFontSize = preferences().uiFontSize,
             onUiFontSizeChange = { appPreferences.setUiFontSize(it) },
             codeFontSize = preferences().codeFontSize,

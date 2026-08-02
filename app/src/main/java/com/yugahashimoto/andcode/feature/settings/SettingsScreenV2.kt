@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
@@ -80,6 +81,8 @@ fun SettingsScreenV2(
     onOpenServerInfo: () -> Unit = {},
     currentTheme: String = "dark",
     onThemeChange: (String) -> Unit = {},
+    currentLanguage: String = "system",
+    onLanguageChange: (String) -> Unit = {},
     uiFontSize: Int = 16,
     onUiFontSizeChange: (Int) -> Unit = {},
     codeFontSize: Int = 12,
@@ -98,6 +101,7 @@ fun SettingsScreenV2(
     wakeWordEnabled: Boolean = false,
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var showUiFontDialog by remember { mutableStateOf(false) }
     var showCodeFontDialog by remember { mutableStateOf(false) }
     var showSyntaxThemeDialog by remember { mutableStateOf(false) }
@@ -157,6 +161,13 @@ fun SettingsScreenV2(
                     title = stringResource(R.string.theme_row),
                     value = currentTheme.replaceFirstChar { it.uppercase() },
                     onClick = { showThemeDialog = true },
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.Translate,
+                    title = stringResource(R.string.language_row),
+                    value = languageDisplayName(currentLanguage),
+                    onClick = { showLanguageDialog = true },
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -356,6 +367,47 @@ fun SettingsScreenV2(
         )
     }
 
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.language_dialog_title)) },
+            text = {
+                Column {
+                    com.yugahashimoto.andcode.core.locale.AppLanguage.supported.forEach { language ->
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onLanguageChange(language)
+                                        showLanguageDialog = false
+                                    }
+                                    .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = currentLanguage == language,
+                                onClick = {
+                                    onLanguageChange(language)
+                                    showLanguageDialog = false
+                                },
+                            )
+                            Text(
+                                text = languageDisplayName(language),
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(R.string.close_description))
+                }
+            },
+        )
+    }
+
     if (showUiFontDialog) {
         var sliderValue by remember { mutableFloatStateOf(uiFontSize.toFloat()) }
         AlertDialog(
@@ -462,6 +514,20 @@ fun SettingsScreenV2(
         )
     }
 }
+
+@Composable
+internal fun languageDisplayName(language: String): String =
+    when (language) {
+        "en" -> stringResource(R.string.language_english)
+        "ja" -> stringResource(R.string.language_japanese)
+        "zh-CN" -> stringResource(R.string.language_chinese)
+        "ru" -> stringResource(R.string.language_russian)
+        "es" -> stringResource(R.string.language_spanish)
+        "fr" -> stringResource(R.string.language_french)
+        "pt-BR" -> stringResource(R.string.language_portuguese)
+        "ar" -> stringResource(R.string.language_arabic)
+        else -> stringResource(R.string.language_system)
+    }
 
 @Composable
 internal fun SettingsSection(

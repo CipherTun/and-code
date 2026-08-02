@@ -511,6 +511,17 @@
     <string name="section_appearance_settings">Appearance</string>
     <string name="theme_row">Theme</string>
     <string name="theme_dialog_title">Select theme</string>
+    <string name="language_row">Language</string>
+    <string name="language_dialog_title">Select language</string>
+    <string name="language_system">System default</string>
+    <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_chinese">中文（简体）</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_french">Français</string>
+    <string name="language_portuguese">Português (Brasil)</string>
+    <string name="language_arabic">العربية</string>
     <string name="ui_font_size_row">UI font size</string>
     <string name="code_font_size_row">Code font size</string>
     <string name="syntax_theme_row">Syntax theme</string>

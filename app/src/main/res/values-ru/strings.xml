@@ -499,6 +499,17 @@
     <string name="section_appearance_settings">Внешний вид</string>
     <string name="theme_row">Тема</string>
     <string name="theme_dialog_title">Выбрать тему</string>
+    <string name="language_row">Язык</string>
+    <string name="language_dialog_title">Выбрать язык</string>
+    <string name="language_system">Системный язык</string>
+    <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_chinese">中文（简体）</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_french">Français</string>
+    <string name="language_portuguese">Português (Brasil)</string>
+    <string name="language_arabic">العربية</string>
     <string name="ui_font_size_row">Размер шрифта интерфейса</string>
     <string name="code_font_size_row">Размер шрифта кода</string>
     <string name="section_chat_settings">Чат</string>

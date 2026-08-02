@@ -53,7 +53,7 @@ On-device agents run inside an Alpine Linux environment via PRoot. Google Antigr
 - **Text-to-speech** — Read responses aloud
 - **Digital assistant** — Register as Android's default assistant (home gesture / corner swipe)
 - **Secure storage** — Connection credentials encrypted with Android Keystore
-- **Bilingual** — English and Japanese UI
+- **Localized UI** — English, Japanese, Chinese (Simplified), Russian, Spanish, French, Portuguese (Brazil), and Arabic, switchable from Settings
 
 ## Antigravity
 

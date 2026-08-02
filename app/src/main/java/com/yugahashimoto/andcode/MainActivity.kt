@@ -1,5 +1,6 @@
 package com.yugahashimoto.andcode
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.yugahashimoto.andcode.core.ProjectLinks
+import com.yugahashimoto.andcode.core.locale.AppLanguage
 import com.yugahashimoto.andcode.feature.assistant.AndCodeVoiceInteractionService
 import com.yugahashimoto.andcode.feature.assistant.AssistantStatus
 import com.yugahashimoto.andcode.feature.support.GitHubStarPromptDialog
@@ -35,6 +37,10 @@ class MainActivity : ComponentActivity() {
 
     private val app: AndCodeApplication
         get() = application as AndCodeApplication
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.applyTo(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
