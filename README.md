@@ -61,6 +61,7 @@ On-device agents run inside a Linux environment via PRoot. OpenCode and Claude C
 - **Native Android GUI** — Touch-first interface for coding agents; no CLI or terminal required for day-to-day use
 - **On-device runtime** — Alpine Linux, Git, bash, curl, ripgrep, and coding agents auto-installed on your Android device via PRoot
 - **Repository & workspace** — Open git repositories on-device, browse the file tree, and view files with syntax highlighting
+- **Device files** — Grant all-files access and the whole phone (`/sdcard`, SD cards, USB drives) becomes browsable in the folder picker and reachable by the agent, opened in place instead of copied into the app
 - **Git support** — Stage, diff, commit, and manage branches from the GUI
 - **Diff viewer** — Review code changes inline before accepting
 - **Embedded terminal** — Full PTY terminal access into the on-device runtime for manual commands
