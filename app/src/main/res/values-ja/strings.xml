@@ -514,6 +514,14 @@
     <string name="language_row">言語</string>
     <string name="language_dialog_title">言語を選択</string>
     <string name="language_system">システムに従う</string>
+    <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_chinese">中文（简体）</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_french">Français</string>
+    <string name="language_portuguese">Português (Brasil)</string>
+    <string name="language_arabic">العربية</string>
     <string name="ui_font_size_row">UIフォントサイズ</string>
     <string name="code_font_size_row">コードフォントサイズ</string>
     <string name="section_chat_settings">チャット</string>

@@ -499,6 +499,17 @@
     <string name="section_appearance_settings">المظهر</string>
     <string name="theme_row">السمة</string>
     <string name="theme_dialog_title">تحديد السمة</string>
+    <string name="language_row">اللغة</string>
+    <string name="language_dialog_title">اختيار اللغة</string>
+    <string name="language_system">إعدادات النظام الافتراضية</string>
+    <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_chinese">中文（简体）</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_french">Français</string>
+    <string name="language_portuguese">Português (Brasil)</string>
+    <string name="language_arabic">العربية</string>
     <string name="ui_font_size_row">حجم خط الواجهة</string>
     <string name="code_font_size_row">حجم خط الكود</string>
     <string name="section_chat_settings">الدردشة</string>

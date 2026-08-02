@@ -499,6 +499,17 @@
     <string name="section_appearance_settings">Aparência</string>
     <string name="theme_row">Tema</string>
     <string name="theme_dialog_title">Selecionar tema</string>
+    <string name="language_row">Idioma</string>
+    <string name="language_dialog_title">Selecionar idioma</string>
+    <string name="language_system">Padrão do sistema</string>
+    <string name="language_english">English</string>
+    <string name="language_japanese">日本語</string>
+    <string name="language_chinese">中文（简体）</string>
+    <string name="language_russian">Русский</string>
+    <string name="language_spanish">Español</string>
+    <string name="language_french">Français</string>
+    <string name="language_portuguese">Português (Brasil)</string>
+    <string name="language_arabic">العربية</string>
     <string name="ui_font_size_row">Tamanho da fonte da interface</string>
     <string name="code_font_size_row">Tamanho da fonte do código</string>
     <string name="section_chat_settings">Chat</string>

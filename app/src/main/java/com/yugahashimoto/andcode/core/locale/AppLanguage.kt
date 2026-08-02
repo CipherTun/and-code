@@ -2,7 +2,7 @@ package com.yugahashimoto.andcode.core.locale
 
 import android.content.Context
 import android.content.res.Configuration
-import android.util.LocaleList
+import android.os.LocaleList
 import com.yugahashimoto.andcode.data.connection.SecureSettingsRepository
 import java.util.Locale
 
