@@ -373,6 +373,23 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         set(value) = preferences.edit().putStringSet(KEY_COLLAPSED_SIDEBAR_SECTIONS, value).apply()
 
     companion object {
+        fun readLanguage(context: Context): String =
+            runCatching {
+                val masterKey =
+                    MasterKey.Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+                val preferences =
+                    EncryptedSharedPreferences.create(
+                        context,
+                        PREFS_NAME,
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                    )
+                preferences.getString(KEY_LANGUAGE, "system") ?: "system"
+            }.getOrDefault("system")
+
         private const val PREFS_NAME = "opencode_android_secure_settings"
         private const val KEY_CONNECTIONS = "connections"
         private const val KEY_SELECTED_CONNECTION = "selected_connection"

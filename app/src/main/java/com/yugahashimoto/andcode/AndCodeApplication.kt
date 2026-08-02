@@ -9,6 +9,7 @@ import android.os.Looper
 import androidx.startup.AppInitializer
 import com.yugahashimoto.andcode.core.api.GitHubApiClient
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
+import com.yugahashimoto.andcode.core.locale.AppLanguage
 import com.yugahashimoto.andcode.core.notification.RuntimeNotificationHelper
 import com.yugahashimoto.andcode.data.connection.SecureSettingsRepository
 import com.yugahashimoto.andcode.data.repository.ProviderCatalogCache
@@ -135,6 +136,10 @@ class AndCodeApplication : Application() {
 
     lateinit var pullRequestStatusRepository: PullRequestStatusRepository
         private set
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.applyTo(newBase))
+    }
 
     override fun onCreate() {
         super.onCreate()

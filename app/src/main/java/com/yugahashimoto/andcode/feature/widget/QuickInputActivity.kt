@@ -1,6 +1,7 @@
 package com.yugahashimoto.andcode.feature.widget
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -19,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.yugahashimoto.andcode.AndCodeApplication
 import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.core.api.PromptRequest
+import com.yugahashimoto.andcode.core.locale.AppLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,6 +42,10 @@ class QuickInputActivity : ComponentActivity() {
                 finish()
             }
         }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguage.applyTo(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
