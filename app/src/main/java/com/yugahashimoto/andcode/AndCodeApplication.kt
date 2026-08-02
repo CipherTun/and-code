@@ -9,6 +9,7 @@ import android.os.Looper
 import androidx.startup.AppInitializer
 import com.yugahashimoto.andcode.core.api.GitHubApiClient
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
+import com.yugahashimoto.andcode.core.diagnostics.CrashReporter
 import com.yugahashimoto.andcode.core.locale.AppLanguage
 import com.yugahashimoto.andcode.core.notification.RuntimeNotificationHelper
 import com.yugahashimoto.andcode.core.storage.DeviceStorage
@@ -150,6 +151,8 @@ class AndCodeApplication : Application() {
         super.onCreate()
         // First, so a crash in the rest of this method is recorded too.
         CrashLog.install(this)
+        // CrashLog handles the local file; Crashlytics adds remote fatal and non-fatal reporting.
+        CrashReporter.install()
         startKoin {
             androidContext(this@AndCodeApplication)
             modules(appModule, viewModelModule)
@@ -331,7 +334,14 @@ class AndCodeApplication : Application() {
                     notifications.notifySessionComplete(sessionId, title)
                     githubStarCoordinator.onSessionCompleted()
                 },
-                onSessionError = notifications::notifySessionError,
+                onSessionError = { sessionId, message ->
+                    CrashReporter.recordException(
+                        error = IllegalStateException(message ?: "Runtime session failed"),
+                        message = "Runtime session error",
+                        customKeys = mapOf("session_id" to (sessionId ?: "unknown")),
+                    )
+                    notifications.notifySessionError(sessionId, message)
+                },
                 onQuestionAsked = notifications::notifyQuestion,
                 unreadStore = settings,
             )

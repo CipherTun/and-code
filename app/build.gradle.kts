@@ -5,6 +5,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("androidx.baselineprofile")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 val repoRoot = rootProject.projectDir
@@ -184,6 +186,10 @@ tasks.named("preBuild").configure {
 dependencies {
     // Core Android
     implementation("androidx.core:core-ktx:1.15.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
+    implementation("com.google.firebase:firebase-crashlytics")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
