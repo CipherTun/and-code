@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,7 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VoiceChat
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
@@ -30,12 +33,16 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -56,11 +63,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.core.api.OpenCodeProvider
+import com.yugahashimoto.andcode.feature.assistant.TtsPreviewState
+import com.yugahashimoto.andcode.feature.assistant.TtsTuning
 import com.yugahashimoto.andcode.feature.chat.ModelAndRuntimePickerSheet
+import com.yugahashimoto.andcode.feature.wakeword.VoskModelCatalog
+import com.yugahashimoto.andcode.feature.wakeword.VoskModelLanguage
+import com.yugahashimoto.andcode.feature.wakeword.VoskModelState
+import com.yugahashimoto.andcode.feature.wakeword.WakeWordGrammar
 import com.yugahashimoto.andcode.runtime.RuntimeTarget
 import com.yugahashimoto.andcode.runtime.WorkspaceRef
 import com.yugahashimoto.andcode.ui.runtimeAgentIcon
 import com.yugahashimoto.andcode.ui.theme.AndCodeTheme
+import java.util.Locale
 
 /** Voice settings with explicit wake-word capability status. */
 @Composable
@@ -69,16 +83,22 @@ fun VoiceSettingsScreen(
     ttsProvider: String = "android",
     ttsAndroidEngine: String? = null,
     androidTtsEngines: List<Pair<String, String>> = emptyList(),
+    ttsSpeechRate: Float = TtsTuning.DEFAULT_RATE,
+    ttsPitch: Float = TtsTuning.DEFAULT_PITCH,
+    ttsPreviewState: TtsPreviewState = TtsPreviewState.IDLE,
     ttsOpenAiApiKey: String = "",
     ttsOpenAiVoice: String = "alloy",
     ttsOpenAiModel: String = "gpt-4o-mini-tts",
     ttsElevenLabsApiKey: String = "",
     ttsElevenLabsVoiceId: String = "",
     ttsElevenLabsModel: String = "eleven_multilingual_v2",
+    ttsBargeInEnabled: Boolean = true,
     continuousConversation: Boolean,
     wakeWordEnabled: Boolean,
-    wakeWordModel: String = "hey_mycroft",
-    availableWakeWordModels: List<String> = emptyList(),
+    wakeWordPhrase: String = WakeWordGrammar.DEFAULT_PHRASE,
+    wakeWordSensitivity: Float = 0.7f,
+    wakeWordModelLanguage: VoskModelLanguage = VoskModelLanguage.ENGLISH,
+    wakeWordModelStates: Map<VoskModelLanguage, VoskModelState> = emptyMap(),
     assistantRuntimeId: String? = null,
     runtimeTargets: List<RuntimeTarget> = emptyList(),
     workspaces: List<WorkspaceRef> = emptyList(),
@@ -88,15 +108,24 @@ fun VoiceSettingsScreen(
     onTtsChange: (Boolean) -> Unit,
     onTtsProviderChange: (String) -> Unit = {},
     onTtsAndroidEngineChange: (String?) -> Unit = {},
+    onTtsSpeechRateChange: (Float) -> Unit = {},
+    onTtsPitchChange: (Float) -> Unit = {},
+    onTtsPreview: () -> Unit = {},
     onTtsOpenAiApiKeyChange: (String) -> Unit = {},
     onTtsOpenAiVoiceChange: (String) -> Unit = {},
     onTtsOpenAiModelChange: (String) -> Unit = {},
     onTtsElevenLabsApiKeyChange: (String) -> Unit = {},
     onTtsElevenLabsVoiceIdChange: (String) -> Unit = {},
     onTtsElevenLabsModelChange: (String) -> Unit = {},
+    onTtsBargeInChange: (Boolean) -> Unit = {},
     onContinuousChange: (Boolean) -> Unit,
     onWakeWordChange: (Boolean) -> Unit,
-    onWakeWordModelChange: (String) -> Unit = {},
+    onWakeWordPhraseChange: (String) -> Unit = {},
+    onWakeWordSensitivityChange: (Float) -> Unit = {},
+    onWakeWordModelLanguageChange: (VoskModelLanguage) -> Unit = {},
+    onWakeWordModelDownload: () -> Unit = {},
+    onWakeWordModelCancel: () -> Unit = {},
+    onWakeWordModelRemove: () -> Unit = {},
     onAssistantRuntimeChange: (String) -> Unit = {},
     onAssistantModelChange: (String, String) -> Unit = { _, _ -> },
     onAssistantWorkspaceChange: (String) -> Unit = {},
@@ -161,53 +190,30 @@ fun VoiceSettingsScreen(
                                 ),
                             onSelect = onTtsProviderChange,
                         )
-                        when (ttsProvider) {
-                            "android" -> {
-                                VoiceDivider()
-                                ChoiceDropdown(
-                                    label = stringResource(R.string.tts_engine_label),
-                                    selected = ttsAndroidEngine.orEmpty(),
-                                    options = listOf("" to stringResource(R.string.tts_engine_system_default)) + androidTtsEngines,
-                                    onSelect = { onTtsAndroidEngineChange(it.takeIf(String::isNotBlank)) },
-                                )
-                            }
-                            "openai" -> {
-                                VoiceDivider()
-                                SecretTextField(
-                                    label = stringResource(R.string.tts_api_key_label),
-                                    value = ttsOpenAiApiKey,
-                                    onValueChange = onTtsOpenAiApiKeyChange,
-                                )
-                                VoiceTextField(
-                                    label = stringResource(R.string.tts_voice_label),
-                                    value = ttsOpenAiVoice,
-                                    onValueChange = onTtsOpenAiVoiceChange,
-                                )
-                                VoiceTextField(
-                                    label = stringResource(R.string.tts_model_label),
-                                    value = ttsOpenAiModel,
-                                    onValueChange = onTtsOpenAiModelChange,
-                                )
-                            }
-                            "elevenlabs" -> {
-                                VoiceDivider()
-                                SecretTextField(
-                                    label = stringResource(R.string.tts_api_key_label),
-                                    value = ttsElevenLabsApiKey,
-                                    onValueChange = onTtsElevenLabsApiKeyChange,
-                                )
-                                VoiceTextField(
-                                    label = stringResource(R.string.tts_voice_id_label),
-                                    value = ttsElevenLabsVoiceId,
-                                    onValueChange = onTtsElevenLabsVoiceIdChange,
-                                )
-                                VoiceTextField(
-                                    label = stringResource(R.string.tts_model_label),
-                                    value = ttsElevenLabsModel,
-                                    onValueChange = onTtsElevenLabsModelChange,
-                                )
-                            }
-                        }
+                        TtsProviderSection(
+                            ttsProvider = ttsProvider,
+                            ttsAndroidEngine = ttsAndroidEngine,
+                            androidTtsEngines = androidTtsEngines,
+                            ttsSpeechRate = ttsSpeechRate,
+                            ttsPitch = ttsPitch,
+                            ttsOpenAiApiKey = ttsOpenAiApiKey,
+                            ttsOpenAiVoice = ttsOpenAiVoice,
+                            ttsOpenAiModel = ttsOpenAiModel,
+                            ttsElevenLabsApiKey = ttsElevenLabsApiKey,
+                            ttsElevenLabsVoiceId = ttsElevenLabsVoiceId,
+                            ttsElevenLabsModel = ttsElevenLabsModel,
+                            onTtsAndroidEngineChange = onTtsAndroidEngineChange,
+                            onTtsSpeechRateChange = onTtsSpeechRateChange,
+                            onTtsPitchChange = onTtsPitchChange,
+                            onTtsOpenAiApiKeyChange = onTtsOpenAiApiKeyChange,
+                            onTtsOpenAiVoiceChange = onTtsOpenAiVoiceChange,
+                            onTtsOpenAiModelChange = onTtsOpenAiModelChange,
+                            onTtsElevenLabsApiKeyChange = onTtsElevenLabsApiKeyChange,
+                            onTtsElevenLabsVoiceIdChange = onTtsElevenLabsVoiceIdChange,
+                            onTtsElevenLabsModelChange = onTtsElevenLabsModelChange,
+                        )
+                        VoiceDivider()
+                        TtsPreviewRow(state = ttsPreviewState, onPress = onTtsPreview)
                     }
                     VoiceDivider()
                     VoiceToggleRow(
@@ -229,12 +235,27 @@ fun VoiceSettingsScreen(
                         checked = wakeWordEnabled,
                         onCheckedChange = onWakeWordChange,
                     )
-                    if (wakeWordEnabled && availableWakeWordModels.isNotEmpty()) {
+                    VoiceDivider()
+                    WakeWordSection(
+                        phrase = wakeWordPhrase,
+                        sensitivity = wakeWordSensitivity,
+                        language = wakeWordModelLanguage,
+                        modelState = wakeWordModelStates[wakeWordModelLanguage] ?: VoskModelState.Missing,
+                        onPhraseChange = onWakeWordPhraseChange,
+                        onSensitivityChange = onWakeWordSensitivityChange,
+                        onLanguageChange = onWakeWordModelLanguageChange,
+                        onDownload = onWakeWordModelDownload,
+                        onCancelDownload = onWakeWordModelCancel,
+                        onRemove = onWakeWordModelRemove,
+                    )
+                    if (wakeWordEnabled) {
                         VoiceDivider()
-                        WakeWordModelDropdown(
-                            selected = wakeWordModel,
-                            models = availableWakeWordModels,
-                            onSelect = onWakeWordModelChange,
+                        VoiceToggleRow(
+                            icon = Icons.Default.Stop,
+                            title = stringResource(R.string.wake_word_barge_in),
+                            description = stringResource(R.string.wake_word_barge_in_description),
+                            checked = ttsBargeInEnabled,
+                            onCheckedChange = onTtsBargeInChange,
                         )
                     }
                 }
@@ -257,6 +278,188 @@ fun VoiceSettingsScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The fields belonging to the chosen speech provider.
+ *
+ * Rate and pitch sit under the Android engine rather than above the provider choice because
+ * [com.yugahashimoto.andcode.feature.assistant.TTSProviderConfig] only carries them for that
+ * engine - the cloud providers voice their own defaults, and showing sliders that quietly do
+ * nothing would be worse than not offering them.
+ */
+@Composable
+private fun TtsProviderSection(
+    ttsProvider: String,
+    ttsAndroidEngine: String?,
+    androidTtsEngines: List<Pair<String, String>>,
+    ttsSpeechRate: Float,
+    ttsPitch: Float,
+    ttsOpenAiApiKey: String,
+    ttsOpenAiVoice: String,
+    ttsOpenAiModel: String,
+    ttsElevenLabsApiKey: String,
+    ttsElevenLabsVoiceId: String,
+    ttsElevenLabsModel: String,
+    onTtsAndroidEngineChange: (String?) -> Unit,
+    onTtsSpeechRateChange: (Float) -> Unit,
+    onTtsPitchChange: (Float) -> Unit,
+    onTtsOpenAiApiKeyChange: (String) -> Unit,
+    onTtsOpenAiVoiceChange: (String) -> Unit,
+    onTtsOpenAiModelChange: (String) -> Unit,
+    onTtsElevenLabsApiKeyChange: (String) -> Unit,
+    onTtsElevenLabsVoiceIdChange: (String) -> Unit,
+    onTtsElevenLabsModelChange: (String) -> Unit,
+) {
+    when (ttsProvider) {
+        "android" -> {
+            VoiceDivider()
+            ChoiceDropdown(
+                label = stringResource(R.string.tts_engine_label),
+                selected = ttsAndroidEngine.orEmpty(),
+                options = listOf("" to stringResource(R.string.tts_engine_system_default)) + androidTtsEngines,
+                onSelect = { onTtsAndroidEngineChange(it.takeIf(String::isNotBlank)) },
+            )
+            VoiceDivider()
+            VoiceSlider(
+                label = stringResource(R.string.tts_speech_rate_label),
+                value = ttsSpeechRate,
+                range = TtsTuning.MIN_RATE..TtsTuning.MAX_RATE,
+                onValueChange = onTtsSpeechRateChange,
+            )
+            VoiceSlider(
+                label = stringResource(R.string.tts_pitch_label),
+                value = ttsPitch,
+                range = TtsTuning.MIN_PITCH..TtsTuning.MAX_PITCH,
+                onValueChange = onTtsPitchChange,
+            )
+        }
+        "openai" -> {
+            VoiceDivider()
+            SecretTextField(
+                label = stringResource(R.string.tts_api_key_label),
+                value = ttsOpenAiApiKey,
+                onValueChange = onTtsOpenAiApiKeyChange,
+            )
+            VoiceTextField(
+                label = stringResource(R.string.tts_voice_label),
+                value = ttsOpenAiVoice,
+                onValueChange = onTtsOpenAiVoiceChange,
+            )
+            VoiceTextField(
+                label = stringResource(R.string.tts_model_label),
+                value = ttsOpenAiModel,
+                onValueChange = onTtsOpenAiModelChange,
+            )
+        }
+        "elevenlabs" -> {
+            VoiceDivider()
+            SecretTextField(
+                label = stringResource(R.string.tts_api_key_label),
+                value = ttsElevenLabsApiKey,
+                onValueChange = onTtsElevenLabsApiKeyChange,
+            )
+            VoiceTextField(
+                label = stringResource(R.string.tts_voice_id_label),
+                value = ttsElevenLabsVoiceId,
+                onValueChange = onTtsElevenLabsVoiceIdChange,
+            )
+            VoiceTextField(
+                label = stringResource(R.string.tts_model_label),
+                value = ttsElevenLabsModel,
+                onValueChange = onTtsElevenLabsModelChange,
+            )
+        }
+    }
+}
+
+/**
+ * A labelled slider showing its own value.
+ *
+ * The value is committed on every change rather than only when the finger lifts: the settings
+ * repository is the single source the voice session reads from, and a rate that only lands after
+ * an unrelated recomposition is the kind of thing that looks like the setting being ignored.
+ */
+@Composable
+private fun VoiceSlider(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = String.format(Locale.US, "%.2f", value),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Slider(
+            value = value.coerceIn(range),
+            onValueChange = onValueChange,
+            valueRange = range,
+            // 0.05 apart across the 0.5..2.0 range the engine accepts: fine enough to hear a
+            // difference between neighbouring stops, coarse enough to land on one deliberately.
+            steps = SLIDER_STEPS,
+        )
+    }
+}
+
+private const val SLIDER_STEPS = 29
+
+/**
+ * Reads a sample line back with the settings as they stand.
+ *
+ * Rate and pitch are hard to judge from a number, and the cloud providers need a working key and
+ * voice id before they say anything at all, so this doubles as the one place those are proved
+ * right without leaving the screen.
+ */
+@Composable
+private fun TtsPreviewRow(
+    state: TtsPreviewState,
+    onPress: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.tts_preview_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (state == TtsPreviewState.FAILED) {
+                Text(
+                    text = stringResource(R.string.tts_preview_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        OutlinedButton(onClick = onPress) {
+            Icon(
+                if (state.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                stringResource(
+                    if (state.isRunning) R.string.tts_preview_stop else R.string.tts_preview_play,
+                ),
+            )
         }
     }
 }
@@ -549,40 +752,136 @@ private fun WorkspaceDropdown(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The wake word itself: what to say, how sure the recogniser must be, and the speech model that
+ * does the recognising.
+ *
+ * The phrase is free text rather than a fixed list because the recogniser is constrained to a
+ * grammar at start-up, so any phrase works - the previous build could only offer the one phrase
+ * someone had trained a network for. The model is downloaded on demand and is the one part of
+ * this that can be absent, so its state is shown here rather than failing silently later.
+ */
 @Composable
-private fun WakeWordModelDropdown(
-    selected: String,
-    models: List<String>,
-    onSelect: (String) -> Unit,
+private fun WakeWordSection(
+    phrase: String,
+    sensitivity: Float,
+    language: VoskModelLanguage,
+    modelState: VoskModelState,
+    onPhraseChange: (String) -> Unit,
+    onSensitivityChange: (Float) -> Unit,
+    onLanguageChange: (VoskModelLanguage) -> Unit,
+    onDownload: () -> Unit,
+    onCancelDownload: () -> Unit,
+    onRemove: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
-    ) {
-        OutlinedTextField(
-            value = selected.replace('_', ' ').replaceFirstChar { it.uppercase() },
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Wake word model") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-            singleLine = true,
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            models.forEach { model ->
-                DropdownMenuItem(
-                    text = { Text(model.replace('_', ' ').replaceFirstChar { it.uppercase() }) },
-                    onClick = {
-                        onSelect(model)
-                        expanded = false
-                    },
+    VoiceTextField(
+        label = stringResource(R.string.wake_word_phrase_label),
+        value = phrase,
+        onValueChange = onPhraseChange,
+    )
+    Text(
+        text = stringResource(R.string.wake_word_phrase_hint, WakeWordGrammar.DEFAULT_PHRASE),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 8.dp),
+    )
+    VoiceSlider(
+        label = stringResource(R.string.wake_word_sensitivity_label),
+        value = sensitivity,
+        range = 0f..1f,
+        onValueChange = onSensitivityChange,
+    )
+    Text(
+        text = stringResource(R.string.wake_word_sensitivity_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 8.dp),
+    )
+    VoiceDivider()
+    ChoiceDropdown(
+        label = stringResource(R.string.wake_word_model_language_label),
+        selected = language.id,
+        options =
+            listOf(
+                VoskModelLanguage.ENGLISH.id to stringResource(R.string.wake_word_model_language_english),
+                VoskModelLanguage.JAPANESE.id to stringResource(R.string.wake_word_model_language_japanese),
+            ),
+        onSelect = { id -> VoskModelLanguage.fromId(id)?.let(onLanguageChange) },
+    )
+    WakeWordModelRow(
+        language = language,
+        state = modelState,
+        onDownload = onDownload,
+        onCancelDownload = onCancelDownload,
+        onRemove = onRemove,
+    )
+}
+
+/** The download state of the selected speech model, and the one action it currently offers. */
+@Composable
+private fun WakeWordModelRow(
+    language: VoskModelLanguage,
+    state: VoskModelState,
+    onDownload: () -> Unit,
+    onCancelDownload: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    val megabytes = VoskModelCatalog.forLanguage(language).approximateBytes / (1024 * 1024)
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.wake_word_model_label),
+                    style = MaterialTheme.typography.bodyLarge,
                 )
+                Text(
+                    text =
+                        when (state) {
+                            VoskModelState.Missing ->
+                                stringResource(R.string.wake_word_model_not_downloaded, megabytes)
+                            is VoskModelState.Downloading ->
+                                state.fraction
+                                    ?.let { stringResource(R.string.wake_word_model_downloading_percent, (it * 100).toInt()) }
+                                    ?: stringResource(R.string.wake_word_model_downloading)
+                            VoskModelState.Extracting -> stringResource(R.string.wake_word_model_extracting)
+                            VoskModelState.Installed -> stringResource(R.string.wake_word_model_ready)
+                            is VoskModelState.Failed ->
+                                state.message ?: stringResource(R.string.wake_word_model_failed)
+                        },
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (state is VoskModelState.Failed) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
+            when (state) {
+                is VoskModelState.Downloading, VoskModelState.Extracting ->
+                    TextButton(onClick = onCancelDownload) {
+                        Text(stringResource(R.string.wake_word_model_cancel))
+                    }
+                VoskModelState.Installed ->
+                    TextButton(onClick = onRemove) {
+                        Text(stringResource(R.string.wake_word_model_remove))
+                    }
+                else ->
+                    OutlinedButton(onClick = onDownload) {
+                        Text(stringResource(R.string.wake_word_model_download))
+                    }
+            }
+        }
+        val fraction = (state as? VoskModelState.Downloading)?.fraction
+        if (state is VoskModelState.Downloading || state == VoskModelState.Extracting) {
+            Spacer(Modifier.height(8.dp))
+            if (fraction != null) {
+                LinearProgressIndicator(
+                    progress = { fraction },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         }
     }

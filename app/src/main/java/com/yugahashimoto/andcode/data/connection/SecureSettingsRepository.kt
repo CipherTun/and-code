@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.yugahashimoto.andcode.data.repository.UnreadSessionStore
+import com.yugahashimoto.andcode.feature.wakeword.WakeWordGrammar
 import com.yugahashimoto.andcode.runtime.RuntimeConnectionStore
 import com.yugahashimoto.andcode.runtime.local.AdbConnectionStore
 
@@ -85,6 +86,14 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         get() = preferences.getString(KEY_TTS_ANDROID_ENGINE, null)
         set(value) = preferences.edit().putString(KEY_TTS_ANDROID_ENGINE, value).apply()
 
+    var ttsSpeechRate: Float
+        get() = preferences.getFloat(KEY_TTS_SPEECH_RATE, 1.0f)
+        set(value) = preferences.edit().putFloat(KEY_TTS_SPEECH_RATE, value).apply()
+
+    var ttsPitch: Float
+        get() = preferences.getFloat(KEY_TTS_PITCH, 1.0f)
+        set(value) = preferences.edit().putFloat(KEY_TTS_PITCH, value).apply()
+
     var ttsOpenAiApiKey: String
         get() = preferences.getString(KEY_TTS_OPENAI_API_KEY, "").orEmpty()
         set(value) = preferences.edit().putString(KEY_TTS_OPENAI_API_KEY, value).apply()
@@ -109,6 +118,12 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         get() = preferences.getString(KEY_TTS_ELEVENLABS_MODEL, "eleven_multilingual_v2") ?: "eleven_multilingual_v2"
         set(value) = preferences.edit().putString(KEY_TTS_ELEVENLABS_MODEL, value).apply()
 
+    // On by default: being unable to stop a long answer without reaching for the screen is the
+    // problem this exists to solve, and it costs nothing when the wake word is switched off.
+    var ttsBargeInEnabled: Boolean
+        get() = preferences.getBoolean(KEY_TTS_BARGE_IN_ENABLED, true)
+        set(value) = preferences.edit().putBoolean(KEY_TTS_BARGE_IN_ENABLED, value).apply()
+
     var continuousConversation: Boolean
         get() = preferences.getBoolean(KEY_CONTINUOUS_CONVERSATION, false)
         set(value) = preferences.edit().putBoolean(KEY_CONTINUOUS_CONVERSATION, value).apply()
@@ -117,9 +132,21 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         get() = preferences.getBoolean(KEY_WAKE_WORD_ENABLED, false)
         set(value) = preferences.edit().putBoolean(KEY_WAKE_WORD_ENABLED, value).apply()
 
-    var wakeWordModel: String
-        get() = preferences.getString(KEY_WAKE_WORD_MODEL, "hey_mycroft") ?: "hey_mycroft"
-        set(value) = preferences.edit().putString(KEY_WAKE_WORD_MODEL, value).apply()
+    /** Free text now: the recogniser is constrained to whatever this says rather than to a
+     * phrase someone trained a network for in advance. */
+    var wakeWordPhrase: String
+        get() = preferences.getString(KEY_WAKE_WORD_PHRASE, null) ?: WakeWordGrammar.DEFAULT_PHRASE
+        set(value) = preferences.edit().putString(KEY_WAKE_WORD_PHRASE, value).apply()
+
+    /** How sure the recogniser has to be. Higher is harder to trigger. */
+    var wakeWordSensitivity: Float
+        get() = preferences.getFloat(KEY_WAKE_WORD_SENSITIVITY, 0.7f)
+        set(value) = preferences.edit().putFloat(KEY_WAKE_WORD_SENSITIVITY, value).apply()
+
+    /** Which downloaded speech model listens, as a [com.yugahashimoto.andcode.feature.wakeword.VoskModelLanguage] id. */
+    var wakeWordModelLanguage: String?
+        get() = preferences.getString(KEY_WAKE_WORD_MODEL_LANGUAGE, null)
+        set(value) = preferences.edit().putString(KEY_WAKE_WORD_MODEL_LANGUAGE, value).apply()
 
     var autoAcceptPermissions: Boolean
         get() = preferences.getBoolean(KEY_AUTO_ACCEPT_PERMISSIONS, false)
@@ -412,6 +439,8 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         private const val KEY_TTS_ENABLED = "tts_enabled"
         private const val KEY_TTS_PROVIDER = "tts_provider"
         private const val KEY_TTS_ANDROID_ENGINE = "tts_android_engine"
+        private const val KEY_TTS_SPEECH_RATE = "tts_speech_rate"
+        private const val KEY_TTS_PITCH = "tts_pitch"
         private const val KEY_TTS_OPENAI_API_KEY = "tts_openai_api_key"
         private const val KEY_TTS_OPENAI_VOICE = "tts_openai_voice"
         private const val KEY_TTS_OPENAI_MODEL = "tts_openai_model"
@@ -419,8 +448,11 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         private const val KEY_TTS_ELEVENLABS_VOICE_ID = "tts_elevenlabs_voice_id"
         private const val KEY_TTS_ELEVENLABS_MODEL = "tts_elevenlabs_model"
         private const val KEY_CONTINUOUS_CONVERSATION = "continuous_conversation"
+        private const val KEY_TTS_BARGE_IN_ENABLED = "tts_barge_in_enabled"
         private const val KEY_WAKE_WORD_ENABLED = "wake_word_enabled"
-        private const val KEY_WAKE_WORD_MODEL = "wake_word_model"
+        private const val KEY_WAKE_WORD_PHRASE = "wake_word_phrase"
+        private const val KEY_WAKE_WORD_SENSITIVITY = "wake_word_sensitivity"
+        private const val KEY_WAKE_WORD_MODEL_LANGUAGE = "wake_word_model_language"
         private const val KEY_AUTO_ACCEPT_PERMISSIONS = "auto_accept_permissions"
         private const val KEY_ASSISTANT_SESSION_ID = "assistant_session_id"
         private const val KEY_PROVIDER_ID = "provider_id"

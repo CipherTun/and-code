@@ -2,16 +2,21 @@ package com.yugahashimoto.andcode.ui.navigation
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.data.settings.AppPreferences
 import com.yugahashimoto.andcode.data.settings.AppPreferencesRepository
+import com.yugahashimoto.andcode.feature.assistant.TtsPreview
 import com.yugahashimoto.andcode.feature.settings.AgentSettingsScreen
 import com.yugahashimoto.andcode.feature.settings.AntigravityAgentSettingsScreen
 import com.yugahashimoto.andcode.feature.settings.ClaudeCodeAgentSettingsScreen
@@ -23,6 +28,7 @@ import com.yugahashimoto.andcode.feature.settings.SettingsScreenV2
 import com.yugahashimoto.andcode.feature.settings.SettingsViewModel
 import com.yugahashimoto.andcode.feature.settings.VoiceSettingsScreen
 import com.yugahashimoto.andcode.feature.support.GitHubSupportSheetHost
+import com.yugahashimoto.andcode.feature.wakeword.VoskModelState
 import com.yugahashimoto.andcode.feature.wakeword.WakeWordSettingsPolicy
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
 
@@ -113,21 +119,46 @@ fun NavGraphBuilder.settingsNavGraph(
                 com.yugahashimoto.andcode.feature.assistant.TTSManager.availableAndroidEngines(context)
                     .map { it.packageName to it.label }
             }
+        // Held for as long as the screen is: building a TTS engine is slow enough that doing it on
+        // the press would put the delay between the button and the first word.
+        val previewScope = rememberCoroutineScope()
+        val preview = remember(previewScope) { TtsPreview(context, previewScope) }
+        val previewState by preview.state.collectAsState()
+        val previewSample = stringResource(R.string.tts_preview_sample)
+        DisposableEffect(preview) { onDispose(preview::release) }
+        // The phrase, sensitivity and model are all read when the recogniser is built, so a change
+        // only takes effect once the service has been restarted with it.
+        val restartWakeWord = {
+            if (settingsState.wakeWordEnabled) {
+                val restarted =
+                    com.yugahashimoto.andcode.feature.wakeword.WakeWordService.start(
+                        context,
+                        settingsState.wakeWordModelLanguage,
+                    )
+                if (!restarted) settingsViewModel.setWakeWordEnabled(false)
+            }
+        }
         VoiceSettingsScreen(
             ttsEnabled = settingsState.ttsEnabled,
             ttsProvider = settingsState.ttsProvider,
             ttsAndroidEngine = settingsState.ttsAndroidEngine,
             androidTtsEngines = androidTtsEngines,
+            ttsSpeechRate = settingsState.ttsSpeechRate,
+            ttsPitch = settingsState.ttsPitch,
+            ttsPreviewState = previewState,
             ttsOpenAiApiKey = settingsState.ttsOpenAiApiKey,
             ttsOpenAiVoice = settingsState.ttsOpenAiVoice,
             ttsOpenAiModel = settingsState.ttsOpenAiModel,
             ttsElevenLabsApiKey = settingsState.ttsElevenLabsApiKey,
             ttsElevenLabsVoiceId = settingsState.ttsElevenLabsVoiceId,
             ttsElevenLabsModel = settingsState.ttsElevenLabsModel,
+            ttsBargeInEnabled = settingsState.ttsBargeInEnabled,
             continuousConversation = settingsState.continuousConversation,
             wakeWordEnabled = settingsState.wakeWordEnabled,
-            wakeWordModel = settingsState.wakeWordModel,
-            availableWakeWordModels = settingsState.availableWakeWordModels,
+            wakeWordPhrase = settingsState.wakeWordPhrase,
+            wakeWordSensitivity = settingsState.wakeWordSensitivity,
+            wakeWordModelLanguage = settingsState.wakeWordModelLanguage,
+            wakeWordModelStates = settingsState.wakeWordModelStates,
             assistantRuntimeId = settingsState.assistantRuntimeId,
             runtimeTargets = runtimeTargets(),
             workspaces = workspaces(),
@@ -137,12 +168,16 @@ fun NavGraphBuilder.settingsNavGraph(
             onTtsChange = settingsViewModel::setTtsEnabled,
             onTtsProviderChange = settingsViewModel::setTtsProvider,
             onTtsAndroidEngineChange = settingsViewModel::setTtsAndroidEngine,
+            onTtsSpeechRateChange = settingsViewModel::setTtsSpeechRate,
+            onTtsPitchChange = settingsViewModel::setTtsPitch,
+            onTtsPreview = { preview.press(settingsViewModel.ttsSettings(), previewSample) },
             onTtsOpenAiApiKeyChange = settingsViewModel::setTtsOpenAiApiKey,
             onTtsOpenAiVoiceChange = settingsViewModel::setTtsOpenAiVoice,
             onTtsOpenAiModelChange = settingsViewModel::setTtsOpenAiModel,
             onTtsElevenLabsApiKeyChange = settingsViewModel::setTtsElevenLabsApiKey,
             onTtsElevenLabsVoiceIdChange = settingsViewModel::setTtsElevenLabsVoiceId,
             onTtsElevenLabsModelChange = settingsViewModel::setTtsElevenLabsModel,
+            onTtsBargeInChange = settingsViewModel::setTtsBargeInEnabled,
             onContinuousChange = settingsViewModel::setContinuousConversation,
             onWakeWordChange = { enabled ->
                 if (enabled) {
@@ -156,12 +191,22 @@ fun NavGraphBuilder.settingsNavGraph(
                             android.widget.Toast.LENGTH_LONG,
                         ).show()
                         onOpenAssistantSettings()
+                    } else if (settingsState.wakeWordModelStates[settingsState.wakeWordModelLanguage] != VoskModelState.Installed) {
+                        // The model is downloaded rather than packaged, so it genuinely may not be
+                        // here. Start fetching it instead of switching on a service with nothing
+                        // to listen with.
+                        android.widget.Toast.makeText(
+                            context,
+                            com.yugahashimoto.andcode.R.string.wake_word_model_required,
+                            android.widget.Toast.LENGTH_LONG,
+                        ).show()
+                        settingsViewModel.downloadWakeWordModel(settingsState.wakeWordModelLanguage)
                     } else {
                         settingsViewModel.setWakeWordEnabled(true)
                         val started =
                             com.yugahashimoto.andcode.feature.wakeword.WakeWordService.start(
                                 context,
-                                settingsState.wakeWordModel,
+                                settingsState.wakeWordModelLanguage,
                             )
                         if (!started) {
                             settingsViewModel.setWakeWordEnabled(false)
@@ -177,12 +222,26 @@ fun NavGraphBuilder.settingsNavGraph(
                     com.yugahashimoto.andcode.feature.wakeword.WakeWordService.stop(context)
                 }
             },
-            onWakeWordModelChange = { model ->
-                settingsViewModel.setWakeWordModel(model)
-                if (settingsState.wakeWordEnabled) {
-                    val restarted = com.yugahashimoto.andcode.feature.wakeword.WakeWordService.start(context, model)
-                    if (!restarted) settingsViewModel.setWakeWordEnabled(false)
-                }
+            onWakeWordPhraseChange = { phrase ->
+                settingsViewModel.setWakeWordPhrase(phrase)
+                restartWakeWord()
+            },
+            onWakeWordSensitivityChange = { sensitivity ->
+                settingsViewModel.setWakeWordSensitivity(sensitivity)
+                restartWakeWord()
+            },
+            onWakeWordModelLanguageChange = { language ->
+                settingsViewModel.setWakeWordModelLanguage(language)
+                restartWakeWord()
+            },
+            onWakeWordModelDownload = { settingsViewModel.downloadWakeWordModel(settingsState.wakeWordModelLanguage) },
+            onWakeWordModelCancel = { settingsViewModel.cancelWakeWordModelDownload(settingsState.wakeWordModelLanguage) },
+            onWakeWordModelRemove = {
+                // Removing the model the service is listening with would leave it running against
+                // files that are no longer there.
+                settingsViewModel.setWakeWordEnabled(false)
+                com.yugahashimoto.andcode.feature.wakeword.WakeWordService.stop(context)
+                settingsViewModel.removeWakeWordModel(settingsState.wakeWordModelLanguage)
             },
             onAssistantRuntimeChange = { runtimeId ->
                 settingsViewModel.setAssistantRuntimeId(runtimeId.takeIf { it.isNotBlank() })
