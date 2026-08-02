@@ -191,7 +191,11 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
 
     // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:34.17.0"))
+    // 34.17.0 pulls Play Services Measurement compiled with Kotlin 2.2 metadata, while this
+    // project is currently on Kotlin 2.0/KSP 2.0. Keep the Firebase stack on the compatible
+    // 33.6 line until the Android build toolchain is upgraded together.
+    implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
+    implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")

@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.startup.AppInitializer
 import com.yugahashimoto.andcode.core.api.GitHubApiClient
+import com.yugahashimoto.andcode.core.diagnostics.AnalyticsReporter
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
 import com.yugahashimoto.andcode.core.diagnostics.CrashReporter
 import com.yugahashimoto.andcode.core.locale.AppLanguage
@@ -156,6 +157,8 @@ class AndCodeApplication : Application() {
         CrashLog.install(this)
         // CrashLog handles the local file; Crashlytics adds remote fatal and non-fatal reporting.
         CrashReporter.install()
+        // Analytics supplies anonymous app-open/session metrics and selected product events.
+        AnalyticsReporter.install(this)
         startKoin {
             androidContext(this@AndCodeApplication)
             modules(appModule, viewModelModule)
@@ -338,10 +341,12 @@ class AndCodeApplication : Application() {
                 },
                 onPermissionResolved = notifications::cancelPermission,
                 onSessionIdle = { sessionId, title ->
+                    AnalyticsReporter.recordRuntimeSessionCompleted()
                     notifications.notifySessionComplete(sessionId, title)
                     githubStarCoordinator.onSessionCompleted()
                 },
                 onSessionError = { sessionId, message ->
+                    AnalyticsReporter.recordRuntimeSessionError()
                     CrashReporter.recordException(
                         error = IllegalStateException(SecretRedaction.redact(message ?: "Runtime session failed")),
                         message = "Runtime session error",
