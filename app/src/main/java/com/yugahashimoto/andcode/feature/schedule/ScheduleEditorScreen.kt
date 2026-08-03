@@ -43,7 +43,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -114,7 +113,6 @@ fun ScheduleEditorScreen(
     var invalidCron by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
-    val sheetState = rememberModalBottomSheetState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Saving used to fail silently whenever a required field was missing; surface the reason instead.
@@ -522,7 +520,6 @@ fun ScheduleEditorScreen(
 
     if (showModelPicker) {
         ModelAndRuntimePickerSheet(
-            sheetState = sheetState,
             runtimeTargets = runtimeTargets,
             selectedRuntimeId = runtimeId,
             onSelectRuntime = { runtimeId = it },

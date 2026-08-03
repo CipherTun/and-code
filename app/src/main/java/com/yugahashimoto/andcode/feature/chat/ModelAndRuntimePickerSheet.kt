@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
@@ -25,8 +26,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SheetState
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +49,11 @@ import com.yugahashimoto.andcode.ui.runtimeTargetLabel
 
 private const val MAX_RECENT_MODELS = 3
 
+internal fun isModelPickerDismissAllowed(
+    targetValue: SheetValue,
+    isListAtTop: Boolean,
+): Boolean = targetValue != SheetValue.Hidden || isListAtTop
+
 /**
  * Bottom sheet opened from the chat screen's model chip. Lets the user pick both
  * the execution target (this Android device or a registered remote runtime) and
@@ -55,7 +62,6 @@ private const val MAX_RECENT_MODELS = 3
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelAndRuntimePickerSheet(
-    sheetState: SheetState,
     runtimeTargets: List<RuntimeTarget>,
     selectedRuntimeId: String?,
     onSelectRuntime: (String) -> Unit,
@@ -72,11 +78,24 @@ fun ModelAndRuntimePickerSheet(
 ) {
     var query by remember { mutableStateOf("") }
     var runtimesExpanded by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val sheetState =
+        rememberModalBottomSheetState(
+            confirmValueChange = { targetValue ->
+                isModelPickerDismissAllowed(
+                    targetValue = targetValue,
+                    isListAtTop =
+                        listState.firstVisibleItemIndex == 0 &&
+                            listState.firstVisibleItemScrollOffset == 0,
+                )
+            },
+        )
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
     ) {
         LazyColumn(
+            state = listState,
             modifier =
                 Modifier
                     .fillMaxWidth()

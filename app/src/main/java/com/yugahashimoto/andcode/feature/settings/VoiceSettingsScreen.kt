@@ -45,7 +45,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -594,7 +593,6 @@ private fun AssistantTargetSection(
     onWorkspaceChange: (String) -> Unit,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
     val selectableTargets = assistantTargets(runtimeTargets)
     val selectedTarget = selectableTargets.firstOrNull { it.id == assistantRuntimeId }
 
@@ -644,7 +642,6 @@ private fun AssistantTargetSection(
 
     if (showPicker) {
         ModelAndRuntimePickerSheet(
-            sheetState = sheetState,
             runtimeTargets = selectableTargets,
             selectedRuntimeId = assistantRuntimeId,
             onSelectRuntime = onRuntimeChange,
