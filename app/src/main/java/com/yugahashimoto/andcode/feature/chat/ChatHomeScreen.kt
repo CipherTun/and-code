@@ -86,7 +86,6 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -201,7 +200,6 @@ fun ChatHomeScreen(
     var input by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     var showModelPicker by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
     val errorKind = classifyChatError(state.error)
     val runtimeNotReady = errorKind == ChatErrorKind.RUNTIME_NOT_READY && state.messages.isEmpty()
     val isAtBottom = remember { mutableStateOf(true) }
@@ -615,7 +613,6 @@ fun ChatHomeScreen(
 
     if (showModelPicker) {
         ModelAndRuntimePickerSheet(
-            sheetState = sheetState,
             runtimeTargets = runtimeTargets,
             selectedRuntimeId = selectedRuntimeId,
             onSelectRuntime = onSelectRuntime,
