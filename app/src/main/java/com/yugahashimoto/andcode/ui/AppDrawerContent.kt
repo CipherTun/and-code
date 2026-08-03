@@ -2,6 +2,7 @@ package com.yugahashimoto.andcode.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -29,7 +30,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -347,10 +347,9 @@ private fun DrawerHeader() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp),
     ) {
-        Icon(
-            imageVector = Icons.Default.Terminal,
+        Image(
+            painter = painterResource(R.drawable.andcode_logo),
             contentDescription = stringResource(R.string.cd_app_logo),
-            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(22.dp),
         )
         Text(
