@@ -1499,10 +1499,15 @@ private fun ModeChip(
     onSelect: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    // OpenCode servers can report arbitrary custom agents alongside its two built-ins; this chip
+    // only offers build/plan to keep the picker to the two modes users actually switch between.
+    // Fall back to the full list if a server configuration omits both, rather than showing an
+    // unusable empty dropdown.
+    val selectableAgents = agents.filter { it.name == "build" || it.name == "plan" }.ifEmpty { agents }
     // The selection is remembered across runtimes, so an id this runtime does not offer would
     // otherwise label the chip with another agent's name. An empty list is not a licence to trust
     // it either: that is exactly the state a stopped runtime is in.
-    val label = selectedAgentId?.takeIf { id -> agents.any { it.name == id } } ?: "build"
+    val label = selectedAgentId?.takeIf { id -> selectableAgents.any { it.name == id } } ?: "build"
     Box {
         Surface(
             modifier =
@@ -1537,7 +1542,7 @@ private fun ModeChip(
             }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            agents.forEach { agent ->
+            selectableAgents.forEach { agent ->
                 DropdownMenuItem(
                     text = { Text(agent.name) },
                     onClick = {
