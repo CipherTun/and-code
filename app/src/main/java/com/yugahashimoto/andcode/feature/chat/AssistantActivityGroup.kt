@@ -82,10 +82,19 @@ fun groupConversationTimeline(messages: List<ChatMessage>): List<TimelineEntry> 
     var turnStartAt: Long? = null
     var turnCompletedAt: Long? = null
     var turnLastId: String? = null
+    // Claude Code reuses tool_use call ids (toolu_…) across retries, so two distinct runs can both
+    // begin with a part of the same id. Tag each group with how many runs have already started with
+    // that first part id so LazyColumn keys stay unique — the first group keeps the bare id so a
+    // growing run's identity stays stable while its steps stream in.
+    val firstIdOccurrences = mutableMapOf<String, Int>()
 
     fun flush() {
         if (pending.isEmpty()) return
-        entries += TimelineEntry.Activity("activity:${pending.first().id}", pending.toList())
+        val firstId = pending.first().id
+        val occurrence = firstIdOccurrences[firstId] ?: 0
+        firstIdOccurrences[firstId] = occurrence + 1
+        val id = if (occurrence == 0) "activity:$firstId" else "activity:$firstId:$occurrence"
+        entries += TimelineEntry.Activity(id, pending.toList())
         pending.clear()
     }
 
