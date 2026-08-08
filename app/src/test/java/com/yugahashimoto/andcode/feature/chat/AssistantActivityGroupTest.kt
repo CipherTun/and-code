@@ -358,10 +358,11 @@ class AssistantActivityGroupTest {
         assertEquals("activity:toolu_stream", firstId)
 
         val grown =
-            first + listOf(
-                ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "retry"))),
-                assistant("m3", tool("toolu_stream", "bash")),
-            )
+            first +
+                listOf(
+                    ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "retry"))),
+                    assistant("m3", tool("toolu_stream", "bash")),
+                )
         val grownIds = groupConversationTimeline(grown).filterIsInstance<TimelineEntry.Activity>().map { it.id }
         assertEquals(listOf("activity:toolu_stream", "activity:toolu_stream:1"), grownIds)
     }
