@@ -316,4 +316,54 @@ class AssistantActivityGroupTest {
 
         assertEquals(parts.size, keys.toSet().size)
     }
+
+    @Test
+    fun `activity group ids stay unique when separate runs reuse the same first part id`() {
+        // Claude Code reuses tool_use call ids (toolu_…) across retries, so two independent runs can
+        // each begin with the very same part id. That must not produce duplicate LazyColumn keys.
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant("m1", tool("toolu_retry", "bash")),
+                    ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "try again"))),
+                    assistant("m3", tool("toolu_retry", "bash")),
+                ),
+            )
+
+        val activityIds = entries.filterIsInstance<TimelineEntry.Activity>().map { it.id }
+        assertEquals(listOf("activity:toolu_retry", "activity:toolu_retry:1"), activityIds)
+        assertEquals(activityIds.size, activityIds.toSet().size)
+    }
+
+    @Test
+    fun `activity group id stays bare for the first run sharing a part id`() {
+        val entries =
+            groupConversationTimeline(
+                listOf(
+                    assistant("m1", tool("toolu_same", "bash")),
+                    ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "again"))),
+                    assistant("m3", tool("toolu_same", "bash")),
+                ),
+            )
+
+        assertEquals("activity:toolu_same", (entries[0] as TimelineEntry.Activity).id)
+    }
+
+    @Test
+    fun `activity group ids stay stable as a growing run streams in`() {
+        // The first occurrence keeps the bare id, so an already-flushed group's identity survives a
+        // sibling run that later reuses the same first part id.
+        val first = listOf(assistant("m1", tool("toolu_stream", "bash")))
+        val firstId = (groupConversationTimeline(first).single() as TimelineEntry.Activity).id
+        assertEquals("activity:toolu_stream", firstId)
+
+        val grown =
+            first +
+                listOf(
+                    ChatMessage(id = "m2", isUser = true, parts = listOf(ChatPart.Text("u1", "retry"))),
+                    assistant("m3", tool("toolu_stream", "bash")),
+                )
+        val grownIds = groupConversationTimeline(grown).filterIsInstance<TimelineEntry.Activity>().map { it.id }
+        assertEquals(listOf("activity:toolu_stream", "activity:toolu_stream:1"), grownIds)
+    }
 }
