@@ -64,6 +64,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.yugahashimoto.andcode.AndCodeApplication
+import com.yugahashimoto.andcode.BuildConfig
 import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
 import com.yugahashimoto.andcode.feature.activity.ActivityViewModel
@@ -119,6 +120,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -229,6 +231,7 @@ fun AndCodeApp(
                         settings = app.settings,
                         registry = app.runtimeRegistry,
                         voskModels = app.voskModels,
+                        providerDisconnectRejectedMessage = context.getString(R.string.provider_disconnect_rejected),
                     )
                 },
         )
@@ -1200,11 +1203,28 @@ fun AndCodeApp(
         }
 
         if (showDiagnostics) {
+            val runtimeStateFlow =
+                remember(selectedRuntime) {
+                    selectedRuntime?.state ?: MutableStateFlow(RuntimeState.Disconnected)
+                }
+            val runtimeState = runtimeStateFlow.collectAsState().value
             DiagnosticsSheet(
                 onDismiss = { showDiagnostics = false },
-                appVersion = "0.3.0",
-                connectionStatus = "connected",
-                runtimeStatus = "ready",
+                appVersion = BuildConfig.VERSION_NAME,
+                connectionStatus =
+                    when (runtimeState) {
+                        is RuntimeState.Connected -> stringResource(R.string.connected_label)
+                        RuntimeState.Connecting -> stringResource(R.string.runtime_status_starting)
+                        else -> stringResource(R.string.disconnected_label)
+                    },
+                runtimeStatus =
+                    when (runtimeState) {
+                        RuntimeState.Disconnected -> stringResource(R.string.disconnected_label)
+                        RuntimeState.Connecting -> stringResource(R.string.runtime_status_starting)
+                        is RuntimeState.Connected -> stringResource(R.string.connected_version, runtimeState.version)
+                        is RuntimeState.Unavailable -> runtimeState.reason
+                        is RuntimeState.Failed -> runtimeState.message
+                    },
             )
         }
     }
@@ -1228,6 +1248,7 @@ private fun GithubCloneDialog(
     var isCloning by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val cloneFailedMessage = stringResource(R.string.workspace_clone_failed)
 
     LaunchedEffect(githubConfigured) {
         if (githubConfigured) {
@@ -1247,7 +1268,7 @@ private fun GithubCloneDialog(
                 onDismiss()
             } else {
                 error = result.output.lineSequence().lastOrNull { it.isNotBlank() }
-                    ?: "Clone failed (${result.exitCode})"
+                    ?: cloneFailedMessage.format(result.exitCode)
                 isCloning = false
             }
         }
