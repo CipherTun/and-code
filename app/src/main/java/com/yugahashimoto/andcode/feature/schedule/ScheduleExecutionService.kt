@@ -179,7 +179,7 @@ class ScheduleExecutionService : Service() {
                                 val title =
                                     runCatching { target.session(targetSessionId).title }
                                         .getOrDefault(schedule.displayName)
-                                app.notifications.notifySessionComplete(targetSessionId, title)
+                                app.notifications.notifySessionComplete(targetSessionId, title, target.id)
                             }
                             throw CompletionSignal()
                         }
@@ -187,7 +187,7 @@ class ScheduleExecutionService : Service() {
                     is OpenCodeEvent.SessionError -> {
                         if (event.sessionId == null || event.sessionId == targetSessionId) {
                             recordFailed(run, event.message)
-                            if (notifyUser) app.notifications.notifySessionError(targetSessionId, event.message)
+                            if (notifyUser) app.notifications.notifySessionError(targetSessionId, event.message, target.id)
                             throw CompletionSignal()
                         }
                     }
@@ -208,7 +208,7 @@ class ScheduleExecutionService : Service() {
                     }
                     is OpenCodeEvent.QuestionAsked -> {
                         if (event.request.sessionId == targetSessionId && notifyUser) {
-                            app.notifications.notifyQuestion(event.request, schedule.displayName)
+                            app.notifications.notifyQuestion(event.request, schedule.displayName, target.id)
                         }
                     }
                     else -> Unit

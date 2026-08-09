@@ -17,6 +17,7 @@ import com.yugahashimoto.andcode.core.api.OpenCodeTime
 import com.yugahashimoto.andcode.core.api.OpenCodeTodo
 import com.yugahashimoto.andcode.core.api.OpenCodeVcsInfo
 import com.yugahashimoto.andcode.core.api.PromptRequest
+import com.yugahashimoto.andcode.core.api.QuestionRequest
 import com.yugahashimoto.andcode.runtime.BackendKind
 import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.PermissionResponse
@@ -331,6 +332,24 @@ class ClaudeCodeTarget(
         answers: List<List<String>>,
         directory: String?,
     ): Boolean = withContext(Dispatchers.IO) { runtime.answerQuestion(requestId, answers) }
+
+    /**
+     * Declines a question parked on the file bridge. Without this the card's decline button threw
+     * "unsupported", leaving no way to unblock a turn whose question the user did not want.
+     */
+    override suspend fun rejectQuestion(
+        requestId: String,
+        directory: String?,
+    ): Boolean = withContext(Dispatchers.IO) { runtime.respondToPermission(requestId, PermissionResponse.REJECT, remember = false) }
+
+    /**
+     * Questions still waiting on the bridge. The event that announces a question is emitted once
+     * and can be missed — another chat on screen, an app restart — and the file bridge is the only
+     * place left to find it. [directory] is ignored: a Claude Code question belongs to a session,
+     * not a workspace.
+     */
+    override suspend fun pendingQuestions(directory: String?): List<QuestionRequest> =
+        withContext(Dispatchers.IO) { runtime.pendingQuestions() }
 
     override fun events(): Flow<OpenCodeEvent> = runtime.events()
 

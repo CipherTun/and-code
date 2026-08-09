@@ -81,15 +81,17 @@ class RuntimeNotificationHelper(private val context: Context) {
     fun notifyQuestion(
         request: QuestionRequest,
         chatTitle: String?,
+        runtimeId: String,
     ) {
         if (!canPostNotifications()) return
         val openIntent =
             pendingActivityIntent(
-                requestCode = request.id.hashCode(),
+                requestCode = ("question:" + request.id).hashCode(),
                 extras =
                     mapOf(
                         EXTRA_OPEN_CHAT to true,
                         EXTRA_TARGET_SESSION_ID to request.sessionId,
+                        EXTRA_RUNTIME_ID to runtimeId,
                     ),
             )
         val prompt = request.questions.firstOrNull()?.question?.takeIf(String::isNotBlank)
@@ -123,15 +125,17 @@ class RuntimeNotificationHelper(private val context: Context) {
     fun notifySessionComplete(
         sessionId: String,
         chatTitle: String?,
+        runtimeId: String,
     ) {
         if (!canPostNotifications()) return
         val intent =
             pendingActivityIntent(
-                requestCode = sessionId.hashCode(),
+                requestCode = ("complete:" + sessionId).hashCode(),
                 extras =
                     mapOf(
                         EXTRA_OPEN_CHAT to true,
                         EXTRA_TARGET_SESSION_ID to sessionId,
+                        EXTRA_RUNTIME_ID to runtimeId,
                     ),
             )
         val notification =
@@ -153,15 +157,17 @@ class RuntimeNotificationHelper(private val context: Context) {
     fun notifySessionError(
         sessionId: String?,
         message: String?,
+        runtimeId: String,
     ) {
         if (!canPostNotifications()) return
         val intent =
             pendingActivityIntent(
-                requestCode = (sessionId ?: "error").hashCode(),
+                requestCode = ("error:" + (sessionId ?: "error")).hashCode(),
                 extras =
                     mapOf(
                         EXTRA_OPEN_ACTIVITY to true,
                         EXTRA_TARGET_SESSION_ID to (sessionId.orEmpty()),
+                        EXTRA_RUNTIME_ID to runtimeId,
                     ),
             )
         val notification =
@@ -266,19 +272,29 @@ class RuntimeNotificationHelper(private val context: Context) {
         )
     }
 
-    private fun permissionNotificationId(permissionId: String): Int = 20_000 + (permissionId.hashCode() and 0x0FFF)
+    // A narrow hash window made unrelated sessions collide onto one notification id, so one chat's
+    // notice visibly replaced another's and tapping it carried the wrong content intent. The wider
+    // mask makes that collision vanishingly unlikely.
+    private fun permissionNotificationId(permissionId: String): Int =
+        NOTIFICATION_ID_BASE_PERMISSION + (permissionId.hashCode() and NOTIFICATION_ID_MASK)
 
-    private fun questionNotificationId(questionId: String): Int = 25_000 + (questionId.hashCode() and 0x0FFF)
+    private fun questionNotificationId(questionId: String): Int =
+        NOTIFICATION_ID_BASE_QUESTION + (questionId.hashCode() and NOTIFICATION_ID_MASK)
 
     private fun statusNotificationId(
         sessionId: String,
         kind: String,
-    ): Int = 30_000 + ((sessionId + kind).hashCode() and 0x0FFF)
+    ): Int = NOTIFICATION_ID_BASE_STATUS + ((sessionId + kind).hashCode() and NOTIFICATION_ID_MASK)
 
     companion object {
         const val CHANNEL_APPROVALS = "opencode_approvals"
         const val CHANNEL_STATUS = "opencode_status"
         const val ACTION_PERMISSION_RESPONSE = "com.yugahashimoto.andcode.PERMISSION_RESPONSE"
+
+        private const val NOTIFICATION_ID_MASK = 0x000FFFFF
+        private const val NOTIFICATION_ID_BASE_PERMISSION = 1_000_000
+        private const val NOTIFICATION_ID_BASE_QUESTION = 3_000_000
+        private const val NOTIFICATION_ID_BASE_STATUS = 5_000_000
         const val EXTRA_OPEN_ACTIVITY = "open_activity"
         const val EXTRA_OPEN_CHAT = "open_chat"
         const val EXTRA_SESSION_ID = "session_id"

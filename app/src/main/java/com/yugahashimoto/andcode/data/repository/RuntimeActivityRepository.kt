@@ -51,9 +51,9 @@ class RuntimeActivityRepository(
     private val maxRetryDelayMillis: Long = 30_000L,
     private val onPermissionAsked: ((PermissionRequest, String?, String) -> Unit)? = null,
     private val onPermissionResolved: ((String) -> Unit)? = null,
-    private val onSessionIdle: ((String, String?) -> Unit)? = null,
-    private val onSessionError: ((String?, String?) -> Unit)? = null,
-    private val onQuestionAsked: ((QuestionRequest, String?) -> Unit)? = null,
+    private val onSessionIdle: ((String, String?, String) -> Unit)? = null,
+    private val onSessionError: ((String?, String?, String) -> Unit)? = null,
+    private val onQuestionAsked: ((QuestionRequest, String?, String) -> Unit)? = null,
     private val unreadStore: UnreadSessionStore? = null,
     private val messages: RuntimeActivityMessages = RuntimeActivityMessages,
 ) {
@@ -254,7 +254,7 @@ class RuntimeActivityRepository(
                     runCatching { target.session(event.sessionId).parentId != null }
                         .getOrDefault(false)
                 if (!isSubagent) {
-                    onSessionIdle?.invoke(event.sessionId, sessionTitle(target, event.sessionId))
+                    onSessionIdle?.invoke(event.sessionId, sessionTitle(target, event.sessionId), target.id)
                 }
             }
             is OpenCodeEvent.MessageUpdated -> {
@@ -309,7 +309,7 @@ class RuntimeActivityRepository(
                     }
                 }
                 appendLog(messages.eventError, event.message, event.sessionId)
-                onSessionError?.invoke(event.sessionId, event.message)
+                onSessionError?.invoke(event.sessionId, event.message, target.id)
             }
             is OpenCodeEvent.QuestionAsked -> {
                 mutableState.update { current ->
@@ -319,6 +319,7 @@ class RuntimeActivityRepository(
                 onQuestionAsked?.invoke(
                     event.request,
                     sessionTitle(target, event.request.sessionId),
+                    target.id,
                 )
             }
             is OpenCodeEvent.Unknown -> appendLog(messages.eventUnknown, event.type)

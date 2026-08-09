@@ -160,7 +160,8 @@ fun AndCodeApp(
     assistantActive: Boolean = false,
     appTheme: AppTheme = AppTheme.DARK,
     uiFontSize: Int = 16,
-    targetSessionId: String? = null,
+    chatDeepLink: ChatDeepLink? = null,
+    onChatDeepLinkConsumed: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -273,6 +274,7 @@ fun AndCodeApp(
                         backend = selectedRuntime,
                         eventFlow = app.activityRepository.events,
                         onPermissionResolved = app.activityRepository::resolvePermission,
+                        onQuestionResolved = app.notifications::cancelQuestion,
                         onSessionCreated = app.catalogRepository::refreshSessionsOnly,
                         onRunStateChanged = { sessionId, running ->
                             if (running) {
@@ -558,11 +560,22 @@ fun AndCodeApp(
         }
     }
 
-    LaunchedEffect(targetSessionId) {
-        targetSessionId?.let { id ->
-            pendingSession = id to id
-            navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
+    // A notification tap. The chat may belong to another agent than the selected one, so move to
+    // its runtime first — opening it against the wrong backend only loads an error. The effect is
+    // keyed on the whole link (token included), so tapping twice for the same session still works,
+    // and consuming resets the state so a stale link never navigates again.
+    LaunchedEffect(chatDeepLink) {
+        val link = chatDeepLink ?: return@LaunchedEffect
+        onChatDeepLinkConsumed()
+        val knownSession = app.catalogRepository.allSessions.value.firstOrNull { it.session.id == link.sessionId }
+        val runtimeId = link.runtimeId ?: knownSession?.runtimeId
+        if (runtimeId != null && runtimeId != selectedRuntime?.id) {
+            app.runtimeRegistry.select(runtimeId)
         }
+        app.activityRepository.markSessionRead(link.sessionId)
+        val title = knownSession?.session?.title?.takeIf(String::isNotBlank) ?: link.sessionId
+        pendingSession = link.sessionId to title
+        navController.navigate(ROUTE_CHAT) { launchSingleTop = true }
     }
 
     // Lets the in-guest agent pop the guest browser open for the user by dropping a command
@@ -881,11 +894,15 @@ fun AndCodeApp(
                 }
 
                 composable(ROUTE_CHAT) {
-                    LaunchedEffect(pendingSession) {
-                        pendingSession?.let { (id, title) ->
-                            chatViewModel.openSession(id, title)
-                            pendingSession = null
-                        }
+                    // Keyed on the runtime too: a deep link that also switches the runtime must run
+                    // against the view model of the new runtime, not the previous one's. While no
+                    // runtime is selected yet (cold start) the chat backend does not exist and
+                    // openSession would silently no-op — wait for one instead of dropping the request.
+                    LaunchedEffect(pendingSession, selectedRuntime?.id) {
+                        val pending = pendingSession ?: return@LaunchedEffect
+                        if (selectedRuntime == null) return@LaunchedEffect
+                        chatViewModel.openSession(pending.first, pending.second)
+                        pendingSession = null
                     }
                     LaunchedEffect(pendingHandoffPrompt, selectedRuntime?.id, handoffReady) {
                         val pending = pendingHandoffPrompt

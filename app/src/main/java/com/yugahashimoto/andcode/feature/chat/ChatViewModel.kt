@@ -163,6 +163,8 @@ private const val TRANSIENT_RECOVERY_MAX_BACKOFF_MS = 30_000L
 private const val TRANSIENT_RECOVERY_MAX_ATTEMPTS = 20
 private const val HEALTH_CHECK_ATTEMPTS = 15
 private const val HEALTH_CHECK_DELAY_MS = 2000L
+private const val PENDING_QUESTION_REFRESH_ATTEMPTS = 3
+private const val PENDING_QUESTION_REFRESH_RETRY_DELAY_MS = 3000L
 
 /** Floor between transcript scans for pull request links, so streaming does not drive them. */
 private const val PULL_REQUEST_SCAN_THROTTLE_MS = 300L
@@ -302,6 +304,8 @@ data class ChatUiState(
     val selectedModelId: String? = null,
     val selectedAgentId: String? = null,
     val selectedWorkspacePath: String? = null,
+    /** Workspace directory of the open session, learned from the backend when it was opened. */
+    val sessionDirectory: String? = null,
     val slashCommands: List<OpenCodeCommand> = emptyList(),
     val slashSkills: List<OpenCodeSkill> = emptyList(),
     val offlineQueue: List<String> = emptyList(),
@@ -316,6 +320,8 @@ class ChatViewModel(
     private val backend: OpenCodeBackend? = null,
     private val eventFlow: Flow<OpenCodeEvent>? = null,
     private val onPermissionResolved: (String) -> Unit = {},
+    /** Reports a question that was answered or declined, so its notification can be cancelled. */
+    private val onQuestionResolved: (String) -> Unit = {},
     private val onSessionCreated: () -> Unit = {},
     /**
      * Reports whether this chat is working, so the drawer shows real state even when no stream
@@ -360,6 +366,12 @@ class ChatViewModel(
 
     /** Message id to role, learned from `message.updated`, so user echoes can be skipped. */
     private val messageRoles = mutableMapOf<String, String>()
+
+    /**
+     * Questions the user hid with [dismissQuestion]. A recovery fetch must not resurrect them:
+     * they are still open server-side, so without this every refetch would put the card back.
+     */
+    private val dismissedQuestionIds = mutableSetOf<String>()
     private val connectionMonitor = ConnectionQualityMonitor(viewModelScope)
 
     init {
@@ -618,6 +630,9 @@ class ChatViewModel(
         val switchingSession = _uiState.value.sessionId != sessionId
         streamedParts.clear()
         messageRoles.clear()
+        // Opening the chat is an explicit act of attention, so questions the user hid earlier are
+        // offered again rather than staying suppressed by a stale dismissal.
+        dismissedQuestionIds.clear()
         _uiState.update {
             it.copy(
                 sessionId = sessionId,
@@ -627,6 +642,7 @@ class ChatViewModel(
                 messages = emptyList(),
                 permissions = emptyList(),
                 pendingQuestions = emptyList(),
+                sessionDirectory = null,
                 isRunning = if (switchingSession) false else it.isRunning,
                 isThinking = if (switchingSession) false else it.isThinking,
                 error = null,
@@ -699,6 +715,7 @@ class ChatViewModel(
     fun newSession() {
         streamedParts.clear()
         messageRoles.clear()
+        dismissedQuestionIds.clear()
         _uiState.update {
             it.copy(
                 sessionId = null,
@@ -707,6 +724,7 @@ class ChatViewModel(
                 messages = emptyList(),
                 permissions = emptyList(),
                 pendingQuestions = emptyList(),
+                sessionDirectory = null,
                 isRunning = false,
                 isThinking = false,
                 isListening = false,
@@ -1242,6 +1260,7 @@ class ChatViewModel(
                     directory = pendingQuestion.workspaceDirectory(),
                 )
             }.onSuccess { accepted ->
+                if (accepted) onQuestionResolved(questionId)
                 _uiState.update { state ->
                     if (accepted) {
                         state.copy(
@@ -1279,31 +1298,53 @@ class ChatViewModel(
 
     /**
      * The directory the question routes have to be scoped to. What the event stream reported is
-     * authoritative; the selected workspace is the fallback for the older per-instance `/event`
-     * stream, whose frames carry no directory.
+     * authoritative; the open session's own directory is the next best source; the selected
+     * workspace is the last fallback for the older per-instance `/event` stream, whose frames
+     * carry no directory.
      */
-    private fun PendingQuestionUi.workspaceDirectory(): String? = request.directory ?: _uiState.value.selectedWorkspacePath
+    private fun PendingQuestionUi.workspaceDirectory(): String? =
+        request.directory
+            ?: _uiState.value.sessionDirectory
+            ?: _uiState.value.selectedWorkspacePath
 
     /**
      * Recovers questions that are already waiting for an answer. A question reaches the chat as an
-     * event and nowhere else, so one asked while this client was not listening — before the app
-     * opened the session, or across a dropped event stream — would otherwise leave the turn
-     * blocked with nothing on screen to unblock it.
+     * event and nowhere else, so one asked while this client was not listening — in another chat,
+     * before the app opened the session, or across a dropped event stream — would otherwise leave
+     * the turn blocked with nothing on screen to unblock it.
+     *
+     * The question routes are scoped to the instance that owns the session, so the directory is
+     * resolved from the session itself: the workspace the composer happens to have selected often
+     * belongs to another project entirely, and querying with it finds nothing.
      */
     private fun refreshPendingQuestions(sessionId: String) {
         val currentBackend = backend ?: return
         viewModelScope.launch {
-            val pending =
-                runCatching { currentBackend.pendingQuestions(_uiState.value.selectedWorkspacePath) }
-                    .getOrElse { return@launch }
-                    .filter { it.sessionId == sessionId }
+            val directory =
+                runCatching { currentBackend.session(sessionId).directory }
+                    .getOrNull()
+                    ?: _uiState.value.selectedWorkspacePath
+            if (directory != null && _uiState.value.sessionId == sessionId) {
+                _uiState.update { it.copy(sessionDirectory = directory) }
+            }
+            var fetched: List<QuestionRequest>? = null
+            for (attempt in 0 until PENDING_QUESTION_REFRESH_ATTEMPTS) {
+                if (_uiState.value.sessionId != sessionId) return@launch
+                fetched = runCatching { currentBackend.pendingQuestions(directory) }.getOrNull()
+                if (fetched != null) break
+                if (attempt < PENDING_QUESTION_REFRESH_ATTEMPTS - 1) delay(PENDING_QUESTION_REFRESH_RETRY_DELAY_MS)
+            }
+            val pending = (fetched ?: return@launch).filter { it.sessionId == sessionId }
             if (pending.isEmpty()) return@launch
             _uiState.update { state ->
                 if (state.sessionId != sessionId) return@update state
                 val known = state.pendingQuestions.map { it.request.id }.toSet()
                 state.copy(
                     pendingQuestions =
-                        state.pendingQuestions + pending.filterNot { it.id in known }.map(PendingQuestionUi::from),
+                        state.pendingQuestions +
+                            pending
+                                .filterNot { it.id in known || it.id in dismissedQuestionIds }
+                                .map(PendingQuestionUi::from),
                 )
             }
         }
@@ -1315,6 +1356,7 @@ class ChatViewModel(
      * chat shows.
      */
     fun dismissQuestion(questionId: String) {
+        dismissedQuestionIds += questionId
         _uiState.update { state ->
             state.copy(
                 pendingQuestions = state.pendingQuestions.filterNot { it.request.id == questionId },
@@ -1341,6 +1383,8 @@ class ChatViewModel(
                     requestId = questionId,
                     directory = pendingQuestion.workspaceDirectory(),
                 )
+            }.onSuccess { rejected ->
+                if (rejected) onQuestionResolved(questionId)
             }.onFailure { error ->
                 _uiState.update { it.copy(error = error.safeMessage()) }
             }
@@ -1447,6 +1491,7 @@ class ChatViewModel(
             }
             is OpenCodeEvent.QuestionAsked -> {
                 if (event.request.sessionId != activeSession) return
+                if (event.request.id in dismissedQuestionIds) return
                 _uiState.update { state ->
                     state.copy(
                         pendingQuestions =

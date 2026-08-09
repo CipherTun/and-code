@@ -40,6 +40,45 @@ class ClaudePermissionBridgeTest {
     }
 
     @Test
+    fun `pendingRequests recovers a request the event stream already carried`() {
+        val bridge = ClaudePermissionBridge(folder.root)
+        val requestId = UUID.randomUUID().toString()
+        bridge.writeGuestRequest(
+            ClaudePermissionBridge.Request(
+                requestId = requestId,
+                androidSessionId = "session-1",
+                kind = ClaudePermissionBridge.Kind.QUESTION,
+                toolName = "AskUserQuestion",
+                toolInputJson = """{"questions":[{"question":"Pick?","options":[{"label":"A"}]}]}""",
+                permissionLabel = "AskUserQuestion",
+            ),
+        )
+
+        // The watcher already emitted it; a chat opened later must still find it on disk.
+        bridge.pollPending()
+        assertEquals(listOf(requestId), bridge.pendingRequests().map { it.requestId })
+    }
+
+    @Test
+    fun `pendingRequests does not consume the watcher's one-shot emission`() {
+        val bridge = ClaudePermissionBridge(folder.root)
+        val requestId = UUID.randomUUID().toString()
+        bridge.writeGuestRequest(
+            ClaudePermissionBridge.Request(
+                requestId = requestId,
+                androidSessionId = "session-1",
+                kind = ClaudePermissionBridge.Kind.PERMISSION,
+                toolName = "Bash",
+                toolInputJson = "{}",
+                permissionLabel = "Bash",
+            ),
+        )
+
+        assertEquals(listOf(requestId), bridge.pendingRequests().map { it.requestId })
+        assertEquals(listOf(requestId), bridge.pollPending().map { it.requestId })
+    }
+
+    @Test
     fun `respond writes a response the hook can read`() {
         val bridge = ClaudePermissionBridge(folder.root)
         val requestId = UUID.randomUUID().toString()

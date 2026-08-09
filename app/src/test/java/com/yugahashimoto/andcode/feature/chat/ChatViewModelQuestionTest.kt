@@ -322,6 +322,141 @@ class ChatViewModelQuestionTest {
             assertEquals(listOf("q-1"), viewModel.uiState.value.pendingQuestions.map { it.request.id })
         }
 
+    @Test
+    fun `recovery asks for the directory of the session being opened`() =
+        runTest(dispatcher) {
+            val backend =
+                FakeBackend(
+                    pending = listOf(request(id = "q-1", sessionId = "session-1")),
+                    sessionDirectory = "/workspace/repo",
+                )
+            val viewModel = ChatViewModel(backend)
+
+            // The composer's workspace belongs to another project; it must not scope the query.
+            viewModel.selectWorkspace("/workspace/other")
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf("q-1"), viewModel.uiState.value.pendingQuestions.map { it.request.id })
+            assertEquals(listOf("/workspace/repo"), backend.pendingQuestionDirectories)
+        }
+
+    @Test
+    fun `a recovered question is answered against the session's own workspace`() =
+        runTest(dispatcher) {
+            val backend =
+                FakeBackend(
+                    pending = listOf(request(id = "q-1", sessionId = "session-1")),
+                    sessionDirectory = "/workspace/repo",
+                )
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.selectWorkspace("/workspace/other")
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals("/workspace/repo", backend.answeredQuestions.single().directory)
+        }
+
+    @Test
+    fun `a dismissed question stays hidden when the stream reconnects`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend(pending = listOf(request(id = "q-1", sessionId = "session-1")))
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            assertEquals(listOf("q-1"), viewModel.uiState.value.pendingQuestions.map { it.request.id })
+
+            viewModel.dismissQuestion("q-1")
+            backend.events.emit(OpenCodeEvent.ServerConnected)
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value.pendingQuestions.isEmpty())
+        }
+
+    @Test
+    fun `reopening the session offers a dismissed question again`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend(pending = listOf(request(id = "q-1", sessionId = "session-1")))
+            val viewModel = ChatViewModel(backend)
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            viewModel.dismissQuestion("q-1")
+            viewModel.openSession("session-2")
+            advanceUntilIdle()
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf("q-1"), viewModel.uiState.value.pendingQuestions.map { it.request.id })
+        }
+
+    @Test
+    fun `answering a question reports it as resolved`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val resolved = mutableListOf<String>()
+            val viewModel = ChatViewModel(backend, onQuestionResolved = { resolved += it })
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1", options = listOf("src"))),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf("q-1"), resolved)
+        }
+
+    @Test
+    fun `cancelling a question reports it as resolved`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend()
+            val resolved = mutableListOf<String>()
+            val viewModel = ChatViewModel(backend, onQuestionResolved = { resolved += it })
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1")))
+            advanceUntilIdle()
+
+            viewModel.cancelQuestion("q-1")
+            advanceUntilIdle()
+
+            assertEquals(listOf("q-1"), resolved)
+        }
+
+    @Test
+    fun `a failed answer does not report the question as resolved`() =
+        runTest(dispatcher) {
+            val backend = FakeBackend(answerResult = false)
+            val resolved = mutableListOf<String>()
+            val viewModel = ChatViewModel(backend, onQuestionResolved = { resolved += it })
+
+            viewModel.openSession("session-1")
+            advanceUntilIdle()
+            backend.events.emit(
+                OpenCodeEvent.QuestionAsked(request(id = "q-1", sessionId = "session-1", options = listOf("src"))),
+            )
+            advanceUntilIdle()
+
+            viewModel.selectQuestionAnswer("q-1", 0, "src")
+            viewModel.submitQuestion("q-1")
+            advanceUntilIdle()
+
+            assertTrue(resolved.isEmpty())
+        }
+
     private fun request(
         id: String,
         sessionId: String,
@@ -351,6 +486,7 @@ class ChatViewModelQuestionTest {
     private class FakeBackend(
         private val answerResult: Boolean = true,
         private val pending: List<QuestionRequest> = emptyList(),
+        private val sessionDirectory: String? = null,
     ) : OpenCodeBackend {
         override val id: String = "fake"
         override val displayName: String = "Fake"
@@ -359,10 +495,19 @@ class ChatViewModelQuestionTest {
         val answeredQuestions = mutableListOf<AnswerRecord>()
         val rejectedQuestions = mutableListOf<Pair<String, String?>>()
         val abortedSessions = mutableListOf<String>()
+        val pendingQuestionDirectories = mutableListOf<String?>()
 
         override suspend fun health(): OpenCodeHealth = OpenCodeHealth(true, "test")
 
         override suspend fun listSessions(directory: String?): List<OpenCodeSession> = emptyList()
+
+        override suspend fun session(sessionId: String): OpenCodeSession =
+            OpenCodeSession(
+                id = sessionId,
+                directory = sessionDirectory,
+                title = "",
+                time = OpenCodeTime(created = 1),
+            )
 
         override suspend fun createSession(
             title: String?,
@@ -415,7 +560,10 @@ class ChatViewModelQuestionTest {
             return true
         }
 
-        override suspend fun pendingQuestions(directory: String?): List<QuestionRequest> = pending
+        override suspend fun pendingQuestions(directory: String?): List<QuestionRequest> {
+            pendingQuestionDirectories += directory
+            return pending
+        }
 
         override fun events(): Flow<OpenCodeEvent> = events
     }

@@ -116,29 +116,45 @@ class ClaudePermissionBridge(
     }
 
     fun pollPending(): List<Request> {
-        val files = pendingDir.listFiles().orEmpty().filter { it.extension == "json" }.sortedBy { it.name }
         val out = mutableListOf<Request>()
-        for (file in files) {
-            val stored = runCatching { json.decodeFromString<StoredRequest>(file.readText()) }.getOrNull() ?: continue
+        for (stored in readPendingFiles()) {
             if (!emitted.add(stored.requestId)) continue
-            out +=
-                Request(
-                    requestId = stored.requestId,
-                    androidSessionId = stored.androidSessionId,
-                    kind =
-                        when (stored.kind.lowercase()) {
-                            "question" -> Kind.QUESTION
-                            "elicitation" -> Kind.ELICITATION
-                            else -> Kind.PERMISSION
-                        },
-                    toolName = stored.toolName,
-                    toolInputJson = stored.toolInput.toString(),
-                    permissionLabel = stored.permissionLabel.ifBlank { stored.toolName },
-                    claudeSessionId = stored.claudeSessionId,
-                )
+            out += toRequest(stored)
         }
         return out
     }
+
+    /**
+     * Everything still waiting on disk, regardless of whether it was already reported as an event.
+     *
+     * Recovery needs this: a request whose event was missed — the app showed another chat, or was
+     * restarted — is only findable through its pending file. Unlike [pollPending] it does not mark
+     * requests as emitted, so the watcher still emits them as events afterwards.
+     */
+    fun pendingRequests(): List<Request> = readPendingFiles().map(::toRequest)
+
+    private fun readPendingFiles(): List<StoredRequest> =
+        pendingDir
+            .listFiles().orEmpty()
+            .filter { it.extension == "json" }
+            .sortedBy { it.name }
+            .mapNotNull { file -> runCatching { json.decodeFromString<StoredRequest>(file.readText()) }.getOrNull() }
+
+    private fun toRequest(stored: StoredRequest): Request =
+        Request(
+            requestId = stored.requestId,
+            androidSessionId = stored.androidSessionId,
+            kind =
+                when (stored.kind.lowercase()) {
+                    "question" -> Kind.QUESTION
+                    "elicitation" -> Kind.ELICITATION
+                    else -> Kind.PERMISSION
+                },
+            toolName = stored.toolName,
+            toolInputJson = stored.toolInput.toString(),
+            permissionLabel = stored.permissionLabel.ifBlank { stored.toolName },
+            claudeSessionId = stored.claudeSessionId,
+        )
 
     fun respond(
         requestId: String,

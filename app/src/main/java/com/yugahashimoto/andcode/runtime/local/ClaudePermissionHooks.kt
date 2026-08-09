@@ -19,6 +19,14 @@ import java.io.File
 object ClaudePermissionHooks {
     const val HOOK_GUEST_PATH = "/usr/local/bin/and-code-claude-permission-hook.sh"
     const val HOOK_MARKER = "and-code-claude-permission"
+
+    /**
+     * How long Claude Code lets the hook block a tool call, in seconds. A question may wait almost
+     * an hour for a user who is away from the device; the old six minutes expired long before
+     * that, denying the turn while the card was still on its way. The hook script's own timeout
+     * stays just under this so it gets to deny gracefully first.
+     */
+    const val HOOK_TIMEOUT_SEC = 3600
     private const val SETTINGS_RELATIVE = "root/.claude/settings.json"
     private const val HOOK_RELATIVE = "usr/local/bin/and-code-claude-permission-hook.sh"
 
@@ -40,7 +48,7 @@ object ClaudePermissionHooks {
                   {
                     "type": "command",
                     "command": "$HOOK_GUEST_PATH",
-                    "timeout": 360,
+                    "timeout": $HOOK_TIMEOUT_SEC,
                     "statusMessage": "Waiting for AndCode approval"
                   }
                 ]
@@ -75,7 +83,7 @@ object ClaudePermissionHooks {
                             buildJsonObject {
                                 put("type", "command")
                                 put("command", HOOK_GUEST_PATH)
-                                put("timeout", 360)
+                                put("timeout", HOOK_TIMEOUT_SEC)
                                 put("statusMessage", "Waiting for AndCode approval")
                             },
                         )
