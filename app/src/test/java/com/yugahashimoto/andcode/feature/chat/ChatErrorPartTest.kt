@@ -10,44 +10,7 @@ import org.junit.Test
 
 class ChatErrorPartTest {
     @Test
-    fun `maps a retry part carrying a provider error to an error part`() {
-        val part =
-            OpenCodePart(
-                id = "p1",
-                type = "retry",
-                error =
-                    OpenCodeMessageError(
-                        name = "APIError",
-                        data = mapOf("message" to JsonPrimitive("Rate limit exceeded (HTTP 429)")),
-                    ),
-            )
-
-        val chat = part.toChatPart() as ChatPart.Error
-        assertEquals("p1", chat.id)
-        assertEquals("Rate limit exceeded (HTTP 429)", chat.message)
-    }
-
-    @Test
-    fun `drops a retry part without an error message`() {
-        val part = OpenCodePart(id = "p2", type = "retry", error = OpenCodeMessageError(name = "APIError"))
-
-        assertNull(part.toChatPart())
-    }
-
-    @Test
-    fun `drops an error part whose message is only whitespace`() {
-        val part =
-            OpenCodePart(
-                id = "p3",
-                type = "retry",
-                error = OpenCodeMessageError(name = "UnknownError", data = mapOf("message" to JsonPrimitive("   "))),
-            )
-
-        assertNull(part.toChatPart())
-    }
-
-    @Test
-    fun `surfaces a message level error when the turn has no retry part`() {
+    fun `appends the message level error for a failed turn`() {
         val error =
             OpenCodeMessageError(
                 name = "APIError",
@@ -101,5 +64,35 @@ class ChatErrorPartTest {
 
         assertTrue(timeline.filterIsInstance<TimelineEntry.Error>().isNotEmpty())
         assertTrue(timeline.filterIsInstance<TimelineEntry.Body>().isNotEmpty())
+    }
+
+    @Test
+    fun `does not flag a user initiated abort as an error`() {
+        val error =
+            OpenCodeMessageError(
+                name = "MessageAbortedError",
+                data = mapOf("message" to JsonPrimitive("The operation was aborted.")),
+            )
+
+        assertTrue(emptyList<ChatPart>().withMessageError("m4", error).isEmpty())
+    }
+
+    @Test
+    fun `does not flag a turn that succeeded after retries as an error`() {
+        val error =
+            OpenCodeMessageError(
+                name = "ApiError",
+                data = mapOf("message" to JsonPrimitive("Rate limited, retrying…")),
+            )
+        val retryPart = OpenCodePart(id = "r1", type = "retry", error = error)
+
+        assertNull(retryPart.toChatPart())
+    }
+
+    @Test
+    fun `ignores a message level error without a message`() {
+        val error = OpenCodeMessageError(name = "UnknownError", data = null)
+
+        assertTrue(emptyList<ChatPart>().withMessageError("m5", error).isEmpty())
     }
 }

@@ -215,16 +215,6 @@ internal fun OpenCodePart.toChatPart(): ChatPart? {
             )
         }
         "patch" -> ChatPart.Patch(partId, extractPatchFiles(stateMap))
-        "retry" -> {
-            // A failed assistant message is persisted with a `retry` part holding the provider
-            // error that exhausted the retries, so the turn is not silently swallowed.
-            val message = error?.message
-            if (message.isNullOrBlank()) {
-                null
-            } else {
-                ChatPart.Error(partId, message)
-            }
-        }
         else -> null
     }
 }
@@ -233,15 +223,21 @@ internal fun OpenCodePart.toChatPart(): ChatPart? {
  * Appends the message-level error reported by the runtime when the turn itself carries no error
  * part. A failed provider request is persisted with the error on the message (`info.error`) and
  * often nothing else, so without this the transcript would silently drop the failed turn.
+ *
+ * User-initiated aborts are excluded: OpenCode records them as `MessageAbortedError`, and stopping
+ * a turn is not a failure the chat should flag red.
  */
 internal fun List<ChatPart>.withMessageError(
     messageId: String,
     error: OpenCodeMessageError?,
 ): List<ChatPart> {
-    val message = error?.message ?: return this
+    if (error == null || error.isAbort()) return this
+    val message = error.message ?: return this
     if (any { it is ChatPart.Error }) return this
     return this + ChatPart.Error("$messageId-error", message)
 }
+
+private fun OpenCodeMessageError.isAbort(): Boolean = name == "MessageAbortedError" || name == "AbortError"
 
 private fun JsonElement.jsonPrimitiveOrNull(): String? = (this as? JsonPrimitive)?.contentOrNull ?: (this as? JsonPrimitive)?.content
 

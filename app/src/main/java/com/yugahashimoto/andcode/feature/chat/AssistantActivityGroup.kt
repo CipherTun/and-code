@@ -142,8 +142,9 @@ fun groupConversationTimeline(messages: List<ChatMessage>): List<TimelineEntry> 
                 }
                 part is ChatPart.Error -> {
                     flush()
-                    flushTurnFooter()
+                    // Footer must trail the error card the way it trails a body text entry.
                     entries += TimelineEntry.Error(part)
+                    flushTurnFooter()
                 }
                 part !is ChatPart.Text -> pending += part
                 part.text.isNotBlank() -> {
