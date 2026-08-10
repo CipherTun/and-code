@@ -101,8 +101,6 @@ data class OpenCodePart(
     val tool: String? = null,
     val callID: String? = null,
     val state: Map<String, JsonElement>? = null,
-    /** Present on `retry` parts, which carry the provider error that triggered the retry. */
-    val error: OpenCodeMessageError? = null,
 )
 
 @Serializable

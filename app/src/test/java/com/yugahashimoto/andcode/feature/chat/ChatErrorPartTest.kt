@@ -79,12 +79,9 @@ class ChatErrorPartTest {
 
     @Test
     fun `does not flag a turn that succeeded after retries as an error`() {
-        val error =
-            OpenCodeMessageError(
-                name = "ApiError",
-                data = mapOf("message" to JsonPrimitive("Rate limited, retrying…")),
-            )
-        val retryPart = OpenCodePart(id = "r1", type = "retry", error = error)
+        // Retry parts are persisted even when the retry succeeds; they must never render as an
+        // error on their own, only the message-level info.error does.
+        val retryPart = OpenCodePart(id = "r1", type = "retry")
 
         assertNull(retryPart.toChatPart())
     }
