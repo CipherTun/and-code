@@ -7,6 +7,7 @@ import com.yugahashimoto.andcode.core.api.OpenCodePart
 import com.yugahashimoto.andcode.core.api.OpenCodeTime
 import com.yugahashimoto.andcode.core.api.OpenCodeTodo
 import com.yugahashimoto.andcode.core.api.PromptAttachment
+import com.yugahashimoto.andcode.core.api.QuestionRequest
 import com.yugahashimoto.andcode.runtime.PermissionResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -214,6 +215,22 @@ class ClaudeCodeRuntime(
             }.getOrDefault("[]")
         return permissionBridge.answerQuestion(requestId, questionsJson, mapped)
     }
+
+    /**
+     * Questions still waiting for an answer, so a chat opened after the event was missed can
+     * recover them.
+     *
+     * Only requests whose session process is alive qualify: the hook that parks a request dies
+     * with the CLI process, so a file left behind by a dead session (an app restart, an aborted
+     * run) can never be answered and must not be shown.
+     */
+    @Synchronized
+    fun pendingQuestions(): List<QuestionRequest> =
+        permissionBridge
+            .pendingRequests()
+            .filter { it.kind == ClaudePermissionBridge.Kind.QUESTION }
+            .filter { sessions[it.androidSessionId]?.process?.isAlive == true }
+            .mapNotNull(permissionBridge::toQuestionRequest)
 
     private fun ensureBridgeWatcher() {
         if (bridgeWatchJob?.isActive == true) return

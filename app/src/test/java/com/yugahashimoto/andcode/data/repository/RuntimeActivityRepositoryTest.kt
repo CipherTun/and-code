@@ -328,11 +328,11 @@ class RuntimeActivityRepositoryTest {
                     localTarget = target,
                     remoteFactory = { error("unused") },
                 )
-            val asked = mutableListOf<QuestionRequest>()
+            val asked = mutableListOf<Pair<QuestionRequest, String>>()
             RuntimeActivityRepository(
                 registry = registry,
                 scope = TestScope(dispatcher),
-                onQuestionAsked = { request, _ -> asked += request },
+                onQuestionAsked = { request, _, runtimeId -> asked += request to runtimeId },
             )
             advanceUntilIdle()
 
@@ -347,7 +347,9 @@ class RuntimeActivityRepositoryTest {
             )
             advanceUntilIdle()
 
-            assertEquals(listOf("q-1"), asked.map { it.id })
+            assertEquals(listOf("q-1"), asked.map { it.first.id })
+            // The notification needs the runtime to open the right chat, so it travels with the ask.
+            assertEquals(listOf(target.id), asked.map { it.second })
         }
 
     @Test
@@ -366,7 +368,7 @@ class RuntimeActivityRepositoryTest {
             RuntimeActivityRepository(
                 registry = registry,
                 scope = TestScope(dispatcher),
-                onSessionIdle = { sessionId, _ -> completed += sessionId },
+                onSessionIdle = { sessionId, _, _ -> completed += sessionId },
             )
             advanceUntilIdle()
 
@@ -393,7 +395,7 @@ class RuntimeActivityRepositoryTest {
             RuntimeActivityRepository(
                 registry = registry,
                 scope = TestScope(dispatcher),
-                onSessionIdle = { sessionId, _ -> completed += sessionId },
+                onSessionIdle = { sessionId, _, _ -> completed += sessionId },
             )
             advanceUntilIdle()
 

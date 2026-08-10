@@ -9,6 +9,10 @@ PENDING="$BRIDGE/pending"
 RESPONSES="$BRIDGE/responses"
 ALWAYS="$BRIDGE/always-rules.json"
 TIMEOUT_SEC="${ANDCODE_PERMISSION_TIMEOUT_SEC:-300}"
+# A question can legitimately wait much longer than a permission: the user may be away from the
+# device and the turn is blocked until they answer. Keep it under the hook timeout Claude Code
+# itself applies (see ClaudePermissionHooks), so this script still gets to deny gracefully.
+QUESTION_TIMEOUT_SEC="${ANDCODE_QUESTION_TIMEOUT_SEC:-3540}"
 SLEEP_SEC=0.25
 
 mkdir -p "$PENDING" "$RESPONSES"
@@ -88,8 +92,15 @@ else
   printf '%s\n' "{\"v\":1,\"kind\":\"$KIND\",\"requestId\":\"$REQUEST_ID\",\"androidSessionId\":\"$ANDROID_SESSION\",\"claudeSessionId\":\"$SESSION_ID\",\"toolName\":\"$TOOL_NAME\",\"toolInput\":{},\"permissionLabel\":\"$LABEL\",\"createdAtMs\":0}" >"$REQUEST_FILE"
 fi
 
-elapsed=0
-while [ "$elapsed" -lt "$TIMEOUT_SEC" ]; do
+if [ "$KIND" = "question" ]; then
+  WAIT_SEC="$QUESTION_TIMEOUT_SEC"
+else
+  WAIT_SEC="$TIMEOUT_SEC"
+fi
+# Measure real seconds: the loop used to count iterations of a quarter-second sleep, which made
+# the effective timeout a quarter of the configured one and expired questions far too early.
+deadline=$(( $(date +%s) + WAIT_SEC ))
+while [ "$(date +%s)" -lt "$deadline" ]; do
   if [ -f "$RESPONSE_FILE" ]; then
     if command -v jq >/dev/null 2>&1; then
       DECISION=$(jq -r '.decision // "deny"' "$RESPONSE_FILE")
@@ -125,7 +136,6 @@ while [ "$elapsed" -lt "$TIMEOUT_SEC" ]; do
   fi
   # shellcheck disable=SC2039
   sleep "$SLEEP_SEC" 2>/dev/null || sleep 1
-  elapsed=$((elapsed + 1))
 done
 
 rm -f "$REQUEST_FILE" 2>/dev/null || true

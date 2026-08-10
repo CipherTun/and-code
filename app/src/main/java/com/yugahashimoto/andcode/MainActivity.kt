@@ -23,15 +23,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.yugahashimoto.andcode.core.ProjectLinks
 import com.yugahashimoto.andcode.core.locale.AppLanguage
+import com.yugahashimoto.andcode.core.notification.RuntimeNotificationHelper
 import com.yugahashimoto.andcode.feature.assistant.AndCodeVoiceInteractionService
 import com.yugahashimoto.andcode.feature.assistant.AssistantStatus
 import com.yugahashimoto.andcode.feature.support.GitHubStarPromptDialog
 import com.yugahashimoto.andcode.feature.support.openProjectLink
 import com.yugahashimoto.andcode.ui.AndCodeApp
+import com.yugahashimoto.andcode.ui.ChatDeepLink
 import java.util.UUID
 
 class MainActivity : ComponentActivity() {
-    private var targetSessionId by mutableStateOf<String?>(null)
+    private var chatDeepLink by mutableStateOf<ChatDeepLink?>(null)
+    private var deepLinkToken = 0L
     private var showInitialStarPrompt by mutableStateOf(false)
     private var assistantActive by mutableStateOf(false)
 
@@ -73,7 +76,8 @@ class MainActivity : ComponentActivity() {
                 AndCodeApp(
                     onOpenAssistantSettings = ::openAssistantSettings,
                     assistantActive = assistantActive,
-                    targetSessionId = targetSessionId,
+                    chatDeepLink = chatDeepLink,
+                    onChatDeepLinkConsumed = { chatDeepLink = null },
                 )
                 SnackbarHost(
                     hostState = snackbarHostState,
@@ -127,9 +131,20 @@ class MainActivity : ComponentActivity() {
 
     private fun handleDeepLink(intent: Intent?) {
         intent ?: return
-        intent.getStringExtra("target_session_id")?.let { id ->
-            targetSessionId = id
-        }
+        val sessionId =
+            intent.getStringExtra(RuntimeNotificationHelper.EXTRA_TARGET_SESSION_ID)
+                ?.takeIf(String::isNotBlank) ?: return
+        deepLinkToken += 1
+        chatDeepLink =
+            ChatDeepLink(
+                sessionId = sessionId,
+                runtimeId = intent.getStringExtra(RuntimeNotificationHelper.EXTRA_RUNTIME_ID),
+                token = deepLinkToken,
+            )
+        // Consume the extras at once: the activity keeps this intent across configuration changes,
+        // and re-delivering it would yank the user back to a chat they have already left.
+        intent.removeExtra(RuntimeNotificationHelper.EXTRA_TARGET_SESSION_ID)
+        intent.removeExtra(RuntimeNotificationHelper.EXTRA_RUNTIME_ID)
     }
 
     private fun openAssistantSettings() {

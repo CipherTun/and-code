@@ -347,21 +347,23 @@ class AndCodeApplication : Application() {
                     notifications.notifyPermission(request, title, runtimeId)
                 },
                 onPermissionResolved = notifications::cancelPermission,
-                onSessionIdle = { sessionId, title ->
+                onSessionIdle = { sessionId, title, runtimeId ->
                     AnalyticsReporter.recordRuntimeSessionCompleted()
-                    notifications.notifySessionComplete(sessionId, title)
+                    notifications.notifySessionComplete(sessionId, title, runtimeId)
                     githubStarCoordinator.onSessionCompleted()
                 },
-                onSessionError = { sessionId, message ->
+                onSessionError = { sessionId, message, runtimeId ->
                     AnalyticsReporter.recordRuntimeSessionError()
                     CrashReporter.recordException(
                         error = IllegalStateException(SecretRedaction.redact(message ?: "Runtime session failed")),
                         message = "Runtime session error",
                         customKeys = mapOf("session_id" to (sessionId ?: "unknown")),
                     )
-                    notifications.notifySessionError(sessionId, message)
+                    notifications.notifySessionError(sessionId, message, runtimeId)
                 },
-                onQuestionAsked = notifications::notifyQuestion,
+                onQuestionAsked = { request, title, runtimeId ->
+                    notifications.notifyQuestion(request, title, runtimeId)
+                },
                 unreadStore = settings,
                 messages = AndroidRuntimeActivityMessages(this),
             )

@@ -193,9 +193,15 @@ val appModule =
                 onPermissionAsked = { request, title, runtimeId ->
                     notifications.notifyPermission(request, title, runtimeId)
                 },
-                onSessionIdle = notifications::notifySessionComplete,
-                onSessionError = notifications::notifySessionError,
-                onQuestionAsked = notifications::notifyQuestion,
+                onSessionIdle = { sessionId, title, runtimeId ->
+                    notifications.notifySessionComplete(sessionId, title, runtimeId)
+                },
+                onSessionError = { sessionId, message, runtimeId ->
+                    notifications.notifySessionError(sessionId, message, runtimeId)
+                },
+                onQuestionAsked = { request, title, runtimeId ->
+                    notifications.notifyQuestion(request, title, runtimeId)
+                },
                 messages = get<AndroidRuntimeActivityMessages>(),
             )
         }
