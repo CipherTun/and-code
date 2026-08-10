@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -66,6 +67,29 @@ internal fun localRuntimeInstallAgents(ids: Array<String>?): Set<LocalAgent> =
         ?.takeIf(Set<LocalAgent>::isNotEmpty)
         ?: setOf(LocalAgent.OPEN_CODE)
 
+/**
+ * Whether the runtime is live enough to be worth keeping the CPU out of suspend for.
+ *
+ * A foreground service only stops the app from being killed; it does nothing to stop the device
+ * from suspending once the screen goes off, and the agent runs as a proot child of this process, so
+ * suspending freezes it mid-run - the symptom being work that "stopped by itself" in the background.
+ * The states that carry no running process - stopped, broken, never installed, unsupported - hold
+ * nothing, since keeping a dead runtime's device awake only costs battery.
+ */
+internal fun localRuntimeNeedsWakeLock(status: LocalRuntimeStatus): Boolean =
+    when (status) {
+        is LocalRuntimeStatus.Installing,
+        is LocalRuntimeStatus.Starting,
+        is LocalRuntimeStatus.Updating,
+        is LocalRuntimeStatus.Ready,
+        -> true
+        LocalRuntimeStatus.NotInstalled,
+        is LocalRuntimeStatus.Stopped,
+        is LocalRuntimeStatus.Broken,
+        is LocalRuntimeStatus.UnsupportedAbi,
+        -> false
+    }
+
 internal class RestartBackoff(
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val baseDelayMs: Long = 1_000L,
@@ -114,6 +138,8 @@ class LocalRuntimeService : Service() {
     private lateinit var manager: LocalRuntimeManager
     private val backoff = RestartBackoff()
     private var inForeground = false
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var shuttingDown = false
 
     override fun onCreate() {
         super.onCreate()
@@ -126,10 +152,12 @@ class LocalRuntimeService : Service() {
                 .onFailure { error -> Log.w(TAG, "Could not enter the foreground", error) }
                 .isSuccess
         if (!inForeground) return
+        syncWakeLock(manager.status())
         scope.launch {
             manager.state.collectLatest { status ->
                 getSystemService(NotificationManager::class.java)
                     .notify(NOTIFICATION_ID, notification(status))
+                syncWakeLock(status)
                 if (status is LocalRuntimeStatus.Ready) {
                     backoff.reset()
                 }
@@ -222,6 +250,7 @@ class LocalRuntimeService : Service() {
         exitMonitorJob?.cancel()
         watchdogJob?.cancel()
         scope.cancel()
+        shutDownWakeLock()
         super.onDestroy()
     }
 
@@ -239,13 +268,62 @@ class LocalRuntimeService : Service() {
                 val watchdog = LocalRuntimeWatchdog()
                 while (isActive) {
                     delay(WATCHDOG_INTERVAL_MILLIS)
-                    if (!autoRestartEnabled) continue
                     val status = manager.status()
+                    // Re-arms the wake lock's timeout well inside it, so a run lasting hours keeps
+                    // the CPU up while a service that died without onDestroy still lets it lapse.
+                    // Ahead of the auto-restart check so that a runtime left running by a path that
+                    // never enables it - an unknown action, a stop that threw - still stays awake.
+                    syncWakeLock(status)
+                    if (!autoRestartEnabled) continue
                     if (watchdog.observe(status)) {
                         manager.ensureRunning()
                     }
                 }
             }
+    }
+
+    /**
+     * Holds or drops the CPU wake lock to match [status]; see [localRuntimeNeedsWakeLock].
+     *
+     * Synchronized because both the status collector on the main thread and the watchdog on an IO
+     * one call it. The lock is not reference counted, so an acquire on a status that already holds
+     * it only pushes the timeout back rather than stacking a release debt.
+     */
+    @Synchronized
+    private fun syncWakeLock(status: LocalRuntimeStatus) {
+        if (shuttingDown || !localRuntimeNeedsWakeLock(status)) {
+            releaseWakeLock()
+            return
+        }
+        val lock =
+            wakeLock ?: getSystemService(PowerManager::class.java)
+                ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG)
+                ?.apply { setReferenceCounted(false) }
+                ?.also { wakeLock = it }
+        runCatching { lock?.acquire(WAKELOCK_TIMEOUT_MILLIS) }
+            .onFailure { error -> Log.w(TAG, "Could not hold the CPU awake", error) }
+    }
+
+    @Synchronized
+    private fun releaseWakeLock() {
+        val lock = wakeLock ?: return
+        if (!lock.isHeld) return
+        runCatching { lock.release() }
+            .onFailure { error -> Log.w(TAG, "Could not let the CPU sleep", error) }
+    }
+
+    /**
+     * Drops the lock for good.
+     *
+     * [android.app.Service.onDestroy] cancelling the scope does not interrupt a watchdog tick that
+     * is already inside [syncWakeLock], so a plain release can be followed by that tick's acquire
+     * and leave the lock held past the service. The flag closes that window from inside the same
+     * monitor: whichever of the two runs first, the tick ends up a no-op.
+     */
+    @Synchronized
+    private fun shutDownWakeLock() {
+        shuttingDown = true
+        releaseWakeLock()
     }
 
     private fun notification(status: LocalRuntimeStatus): android.app.Notification {
@@ -348,6 +426,8 @@ class LocalRuntimeService : Service() {
         private const val CHANNEL_ID = "local_opencode_runtime"
         private const val NOTIFICATION_ID = 4107
         private const val WATCHDOG_INTERVAL_MILLIS = 5_000L
+        private const val WAKELOCK_TAG = "opencode:runtime"
+        private const val WAKELOCK_TIMEOUT_MILLIS = 10 * 60 * 1000L
         const val ACTION_INSTALL_AND_START = "com.yugahashimoto.andcode.local.INSTALL_AND_START"
         const val ACTION_START = "com.yugahashimoto.andcode.local.START"
         const val ACTION_STOP = "com.yugahashimoto.andcode.local.STOP"
