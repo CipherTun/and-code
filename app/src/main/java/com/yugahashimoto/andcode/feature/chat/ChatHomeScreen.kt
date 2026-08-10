@@ -400,6 +400,7 @@ fun ChatHomeScreen(
                                         is TimelineEntry.Image -> null
                                         is TimelineEntry.Activity -> null
                                         is TimelineEntry.Todo -> null
+                                        is TimelineEntry.Error -> null
                                         is TimelineEntry.Footer -> null
                                     }
                                 Box(

@@ -3,6 +3,7 @@ package com.yugahashimoto.andcode.feature.chat
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -170,6 +173,7 @@ fun TimelineEntryRow(
         is TimelineEntry.UserMessage -> MessageBubble(entry.message, onImageClick)
         is TimelineEntry.Body -> MarkdownText(entry.part.text, onImageClick = onImageClick)
         is TimelineEntry.Image -> ImagePartView(entry.part, onImageClick)
+        is TimelineEntry.Error -> ErrorPartCard(entry.part)
         is TimelineEntry.Activity ->
             AssistantActivityRow(
                 parts = entry.parts,
@@ -177,6 +181,37 @@ fun TimelineEntryRow(
             )
         is TimelineEntry.Todo -> TodoTimelineCard(entry.todos)
         is TimelineEntry.Footer -> MessageFooter(entry)
+    }
+}
+
+/** An assistant turn that failed (provider error, retries exhausted, ...) surfaced in the chat. */
+@Composable
+private fun ErrorPartCard(part: ChatPart.Error) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f)),
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    Icons.Default.ErrorOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    text = stringResource(R.string.error_session_failed),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(text = part.message, color = MaterialTheme.colorScheme.onSurface)
+        }
     }
 }
 

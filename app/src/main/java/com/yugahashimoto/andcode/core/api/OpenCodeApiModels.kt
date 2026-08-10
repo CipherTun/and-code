@@ -3,6 +3,7 @@ package com.yugahashimoto.andcode.core.api
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 data class OpenCodeHealth(
@@ -69,7 +70,23 @@ data class OpenCodeMessageInfo(
     val agent: String? = null,
     val model: OpenCodeModelReference? = null,
     val tokens: OpenCodeSessionTokens? = null,
+    /** Provider/session failure recorded on the message, e.g. `ApiError` with `statusCode` 429. */
+    val error: OpenCodeMessageError? = null,
 )
+
+/** A typed message error, e.g. `ApiError`; rendered in the chat when a turn fails. */
+@Serializable
+data class OpenCodeMessageError(
+    val name: String? = null,
+    val data: Map<String, JsonElement>? = null,
+) {
+    val message: String?
+        get() =
+            data?.get("message")
+                ?.takeIf { it is JsonPrimitive }
+                ?.let { (it as JsonPrimitive).content }
+                ?.takeIf { it.isNotBlank() }
+}
 
 @Serializable
 data class OpenCodePart(
@@ -84,6 +101,8 @@ data class OpenCodePart(
     val tool: String? = null,
     val callID: String? = null,
     val state: Map<String, JsonElement>? = null,
+    /** Present on `retry` parts, which carry the provider error that triggered the retry. */
+    val error: OpenCodeMessageError? = null,
 )
 
 @Serializable
