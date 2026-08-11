@@ -7,10 +7,12 @@ import com.yugahashimoto.andcode.core.api.OpenCodeMessage
 import com.yugahashimoto.andcode.core.api.OpenCodeMessageInfo
 import com.yugahashimoto.andcode.core.api.OpenCodePart
 import com.yugahashimoto.andcode.core.api.OpenCodeSession
+import com.yugahashimoto.andcode.core.api.OpenCodeTime
 import com.yugahashimoto.andcode.core.api.PromptRequest
 import com.yugahashimoto.andcode.core.api.ProviderCatalog
 import com.yugahashimoto.andcode.core.api.QuestionPrompt
 import com.yugahashimoto.andcode.core.api.QuestionRequest
+import com.yugahashimoto.andcode.core.diagnostics.StallReason
 import com.yugahashimoto.andcode.data.connection.ConnectionProfile
 import com.yugahashimoto.andcode.runtime.BackendKind
 import com.yugahashimoto.andcode.runtime.PermissionResponse
@@ -21,6 +23,7 @@ import com.yugahashimoto.andcode.runtime.RuntimeTarget
 import com.yugahashimoto.andcode.runtime.RuntimeType
 import com.yugahashimoto.andcode.runtime.WorkspaceRef
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -730,6 +734,291 @@ class RuntimeActivityRepositoryTest {
             assertTrue(completed.isEmpty())
         }
 
+    @Test
+    fun `a running session that goes quiet is reported once, with a reason`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            // The watchdog polls for as long as a session runs, so the scope it lives in is
+            // cancelled by hand at the end rather than drained by runTest's own cleanup.
+            val scope = TestScope(dispatcher)
+            val target = FakeTarget(requireConnected = false)
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<Pair<String, StallReason>>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    onSessionStalled = { sessionId, _, diagnosis, _ -> stalled += sessionId to diagnosis.reason },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                // Only advance in bounded steps: the watchdog polls for as long as a session runs.
+                advanceTimeBy(200L)
+                runCurrent()
+
+                repository.markSessionRunning("ses_quiet")
+                advanceTimeBy(2_000L)
+                runCurrent()
+
+                assertEquals(listOf("ses_quiet" to StallReason.NO_OUTPUT), stalled)
+
+                // One dead run is announced once, not on every tick.
+                advanceTimeBy(2_000L)
+                runCurrent()
+
+                assertEquals(1, stalled.size)
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `a quiet session whose turn had in fact finished is completed rather than flagged`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target =
+                FakeTarget(requireConnected = false).apply {
+                    sessions = listOf(OpenCodeSession(id = "ses_done", title = "Ship it"))
+                    messages =
+                        listOf(
+                            OpenCodeMessage(
+                                info =
+                                    OpenCodeMessageInfo(
+                                        id = "m1",
+                                        sessionId = "ses_done",
+                                        role = "assistant",
+                                        time = OpenCodeTime(created = 1L, completed = 2L),
+                                    ),
+                            ),
+                        )
+                }
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<String>()
+            val completed = mutableListOf<String>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    onSessionIdle = { sessionId, _, _ -> completed += sessionId },
+                    onSessionStalled = { sessionId, _, _, _ -> stalled += sessionId },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                advanceTimeBy(200L)
+                runCurrent()
+
+                repository.markSessionRunning("ses_done")
+                advanceTimeBy(2_000L)
+                runCurrent()
+
+                assertTrue(stalled.isEmpty())
+                assertEquals(listOf("ses_done"), completed)
+                assertTrue("ses_done" !in repository.state.value.activeSessionIds)
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `events keep a working session off the watchdog`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target = FakeTarget(requireConnected = false)
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<String>()
+            RuntimeActivityRepository(
+                registry = registry,
+                scope = scope,
+                onSessionStalled = { sessionId, _, _, _ -> stalled += sessionId },
+                stallThresholdMillis = 1_000L,
+                stallCheckIntervalMillis = 100L,
+                now = { testScheduler.currentTime },
+            )
+            try {
+                advanceTimeBy(200L)
+                runCurrent()
+
+                repeat(6) {
+                    target.eventFlow.emit(
+                        OpenCodeEvent.MessagePartDelta(
+                            sessionId = "ses_busy",
+                            messageId = "m1",
+                            partId = "p1",
+                            field = "text",
+                            delta = "still going",
+                        ),
+                    )
+                    advanceTimeBy(400L)
+                    runCurrent()
+                }
+
+                assertTrue(stalled.isEmpty())
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `a quiet subagent is not announced on its own`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target =
+                FakeTarget(requireConnected = false).apply {
+                    sessions = listOf(OpenCodeSession(id = "child_1", parentId = "ses_parent", title = "Child"))
+                }
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<String>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    onSessionStalled = { sessionId, _, _, _ -> stalled += sessionId },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                advanceTimeBy(200L)
+                runCurrent()
+
+                repository.markSessionRunning("child_1")
+                advanceTimeBy(2_000L)
+                runCurrent()
+
+                // Its parent is wedged on it and is reported instead; two notices for one stall
+                // would only be the same news twice.
+                assertTrue(stalled.isEmpty())
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `a diagnosis that throws does not take the event stream down with it`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target = FakeTarget(requireConnected = false)
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    // Posting the notification is the step most likely to throw in the real app.
+                    onSessionStalled = { _, _, _, _ -> throw IllegalStateException("notification failed") },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                advanceTimeBy(200L)
+                runCurrent()
+
+                repository.markSessionRunning("ses_quiet")
+                advanceTimeBy(2_000L)
+                runCurrent()
+
+                // The watchdog shares its scope with the event stream, so a thrown diagnosis must
+                // not be allowed to cancel the collector alongside it.
+                target.eventFlow.emit(OpenCodeEvent.ServerConnected)
+                advanceTimeBy(100L)
+                runCurrent()
+
+                assertTrue(repository.state.value.logs.any { it.title == "Event connection" })
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `a parent waiting on a subagent is kept alive by the child's events`() =
+        runTest {
+            // A parent blocked on the task tool emits nothing of its own for the subagent's whole
+            // run, which is exactly what a stalled session looks like from the outside.
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target =
+                FakeTarget(requireConnected = false).apply {
+                    sessions =
+                        listOf(
+                            OpenCodeSession(id = "ses_parent", title = "Parent"),
+                            OpenCodeSession(id = "child_1", parentId = "ses_parent", title = "Child"),
+                        )
+                }
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<String>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    onSessionStalled = { sessionId, _, _, _ -> stalled += sessionId },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                advanceTimeBy(200L)
+                runCurrent()
+                repository.markSessionRunning("ses_parent")
+
+                repeat(6) {
+                    target.eventFlow.emit(
+                        OpenCodeEvent.MessagePartDelta(
+                            sessionId = "child_1",
+                            messageId = "m1",
+                            partId = "p1",
+                            field = "text",
+                            delta = "subagent working",
+                        ),
+                    )
+                    advanceTimeBy(400L)
+                    runCurrent()
+                }
+
+                assertTrue(stalled.isEmpty())
+                assertTrue("ses_parent" in repository.state.value.activeSessionIds)
+            } finally {
+                scope.cancel()
+            }
+        }
+
     private class FakeUnreadStore(
         override var unreadSessionIds: Set<String>,
     ) : UnreadSessionStore
@@ -762,7 +1051,9 @@ class RuntimeActivityRepositoryTest {
 
         override suspend fun listWorkspaces(): List<WorkspaceRef> = emptyList()
 
-        override suspend fun health(): OpenCodeHealth = error("unused")
+        var health: OpenCodeHealth = OpenCodeHealth(healthy = true, version = "test")
+
+        override suspend fun health(): OpenCodeHealth = health
 
         var sessions: List<OpenCodeSession> = emptyList()
 
@@ -773,7 +1064,9 @@ class RuntimeActivityRepositoryTest {
             directory: String?,
         ): OpenCodeSession = error("unused")
 
-        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
+        var messages: List<OpenCodeMessage> = emptyList()
+
+        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = messages
 
         override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
 

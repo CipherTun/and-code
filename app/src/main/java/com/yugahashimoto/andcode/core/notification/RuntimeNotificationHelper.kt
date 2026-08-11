@@ -17,6 +17,8 @@ import com.yugahashimoto.andcode.MainActivity
 import com.yugahashimoto.andcode.R
 import com.yugahashimoto.andcode.core.api.PermissionRequest
 import com.yugahashimoto.andcode.core.api.QuestionRequest
+import com.yugahashimoto.andcode.core.diagnostics.StallDiagnosis
+import com.yugahashimoto.andcode.core.diagnostics.explain
 import com.yugahashimoto.andcode.runtime.PermissionResponse
 
 class RuntimeNotificationHelper(private val context: Context) {
@@ -127,6 +129,7 @@ class RuntimeNotificationHelper(private val context: Context) {
         chatTitle: String?,
         runtimeId: String,
     ) {
+        cancelStalled(sessionId)
         if (!canPostNotifications()) return
         val intent =
             pendingActivityIntent(
@@ -159,6 +162,7 @@ class RuntimeNotificationHelper(private val context: Context) {
         message: String?,
         runtimeId: String,
     ) {
+        sessionId?.let(::cancelStalled)
         if (!canPostNotifications()) return
         val intent =
             pendingActivityIntent(
@@ -179,6 +183,51 @@ class RuntimeNotificationHelper(private val context: Context) {
                 .setAutoCancel(true)
                 .build()
         safeNotify(statusNotificationId(sessionId ?: "error", "err"), notification)
+    }
+
+    /**
+     * Tells the user that a run they left working has stopped producing anything, and what the app
+     * managed to find out about why. Tapping it opens the chat so they can stop or resend.
+     */
+    fun notifySessionStalled(
+        sessionId: String,
+        chatTitle: String?,
+        diagnosis: StallDiagnosis,
+        runtimeId: String,
+    ) {
+        if (!canPostNotifications()) return
+        val intent =
+            pendingActivityIntent(
+                requestCode = ("stalled:$sessionId").hashCode(),
+                extras =
+                    mapOf(
+                        EXTRA_OPEN_CHAT to true,
+                        EXTRA_TARGET_SESSION_ID to sessionId,
+                        EXTRA_RUNTIME_ID to runtimeId,
+                    ),
+            )
+        val reason = diagnosis.explain(context)
+        val title = chatTitle?.takeIf(String::isNotBlank) ?: context.getString(R.string.new_chat)
+        val notification =
+            NotificationCompat.Builder(context, CHANNEL_STATUS)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(context.getString(R.string.notification_stalled_title))
+                .setContentText(context.getString(R.string.notification_stalled_body, title, reason))
+                // Every stall notice carries the same title, so the chat has to be named in the
+                // expanded text too or two of them are indistinguishable once opened.
+                .setStyle(NotificationCompat.BigTextStyle().bigText("$title\n$reason"))
+                .setContentIntent(intent)
+                .setAutoCancel(true)
+                .build()
+        safeNotify(statusNotificationId(sessionId, "stalled"), notification)
+    }
+
+    /**
+     * Takes down a stall notice once the run it described has resolved. Without it, "this run has
+     * gone quiet" would sit in the shade next to the completion notice for the same chat.
+     */
+    fun cancelStalled(sessionId: String) {
+        manager.cancel(statusNotificationId(sessionId, "stalled"))
     }
 
     fun cancelPermission(permissionId: String) {

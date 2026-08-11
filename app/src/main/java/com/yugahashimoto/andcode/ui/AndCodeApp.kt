@@ -121,6 +121,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -279,7 +281,11 @@ fun AndCodeApp(
                         onPermissionResolved = app.activityRepository::resolvePermission,
                         onQuestionResolved = app.notifications::cancelQuestion,
                         onSessionCreated = app.catalogRepository::refreshSessionsOnly,
-                        onSessionAborted = app.activityRepository::markSessionAborted,
+                        onSessionAborted = { sessionId ->
+                            app.activityRepository.markSessionAborted(sessionId)
+                            // Stopping the run answers the "this run has gone quiet" notice.
+                            app.notifications.cancelStalled(sessionId)
+                        },
                         onRunStateChanged = { sessionId, running ->
                             if (running) {
                                 app.activityRepository.markSessionRunning(sessionId)
@@ -295,6 +301,13 @@ fun AndCodeApp(
                         monitorConnectionQuality = true,
                         resolvedPermissionFlow = app.activityRepository.resolvedPermissions,
                         pullRequestStatuses = app.pullRequestStatusRepository,
+                        monitorStalls = true,
+                        // Every activity event updates this state, so only real transitions of the
+                        // stream's own health are forwarded.
+                        streamErrorFlow =
+                            app.activityRepository.state
+                                .map { it.streamError }
+                                .distinctUntilChanged(),
                     )
                 },
         )
@@ -997,6 +1010,7 @@ fun AndCodeApp(
                         onSendMessage = chatViewModel::sendMessage,
                         onPermission = chatViewModel::respondToPermission,
                         onAbort = chatViewModel::abort,
+                        onRecheckStall = chatViewModel::checkForStall,
                         onMic = requestVoiceInput,
                         onNewChat = {
                             pendingSession = null

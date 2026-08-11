@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.Button
@@ -106,7 +107,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -124,6 +127,10 @@ import com.yugahashimoto.andcode.core.api.OpenCodeCommand
 import com.yugahashimoto.andcode.core.api.OpenCodeProvider
 import com.yugahashimoto.andcode.core.api.OpenCodeSkill
 import com.yugahashimoto.andcode.core.api.PromptAttachment
+import com.yugahashimoto.andcode.core.diagnostics.StallDiagnosis
+import com.yugahashimoto.andcode.core.diagnostics.StallReason
+import com.yugahashimoto.andcode.core.diagnostics.explain
+import com.yugahashimoto.andcode.core.diagnostics.supportingDetail
 import com.yugahashimoto.andcode.feature.workspace.GitHubAutoAttachChips
 import com.yugahashimoto.andcode.feature.workspace.GitHubReference
 import com.yugahashimoto.andcode.runtime.PermissionResponse
@@ -184,6 +191,8 @@ fun ChatHomeScreen(
     onSendMessage: (String) -> Unit,
     onPermission: (String, PermissionResponse, Boolean) -> Unit,
     onAbort: () -> Unit,
+    /** Probes the quiet run again now, rather than waiting for the next scheduled check. */
+    onRecheckStall: () -> Unit = {},
     onMic: () -> Unit,
     onNewChat: () -> Unit,
     onOpenLocalSetup: () -> Unit,
@@ -421,7 +430,17 @@ fun ChatHomeScreen(
                                     )
                                 }
                             }
-                            if (state.isRunning && timelineEntries.isNotEmpty()) {
+                            // A run that has gone quiet says so here, in place of the "Processing"
+                            // label that otherwise looks identical whether it is working or dead.
+                            if (state.isRunning && state.stall != null) {
+                                item(key = "stall") {
+                                    ChatStallCard(
+                                        stall = state.stall,
+                                        onRecheck = onRecheckStall,
+                                        onStop = onAbort,
+                                    )
+                                }
+                            } else if (state.isRunning && timelineEntries.isNotEmpty()) {
                                 item(key = "processing") {
                                     Text(
                                         text = stringResource(R.string.processing),
@@ -442,7 +461,10 @@ fun ChatHomeScreen(
                                     onDismiss = onDismissQuestion,
                                 )
                             }
-                            if (state.isThinking) {
+                            // Not while a stall is up: a turn that has produced nothing never
+                            // cleared this flag, so the warning would sit directly above a chip
+                            // cheerfully reporting that the same turn is thinking.
+                            if (state.isThinking && state.stall == null) {
                                 item { StatusChip(text = stringResource(R.string.thinking), active = true) }
                             }
                             state.error?.let { error ->
@@ -950,6 +972,87 @@ private fun ChatErrorCard(
                 }
             } else {
                 Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+/**
+ * Says out loud that a run has stopped producing anything, and why the app thinks so.
+ *
+ * Without it a turn that died in the background is indistinguishable from one that is working: the
+ * transcript just stops, under a spinner that never ends.
+ */
+@Composable
+private fun ChatStallCard(
+    stall: StallDiagnosis,
+    onRecheck: () -> Unit,
+    onStop: () -> Unit,
+) {
+    val context = LocalContext.current
+    // Rounded rather than truncated: a run 2 minutes 50 seconds quiet is nearer 3 than 2.
+    val silentMinutes = ((stall.silentForMillis + 30_000L) / 60_000L).toInt().coerceAtLeast(1)
+    // A turn with something visible left to wait for (a long tool call, an unanswered approval, a
+    // dropped event stream) is reported in the neutral outline; a run that is over, unreachable or
+    // producing nothing at all earns the error red.
+    val accent =
+        if (stall.isStopped) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        modifier = Modifier.testTag("chat-stall-card"),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, if (stall.isStopped) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.WarningAmber,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.chat_stall_title),
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = pluralStringResource(R.plurals.chat_stall_silent_for, silentMinutes, silentMinutes),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(text = stall.explain(context))
+            stall.supportingDetail()?.let { detail ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            // Shared evenly rather than sized to their text: "Остановить выполнение" and its
+            // Arabic counterpart do not fit beside another button on a narrow screen.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(onClick = onRecheck, modifier = Modifier.weight(1f).testTag("chat-stall-recheck")) {
+                    Text(stringResource(R.string.chat_stall_recheck))
+                }
+                // Stopping goes through the runtime, so it is not offered when the runtime is the
+                // thing that cannot be reached: the attempt would only fail and replace this card,
+                // and its diagnosis, with a generic error.
+                if (stall.reason != StallReason.RUNTIME_UNREACHABLE) {
+                    OutlinedButton(onClick = onStop, modifier = Modifier.weight(1f).testTag("chat-stall-stop")) {
+                        Text(stringResource(R.string.chat_stall_stop))
+                    }
+                }
             }
         }
     }
