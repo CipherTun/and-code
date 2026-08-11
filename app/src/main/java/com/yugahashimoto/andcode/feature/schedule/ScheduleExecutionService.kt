@@ -25,8 +25,12 @@ import com.yugahashimoto.andcode.runtime.PermissionResponse
 import com.yugahashimoto.andcode.runtime.RuntimeTarget
 import com.yugahashimoto.andcode.runtime.RuntimeType
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -43,6 +47,7 @@ class ScheduleExecutionService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var app: AndCodeApplication
     private var inForeground = false
+    private var executionJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -68,14 +73,16 @@ class ScheduleExecutionService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        scope.launch {
-            try {
-                execute(scheduleId)
-            } finally {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+        if (executionJob?.isActive == true) return START_NOT_STICKY
+        executionJob =
+            scope.launch {
+                try {
+                    execute(scheduleId)
+                } finally {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
             }
-        }
         return START_NOT_STICKY
     }
 
@@ -95,7 +102,7 @@ class ScheduleExecutionService : Service() {
 
         val target = app.runtimeRegistry.target(schedule.runtimeId)
         if (target == null) {
-            recordSkipped(schedule, "runtime unavailable")
+            recordSkipped(schedule, getString(R.string.schedule_runtime_unavailable))
             return
         }
         var activeRun: ScheduleRun? = null
@@ -104,11 +111,11 @@ class ScheduleExecutionService : Service() {
             // Remote runtimes live on the user's PC and need no boot; local agents share the
             // PRoot Linux environment, which has to be running before the agent can start.
             if (target.type == RuntimeType.LOCAL && !ensureLocalRuntimeReady()) {
-                recordSkipped(schedule, "runtime did not become ready")
+                recordSkipped(schedule, getString(R.string.schedule_runtime_not_ready))
                 return
             }
             if (target.connect().isFailure) {
-                recordSkipped(schedule, "runtime connection failed")
+                recordSkipped(schedule, getString(R.string.schedule_runtime_connection_failed))
                 return
             }
             val session =
@@ -121,16 +128,29 @@ class ScheduleExecutionService : Service() {
             updateForegroundNotification(app.getString(R.string.schedule_notification_running))
 
             val autoAccept = schedule.autoAcceptPermissions ?: app.settings.autoAcceptPermissions
-            target.sendMessage(
-                session.id,
-                PromptRequest(
-                    text = schedule.prompt,
-                    providerId = schedule.providerId,
-                    modelId = schedule.modelId,
-                    agent = schedule.agentId,
-                ),
-            )
-            watchForCompletion(target, schedule, run, autoAccept)
+            // Subscribe before sending: fast runtimes can emit idle during sendMessage itself.
+            val watcher: Deferred<ScheduleCompletion> =
+                scope.async(start = CoroutineStart.UNDISPATCHED) {
+                    watchForCompletion(target, schedule, run, autoAccept)
+                }
+            try {
+                target.sendMessage(
+                    session.id,
+                    PromptRequest(
+                        text = schedule.prompt,
+                        providerId = schedule.providerId,
+                        modelId = schedule.modelId,
+                        agent = schedule.agentId,
+                    ),
+                )
+                when (val completion = withTimeoutOrNull(COMPLETION_TIMEOUT_MS) { watcher.await() }) {
+                    ScheduleCompletion.Completed -> recordCompleted(run)
+                    is ScheduleCompletion.Failed -> recordFailed(run, completion.message)
+                    null -> recordFailed(run, getString(R.string.schedule_completion_timeout))
+                }
+            } finally {
+                watcher.cancel()
+            }
         } catch (error: Exception) {
             activeRun?.let { recordFailed(it, error.message ?: error.javaClass.simpleName) }
         } finally {
@@ -165,7 +185,7 @@ class ScheduleExecutionService : Service() {
         schedule: Schedule,
         run: ScheduleRun,
         autoAccept: Boolean,
-    ) {
+    ): ScheduleCompletion {
         val targetSessionId = run.sessionId
         val notifyUser = target.id != app.runtimeRegistry.selected.value?.id
 
@@ -174,21 +194,19 @@ class ScheduleExecutionService : Service() {
                 when (event) {
                     is OpenCodeEvent.SessionIdle -> {
                         if (event.sessionId == targetSessionId) {
-                            recordCompleted(run)
                             if (notifyUser) {
                                 val title =
                                     runCatching { target.session(targetSessionId).title }
                                         .getOrDefault(schedule.displayName)
                                 app.notifications.notifySessionComplete(targetSessionId, title, target.id)
                             }
-                            throw CompletionSignal()
+                            throw CompletionSignal(ScheduleCompletion.Completed)
                         }
                     }
                     is OpenCodeEvent.SessionError -> {
                         if (event.sessionId == null || event.sessionId == targetSessionId) {
-                            recordFailed(run, event.message)
                             if (notifyUser) app.notifications.notifySessionError(targetSessionId, event.message, target.id)
-                            throw CompletionSignal()
+                            throw CompletionSignal(ScheduleCompletion.Failed(event.message))
                         }
                     }
                     is OpenCodeEvent.PermissionAsked -> {
@@ -214,31 +232,22 @@ class ScheduleExecutionService : Service() {
                     else -> Unit
                 }
             }
-        } catch (_: CompletionSignal) {
+        } catch (signal: CompletionSignal) {
             // The run settled; the event stream is drained.
+            return signal.result
         }
+        return ScheduleCompletion.Failed(getString(R.string.schedule_event_stream_ended))
     }
 
     private fun recordCompleted(run: ScheduleRun) {
-        app.scheduleRepository.updateRun(
-            run.copy(
-                status = ScheduleRunStatus.COMPLETED,
-                finishedAt = System.currentTimeMillis(),
-            ),
-        )
+        app.scheduleRepository.finishRun(run.id, ScheduleRunStatus.COMPLETED)
     }
 
     private fun recordFailed(
         run: ScheduleRun,
         error: String?,
     ) {
-        app.scheduleRepository.updateRun(
-            run.copy(
-                status = ScheduleRunStatus.FAILED,
-                finishedAt = System.currentTimeMillis(),
-                error = error,
-            ),
-        )
+        app.scheduleRepository.finishRun(run.id, ScheduleRunStatus.FAILED, error = error)
     }
 
     private fun recordSkipped(
@@ -285,7 +294,13 @@ class ScheduleExecutionService : Service() {
     }
 
     /** Thrown to unwind the event collector once the run has settled. */
-    private class CompletionSignal : Exception()
+    private sealed interface ScheduleCompletion {
+        data object Completed : ScheduleCompletion
+
+        data class Failed(val message: String?) : ScheduleCompletion
+    }
+
+    private class CompletionSignal(val result: ScheduleCompletion) : Exception()
 
     companion object {
         const val EXTRA_SCHEDULE_ID = "schedule_id"
@@ -293,6 +308,7 @@ class ScheduleExecutionService : Service() {
         private const val CHANNEL_ID = "andcode_schedule_runs"
         private const val NOTIFICATION_ID = 4201
         private const val LOCAL_RUNTIME_START_TIMEOUT_MS = 5 * 60_000L
+        private const val COMPLETION_TIMEOUT_MS = 30 * 60_000L
 
         /**
          * Starts a run, returning false when the platform refused the foreground start.

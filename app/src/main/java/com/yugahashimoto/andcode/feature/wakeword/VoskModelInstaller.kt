@@ -30,6 +30,9 @@ sealed interface VoskInstallProgress {
 class VoskModelInstaller(
     private val client: OkHttpClient,
     private val root: File,
+    private val maxArchiveBytes: Long = 100L * 1024 * 1024,
+    private val maxExpandedBytes: Long = 250L * 1024 * 1024,
+    private val maxEntryCount: Int = 20_000,
 ) {
     fun directoryFor(spec: VoskModelSpec): File = File(root, spec.directoryName)
 
@@ -85,8 +88,11 @@ class VoskModelInstaller(
             check(response.isSuccessful) { "Model download failed with HTTP ${response.code}" }
             val body = checkNotNull(response.body) { "Model download returned no body" }
             val total = body.contentLength().takeIf { it > 0 }
+            check(total == null || total <= maxArchiveBytes) {
+                "Model archive exceeds the ${maxArchiveBytes / (1024 * 1024)} MiB limit"
+            }
             onProgress(VoskInstallProgress.Downloading(0, total))
-            extract(CountingStream(body.byteStream(), total, onProgress), staging)
+            extract(CountingStream(body.byteStream(), total, maxArchiveBytes, onProgress), staging)
             onProgress(VoskInstallProgress.Extracting)
         }
     }
@@ -96,9 +102,12 @@ class VoskModelInstaller(
         staging: File,
     ) {
         ZipInputStream(source).use { zip ->
+            var entryCount = 0
+            var expandedBytes = 0L
             var entry = zip.nextEntry
             while (entry != null) {
                 coroutineContext.ensureActive()
+                check(++entryCount <= maxEntryCount) { "Model archive contains too many entries" }
                 val target = File(staging, entry.name)
                 // The archive comes off the network, so its entry names are untrusted: "../" in a
                 // name is the standard way one writes outside the directory it was given.
@@ -109,7 +118,18 @@ class VoskModelInstaller(
                     target.mkdirs()
                 } else {
                     target.parentFile?.mkdirs()
-                    target.outputStream().use(zip::copyTo)
+                    target.outputStream().use { output ->
+                        val buffer = ByteArray(BUFFER_SIZE)
+                        while (true) {
+                            val count = zip.read(buffer)
+                            if (count < 0) break
+                            expandedBytes += count
+                            check(expandedBytes <= maxExpandedBytes) {
+                                "Model archive expands beyond the ${maxExpandedBytes / (1024 * 1024)} MiB limit"
+                            }
+                            output.write(buffer, 0, count)
+                        }
+                    }
                 }
                 zip.closeEntry()
                 entry = zip.nextEntry
@@ -121,6 +141,7 @@ class VoskModelInstaller(
     private class CountingStream(
         private val delegate: InputStream,
         private val total: Long?,
+        private val maxBytes: Long,
         private val onProgress: (VoskInstallProgress) -> Unit,
     ) : InputStream() {
         private var read = 0L
@@ -138,6 +159,9 @@ class VoskModelInstaller(
 
         private fun advance(count: Long) {
             read += count
+            check(read <= maxBytes) {
+                "Model archive exceeds the ${maxBytes / (1024 * 1024)} MiB limit"
+            }
             // Throttled: the archive is tens of megabytes and a callback per buffer would spend
             // more time recomposing the progress bar than reading.
             if (read - lastReported < PROGRESS_STEP_BYTES) return
@@ -148,5 +172,9 @@ class VoskModelInstaller(
         private companion object {
             const val PROGRESS_STEP_BYTES = 256L * 1024
         }
+    }
+
+    private companion object {
+        const val BUFFER_SIZE = 32 * 1024
     }
 }

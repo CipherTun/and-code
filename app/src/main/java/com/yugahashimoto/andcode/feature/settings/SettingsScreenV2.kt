@@ -67,6 +67,8 @@ fun SettingsScreenV2(
     assistantConfigured: Boolean,
     notificationsEnabled: Boolean,
     onToggleNotifications: (Boolean) -> Unit,
+    analyticsEnabled: Boolean = false,
+    onToggleAnalytics: (Boolean) -> Unit = {},
     appVersion: String,
     onOpenDrawer: () -> Unit,
     onOpenAssistantSettings: () -> Unit,
@@ -296,6 +298,13 @@ fun SettingsScreenV2(
                     onCheckedChange = onToggleNotifications,
                 )
                 SettingsDivider()
+                SettingsToggleRow(
+                    icon = Icons.Default.BugReport,
+                    title = stringResource(R.string.analytics_row),
+                    checked = analyticsEnabled,
+                    onCheckedChange = onToggleAnalytics,
+                )
+                SettingsDivider()
                 SettingsRow(
                     icon = Icons.Default.BugReport,
                     title = stringResource(R.string.diagnostics_row),
@@ -328,7 +337,13 @@ fun SettingsScreenV2(
                 Surface(
                     modifier = Modifier.weight(1f),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                ) {}
+                ) {
+                    Text(
+                        text = stringResource(R.string.nav_settings),
+                        modifier = Modifier.padding(24.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
             }
         } else {
             LazyColumn(
