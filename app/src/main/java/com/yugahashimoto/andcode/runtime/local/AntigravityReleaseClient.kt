@@ -132,8 +132,13 @@ suspend fun resolveAntigravityRelease(
     httpClient: OkHttpClient,
     endpoint: HttpUrl = AntigravityReleaseClient.OFFICIAL_RELEASE_ENDPOINT.toHttpUrl(),
 ): AntigravityRelease =
-    runCatching { AntigravityReleaseClient(httpClient, endpoint).latest(abi) }
-        .getOrElse { AntigravityRelease(AntigravityManifest.VERSION, AntigravityManifest.assetFor(abi)) }
+    try {
+        AntigravityReleaseClient(httpClient, endpoint).latest(abi)
+    } catch (cancellation: kotlinx.coroutines.CancellationException) {
+        throw cancellation
+    } catch (failure: Exception) {
+        AntigravityRelease(AntigravityManifest.VERSION, AntigravityManifest.assetFor(abi))
+    }
 
 /**
  * Whether installing [latestVersion] over [currentVersion] would change anything.
