@@ -27,32 +27,18 @@ class AntigravityUpdateTest {
     }
 
     @Test
-    fun `an older recorded release offers the version this app carries`() {
-        val state =
-            AntigravityControllerState(
-                installed = true,
-                version = "1.1.6",
-                bundledVersion = "1.1.7",
-            )
-
-        assertTrue(state.updateAvailable)
+    fun `an unknown installed release is always replaced`() {
+        assertTrue(shouldReplaceInstalledAntigravity(currentVersion = null, latestVersion = "1.1.17"))
+        assertTrue(shouldReplaceInstalledAntigravity(currentVersion = "", latestVersion = "1.1.17"))
+        assertTrue(shouldReplaceInstalledAntigravity(currentVersion = "not-a-version", latestVersion = "1.1.17"))
     }
 
     @Test
-    fun `the pinned release offers no update`() {
-        val state =
-            AntigravityControllerState(
-                installed = true,
-                version = "1.1.7",
-                bundledVersion = "1.1.7",
-            )
-
-        assertFalse(state.updateAvailable)
-    }
-
-    @Test
-    fun `an agent that is not installed is never offered an update`() {
-        assertFalse(AntigravityControllerState(installed = false, version = "1.1.6").updateAvailable)
+    fun `an older or equal installed release is only replaced by something newer`() {
+        assertFalse(shouldReplaceInstalledAntigravity(currentVersion = "1.1.17", latestVersion = "1.1.17"))
+        assertFalse(shouldReplaceInstalledAntigravity(currentVersion = "1.2.0", latestVersion = "1.1.17"))
+        assertTrue(shouldReplaceInstalledAntigravity(currentVersion = "1.1.7", latestVersion = "1.1.17"))
+        assertTrue(shouldReplaceInstalledAntigravity(currentVersion = "v1.1.7", latestVersion = "1.1.8"))
     }
 
     @Test

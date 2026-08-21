@@ -180,10 +180,11 @@ private fun InstalledSection(
 }
 
 /**
- * Offers the release this build of the app carries, and says what the last attempt did.
+ * Offers an update to the newest official release, and says what the last attempt did.
  *
- * Antigravity comes from a version pinned in the app rather than a package repository, so whether an
- * update exists is already known here — no check button, and no network needed to answer it.
+ * Updates resolve GitHub's latest at press time (this build's pin only as fallback), so the button
+ * is always offered — whether anything newer exists is only known after the check, the same way
+ * Claude Code's update works against its package repository.
  */
 @Composable
 private fun UpdateSection(
@@ -205,15 +206,8 @@ private fun UpdateSection(
             )
         }
     }
-    if (antigravity.updateAvailable) {
-        Text(
-            text = stringResource(R.string.antigravity_update_available, antigravity.bundledVersion),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        OutlinedButton(onClick = onUpdate, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.antigravity_update_button))
-        }
+    OutlinedButton(onClick = onUpdate, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.antigravity_update_button))
     }
 }
 

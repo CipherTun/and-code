@@ -125,7 +125,7 @@ class LocalRuntimeManager(
             val bundledVersion = installer?.bundledOpenCodeVersion()
             if (updateEngine != null &&
                 bundledVersion != null &&
-                compareOpenCodeVersions(metadata.version, bundledVersion) < 0
+                compareRuntimeVersions(metadata.version, bundledVersion) < 0
             ) {
                 return@withLock updateToLatestLocked()
             }

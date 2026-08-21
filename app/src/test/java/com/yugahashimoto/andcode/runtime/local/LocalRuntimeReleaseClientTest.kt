@@ -25,10 +25,10 @@ class LocalRuntimeReleaseClientTest {
 
     @Test
     fun `compares numeric OpenCode versions`() {
-        assertTrue(compareOpenCodeVersions("1.18.10", "1.18.3") > 0)
-        assertTrue(compareOpenCodeVersions("v2.0.0", "1.99.99") > 0)
-        assertEquals(0, compareOpenCodeVersions("v1.18.3", "1.18.3"))
-        assertTrue(compareOpenCodeVersions("1.18.2", "1.18.3") < 0)
+        assertTrue(compareRuntimeVersions("1.18.10", "1.18.3") > 0)
+        assertTrue(compareRuntimeVersions("v2.0.0", "1.99.99") > 0)
+        assertEquals(0, compareRuntimeVersions("v1.18.3", "1.18.3"))
+        assertTrue(compareRuntimeVersions("1.18.2", "1.18.3") < 0)
     }
 
     @Test

@@ -158,9 +158,14 @@ class LocalRuntimeInstaller(
                 }
                 if (LocalAgent.ANTIGRAVITY in requestedAgents) {
                     onAntigravity(0.94f, context.getString(R.string.install_step_downloading_antigravity))
-                    AntigravityInstaller(runtimeDirectory, abi, downloader).installInto(antigravityRootfs ?: rootfs) { progress ->
-                        onAntigravity(0.94f + progress * 0.04f, context.getString(R.string.install_step_installing_antigravity))
-                    }
+                    val antigravityRelease = resolveAntigravityRelease(abi, httpClient)
+                    AntigravityInstaller(runtimeDirectory, downloader).installInto(
+                        antigravityRootfs ?: rootfs,
+                        { progress ->
+                            onAntigravity(0.94f + progress * 0.04f, context.getString(R.string.install_step_installing_antigravity))
+                        },
+                        antigravityRelease,
+                    )
                 }
 
                 val metadata =
@@ -265,12 +270,15 @@ class LocalRuntimeInstaller(
     fun bundledOpenCodeVersion(): String = manifestReader.read().openCodeVersion
 
     /**
-     * Reinstalls the pinned Antigravity release into the sandbox that is already active.
+     * Brings the active sandbox's Antigravity up to the newest official release.
      *
-     * Antigravity ships as a binary this app pins, so an update means "install what this build
-     * pins" — and going through [install] for that would provision a whole new environment
-     * directory to replace one file. [AntigravityInstaller] verifies the release's SHA-256 and swaps
-     * `agy` in place instead, leaving the Debian rootfs and every agent's credentials untouched.
+     * The release is resolved at update time — GitHub's `latest`, with this build's pin only as the
+     * fallback when the lookup fails — so users no longer wait for an app release to receive new
+     * Antigravity versions. When the guest already runs the resolved release (or something newer,
+     * which a pin-degraded lookup can report) the ~50 MB download is skipped. Going through
+     * [install] for any of this would provision a whole new environment directory to replace one
+     * file; [AntigravityInstaller] swaps `agy` in place instead, leaving the Debian rootfs and
+     * every agent's credentials untouched.
      *
      * Not serialised against [install]: that one builds a staging directory and swaps it in, so the
      * worst a concurrent run can do is discard this binary, which the next update reinstates. The
@@ -278,9 +286,11 @@ class LocalRuntimeInstaller(
      */
     suspend fun updateAntigravity(onProgress: (Float) -> Unit = {}): String {
         val runtime = installedRuntime() ?: error("The Linux environment is not installed")
-        AntigravityInstaller(runtimeDirectory, abi, downloader)
-            .installInto(runtime.antigravityRootfs ?: runtime.rootfs, onProgress)
-        return AntigravityManifest.VERSION
+        val rootfs = runtime.antigravityRootfs ?: runtime.rootfs
+        val release = resolveAntigravityRelease(abi, httpClient)
+        val installed = AntigravityInstaller.installedVersion(rootfs)
+        if (!shouldReplaceInstalledAntigravity(installed, release.version)) return installed!!
+        return AntigravityInstaller(runtimeDirectory, downloader).installInto(rootfs, onProgress, release)
     }
 
     private fun extractOpenCode(

@@ -51,14 +51,6 @@ internal fun antigravityUpdateResult(
 data class AntigravityControllerState(
     val installed: Boolean = false,
     val version: String? = null,
-    /**
-     * The release this build of the app pins.
-     *
-     * Antigravity is not fetched from a package repository, so the newest version available to the
-     * user is whatever the installed app carries — comparing it against [version] is the whole
-     * update check, and it needs no network.
-     */
-    val bundledVersion: String = AntigravityManifest.VERSION,
     val install: AntigravityInstallStatus = AntigravityInstallStatus.Idle,
     val lastUpdate: AntigravityUpdateResult? = null,
     val auth: AntigravityAuthCoordinator.State = AntigravityAuthCoordinator.State.Idle,
@@ -69,15 +61,6 @@ data class AntigravityControllerState(
 
     /** Kept for call sites that only care about the last failure message. */
     val error: String? get() = (install as? AntigravityInstallStatus.Failed)?.message
-
-    /**
-     * True when the installed release differs from the one this app carries.
-     *
-     * An install whose version was never recorded reports the pinned version (see
-     * [AntigravityRuntime.version]), so it reads as up to date rather than prompting an update on a
-     * guess.
-     */
-    val updateAvailable: Boolean get() = installed && version != null && version != bundledVersion
 }
 
 /** Single owner for install/update/auth state; UI can observe this without owning a process. */
@@ -172,11 +155,13 @@ class AntigravityController(
     }
 
     /**
-     * Installs the release this build of the app pins, over whatever is in the guest.
+     * Brings the guest up to the newest official release, over whatever is installed.
      *
      * Deliberately not [install]: that provisions a whole new environment directory, while an
-     * Antigravity update only ever replaces one verified binary. The version is read on both sides
-     * so the card can say which release the update landed on instead of just going quiet.
+     * Antigravity update only ever replaces one verified binary. The release is resolved at update
+     * time (GitHub's latest; the build's pin only as fallback), and [LocalRuntimeInstaller] skips a
+     * download that would change nothing — both sides report AlreadyLatest in that case. The version
+     * is read before and after so the card can say what the update did instead of just going quiet.
      */
     fun update() {
         if (mutableState.value.install is AntigravityInstallStatus.Installing) return
