@@ -136,7 +136,7 @@ class LocalRuntimeUpdater(
             messages.insufficientFreeSpace(release.asset.requiredFreeBytes, freeBytes)
         }
 
-        val normalizedVersion = normalizeOpenCodeVersion(release.version)
+        val normalizedVersion = normalizeRuntimeVersion(release.version)
         val cacheArchive = File(runtimeDirectory, "cache/opencode-update-$normalizedVersion-$abi.tar.gz")
         val extractionDirectory = File(runtimeDirectory, "update-staging-$normalizedVersion")
         val candidate = candidateBinary(normalizedVersion)
@@ -179,7 +179,7 @@ class LocalRuntimeUpdater(
                 release = release.copy(version = normalizedVersion),
                 candidateBinary = candidate,
                 candidateMetadata = candidateMetadata,
-                baseVersion = normalizeOpenCodeVersion(currentMetadata.version),
+                baseVersion = normalizeRuntimeVersion(currentMetadata.version),
             )
         } catch (error: Throwable) {
             candidate.delete()
@@ -213,10 +213,10 @@ class LocalRuntimeUpdater(
         val previousMetadata =
             readMetadata(METADATA_FILE)
                 ?: error("Local runtime metadata is invalid")
-        require(normalizeOpenCodeVersion(previousMetadata.version) == prepared.baseVersion) {
+        require(normalizeRuntimeVersion(previousMetadata.version) == prepared.baseVersion) {
             "Local runtime changed after the update candidate was prepared"
         }
-        require(binaryVersion(candidate) == normalizeOpenCodeVersion(prepared.candidateMetadata.version)) {
+        require(binaryVersion(candidate) == normalizeRuntimeVersion(prepared.candidateMetadata.version)) {
             "Prepared OpenCode candidate no longer matches its metadata"
         }
 
@@ -225,8 +225,8 @@ class LocalRuntimeUpdater(
         if (!hadRollback) cleanup(rollback, rollbackMetadata)
         val journal =
             LocalRuntimeUpdateJournal(
-                oldVersion = normalizeOpenCodeVersion(previousMetadata.version),
-                newVersion = normalizeOpenCodeVersion(prepared.candidateMetadata.version),
+                oldVersion = normalizeRuntimeVersion(previousMetadata.version),
+                newVersion = normalizeRuntimeVersion(prepared.candidateMetadata.version),
                 candidateFileName = candidate.name,
                 candidateMetadataFileName = candidateMetadata.name,
                 hadRollback = hadRollback,
@@ -303,7 +303,7 @@ class LocalRuntimeUpdater(
                 rollbackMetadata,
                 rollbackMetadataPrevious,
             ).distinctBy { it.absolutePath }
-                .firstOrNull { file -> readMetadataFile(file)?.version?.let(::normalizeOpenCodeVersion) == journal.oldVersion }
+                .firstOrNull { file -> readMetadataFile(file)?.version?.let(::normalizeRuntimeVersion) == journal.oldVersion }
                 ?: error("Unable to locate previous OpenCode ${journal.oldVersion} metadata")
         val oldMetadata = requireNotNull(readMetadataFile(oldMetadataFile))
 
@@ -428,14 +428,14 @@ class LocalRuntimeUpdater(
         val targetMetadata =
             readMetadata(ROLLBACK_METADATA_FILE)
                 ?: error("Rollback runtime metadata is invalid")
-        require(normalizeOpenCodeVersion(currentMetadata.version) != normalizeOpenCodeVersion(targetMetadata.version)) {
+        require(normalizeRuntimeVersion(currentMetadata.version) != normalizeRuntimeVersion(targetMetadata.version)) {
             "Current and rollback OpenCode versions are identical"
         }
         writeJsonAtomically(
             rollbackJournalFile(),
             LocalRuntimeRollbackJournal(
-                currentVersion = normalizeOpenCodeVersion(currentMetadata.version),
-                targetVersion = normalizeOpenCodeVersion(targetMetadata.version),
+                currentVersion = normalizeRuntimeVersion(currentMetadata.version),
+                targetVersion = normalizeRuntimeVersion(targetMetadata.version),
             ),
         )
 
@@ -495,7 +495,7 @@ class LocalRuntimeUpdater(
         version: String,
     ): File =
         candidates.firstOrNull { file ->
-            readMetadataFile(file)?.version?.let(::normalizeOpenCodeVersion) == version
+            readMetadataFile(file)?.version?.let(::normalizeRuntimeVersion) == version
         } ?: error("Unable to locate OpenCode $version metadata during rollback recovery")
 
     private fun stageRecoveryFile(
@@ -529,7 +529,7 @@ class LocalRuntimeUpdater(
         moveFile(source, destination)
     }
 
-    private fun binaryVersion(file: File): String = normalizeOpenCodeVersion(candidateVersionProvider(file))
+    private fun binaryVersion(file: File): String = normalizeRuntimeVersion(candidateVersionProvider(file))
 
     private fun readJournal(): LocalRuntimeUpdateJournal? = readJson<LocalRuntimeUpdateJournal>(journalFile())
 

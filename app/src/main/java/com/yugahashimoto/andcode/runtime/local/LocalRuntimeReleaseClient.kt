@@ -71,7 +71,7 @@ class LocalRuntimeReleaseClient(
                 requireNotNull(ASSET_NAME_BY_ABI[abi]) {
                     "Unsupported Android ABI for OpenCode updates: $abi"
                 }
-            val normalizedCurrent = normalizeOpenCodeVersion(currentVersion)
+            val normalizedCurrent = normalizeRuntimeVersion(currentVersion)
             val request =
                 Request.Builder()
                     .url(endpoint)
@@ -90,7 +90,7 @@ class LocalRuntimeReleaseClient(
                         }
                     json.decodeFromString<GitHubReleaseDto>(body.string())
                 }
-            val latestVersion = normalizeOpenCodeVersion(releaseDto.tagName)
+            val latestVersion = normalizeRuntimeVersion(releaseDto.tagName)
             val assetDto =
                 requireNotNull(releaseDto.assets.firstOrNull { it.name == assetName }) {
                     "OpenCode release $latestVersion does not contain $assetName"
@@ -115,7 +115,7 @@ class LocalRuntimeReleaseClient(
                             sizeBytes = assetDto.size,
                         ),
                 )
-            if (compareOpenCodeVersions(latestVersion, normalizedCurrent) > 0) {
+            if (compareRuntimeVersions(latestVersion, normalizedCurrent) > 0) {
                 LocalRuntimeUpdateCheck.Available(normalizedCurrent, release)
             } else {
                 LocalRuntimeUpdateCheck.UpToDate(normalizedCurrent, latestVersion)
@@ -153,12 +153,12 @@ class LocalRuntimeReleaseClient(
     }
 }
 
-internal fun compareOpenCodeVersions(
+internal fun compareRuntimeVersions(
     left: String,
     right: String,
 ): Int {
-    val leftParts = parseOpenCodeVersion(left)
-    val rightParts = parseOpenCodeVersion(right)
+    val leftParts = parseRuntimeVersion(left)
+    val rightParts = parseRuntimeVersion(right)
     repeat(maxOf(leftParts.size, rightParts.size)) { index ->
         val comparison =
             (leftParts.getOrElse(index) { 0 })
@@ -168,9 +168,9 @@ internal fun compareOpenCodeVersions(
     return 0
 }
 
-internal fun normalizeOpenCodeVersion(version: String): String = parseOpenCodeVersion(version).joinToString(".")
+internal fun normalizeRuntimeVersion(version: String): String = parseRuntimeVersion(version).joinToString(".")
 
-private fun parseOpenCodeVersion(version: String): List<Int> {
+private fun parseRuntimeVersion(version: String): List<Int> {
     val normalized =
         version.trim()
             .removePrefix("v")

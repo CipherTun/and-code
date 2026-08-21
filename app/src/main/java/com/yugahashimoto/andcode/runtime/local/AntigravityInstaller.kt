@@ -6,25 +6,36 @@ import java.io.File
 
 class AntigravityInstaller(
     private val runtimeDirectory: File,
-    private val abi: String,
     private val downloader: VerifiedRuntimeDownloader = VerifiedRuntimeDownloader(),
 ) {
     suspend fun install(
         runtime: LocalRuntimeInstaller.InstalledRuntime,
         onProgress: (Float) -> Unit = {},
-    ): File = installInto(runtime.rootfs, onProgress)
+        release: AntigravityRelease,
+    ): String = installInto(runtime.rootfs, onProgress, release)
 
+    /**
+     * Downloads [release], verifies it and swaps the `agy` binary in place.
+     *
+     * The caller resolves which release that is — GitHub's latest with this build's pin as the
+     * fallback ([resolveAntigravityRelease]) — so provisioning and updating share one code path and
+     * can never disagree about what was installed. Returns the release version actually written,
+     * which is what the version marker records.
+     */
     suspend fun installInto(
         rootfs: File,
         onProgress: (Float) -> Unit = {},
-    ): File =
+        release: AntigravityRelease,
+    ): String =
         withContext(Dispatchers.IO) {
             require(runtimeDirectory.usableSpace >= AntigravityManifest.MIN_FREE_BYTES) {
                 "Antigravity needs at least 300 MB free space (available ${runtimeDirectory.usableSpace} bytes)"
             }
-            val asset = AntigravityManifest.assetFor(abi)
+            val asset = release.asset
+            // Versioned cache name: a stale archive of a different release must never be mistaken
+            // for this one (the SHA-256 check would catch it, but only after a wasted re-download).
             val cache = File(runtimeDirectory, "cache").apply { mkdirs() }
-            val archive = File(cache, asset.name)
+            val archive = File(cache, "agy-${release.version}-${asset.name}")
             downloader.download(asset.url, archive, asset.sha256, asset.sizeBytes) { progress ->
                 progress?.let { onProgress(it * 0.75f) }
             }
@@ -52,10 +63,10 @@ class AntigravityInstaller(
                 }
                 // Written only once the swap succeeded, so the marker can never claim a version the
                 // guest is not actually running.
-                writeInstalledVersion(rootfs, AntigravityManifest.VERSION)
+                writeInstalledVersion(rootfs, release.version)
                 onProgress(1f)
                 archive.delete()
-                destination
+                release.version
             } finally {
                 extraction.deleteRecursively()
             }
