@@ -184,8 +184,10 @@ class AntigravityController(
                 target.runtime.invalidateVersion()
                 // Same as install: the catalog belongs to the binary that was just replaced, so a
                 // stale cache would keep showing the previous release's models (e.g. no
-                // gemini-3.7-flash after moving from 1.1.x) until the app restarted.
-                target.runtime.invalidateModels()
+                // gemini-3.7-flash after moving from 1.1.x) until the app restarted. Skipped only
+                // when the guest verifiably ran this release already; an unknown "before" still
+                // invalidates — one redundant `agy models` fetch is cheap.
+                if (before == null || before != version) target.runtime.invalidateModels()
                 mutableState.value =
                     mutableState.value.copy(
                         installed = true,
