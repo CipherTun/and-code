@@ -137,6 +137,9 @@ class AntigravityController(
             }
                 .onSuccess {
                     target.runtime.invalidateVersion()
+                    // The cached catalog was read by the binary that just got replaced; keeping it
+                    // would leave the picker on the old release's model list until a restart.
+                    target.runtime.invalidateModels()
                     target.connect()
                     val version =
                         target.state.value.let { (it as? com.yugahashimoto.andcode.runtime.RuntimeState.Connected)?.version }
@@ -179,6 +182,10 @@ class AntigravityController(
                 }
             }.onSuccess { version ->
                 target.runtime.invalidateVersion()
+                // Same as install: the catalog belongs to the binary that was just replaced, so a
+                // stale cache would keep showing the previous release's models (e.g. no
+                // gemini-3.7-flash after moving from 1.1.x) until the app restarted.
+                target.runtime.invalidateModels()
                 mutableState.value =
                     mutableState.value.copy(
                         installed = true,
