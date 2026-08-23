@@ -1057,6 +1057,10 @@ class ChatViewModel(
                             // transcript then. Another fetch here would merge against a stream
                             // cache it has already cleared and drop what only this client has.
                             if (!isStillActive() || !_uiState.value.isRunning) return@withTimeoutOrNull
+                            // Snapshotted before the fetch: the idle can clear the stream cache
+                            // while it is in flight, and merging against an empty live view would
+                            // drop what only this client has.
+                            val retainIds = streamedParts.keys.toSet()
                             runCatching { currentBackend.listMessages(targetSessionId) }
                                 .onSuccess { serverMessages ->
                                     if (!isStillActive()) return@onSuccess
@@ -1065,7 +1069,7 @@ class ChatViewModel(
                                             serverMessages.mapNotNull(::toUiMessage),
                                             _uiState.value.messages,
                                             pendingPreviewsByFilename,
-                                            streamedParts.keys,
+                                            retainIds,
                                         )
                                     if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
                                         _uiState.update { it.copy(messages = uiMessages) }
@@ -1250,6 +1254,10 @@ class ChatViewModel(
                             // transcript then. Another fetch here would merge against a stream
                             // cache it has already cleared and drop what only this client has.
                             if (!isStillActive() || !_uiState.value.isRunning) return@withTimeoutOrNull
+                            // Snapshotted before the fetch: the idle can clear the stream cache
+                            // while it is in flight, and merging against an empty live view would
+                            // drop what only this client has.
+                            val retainIds = streamedParts.keys.toSet()
                             runCatching { currentBackend.listMessages(targetSessionId) }
                                 .onSuccess { serverMessages ->
                                     if (!isStillActive()) return@onSuccess
@@ -1257,7 +1265,7 @@ class ChatViewModel(
                                         mergeReloadedMessages(
                                             serverMessages.mapNotNull(::toUiMessage),
                                             _uiState.value.messages,
-                                            retainIds = streamedParts.keys,
+                                            retainIds = retainIds,
                                         )
                                     if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
                                         _uiState.update { it.copy(messages = uiMessages) }
