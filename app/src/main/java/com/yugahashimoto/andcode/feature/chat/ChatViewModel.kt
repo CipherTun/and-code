@@ -1053,7 +1053,10 @@ class ChatViewModel(
                     withTimeoutOrNull(RESPONSE_POLL_TIMEOUT_MS) {
                         while (isStillActive() && _uiState.value.isRunning) {
                             delay(RESPONSE_POLL_INTERVAL_MS)
-                            if (!isStillActive()) return@withTimeoutOrNull
+                            // The turn can end while this slept; the idle handler owns the
+                            // transcript then. Another fetch here would merge against a stream
+                            // cache it has already cleared and drop what only this client has.
+                            if (!isStillActive() || !_uiState.value.isRunning) return@withTimeoutOrNull
                             runCatching { currentBackend.listMessages(targetSessionId) }
                                 .onSuccess { serverMessages ->
                                     if (!isStillActive()) return@onSuccess
@@ -1243,7 +1246,10 @@ class ChatViewModel(
                     withTimeoutOrNull(RESPONSE_POLL_TIMEOUT_MS) {
                         while (isStillActive() && _uiState.value.isRunning) {
                             delay(RESPONSE_POLL_INTERVAL_MS)
-                            if (!isStillActive()) return@withTimeoutOrNull
+                            // The turn can end while this slept; the idle handler owns the
+                            // transcript then. Another fetch here would merge against a stream
+                            // cache it has already cleared and drop what only this client has.
+                            if (!isStillActive() || !_uiState.value.isRunning) return@withTimeoutOrNull
                             runCatching { currentBackend.listMessages(targetSessionId) }
                                 .onSuccess { serverMessages ->
                                     if (!isStillActive()) return@onSuccess

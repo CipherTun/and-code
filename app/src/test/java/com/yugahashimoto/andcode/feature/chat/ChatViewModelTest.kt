@@ -944,8 +944,16 @@ class ChatViewModelTest {
             runCurrent()
             assertEquals(listOf("prompt:first", "abort:s1", "prompt:second"), backend.calls)
 
-            // The poll loop refetches the transcript while the replacement runs; it reports
-            // nothing persisted yet. Then the replacement ends and its idle reloads again.
+            // The transcript now carries the two prompts (the interrupted turn is not persisted
+            // yet), so the polls reconcile against a real, non-empty transcript.
+            backend.transcript =
+                listOf(
+                    sessionUserMessage("s1", "u1", "first", created = 100),
+                    sessionUserMessage("s1", "u2", "second", created = 101),
+                )
+
+            // The poll loop refetches the transcript while the replacement runs. Then the
+            // replacement ends and its idle reloads again.
             backend.events.tryEmit(OpenCodeEvent.SessionStatusChanged("s1", "busy"))
             advanceTimeBy(RESPONSE_POLL_INTERVAL_MS + 1L)
             backend.events.tryEmit(OpenCodeEvent.SessionIdle("s1"))
@@ -954,6 +962,7 @@ class ChatViewModelTest {
             val abortedBubble =
                 viewModel.uiState.value.messages.firstOrNull { it.id == "m-aborted" }
             assertEquals("partial answer", abortedBubble?.text)
+            assertTrue(viewModel.uiState.value.messages.map { it.id }.containsAll(listOf("u1", "u2")))
         }
 
     /**
@@ -1146,6 +1155,31 @@ class ChatViewModelTest {
                 sessionId = sessionId,
                 role = "assistant",
                 time = OpenCodeTime(created = 1),
+            ),
+        parts =
+            listOf(
+                OpenCodePart(
+                    id = "$messageId-p",
+                    sessionId = sessionId,
+                    messageId = messageId,
+                    type = "text",
+                    text = text,
+                ),
+            ),
+    )
+
+    private fun sessionUserMessage(
+        sessionId: String,
+        messageId: String,
+        text: String,
+        created: Long,
+    ) = OpenCodeMessage(
+        info =
+            OpenCodeMessageInfo(
+                id = messageId,
+                sessionId = sessionId,
+                role = "user",
+                time = OpenCodeTime(created = created),
             ),
         parts =
             listOf(
