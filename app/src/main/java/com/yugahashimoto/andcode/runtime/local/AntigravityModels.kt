@@ -8,12 +8,11 @@ import com.yugahashimoto.andcode.core.api.ProviderCatalog
  * Models offered for Antigravity, read from `agy models`.
  *
  * Unlike Claude Code, the official CLI does enumerate what the signed-in account can actually use.
- * The pinned official release (1.1.7, [AntigravityManifest.VERSION]) prints one lowercase, hyphenated
- * slug per line - `gemini-3.1-pro-high`, `claude-opus-4-6-thinking`, `claude-sonnet-4-6` - confirmed
- * live against a signed-in install of that exact version. Earlier builds of this parser were tested
- * against a different locally-installed `agy` version (1.1.1) that prints `Title Case (Variant)`
- * labels instead; that format does not appear in the version this app actually ships, which is why
- * the model picker previously showed nothing useful.
+ * Since 1.1.17 each line is two whitespace-separated columns - the lowercase hyphenated slug the
+ * CLI accepts on `--model`, then a human label: `gemini-3.7-flash-low Gemini 3.7 Flash (Low)`. The
+ * 1.1.x releases before that printed the bare slug only (`gemini-3.1-pro-high`), and 1.1.1 printed
+ * `Title Case (Variant)` labels with no slug at all; [parse] handles all three by treating
+ * everything after the first token as the label.
  */
 object AntigravityModels {
     const val PROVIDER_ID = "antigravity"
@@ -31,29 +30,42 @@ object AntigravityModels {
      */
     private val EFFORT_SUFFIXES = setOf("high", "medium", "low")
 
-    data class Entry(val base: String, val variant: String?) {
-        /** The line the CLI printed, and the id the picker shows. */
+    /** The reasoning efforts a slug's trailing segment may carry, joined for messages. */
+    private val WHITESPACE = Regex("\\s+")
+
+    data class Entry(
+        val base: String,
+        val variant: String?,
+        /** The CLI's own display name for the model, or null when the line carried no label. */
+        val label: String? = null,
+    ) {
+        /** The slug the CLI prints and accepts on `--model` — never contains whitespace. */
         val slug: String get() = if (variant != null) "$base-$variant" else base
     }
 
     /**
      * Parses one model per non-blank line.
      *
-     * A slug's last hyphen-separated segment splits off only when it is a reasoning effort;
-     * `claude-sonnet-4-6`'s last segment is `6` and `claude-opus-4-6-thinking`'s is `thinking`, so
-     * both stay whole - splitting on every hyphen would cut version numbers like `4-6` apart.
+     * The first whitespace-delimited token is always the slug; anything after it is the CLI's
+     * display label for the picker. Within a bare slug (the pre-1.1.17 format), the last
+     * hyphen-separated segment splits off only when it is a reasoning effort; `claude-sonnet-4-6`'s
+     * last segment is `6` and `claude-opus-4-6-thinking`'s is `thinking`, so both stay whole -
+     * splitting on every hyphen would cut version numbers like `4-6` apart.
      */
     fun parse(output: String): List<Entry> =
         output.lineSequence()
             .map(String::trim)
             .filter(String::isNotEmpty)
-            .map { slug ->
+            .map { line ->
+                val firstBreak = WHITESPACE.find(line)?.range?.first ?: line.length
+                val slug = line.take(firstBreak)
+                val label = line.drop(firstBreak).trim().takeIf(String::isNotEmpty)
                 val segments = slug.split('-')
                 val last = segments.last()
                 if (segments.size > 1 && last in EFFORT_SUFFIXES) {
-                    Entry(segments.dropLast(1).joinToString("-"), last)
+                    Entry(segments.dropLast(1).joinToString("-"), last, label)
                 } else {
-                    Entry(slug, null)
+                    Entry(slug, null, label)
                 }
             }
             .toList()
@@ -83,11 +95,12 @@ object AntigravityModels {
         // a separate effort chip. A model that has efforts *requires* one - the CLI rejects
         // `--model gemini-3.1-pro` with `--effort ""` - so an effort left unselected in another
         // control is not a valid state to be able to reach. Listing whole ids also keeps the picker
-        // a one-to-one view of `agy models`.
+        // a one-to-one view of `agy models`. The CLI's own label (1.1.17+) names the row and the
+        // bare slug stays the id/subtitle; older releases printed no label, so the id fills in.
         val models =
             entries.associate { entry ->
                 val id = entry.slug
-                id to OpenCodeModel(id = id, providerId = PROVIDER_ID, name = id)
+                id to OpenCodeModel(id = id, providerId = PROVIDER_ID, name = entry.label ?: id)
             }
         return ProviderCatalog(
             all = listOf(OpenCodeProvider(PROVIDER_ID, "Antigravity", models)),
@@ -115,7 +128,10 @@ object AntigravityModels {
         if (selected == FALLBACK_MODEL) return emptyList()
         // The picker's id is a whole CLI slug, so the effort is split back out of it here rather
         // than taken from [variant] - which is the chat's separate effort control and can legally be
-        // unset. Reading it from the id means the pair sent to the CLI is always complete.
+        // unset. Reading it from the id means the pair sent to the CLI is always complete. Sessions
+        // recorded while 1.1.17's two-column output was parsed whole carry a trailing display label
+        // in the id; [parse] reads only the first token as the slug, so the label never reaches
+        // `--model`.
         val entry = parse(selected).single()
         val effort = entry.variant ?: variant?.trim()?.lowercase()?.takeIf { it in EFFORT_SUFFIXES }
         return listOf("--model", entry.base) + (effort?.let { listOf("--effort", it) } ?: emptyList())
