@@ -110,36 +110,68 @@ data class ChatMessage(
         get() = parts.filterIsInstance<ChatPart.Text>().joinToString("") { it.text }
 }
 
-/** Keeps optimistic image data when a runtime replaces the transcript with its persisted copy. */
+/**
+ * Rebuilds the timeline from the runtime's persisted transcript, keeping what only this client has.
+ *
+ * [retainIds] names messages streamed here that the transcript may not carry yet. A turn interrupted
+ * by a replacement prompt is finalized asynchronously, and some runtimes never persist its partial
+ * output at all; reloading wholesale dropped the bubble the user had been reading, so anything
+ * listed here survives until the transcript produces its own copy under the same id (which then
+ * wins, keeping the two from doubling up).
+ */
 internal fun mergeReloadedMessages(
     reloaded: List<ChatMessage>,
     existing: List<ChatMessage>,
     previewsByFilename: Map<String, Bitmap> = emptyMap(),
+    retainIds: Set<String> = emptySet(),
 ): List<ChatMessage> {
+    // Nothing persisted yet means nothing to reconcile against: keeping what is on screen is both
+    // correct and what callers did with an empty result before this could ever retain anything.
+    if (reloaded.isEmpty()) return existing
     val usedExisting = mutableSetOf<Int>()
-    return reloaded.map { message ->
-        val existingIndex =
-            existing.indices.firstOrNull { it !in usedExisting && existing[it].id == message.id }
-                ?: existing.indices.firstOrNull { index ->
-                    val candidate = existing[index]
-                    index !in usedExisting &&
-                        message.isUser && candidate.isUser &&
-                        candidate.text == message.text &&
-                        (message.text.isNotBlank() || candidate.attachments.isNotEmpty())
+    val merged =
+        reloaded.map { message ->
+            val existingIndex =
+                existing.indices.firstOrNull { it !in usedExisting && existing[it].id == message.id }
+                    ?: existing.indices.firstOrNull { index ->
+                        val candidate = existing[index]
+                        index !in usedExisting &&
+                            message.isUser && candidate.isUser &&
+                            candidate.text == message.text &&
+                            (message.text.isNotBlank() || candidate.attachments.isNotEmpty())
+                    }
+            val previous = existingIndex?.let { index -> existing[index].also { usedExisting += index } }
+            val reloadedImageNames = message.attachments.filter { it.mime.startsWith("image/") }.map { it.filename }.toSet()
+            val missingImages =
+                previous?.attachments.orEmpty().filter {
+                    it.mime.startsWith("image/") && it.filename !in reloadedImageNames
                 }
-        val previous = existingIndex?.let { index -> existing[index].also { usedExisting += index } }
-        val reloadedImageNames = message.attachments.filter { it.mime.startsWith("image/") }.map { it.filename }.toSet()
-        val missingImages =
-            previous?.attachments.orEmpty().filter {
-                it.mime.startsWith("image/") && it.filename !in reloadedImageNames
+            val attachments = message.attachments + missingImages
+            val previews =
+                previous?.imagePreviews.orEmpty().ifEmpty {
+                    attachments.mapNotNull { previewsByFilename[it.filename] }
+                }
+            message.copy(attachments = attachments, imagePreviews = previews)
+        }.toMutableList()
+    if (retainIds.isNotEmpty()) {
+        val reloadedIds = reloaded.map { it.id }.toSet()
+        existing
+            .asSequence()
+            .filter { message ->
+                !message.isUser && message.parts.isNotEmpty() && message.id in retainIds && message.id !in reloadedIds
             }
-        val attachments = message.attachments + missingImages
-        val previews =
-            previous?.imagePreviews.orEmpty().ifEmpty {
-                attachments.mapNotNull { previewsByFilename[it.filename] }
+            .forEach { message ->
+                // The bubble belongs where it streamed, ahead of everything that came after it,
+                // not pinned to the bottom of a timeline that has moved on.
+                val index = merged.indexOfFirst { it.timestamp > message.timestamp }
+                if (index >= 0) {
+                    merged.add(index, message)
+                } else {
+                    merged.add(message)
+                }
             }
-        message.copy(attachments = attachments, imagePreviews = previews)
     }
+    return merged
 }
 
 data class PendingQuestionUi(
@@ -169,7 +201,7 @@ data class PendingQuestionUi(
 }
 
 private const val MAX_TOOL_OUTPUT_CHARS = 4000
-private const val RESPONSE_POLL_INTERVAL_MS = 3000L
+internal const val RESPONSE_POLL_INTERVAL_MS = 3000L
 private const val RESPONSE_POLL_TIMEOUT_MS = 120_000L
 internal const val TRANSIENT_RECOVERY_DELAY_MS = 5000L
 internal const val TRANSIENT_RECOVERY_RETRY_DELAY_MS = 3000L
@@ -1030,6 +1062,7 @@ class ChatViewModel(
                                             serverMessages.mapNotNull(::toUiMessage),
                                             _uiState.value.messages,
                                             pendingPreviewsByFilename,
+                                            streamedParts.keys,
                                         )
                                     if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
                                         _uiState.update { it.copy(messages = uiMessages) }
@@ -1057,6 +1090,10 @@ class ChatViewModel(
                                     message.info.role == "assistant" && message.info.id !in messageIdsBeforeSend
                                 }
                             if (!sessionCompleted && !hasResponse) return@onSuccess
+                            // Captured before the stream cache is cleared: the final reload must
+                            // keep what this client streamed that the transcript still does not
+                            // carry, not drop it the way it otherwise would.
+                            val retainedIds = streamedParts.keys.toSet()
                             streamedParts.clear()
                             // Re-attach the in-memory previews the same way the polling loop does:
                             // the final reload otherwise drops them, and a runtime whose attachment
@@ -1067,6 +1104,7 @@ class ChatViewModel(
                                     serverMessages.mapNotNull(::toUiMessage),
                                     _uiState.value.messages,
                                     pendingPreviewsByFilename,
+                                    retainedIds,
                                 )
                             _uiState.update {
                                 it.copy(
@@ -1213,6 +1251,7 @@ class ChatViewModel(
                                         mergeReloadedMessages(
                                             serverMessages.mapNotNull(::toUiMessage),
                                             _uiState.value.messages,
+                                            retainIds = streamedParts.keys,
                                         )
                                     if (uiMessages.isNotEmpty() && uiMessages != _uiState.value.messages) {
                                         _uiState.update { it.copy(messages = uiMessages) }
@@ -1234,6 +1273,7 @@ class ChatViewModel(
                                     message.info.role == "assistant" && message.info.id !in messageIdsBeforeSend
                                 }
                             if (!sessionCompleted && !hasResponse) return@onSuccess
+                            val retainedIds = streamedParts.keys.toSet()
                             streamedParts.clear()
                             _uiState.update {
                                 it.copy(
@@ -1241,6 +1281,7 @@ class ChatViewModel(
                                         mergeReloadedMessages(
                                             serverMessages.mapNotNull(::toUiMessage),
                                             it.messages,
+                                            retainIds = retainedIds,
                                         ),
                                     isRunning = false,
                                     isThinking = false,
@@ -1828,6 +1869,12 @@ class ChatViewModel(
             }
             is OpenCodeEvent.SessionError -> {
                 if (event.sessionId != null && event.sessionId != activeSession) return
+                // Stopping a run on purpose - the stop button, or a replacement prompt sent
+                // mid-turn - makes the runtime emit this same event carrying an abort error.
+                // That is a decision, not a failure: painting it red left the card up forever,
+                // outliving every later turn, and nothing the turn did next ever cleared it.
+                // The abort paths settle their own state; there is nothing to report here.
+                if (event.isAbort) return
                 event.sessionId?.let(::closeInterruptWindow)
                 _uiState.update {
                     it.copy(
@@ -1848,6 +1895,10 @@ class ChatViewModel(
         // prompt sent in its place; acting on it would park the composer on the send button and
         // drain another queued prompt over a turn that is only starting.
         if (sessionId in pendingInterrupts) return
+        // Captured before the stream cache is cleared: a bubble this client streamed that the
+        // transcript still does not carry (an interrupted turn some runtimes never persist) must
+        // survive the reload below, not vanish with the cache.
+        val retainedIds = streamedParts.keys.toSet()
         streamedParts.clear()
         _uiState.update { state ->
             state.copy(
@@ -1860,17 +1911,25 @@ class ChatViewModel(
             )
         }
         refreshContextUsage(sessionId)
-        refreshMessages(sessionId)
+        refreshMessages(sessionId, retainedIds)
         onSessionCreated()
         drainQueue()
     }
 
-    private fun refreshMessages(sessionId: String) {
+    private fun refreshMessages(
+        sessionId: String,
+        retainIds: Set<String> = emptySet(),
+    ) {
         val currentBackend = backend ?: return
         viewModelScope.launch {
             runCatching { currentBackend.listMessages(sessionId) }
                 .onSuccess { messages ->
-                    val uiMessages = mergeReloadedMessages(messages.mapNotNull(::toUiMessage), _uiState.value.messages)
+                    val uiMessages =
+                        mergeReloadedMessages(
+                            messages.mapNotNull(::toUiMessage),
+                            _uiState.value.messages,
+                            retainIds = retainIds,
+                        )
                     if (uiMessages.isNotEmpty()) {
                         _uiState.update { it.copy(messages = uiMessages) }
                     }
