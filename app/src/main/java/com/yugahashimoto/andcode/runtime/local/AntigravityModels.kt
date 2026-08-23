@@ -30,7 +30,7 @@ object AntigravityModels {
      */
     private val EFFORT_SUFFIXES = setOf("high", "medium", "low")
 
-    /** The reasoning efforts a slug's trailing segment may carry, joined for messages. */
+    /** Splits a `models` line into its leading slug token and the display label after it. */
     private val WHITESPACE = Regex("\\s+")
 
     data class Entry(
