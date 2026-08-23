@@ -1,15 +1,16 @@
 name: OCR PR Review
 
+# DISABLED 2026-08: OpenCode Zen's free tier keeps failing with
+# "Upstream request failed: Model is unavailable", so every PR went red on a
+# check that had produced no findings at all. Automated review moved to
+# copilot-review.yml; restore the pull_request_target trigger below once the
+# free tier is dependable again.
+on:
+  workflow_dispatch:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
-on:
-  # pull_request_target so the job can post comments even on fork PRs
-  # (GITHUB_TOKEN is read-only for pull_request events from forks).
-  # Safe because OCR only reads the diff and never executes PR code.
-  pull_request_target:
-    types: [opened, synchronize]
 
 permissions:
   contents: read
