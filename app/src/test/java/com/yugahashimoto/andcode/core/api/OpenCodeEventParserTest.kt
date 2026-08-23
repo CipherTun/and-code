@@ -2,6 +2,8 @@ package com.yugahashimoto.andcode.core.api
 
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -239,5 +241,29 @@ class OpenCodeEventParserTest {
 
         assertEquals("s1", event.sessionId)
         assertEquals("ProviderAuthError: missing api key", event.message)
+        assertEquals("ProviderAuthError", event.name)
+        assertFalse(event.isAbort)
+    }
+
+    @Test
+    fun `session error for a deliberate stop is recognized as an abort`() {
+        val event =
+            parser.parse(
+                """{"type":"session.error","properties":{"sessionID":"s1","error":{"name":"MessageAbortedError","data":{"message":"Aborted"}}}}""",
+            ) as OpenCodeEvent.SessionError
+
+        assertTrue(event.isAbort)
+    }
+
+    @Test
+    fun `session error without a typed error object is not an abort`() {
+        val event =
+            parser.parse(
+                """{"type":"session.error","properties":{"sessionID":"s1","error":"boom"}}""",
+            ) as OpenCodeEvent.SessionError
+
+        assertEquals("boom", event.message)
+        assertNull(event.name)
+        assertFalse(event.isAbort)
     }
 }

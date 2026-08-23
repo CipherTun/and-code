@@ -109,11 +109,14 @@ class OpenCodeEventParser(
                         sessionId = properties["sessionID"]!!.jsonPrimitive.content,
                         status = properties["status"]!!.jsonObject["type"]!!.jsonPrimitive.content,
                     )
-                "session.error" ->
+                "session.error" -> {
+                    val errorObject = properties["error"] as? JsonObject
                     OpenCodeEvent.SessionError(
                         sessionId = (properties["sessionID"] as? JsonPrimitive)?.content,
                         message = describeError(properties["error"]),
+                        name = (errorObject?.get("name") as? JsonPrimitive)?.content,
                     )
+                }
                 else -> OpenCodeEvent.Unknown(type, raw)
             }
         }.getOrElse { OpenCodeEvent.Unknown(type, raw) }

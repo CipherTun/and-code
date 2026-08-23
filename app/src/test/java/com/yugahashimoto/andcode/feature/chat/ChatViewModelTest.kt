@@ -870,6 +870,102 @@ class ChatViewModelTest {
         }
 
     /**
+     * Stopping a run - by hand or by sending a replacement prompt mid-turn - makes the runtime
+     * report the cancelled turn as a session error named MessageAbortedError. That is the user's own
+     * decision arriving back at them: painting it red left an error card up forever, outliving every
+     * later turn, and nothing that happened next ever cleared it.
+     */
+    @Test
+    fun `an abort reported as a session error does not surface as a failure`() =
+        runTest(dispatcher) {
+            val backend = FakeRuntimeTargetBackend(RuntimeCapabilities(abortsBeforeInterrupt = true))
+            val viewModel = ChatViewModel(backend, backend.events)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("first")
+            runCurrent()
+            viewModel.sendMessage("second")
+            runCurrent()
+
+            backend.events.tryEmit(
+                OpenCodeEvent.SessionError("s1", "MessageAbortedError: Aborted", name = "MessageAbortedError"),
+            )
+            advanceUntilIdle()
+
+            assertNull(viewModel.uiState.value.error)
+            assertTrue(viewModel.uiState.value.isRunning)
+        }
+
+    /** A session error that is not a deliberate stop keeps its existing failure reporting. */
+    @Test
+    fun `a real session error still surfaces and ends the run`() =
+        runTest(dispatcher) {
+            val backend = FakeRuntimeTargetBackend(RuntimeCapabilities(abortsBeforeInterrupt = true))
+            val viewModel = ChatViewModel(backend, backend.events)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("first")
+            runCurrent()
+
+            backend.events.tryEmit(
+                OpenCodeEvent.SessionError("s1", "ProviderAuthError: missing api key", name = "ProviderAuthError"),
+            )
+            advanceUntilIdle()
+
+            assertEquals("ProviderAuthError: missing api key", viewModel.uiState.value.error)
+            assertFalse(viewModel.uiState.value.isRunning)
+        }
+
+    /**
+     * The bubble of a turn interrupted mid-stream must survive the transcript reloads that start
+     * with the replacement prompt. The interrupted turn is finalized asynchronously and some
+     * runtimes never persist its partial output at all, so reloading wholesale dropped what the
+     * user had been reading — the "sent a message and my answer vanished" report.
+     */
+    @Test
+    fun `the partial answer of an interrupted turn survives transcript reloads`() =
+        runTest(dispatcher) {
+            val backend = FakeRuntimeTargetBackend(RuntimeCapabilities(abortsBeforeInterrupt = true))
+            val viewModel = ChatViewModel(backend, backend.events)
+            advanceUntilIdle()
+
+            viewModel.sendMessage("first")
+            runCurrent()
+            // The interrupted turn has streamed some output when the replacement prompt lands.
+            backend.events.tryEmit(
+                OpenCodeEvent.MessagePartUpdated(
+                    OpenCodePart(id = "p1", sessionId = "s1", messageId = "m-aborted", type = "text", text = "partial answer"),
+                ),
+            )
+            runCurrent()
+            assertTrue(viewModel.uiState.value.messages.any { it.id == "m-aborted" })
+
+            viewModel.sendMessage("second")
+            runCurrent()
+            assertEquals(listOf("prompt:first", "abort:s1", "prompt:second"), backend.calls)
+
+            // The transcript now carries the two prompts (the interrupted turn is not persisted
+            // yet), so the polls reconcile against a real, non-empty transcript.
+            backend.transcript =
+                listOf(
+                    sessionUserMessage("s1", "u1", "first", created = 100),
+                    sessionUserMessage("s1", "u2", "second", created = 101),
+                )
+
+            // The poll loop refetches the transcript while the replacement runs. Then the
+            // replacement ends and its idle reloads again.
+            backend.events.tryEmit(OpenCodeEvent.SessionStatusChanged("s1", "busy"))
+            advanceTimeBy(RESPONSE_POLL_INTERVAL_MS + 1L)
+            backend.events.tryEmit(OpenCodeEvent.SessionIdle("s1"))
+            advanceUntilIdle()
+
+            val abortedBubble =
+                viewModel.uiState.value.messages.firstOrNull { it.id == "m-aborted" }
+            assertEquals("partial answer", abortedBubble?.text)
+            assertTrue(viewModel.uiState.value.messages.map { it.id }.containsAll(listOf("u1", "u2")))
+        }
+
+    /**
      * Messages held while the runtime was unreachable used to all go out the moment it came back.
      * Now that a send interrupts, each one would abort the turn the one before it just started, so
      * they have to be spread over the turns instead.
@@ -1072,6 +1168,31 @@ class ChatViewModelTest {
             ),
     )
 
+    private fun sessionUserMessage(
+        sessionId: String,
+        messageId: String,
+        text: String,
+        created: Long,
+    ) = OpenCodeMessage(
+        info =
+            OpenCodeMessageInfo(
+                id = messageId,
+                sessionId = sessionId,
+                role = "user",
+                time = OpenCodeTime(created = created),
+            ),
+        parts =
+            listOf(
+                OpenCodePart(
+                    id = "$messageId-p",
+                    sessionId = sessionId,
+                    messageId = messageId,
+                    type = "text",
+                    text = text,
+                ),
+            ),
+    )
+
     private class FakeBackend : OpenCodeBackend {
         override val id: String = "fake"
         override val displayName: String = "Fake"
@@ -1183,6 +1304,9 @@ class ChatViewModelTest {
         /** Aborts and prompt sends in the order the ViewModel issued them. */
         val calls = mutableListOf<String>()
 
+        /** What the transcript endpoint reports; defaults to nothing being persisted. */
+        var transcript: List<OpenCodeMessage> = emptyList()
+
         override suspend fun connect(): Result<OpenCodeHealth> = Result.success(OpenCodeHealth(true, "test"))
 
         override fun disconnect() = Unit
@@ -1198,7 +1322,7 @@ class ChatViewModelTest {
             directory: String?,
         ): OpenCodeSession = OpenCodeSession(id = "s1", title = title ?: "", directory = directory, time = OpenCodeTime(created = 1))
 
-        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = emptyList()
+        override suspend fun listMessages(sessionId: String): List<OpenCodeMessage> = transcript
 
         override suspend fun listProviders(): ProviderCatalog = ProviderCatalog()
 

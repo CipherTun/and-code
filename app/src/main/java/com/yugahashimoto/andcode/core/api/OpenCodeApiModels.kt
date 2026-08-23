@@ -74,6 +74,13 @@ data class OpenCodeMessageInfo(
     val error: OpenCodeMessageError? = null,
 )
 
+/**
+ * Names the runtimes give an error that only records a turn being stopped on purpose — by the stop
+ * button, or by a replacement prompt sent mid-turn. Stopping a run is a decision, not a failure, so
+ * these must never read as one.
+ */
+val AbortErrorNames: Set<String> = setOf("MessageAbortedError", "AbortError")
+
 /** A typed message error, e.g. `ApiError`; rendered in the chat when a turn fails. */
 @Serializable
 data class OpenCodeMessageError(
@@ -89,7 +96,7 @@ data class OpenCodeMessageError(
 
     /** OpenCode records a stop the user asked for as an error; it is not a failure to report. */
     val isAbort: Boolean
-        get() = name == "MessageAbortedError" || name == "AbortError"
+        get() = name in AbortErrorNames
 }
 
 @Serializable
@@ -347,7 +354,15 @@ sealed interface OpenCodeEvent {
     /** Replacement for the deprecated `session.idle`: status is `idle`, `busy` or `retry`. */
     data class SessionStatusChanged(val sessionId: String, val status: String) : OpenCodeEvent
 
-    data class SessionError(val sessionId: String?, val message: String?) : OpenCodeEvent
+    /**
+     * A run stopped on purpose — stop button, or interrupted by a replacement prompt — is a decision,
+     * not a failure. The error that arrives here must never read as one.
+     */
+    data class SessionError(val sessionId: String?, val message: String?, val name: String? = null) : OpenCodeEvent {
+        /** An abort the user asked for arrives here too; it must not read as a failure. */
+        val isAbort: Boolean
+            get() = name in AbortErrorNames
+    }
 
     data class Unknown(val type: String, val rawJson: String) : OpenCodeEvent
 }

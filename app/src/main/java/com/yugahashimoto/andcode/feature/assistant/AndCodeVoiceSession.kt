@@ -274,6 +274,9 @@ class AndCodeVoiceSession(context: Context) :
                             }
                             is OpenCodeEvent.SessionError -> {
                                 if (event.sessionId == null || event.sessionId == sessionId) {
+                                    // A deliberate stop arrives here too; it is a decision, not a
+                                    // failure, and the idle that follows settles the turn.
+                                    if (event.isAbort) return@collect
                                     showError(event.message ?: context.getString(R.string.voice_processing_failed))
                                 }
                             }

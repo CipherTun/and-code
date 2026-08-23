@@ -205,7 +205,11 @@ class ScheduleExecutionService : Service() {
                     }
                     is OpenCodeEvent.SessionError -> {
                         if (event.sessionId == null || event.sessionId == targetSessionId) {
-                            if (notifyUser) app.notifications.notifySessionError(targetSessionId, event.message, target.id)
+                            // Stopping the run by hand reaches here as MessageAbortedError; the
+                            // user made that decision, so it is not announced as a failure.
+                            if (notifyUser && !event.isAbort) {
+                                app.notifications.notifySessionError(targetSessionId, event.message, target.id)
+                            }
                             throw CompletionSignal(ScheduleCompletion.Failed(event.message))
                         }
                     }

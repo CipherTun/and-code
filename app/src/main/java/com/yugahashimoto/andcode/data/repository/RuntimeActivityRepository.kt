@@ -487,6 +487,10 @@ class RuntimeActivityRepository(
                         )
                     }
                 }
+                // Stopping a run on purpose is a decision, not a failure: reporting it as an error
+                // left a red card up forever and notified the user of every stop. The abort paths
+                // settle their own state; there is nothing to log or notify here.
+                if (event.isAbort) return
                 appendLog(messages.eventError, event.message, event.sessionId)
                 onSessionError?.invoke(event.sessionId, event.message, target.id)
             }
