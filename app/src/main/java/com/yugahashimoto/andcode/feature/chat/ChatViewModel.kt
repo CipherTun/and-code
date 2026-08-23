@@ -1759,10 +1759,16 @@ class ChatViewModel(
                     viewModelScope.launch {
                         runCatching { currentBackend.listMessages(session) }
                             .onSuccess { messages ->
+                                val retainedIds = streamedParts.keys.toSet()
                                 streamedParts.clear()
                                 _uiState.update {
                                     it.copy(
-                                        messages = mergeReloadedMessages(messages.mapNotNull(::toUiMessage), it.messages),
+                                        messages =
+                                            mergeReloadedMessages(
+                                                messages.mapNotNull(::toUiMessage),
+                                                it.messages,
+                                                retainIds = retainedIds,
+                                            ),
                                     )
                                 }
                             }
@@ -2181,9 +2187,17 @@ class ChatViewModel(
             if (session != null) {
                 runCatching { currentBackend.listMessages(session) }
                     .onSuccess { messages ->
+                        val retainedIds = streamedParts.keys.toSet()
                         streamedParts.clear()
                         _uiState.update {
-                            it.copy(messages = mergeReloadedMessages(messages.mapNotNull(::toUiMessage), it.messages))
+                            it.copy(
+                                messages =
+                                    mergeReloadedMessages(
+                                        messages.mapNotNull(::toUiMessage),
+                                        it.messages,
+                                        retainIds = retainedIds,
+                                    ),
+                            )
                         }
                     }
                     .isSuccess
