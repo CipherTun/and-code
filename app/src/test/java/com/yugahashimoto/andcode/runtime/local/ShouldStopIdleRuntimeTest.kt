@@ -10,12 +10,13 @@ class ShouldStopIdleRuntimeTest {
     private val timeout = 15 * 60 * 1000L
 
     @Test
-    fun `stops once ready, work-free, backgrounded and past the timeout`() {
+    fun `stops once ready, work-free, backgrounded, adb-disconnected and past the timeout`() {
         assertTrue(
             shouldStopIdleRuntime(
                 status = ready,
                 hasActiveWork = false,
                 appInForeground = false,
+                adbConnected = false,
                 idleForMillis = timeout,
                 timeoutMillis = timeout,
             ),
@@ -29,13 +30,14 @@ class ShouldStopIdleRuntimeTest {
                 status = ready,
                 hasActiveWork = false,
                 appInForeground = false,
+                adbConnected = false,
                 idleForMillis = timeout - 1,
                 timeoutMillis = timeout,
             ),
         )
     }
 
-    /** A lease held through RuntimeWorkTracker - a chat run, a schedule, a live ADB link - always blocks it. */
+    /** A lease held through RuntimeWorkTracker - a chat run, a schedule, an in-flight adb command - always blocks it. */
     @Test
     fun `does not stop while work is active`() {
         assertFalse(
@@ -43,6 +45,7 @@ class ShouldStopIdleRuntimeTest {
                 status = ready,
                 hasActiveWork = true,
                 appInForeground = false,
+                adbConnected = false,
                 idleForMillis = timeout,
                 timeoutMillis = timeout,
             ),
@@ -56,6 +59,26 @@ class ShouldStopIdleRuntimeTest {
                 status = ready,
                 hasActiveWork = false,
                 appInForeground = true,
+                adbConnected = false,
+                idleForMillis = timeout,
+                timeoutMillis = timeout,
+            ),
+        )
+    }
+
+    /**
+     * A live wireless-debugging link is not leased as work (see AdbConnectionManager), but it still
+     * has to block the shutdown - killing the runtime out from under an active debugging session
+     * would be as disruptive as freezing a chat run.
+     */
+    @Test
+    fun `does not stop while adb is connected`() {
+        assertFalse(
+            shouldStopIdleRuntime(
+                status = ready,
+                hasActiveWork = false,
+                appInForeground = false,
+                adbConnected = true,
                 idleForMillis = timeout,
                 timeoutMillis = timeout,
             ),
@@ -70,6 +93,7 @@ class ShouldStopIdleRuntimeTest {
                 status = LocalRuntimeStatus.Installing(progress = 0.5f, step = "unpacking"),
                 hasActiveWork = false,
                 appInForeground = false,
+                adbConnected = false,
                 idleForMillis = timeout,
                 timeoutMillis = timeout,
             ),
@@ -79,6 +103,7 @@ class ShouldStopIdleRuntimeTest {
                 status = LocalRuntimeStatus.Starting("1.0.0", 4096),
                 hasActiveWork = false,
                 appInForeground = false,
+                adbConnected = false,
                 idleForMillis = timeout,
                 timeoutMillis = timeout,
             ),
@@ -88,6 +113,7 @@ class ShouldStopIdleRuntimeTest {
                 status = LocalRuntimeStatus.Stopped("1.0.0", 4096),
                 hasActiveWork = false,
                 appInForeground = false,
+                adbConnected = false,
                 idleForMillis = timeout,
                 timeoutMillis = timeout,
             ),

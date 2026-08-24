@@ -12,6 +12,7 @@ import com.yugahashimoto.andcode.core.diagnostics.AnalyticsReporter
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
 import com.yugahashimoto.andcode.core.diagnostics.CrashReporter
 import com.yugahashimoto.andcode.core.lifecycle.AppForeground
+import com.yugahashimoto.andcode.core.lifecycle.ForegroundReturnDetector
 import com.yugahashimoto.andcode.core.lifecycle.ProcessLifecycleAppForeground
 import com.yugahashimoto.andcode.core.locale.AppLanguage
 import com.yugahashimoto.andcode.core.notification.RuntimeNotificationHelper
@@ -36,9 +37,9 @@ import com.yugahashimoto.andcode.feature.schedule.ScheduleManager
 import com.yugahashimoto.andcode.feature.support.GitHubStarCoordinator
 import com.yugahashimoto.andcode.feature.support.GitHubStarService
 import com.yugahashimoto.andcode.feature.wakeword.VoskModelStore
+import com.yugahashimoto.andcode.runtime.LocalRuntimeStatus
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
 import com.yugahashimoto.andcode.runtime.local.AdbConnectionManager
-import com.yugahashimoto.andcode.runtime.local.AdbConnectionState
 import com.yugahashimoto.andcode.runtime.local.AdbShellRunner
 import com.yugahashimoto.andcode.runtime.local.AndroidClaudeMessages
 import com.yugahashimoto.andcode.runtime.local.AndroidLocalRuntimeMessages
@@ -66,6 +67,7 @@ import com.yugahashimoto.andcode.runtime.local.LocalRuntimeUpdater
 import com.yugahashimoto.andcode.runtime.local.VerifiedRuntimeDownloader
 import com.yugahashimoto.andcode.startup.CatalogReconcileInitializer
 import com.yugahashimoto.andcode.startup.RuntimeAutoStartInitializer
+import com.yugahashimoto.andcode.startup.RuntimeAutoStartTrigger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -89,9 +91,9 @@ class AndCodeApplication : Application() {
         private set
 
     /**
-     * The single source of truth for whether the device may suspend. Created before
-     * [activityRepository] so the bridge from its session state into a lease (wired later in
-     * [onCreate]) always has a tracker to acquire against.
+     * The single source of truth for whether the device may suspend. Created at the very start of
+     * [onCreate] so every collaborator built afterwards - the adb manager, the agent controllers,
+     * the activity repository's bridge - can take it as a plain constructor dependency.
      */
     lateinit var runtimeWork: RuntimeWorkTracker
         private set
@@ -187,6 +189,10 @@ class AndCodeApplication : Application() {
             modules(appModule, viewModelModule)
         }
         appForeground = ProcessLifecycleAppForeground.install()
+        // Created early so every collaborator constructed below - the adb manager, the agent
+        // controllers, the activity repository's bridge - can take it as a plain constructor
+        // dependency instead of a nullable one wired in after the fact.
+        runtimeWork = RuntimeWorkTracker()
         settings = SecureSettingsRepository(this)
         // Analytics is explicitly opt-in; source-code tooling should not silently collect usage data.
         AnalyticsReporter.install(this, settings.analyticsEnabled)
@@ -256,7 +262,7 @@ class AndCodeApplication : Application() {
         claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
         antigravityRuntime = AntigravityRuntime(runtimeDirectory, installer::installedRuntime, githubToken = { settings.githubToken })
         antigravityTarget = AntigravityTarget(antigravityRuntime)
-        antigravityController = AntigravityController(installer, antigravityTarget, applicationScope)
+        antigravityController = AntigravityController(installer, antigravityTarget, runtimeWork, applicationScope)
         runtimeMessages = AndroidLocalRuntimeMessages(this)
         gitCloneRepository =
             GitCloneRepository(
@@ -323,20 +329,17 @@ class AndCodeApplication : Application() {
                 shellRunner = AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) },
                 connectionStore = settings,
                 nsdManagerProvider = { getSystemService(Context.NSD_SERVICE) as? NsdManager },
+                runtimeWork = runtimeWork,
                 messages = runtimeMessages,
             )
         // Keep the persisted wireless-debugging link alive for the whole process lifetime. The
         // loop is a cheap no-op until the user has connected once, and it self-heals the link
-        // whenever the adb server inside the Linux runtime is restarted.
+        // whenever the adb server inside the Linux runtime is restarted. The wake-lock lease for
+        // this work is taken inside AdbConnectionManager itself, around each shell invocation - a
+        // live `Connected` state is not leased here, since for anyone who has ever paired wireless
+        // debugging that state is re-established every 30 seconds and would hold the lock forever;
+        // it instead blocks the idle auto-stop directly, in LocalRuntimeService.checkIdleStop.
         adbConnectionManager.startAutoReconnect(applicationScope)
-        runtimeWork = RuntimeWorkTracker()
-        // A live wireless-debugging link is another process depending on the runtime staying up,
-        // so it holds the device awake exactly like an active chat or scheduled run does.
-        bridgeLeaseToWork(
-            tag = "adb",
-            hasWork = adbConnectionManager.state.map { it is AdbConnectionState.Connected }.distinctUntilChanged(),
-            scope = applicationScope,
-        )
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,
@@ -352,6 +355,7 @@ class AndCodeApplication : Application() {
                 runtime = claudeCodeRuntime,
                 installer = installer,
                 scope = applicationScope,
+                runtimeWork = runtimeWork,
                 messages = claudeMessages,
             )
         catalogRepository =
@@ -420,7 +424,37 @@ class AndCodeApplication : Application() {
         // The poll loop is a cheap no-op (one directory stat) while no guest has touched the bridge.
         val scheduleBridge = ScheduleBridge(File(runtimeDirectory, "workspace"), AppScheduleStore(scheduleRepository, scheduleManager))
         applicationScope.launch { scheduleBridge.run() }
+        observeForegroundForRuntimeRestart()
         scheduleDeferredInitialization()
+    }
+
+    /**
+     * Restarts the local runtime when the app returns to the foreground after the 15-minute idle
+     * auto-stop shut it down while backgrounded (see [LocalRuntimeService.checkIdleStop]).
+     *
+     * [RuntimeAutoStartInitializer.create] only runs once per process, at cold start via
+     * [scheduleDeferredInitialization] - it has no hook for a later foreground return, so without
+     * this a runtime the watchdog stopped stays stopped until the process itself is killed and
+     * relaunched, and chat sends silently fail even though the idle-stop setting's own description
+     * promises the runtime restarts when the app is opened.
+     *
+     * [ForegroundReturnDetector] filters out the app's own cold-start transition, which the
+     * initializer above already handles, so only an actual return from the background reaches the
+     * check below. That check is guarded on the runtime being
+     * [Stopped][LocalRuntimeStatus.Stopped]: [LocalRuntimeService.ACTION_START] cancels whatever
+     * operation is currently in flight, so firing it at a Ready runtime, or one mid-install or
+     * mid-update, would interrupt real work rather than being the no-op a healthy runtime deserves.
+     */
+    private fun observeForegroundForRuntimeRestart() {
+        val detector = ForegroundReturnDetector()
+        applicationScope.launch {
+            appForeground.foreground.collect { inForeground ->
+                if (!detector.onForegroundChanged(inForeground)) return@collect
+                if (localRuntimeManager.status() is LocalRuntimeStatus.Stopped) {
+                    RuntimeAutoStartInitializer.restoreIfConfigured(this@AndCodeApplication, RuntimeAutoStartTrigger.AppLaunch)
+                }
+            }
+        }
     }
 
     /**

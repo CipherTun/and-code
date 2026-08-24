@@ -1,6 +1,7 @@
 package com.yugahashimoto.andcode.runtime.local
 
 import com.yugahashimoto.andcode.R
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.runtime.LocalAgent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +77,14 @@ class ClaudeCodeController(
     private val runtime: ClaudeCodeRuntime,
     private val installer: LocalRuntimeInstaller,
     private val scope: CoroutineScope,
+    /**
+     * Install and update run for real time on the runtime's proot process, exactly like a chat
+     * turn does, but neither ever touches
+     * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository] - the only place that
+     * already tracks that as work - so without a lease of their own the device could suspend and
+     * freeze either one mid-flight.
+     */
+    private val runtimeWork: RuntimeWorkTracker,
     private val messages: ClaudeMessages = ClaudeMessages,
 ) {
     private val mutableState = MutableStateFlow(ClaudeCodeUiState())
@@ -112,32 +121,34 @@ class ClaudeCodeController(
         if (installJob?.isActive == true) return
         installJob =
             scope.launch(Dispatchers.IO) {
-                runCatching {
-                    if (installer.installedRuntime() == null) {
-                        report(ClaudeInstallStatus.Installing(R.string.claude_step_preparing_runtime))
-                        installer.install(agents = setOf(LocalAgent.CLAUDE_CODE)) { _, _, _ -> }
+                runtimeWork.withLease(INSTALL_LEASE_TAG) {
+                    runCatching {
+                        if (installer.installedRuntime() == null) {
+                            report(ClaudeInstallStatus.Installing(R.string.claude_step_preparing_runtime))
+                            installer.install(agents = setOf(LocalAgent.CLAUDE_CODE)) { _, _, _ -> }
+                        }
+                        report(ClaudeInstallStatus.Installing(R.string.claude_step_adding_repository))
+                        target.install { step ->
+                            report(
+                                ClaudeInstallStatus.Installing(
+                                    when (step) {
+                                        ClaudeCodeInstaller.Step.ADDING_REPOSITORY ->
+                                            R.string.claude_step_adding_repository
+                                        ClaudeCodeInstaller.Step.DOWNLOADING_PACKAGE ->
+                                            R.string.claude_step_downloading_package
+                                        ClaudeCodeInstaller.Step.VERIFYING ->
+                                            R.string.claude_step_verifying
+                                    },
+                                ),
+                            )
+                        }.getOrThrow()
+                        // Recorded so a later OpenCode install or a reinstall keeps Claude Code.
+                        installer.recordAgent(LocalAgent.CLAUDE_CODE)
+                    }.onSuccess {
+                        refreshBlocking()
+                    }.onFailure { error ->
+                        report(ClaudeInstallStatus.Failed(error.message ?: messages.installFailed))
                     }
-                    report(ClaudeInstallStatus.Installing(R.string.claude_step_adding_repository))
-                    target.install { step ->
-                        report(
-                            ClaudeInstallStatus.Installing(
-                                when (step) {
-                                    ClaudeCodeInstaller.Step.ADDING_REPOSITORY ->
-                                        R.string.claude_step_adding_repository
-                                    ClaudeCodeInstaller.Step.DOWNLOADING_PACKAGE ->
-                                        R.string.claude_step_downloading_package
-                                    ClaudeCodeInstaller.Step.VERIFYING ->
-                                        R.string.claude_step_verifying
-                                },
-                            ),
-                        )
-                    }.getOrThrow()
-                    // Recorded so a later OpenCode install or a reinstall keeps Claude Code.
-                    installer.recordAgent(LocalAgent.CLAUDE_CODE)
-                }.onSuccess {
-                    refreshBlocking()
-                }.onFailure { error ->
-                    report(ClaudeInstallStatus.Failed(error.message ?: messages.installFailed))
                 }
             }
     }
@@ -146,16 +157,18 @@ class ClaudeCodeController(
         if (installJob?.isActive == true) return
         installJob =
             scope.launch(Dispatchers.IO) {
-                mutableState.value = mutableState.value.copy(lastUpdate = null)
-                report(ClaudeInstallStatus.Installing(R.string.claude_step_downloading_package))
-                target.update()
-                    .onSuccess { result ->
-                        refreshBlocking()
-                        // After the refresh, so the version the card shows and the outcome it
-                        // reports come from the same read of the sandbox.
-                        mutableState.value = mutableState.value.copy(lastUpdate = result)
-                    }
-                    .onFailure { error -> report(ClaudeInstallStatus.Failed(error.message ?: messages.updateFailed)) }
+                runtimeWork.withLease(UPDATE_LEASE_TAG) {
+                    mutableState.value = mutableState.value.copy(lastUpdate = null)
+                    report(ClaudeInstallStatus.Installing(R.string.claude_step_downloading_package))
+                    target.update()
+                        .onSuccess { result ->
+                            refreshBlocking()
+                            // After the refresh, so the version the card shows and the outcome it
+                            // reports come from the same read of the sandbox.
+                            mutableState.value = mutableState.value.copy(lastUpdate = result)
+                        }
+                        .onFailure { error -> report(ClaudeInstallStatus.Failed(error.message ?: messages.updateFailed)) }
+                }
             }
     }
 
@@ -201,5 +214,10 @@ class ClaudeCodeController(
 
     private fun report(status: ClaudeInstallStatus) {
         mutableState.value = mutableState.value.copy(install = status)
+    }
+
+    private companion object {
+        const val INSTALL_LEASE_TAG = "claude-install"
+        const val UPDATE_LEASE_TAG = "claude-update"
     }
 }

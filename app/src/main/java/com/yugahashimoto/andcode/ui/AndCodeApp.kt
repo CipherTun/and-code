@@ -945,7 +945,7 @@ fun AndCodeApp(
                     // polling GitHub for badges nobody can see.
                     if (chatState.pullRequests.isNotEmpty()) {
                         val lifecycleOwner = LocalLifecycleOwner.current
-                        LaunchedEffect(Unit) {
+                        LaunchedEffect(lifecycleOwner) {
                             lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
                                 while (true) {
                                     delay(PULL_REQUEST_REFRESH_INTERVAL_MS)
@@ -1239,7 +1239,12 @@ fun AndCodeApp(
                 githubConfigured = !app.settings.githubToken.isNullOrBlank(),
                 onClone = { url ->
                     val name = url.trim().removeSuffix("/").removeSuffix(".git").substringAfterLast('/')
-                    withContext(Dispatchers.IO) { app.gitCloneRepository.clone(url, name) }
+                    // A clone can run for as long as the repository takes to fetch, entirely on the
+                    // runtime's proot process, so it needs its own lease the same way an install or
+                    // scheduled run does - nothing else already tracks this as active work.
+                    app.runtimeWork.withLease("git-clone") {
+                        withContext(Dispatchers.IO) { app.gitCloneRepository.clone(url, name) }
+                    }
                 },
                 onListRepos = { settingsViewModel.listGitHubRepos() },
                 onCloned = { serverPath ->

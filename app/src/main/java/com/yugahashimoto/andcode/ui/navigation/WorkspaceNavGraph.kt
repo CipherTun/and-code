@@ -173,7 +173,7 @@ fun NavGraphBuilder.workspaceNavGraph(
                 key = "terminal",
                 factory =
                     ViewModelFactory {
-                        TerminalViewModel(app.commandRunner)
+                        TerminalViewModel(app.commandRunner, app.runtimeWork)
                     },
             )
         val terminalState by terminalViewModel.state.collectAsState()

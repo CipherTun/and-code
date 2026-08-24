@@ -535,7 +535,7 @@
     <string name="settings_workspace_row">ワークスペース</string>
     <string name="notifications_row">通知</string>
     <string name="local_runtime_idle_stop_row">アイドル状態のランタイムを停止</string>
-    <string name="local_runtime_idle_stop_row_description">スケジュールの実行時やアプリを開いたときに自動的に再起動します</string>
+    <string name="local_runtime_idle_stop_row_description">スケジュールの実行時やアプリを開いたときに自動的に再起動しますが、デバイスの再起動後は自動的には起動しません</string>
     <string name="privacy_row">プライバシーとデータ</string>
     <string name="privacy_stub_body">この機能は準備中です。</string>
     <string name="diagnostics_row">診断・ログ</string>

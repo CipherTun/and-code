@@ -115,18 +115,26 @@ internal const val IDLE_STOP_TIMEOUT_MILLIS = 15 * 60 * 1000L
  * An idle, work-free [Ready][LocalRuntimeStatus.Ready] runtime backs off to a much slower poll: with
  * no wake lock held (see [localRuntimeNeedsWakeLock]) the device is free to suspend, so there is
  * nothing productive a 5-second tick buys that a 60-second one does not - the runtime is not going
- * anywhere on its own while genuinely idle. Every other state keeps the tight interval: a bounded
- * operation in progress needs its wake lock re-armed well before the timeout, and a stopped/broken
- * runtime needs the auto-restart check to notice quickly.
+ * anywhere on its own while genuinely idle.
+ * [Broken][LocalRuntimeStatus.Broken], [UnsupportedAbi][LocalRuntimeStatus.UnsupportedAbi] and
+ * [NotInstalled][LocalRuntimeStatus.NotInstalled] back off for a different reason: they are terminal
+ * states this watchdog's auto-restart check cannot do anything about, so a tight poll only burns
+ * battery for no chance of recovery. [Stopped][LocalRuntimeStatus.Stopped] is the one state that
+ * keeps the tight interval despite having no active work - it is exactly what the auto-restart
+ * check exists to notice and recover from quickly - and every bounded, in-progress state
+ * ([Installing][LocalRuntimeStatus.Installing], [Starting][LocalRuntimeStatus.Starting],
+ * [Updating][LocalRuntimeStatus.Updating]) needs its wake lock re-armed well before the timeout.
  */
 internal fun watchdogIntervalMillis(
     status: LocalRuntimeStatus,
     hasActiveWork: Boolean,
 ): Long =
-    if (status is LocalRuntimeStatus.Ready && !hasActiveWork) {
-        WATCHDOG_IDLE_INTERVAL_MILLIS
-    } else {
-        WATCHDOG_ACTIVE_INTERVAL_MILLIS
+    when {
+        status is LocalRuntimeStatus.Ready && !hasActiveWork -> WATCHDOG_IDLE_INTERVAL_MILLIS
+        status is LocalRuntimeStatus.Broken -> WATCHDOG_IDLE_INTERVAL_MILLIS
+        status is LocalRuntimeStatus.UnsupportedAbi -> WATCHDOG_IDLE_INTERVAL_MILLIS
+        status is LocalRuntimeStatus.NotInstalled -> WATCHDOG_IDLE_INTERVAL_MILLIS
+        else -> WATCHDOG_ACTIVE_INTERVAL_MILLIS
     }
 
 /**
@@ -140,17 +148,27 @@ internal fun watchdogIntervalMillis(
  * every one of which holds its own lease through
  * [com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker] and therefore already fails
  * [hasActiveWork] - is never caught mid-operation even if this were checked at the wrong moment.
+ *
+ * [adbConnected] is deliberately not folded into [hasActiveWork]: a live wireless-debugging link is
+ * only leased for the duration of an actual shell command (see [AdbConnectionManager]), since that
+ * state is re-established every 30 seconds by its auto-reconnect loop and a lease held for as long
+ * as it reads `Connected` would keep the device awake forever for anyone who has ever paired. A
+ * connected link still has to block this shutdown though - killing the runtime out from under an
+ * active debugging session would be as disruptive as freezing a chat run - so it is threaded through
+ * as its own condition instead.
  */
 internal fun shouldStopIdleRuntime(
     status: LocalRuntimeStatus,
     hasActiveWork: Boolean,
     appInForeground: Boolean,
+    adbConnected: Boolean,
     idleForMillis: Long,
     timeoutMillis: Long,
 ): Boolean =
     status is LocalRuntimeStatus.Ready &&
         !hasActiveWork &&
         !appInForeground &&
+        !adbConnected &&
         idleForMillis >= timeoutMillis
 
 internal class RestartBackoff(
@@ -342,10 +360,14 @@ class LocalRuntimeService : Service() {
     /**
      * Runs [block] under a `"runtime-op"` [RuntimeWorkTracker] lease.
      *
-     * Every install, start, update, rollback and restore passes through here, and every one of
-     * them is real work the device must not suspend through - the difference from a chat session is
-     * only that nothing else already tracks it, since it never touches
-     * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository].
+     * Every command this service itself executes - installing, starting, updating, rolling back,
+     * restoring or deleting the OpenCode runtime - passes through here, and each is real work the
+     * device must not suspend through; the difference from a chat session is only that nothing else
+     * already tracks it, since none of them touch
+     * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository]. Claude Code and
+     * Antigravity's own install and update flows are separate controllers
+     * ([ClaudeCodeController], [AntigravityController]) that never call this service, so they hold
+     * their own leases instead of passing through here.
      */
     private fun launchOperation(block: suspend () -> Unit) {
         operation?.cancel()
@@ -381,9 +403,10 @@ class LocalRuntimeService : Service() {
 
     /**
      * Tracks how long the idle-stop condition has held and, once [shouldStopIdleRuntime] agrees it
-     * has held long enough, performs the same shutdown the [LocalRuntimeServiceCommand.Stop] path
-     * does. Returns true when it stopped the runtime, so the watchdog loop can end its own tick
-     * loop instead of running once more against a service already on its way down.
+     * has held long enough, stops the runtime and this service the same way
+     * [LocalRuntimeServiceCommand.Stop] does. Returns true when it stopped the runtime, so the
+     * watchdog loop can end its own tick loop instead of running once more against a service
+     * already on its way down.
      *
      * The setting is read fresh on every tick rather than cached, so flipping it in Settings takes
      * effect on the very next check instead of needing the service to restart.
@@ -393,20 +416,31 @@ class LocalRuntimeService : Service() {
         hasActiveWork: Boolean,
     ): Boolean {
         val appInForeground = appForeground.foreground.value
+        val adbConnected = app.adbConnectionManager.state.value is AdbConnectionState.Connected
         val now = System.currentTimeMillis()
-        val idleNow = status is LocalRuntimeStatus.Ready && !hasActiveWork && !appInForeground
+        val idleNow = status is LocalRuntimeStatus.Ready && !hasActiveWork && !appInForeground && !adbConnected
         idleSinceMillis = if (idleNow) idleSinceMillis ?: now else null
         val idleForMillis = idleSinceMillis?.let { now - it } ?: 0L
 
         if (!app.settings.localRuntimeIdleStopEnabled) return false
-        if (!shouldStopIdleRuntime(status, hasActiveWork, appInForeground, idleForMillis, IDLE_STOP_TIMEOUT_MILLIS)) {
+        if (!shouldStopIdleRuntime(status, hasActiveWork, appInForeground, adbConnected, idleForMillis, IDLE_STOP_TIMEOUT_MILLIS)) {
             return false
         }
         autoRestartEnabled = false
-        launchOperation {
-            manager.stop()
-            stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+        // Deliberately not launchOperation: this is the watchdog's own decision, not a user or
+        // notification action, so it must not cancel anything already tracked in `operation`, and
+        // stopForeground/stopSelf have to run even if manager.stop() throws - otherwise a throwing
+        // stop leaves an unmonitored zombie foreground service, since the watchdog loop has already
+        // returned and autoRestartEnabled is now false.
+        scope.launch(Dispatchers.IO) {
+            runtimeWork.withLease(RUNTIME_OPERATION_LEASE_TAG) {
+                try {
+                    manager.stop()
+                } finally {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
+            }
         }
         return true
     }

@@ -3,6 +3,7 @@ package com.yugahashimoto.andcode.runtime.local
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,6 +49,15 @@ class AdbConnectionManager(
     private val shellRunner: AdbShellRunner,
     private val connectionStore: AdbConnectionStore = InMemoryAdbConnectionStore(),
     private val nsdManagerProvider: () -> NsdManager?,
+    /**
+     * Leased around each shell invocation below rather than for as long as [state] reads
+     * [AdbConnectionState.Connected] - that state is re-established every 30 seconds by
+     * [startAutoReconnect] for anyone who has ever paired wireless debugging, so a lease held for
+     * its whole duration would keep the device awake forever for those users. A live connection
+     * still has to block the idle auto-stop, but that is a separate condition threaded through
+     * [com.yugahashimoto.andcode.runtime.local.LocalRuntimeService.checkIdleStop], not this lease.
+     */
+    private val runtimeWork: RuntimeWorkTracker = RuntimeWorkTracker(),
     private val messages: LocalRuntimeMessages = LocalRuntimeMessages,
 ) {
     private val mutableState = MutableStateFlow<AdbConnectionState>(AdbConnectionState.Disconnected)
@@ -143,10 +153,12 @@ class AdbConnectionManager(
         withContext(Dispatchers.IO) {
             mutableState.value = AdbConnectionState.Pairing(pairingPort)
             val result =
-                shellRunner.runShell(
-                    "echo '${pairingCode.replace("'", "'\\''")}' | adb pair localhost:$pairingPort",
-                    timeoutSeconds = 30L,
-                )
+                runtimeWork.withLease(ADB_LEASE_TAG) {
+                    shellRunner.runShell(
+                        "echo '${pairingCode.replace("'", "'\\''")}' | adb pair localhost:$pairingPort",
+                        timeoutSeconds = 30L,
+                    )
+                }
             if (result.exitCode == 0) {
                 Result.success(Unit)
             } else {
@@ -158,10 +170,12 @@ class AdbConnectionManager(
     suspend fun connect(port: Int): Result<Unit> =
         withContext(Dispatchers.IO) {
             val result =
-                shellRunner.runShell(
-                    "adb connect localhost:$port",
-                    timeoutSeconds = CONNECT_TIMEOUT_SECONDS,
-                )
+                runtimeWork.withLease(ADB_LEASE_TAG) {
+                    shellRunner.runShell(
+                        "adb connect localhost:$port",
+                        timeoutSeconds = CONNECT_TIMEOUT_SECONDS,
+                    )
+                }
             if (isConnectedOutput(result)) {
                 connectionStore.saveConnectedPort(port)
                 mutableState.value = AdbConnectionState.Connected(port)
@@ -174,7 +188,7 @@ class AdbConnectionManager(
 
     suspend fun disconnect(): Result<Unit> =
         withContext(Dispatchers.IO) {
-            val result = shellRunner.runShell("adb disconnect", timeoutSeconds = 10L)
+            val result = runtimeWork.withLease(ADB_LEASE_TAG) { shellRunner.runShell("adb disconnect", timeoutSeconds = 10L) }
             connectionStore.clearConnectedPort()
             mutableState.value = AdbConnectionState.Disconnected
             if (result.exitCode == 0) Result.success(Unit) else Result.failure(RuntimeException(result.output))
@@ -182,7 +196,7 @@ class AdbConnectionManager(
 
     suspend fun checkConnection(): Boolean =
         withContext(Dispatchers.IO) {
-            val result = shellRunner.runShell("adb get-state", timeoutSeconds = 10L)
+            val result = runtimeWork.withLease(ADB_LEASE_TAG) { shellRunner.runShell("adb get-state", timeoutSeconds = 10L) }
             val connected = result.exitCode == 0 && result.output.trim() == "device"
             if (connected) {
                 mutableState.update { current ->
@@ -244,10 +258,12 @@ class AdbConnectionManager(
     private suspend fun reconnectQuietly(port: Int): Boolean =
         withContext(Dispatchers.IO) {
             val result =
-                shellRunner.runShell(
-                    "adb connect localhost:$port",
-                    timeoutSeconds = CONNECT_TIMEOUT_SECONDS,
-                )
+                runtimeWork.withLease(ADB_LEASE_TAG) {
+                    shellRunner.runShell(
+                        "adb connect localhost:$port",
+                        timeoutSeconds = CONNECT_TIMEOUT_SECONDS,
+                    )
+                }
             if (isConnectedOutput(result)) {
                 connectionStore.saveConnectedPort(port)
                 mutableState.value = AdbConnectionState.Connected(port)
@@ -269,5 +285,6 @@ class AdbConnectionManager(
         private const val SERVICE_TYPE = "_adb-tls-connect._tcp"
         private const val CONNECT_TIMEOUT_SECONDS = 30L
         private const val DEFAULT_HEALTH_INTERVAL_MS = 30_000L
+        private const val ADB_LEASE_TAG = "adb"
     }
 }

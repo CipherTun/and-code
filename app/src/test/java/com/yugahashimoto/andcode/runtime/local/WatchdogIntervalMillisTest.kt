@@ -19,13 +19,12 @@ class WatchdogIntervalMillisTest {
     }
 
     /**
-     * Every non-Ready state keeps the tight interval regardless of active work: a bounded operation
-     * needs its wake lock re-armed promptly, and a stopped/broken runtime needs the auto-restart
-     * check to notice quickly.
+     * A bounded, in-progress operation needs its wake lock re-armed promptly, and a stopped runtime
+     * needs the auto-restart check to notice quickly - both keep the tight interval regardless of
+     * active work.
      */
     @Test
-    fun `non-ready states always use the tight interval`() {
-        assertEquals(5_000L, watchdogIntervalMillis(LocalRuntimeStatus.NotInstalled, hasActiveWork = false))
+    fun `in-progress and stopped states keep the tight interval`() {
         assertEquals(5_000L, watchdogIntervalMillis(LocalRuntimeStatus.Stopped("1.0.0", 4096), hasActiveWork = false))
         assertEquals(5_000L, watchdogIntervalMillis(LocalRuntimeStatus.Starting("1.0.0", 4096), hasActiveWork = false))
         assertEquals(5_000L, watchdogIntervalMillis(LocalRuntimeStatus.Installing(0.5f, "unpacking"), hasActiveWork = false))
@@ -36,7 +35,16 @@ class WatchdogIntervalMillisTest {
                 hasActiveWork = false,
             ),
         )
-        assertEquals(5_000L, watchdogIntervalMillis(LocalRuntimeStatus.Broken("missing rootfs"), hasActiveWork = false))
-        assertEquals(5_000L, watchdogIntervalMillis(LocalRuntimeStatus.UnsupportedAbi("x86"), hasActiveWork = false))
+    }
+
+    /**
+     * Broken, unsupported-ABI and never-installed are terminal states the auto-restart check cannot
+     * recover from, so polling them every 5 seconds only burns battery for no chance of recovery.
+     */
+    @Test
+    fun `terminal states back off to the idle interval`() {
+        assertEquals(60_000L, watchdogIntervalMillis(LocalRuntimeStatus.NotInstalled, hasActiveWork = false))
+        assertEquals(60_000L, watchdogIntervalMillis(LocalRuntimeStatus.Broken("missing rootfs"), hasActiveWork = false))
+        assertEquals(60_000L, watchdogIntervalMillis(LocalRuntimeStatus.UnsupportedAbi("x86"), hasActiveWork = false))
     }
 }

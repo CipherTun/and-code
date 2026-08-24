@@ -1,5 +1,6 @@
 package com.yugahashimoto.andcode.runtime.local
 
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.runtime.LocalAgent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -67,6 +68,14 @@ data class AntigravityControllerState(
 class AntigravityController(
     private val installer: LocalRuntimeInstaller,
     private val target: AntigravityTarget,
+    /**
+     * Install and update run for real time on the runtime's proot process, exactly like a chat
+     * turn does, but neither ever touches
+     * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository] - the only place that
+     * already tracks that as work - so without a lease of their own the device could suspend and
+     * freeze either one mid-flight.
+     */
+    private val runtimeWork: RuntimeWorkTracker = RuntimeWorkTracker(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
 ) {
     private val mutableState = MutableStateFlow(AntigravityControllerState())
@@ -130,30 +139,32 @@ class AntigravityController(
         if (mutableState.value.install is AntigravityInstallStatus.Installing) return
         mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(0f, ""))
         scope.launch {
-            runCatching {
-                installer.install(agents + LocalAgent.ANTIGRAVITY) { progress, step, _ ->
-                    mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(progress, step))
+            runtimeWork.withLease(INSTALL_LEASE_TAG) {
+                runCatching {
+                    installer.install(agents + LocalAgent.ANTIGRAVITY) { progress, step, _ ->
+                        mutableState.value = mutableState.value.copy(install = AntigravityInstallStatus.Installing(progress, step))
+                    }
                 }
+                    .onSuccess {
+                        target.runtime.invalidateVersion()
+                        // The cached catalog was read by the binary that just got replaced; keeping it
+                        // would leave the picker on the old release's model list until a restart.
+                        target.runtime.invalidateModels()
+                        target.connect()
+                        val version =
+                            target.state.value.let { (it as? com.yugahashimoto.andcode.runtime.RuntimeState.Connected)?.version }
+                        mutableState.value =
+                            AntigravityControllerState(
+                                installed = true,
+                                version = version,
+                                install = version?.let(AntigravityInstallStatus::Ready) ?: AntigravityInstallStatus.Idle,
+                            )
+                    }
+                    .onFailure { error ->
+                        mutableState.value =
+                            AntigravityControllerState(install = AntigravityInstallStatus.Failed(error.message ?: "Install failed"))
+                    }
             }
-                .onSuccess {
-                    target.runtime.invalidateVersion()
-                    // The cached catalog was read by the binary that just got replaced; keeping it
-                    // would leave the picker on the old release's model list until a restart.
-                    target.runtime.invalidateModels()
-                    target.connect()
-                    val version =
-                        target.state.value.let { (it as? com.yugahashimoto.andcode.runtime.RuntimeState.Connected)?.version }
-                    mutableState.value =
-                        AntigravityControllerState(
-                            installed = true,
-                            version = version,
-                            install = version?.let(AntigravityInstallStatus::Ready) ?: AntigravityInstallStatus.Idle,
-                        )
-                }
-                .onFailure { error ->
-                    mutableState.value =
-                        AntigravityControllerState(install = AntigravityInstallStatus.Failed(error.message ?: "Install failed"))
-                }
         }
     }
 
@@ -175,31 +186,33 @@ class AntigravityController(
                 lastUpdate = null,
             )
         scope.launch {
-            runCatching {
-                installer.updateAntigravity { progress ->
+            runtimeWork.withLease(UPDATE_LEASE_TAG) {
+                runCatching {
+                    installer.updateAntigravity { progress ->
+                        mutableState.value =
+                            mutableState.value.copy(install = AntigravityInstallStatus.Installing(progress, ""))
+                    }
+                }.onSuccess { version ->
+                    target.runtime.invalidateVersion()
+                    // Same as install: the catalog belongs to the binary that was just replaced, so a
+                    // stale cache would keep showing the previous release's models (e.g. no
+                    // gemini-3.7-flash after moving from 1.1.x) until the app restarted. Skipped only
+                    // when the guest verifiably ran this release already; an unknown "before" still
+                    // invalidates — one redundant `agy models` fetch is cheap.
+                    if (before == null || before != version) target.runtime.invalidateModels()
                     mutableState.value =
-                        mutableState.value.copy(install = AntigravityInstallStatus.Installing(progress, ""))
+                        mutableState.value.copy(
+                            installed = true,
+                            version = version,
+                            install = AntigravityInstallStatus.Ready(version),
+                            lastUpdate = antigravityUpdateResult(before, version),
+                        )
+                }.onFailure { error ->
+                    mutableState.value =
+                        mutableState.value.copy(
+                            install = AntigravityInstallStatus.Failed(error.message ?: "Update failed"),
+                        )
                 }
-            }.onSuccess { version ->
-                target.runtime.invalidateVersion()
-                // Same as install: the catalog belongs to the binary that was just replaced, so a
-                // stale cache would keep showing the previous release's models (e.g. no
-                // gemini-3.7-flash after moving from 1.1.x) until the app restarted. Skipped only
-                // when the guest verifiably ran this release already; an unknown "before" still
-                // invalidates — one redundant `agy models` fetch is cheap.
-                if (before == null || before != version) target.runtime.invalidateModels()
-                mutableState.value =
-                    mutableState.value.copy(
-                        installed = true,
-                        version = version,
-                        install = AntigravityInstallStatus.Ready(version),
-                        lastUpdate = antigravityUpdateResult(before, version),
-                    )
-            }.onFailure { error ->
-                mutableState.value =
-                    mutableState.value.copy(
-                        install = AntigravityInstallStatus.Failed(error.message ?: "Update failed"),
-                    )
             }
         }
     }
@@ -248,4 +261,9 @@ class AntigravityController(
         mode: AntigravityPermissionMode,
         sessionId: String? = null,
     ) = target.setPermissionMode(mode, sessionId)
+
+    private companion object {
+        const val INSTALL_LEASE_TAG = "antigravity-install"
+        const val UPDATE_LEASE_TAG = "antigravity-update"
+    }
 }
