@@ -20,6 +20,7 @@ import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.core.security.SecretRedaction
 import com.yugahashimoto.andcode.core.storage.DeviceStorage
 import com.yugahashimoto.andcode.core.storage.DeviceStorageAccess
+import com.yugahashimoto.andcode.core.util.debounceFalseEdge
 import com.yugahashimoto.andcode.data.connection.SecureSettingsRepository
 import com.yugahashimoto.andcode.data.repository.AndroidRuntimeActivityMessages
 import com.yugahashimoto.andcode.data.repository.AndroidRuntimeCatalogMessages
@@ -432,9 +433,18 @@ class AndCodeApplication : Application() {
         // A chat or agent run in flight is real work happening on the runtime's proot process,
         // so it holds the device awake until the session settles - wired here rather than inside
         // the repository's own constructor, which has no reason to know about wake locks.
+        //
+        // debounceFalseEdge rides out a momentary SSE/HTTP blip: activeSessionIds is cleared the
+        // instant the runtime target leaves Connected/Connecting (see RuntimeActivityRepository),
+        // and releasing this lease on that same instant would let the device suspend mid-run and
+        // freeze the proot child - precisely the failure the wake-lock rework exists to prevent.
+        // Only a drop that holds for the whole grace window releases the lease.
         bridgeLeaseToWork(
             tag = "sessions",
-            hasWork = activityRepository.state.map { it.activeSessionIds.isNotEmpty() }.distinctUntilChanged(),
+            hasWork =
+                activityRepository.state.map { it.activeSessionIds.isNotEmpty() }
+                    .distinctUntilChanged()
+                    .debounceFalseEdge(SESSIONS_LEASE_GRACE_MILLIS),
             scope = applicationScope,
         )
         githubStarCoordinator.refresh()
@@ -532,5 +542,14 @@ class AndCodeApplication : Application() {
             AppInitializer.getInstance(this)
                 .initializeComponent(RuntimeAutoStartInitializer::class.java)
         }
+    }
+
+    private companion object {
+        /**
+         * How long [debounceFalseEdge] rides out a drop to "no active sessions" before releasing
+         * the `"sessions"` wake-lock lease. Long enough to survive a transient SSE/HTTP blip during
+         * a long agent run, short enough that a genuine end still releases the lock promptly.
+         */
+        private const val SESSIONS_LEASE_GRACE_MILLIS = 60_000L
     }
 }

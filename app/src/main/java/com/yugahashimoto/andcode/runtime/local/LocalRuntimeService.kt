@@ -261,6 +261,29 @@ internal class IdleStopTracker(private val nowMillis: () -> Long = SystemClock::
     }
 }
 
+/**
+ * The idle auto-stop's set-stop-clear sequence, pulled out of [LocalRuntimeService.checkIdleStop]
+ * so [markInProgress]'s set/clear pairing can be verified without a real Android [Service]: the
+ * only way [markInProgress](false) can fail to run after [markInProgress](true) succeeded is
+ * [stop] throwing, and the `finally` here covers that the same way the inline version did. What the
+ * extraction actually buys is atomicity - the set and the eventual clear are one suspend-function
+ * call, so scheduling this via `scope.launch` means a scope cancelled before that coroutine starts
+ * runs neither, instead of the set running standalone with nothing left to run the clear.
+ */
+internal suspend fun runIdleStopSequence(
+    markInProgress: (Boolean) -> Unit,
+    stop: suspend () -> Unit,
+    onStopped: () -> Unit,
+) {
+    markInProgress(true)
+    try {
+        stop()
+    } finally {
+        markInProgress(false)
+        onStopped()
+    }
+}
+
 class LocalRuntimeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var operation: Job? = null
@@ -335,15 +358,18 @@ class LocalRuntimeService : Service() {
         flags: Int,
         startId: Int,
     ): Int {
-        if (!inForeground) {
-            stopSelf()
-            return START_NOT_STICKY
-        }
         val command = localRuntimeServiceCommand(intent?.action)
         // An explicit start always means "the user (or something acting for them) wants this
         // running" - without clearing the flag here, a deliberate restart from the workspace screen
         // would still read as "leave it down" the very next time the app comes to the foreground.
+        // Cleared before the startForeground-failure early return below too: a background
+        // ACTION_START the platform refused to promote is still an explicit ask, and leaving the
+        // flag set would strand the very next foreground return's restore attempt on it.
         if (clearsUserStoppedFlag(command)) app.settings.localRuntimeStoppedByUser = false
+        if (!inForeground) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (command) {
             LocalRuntimeServiceCommand.InstallAndStart -> {
                 autoRestartEnabled = true
@@ -412,6 +438,11 @@ class LocalRuntimeService : Service() {
         watchdogJob?.cancel()
         scope.cancel()
         shutDownWakeLock()
+        // Belt-and-braces: scope.cancel() above can land between checkIdleStop scheduling its
+        // coroutine and that coroutine actually starting, in which case the set/clear pair inside it
+        // never runs at all. Clearing here as well means the flag can never outlive this service
+        // instance regardless of exactly where a cancellation lands.
+        app.setIdleStopInProgress(false)
         super.onDestroy()
     }
 
@@ -485,25 +516,27 @@ class LocalRuntimeService : Service() {
             return false
         }
         autoRestartEnabled = false
-        // Flagged for the whole stop() call, not just after it settles: status is still read as
-        // Ready for that entire window (there is no Stopping state), so a foreground return landing
-        // inside it would otherwise fail AndCodeApplication's "is Stopped" restore check and leave
-        // the runtime down until the *next* return instead of this one.
-        app.setIdleStopInProgress(true)
         // Deliberately not launchOperation: this is the watchdog's own decision, not a user or
-        // notification action, so it must not cancel anything already tracked in `operation`, and
-        // stopForeground/stopSelf have to run even if manager.stop() throws - otherwise a throwing
-        // stop leaves an unmonitored zombie foreground service, since the watchdog loop has already
-        // returned and autoRestartEnabled is now false.
+        // notification action, so it must not cancel anything already tracked in `operation`. The
+        // set/clear pair for setIdleStopInProgress is extracted into runIdleStopSequence precisely so
+        // both live inside one coroutine body rather than straddling this launch call: if onDestroy
+        // (and therefore scope.cancel()) lands between scheduling this coroutine and it actually
+        // starting, the body - set included - simply never runs, rather than setting the flag and
+        // then never reaching the finally that clears it. A stuck `true` would make
+        // shouldRestoreOnForegroundReturn treat every later foreground entry as needing a restore,
+        // sending ACTION_START at a healthy Ready runtime and cancelling whatever operation it finds
+        // in flight. onDestroy also clears the flag directly as a belt-and-braces guard for any
+        // window this reasoning misses.
         scope.launch(Dispatchers.IO) {
             runtimeWork.withLease(RUNTIME_OPERATION_LEASE_TAG) {
-                try {
-                    manager.stop()
-                } finally {
-                    app.setIdleStopInProgress(false)
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                }
+                runIdleStopSequence(
+                    markInProgress = app::setIdleStopInProgress,
+                    stop = manager::stop,
+                    onStopped = {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    },
+                )
             }
         }
         return true
