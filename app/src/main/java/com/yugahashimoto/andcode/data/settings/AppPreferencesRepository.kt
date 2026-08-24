@@ -48,6 +48,7 @@ data class AppPreferences(
     val language: String = "system",
     val liveTranscriptEnabled: Boolean = false,
     val analyticsEnabled: Boolean = false,
+    val localRuntimeIdleStopEnabled: Boolean = true,
 )
 
 class AppPreferencesRepository(
@@ -93,6 +94,7 @@ class AppPreferencesRepository(
                 language = settings.language,
                 liveTranscriptEnabled = settings.liveTranscriptEnabled,
                 analyticsEnabled = settings.analyticsEnabled,
+                localRuntimeIdleStopEnabled = settings.localRuntimeIdleStopEnabled,
             ),
         )
     val state: StateFlow<AppPreferences> = mutableState.asStateFlow()
@@ -344,5 +346,10 @@ class AppPreferencesRepository(
         settings.analyticsEnabled = enabled
         com.yugahashimoto.andcode.core.diagnostics.AnalyticsReporter.setEnabled(enabled)
         mutableState.update { it.copy(analyticsEnabled = enabled) }
+    }
+
+    fun setLocalRuntimeIdleStopEnabled(enabled: Boolean) {
+        settings.localRuntimeIdleStopEnabled = enabled
+        mutableState.update { it.copy(localRuntimeIdleStopEnabled = enabled) }
     }
 }

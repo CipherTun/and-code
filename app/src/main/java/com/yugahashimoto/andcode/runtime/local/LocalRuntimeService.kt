@@ -14,6 +14,8 @@ import androidx.core.content.ContextCompat
 import com.yugahashimoto.andcode.AndCodeApplication
 import com.yugahashimoto.andcode.MainActivity
 import com.yugahashimoto.andcode.R
+import com.yugahashimoto.andcode.core.lifecycle.AppForeground
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.runtime.LocalAgent
 import com.yugahashimoto.andcode.runtime.LocalRuntimeStatus
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -72,23 +75,83 @@ internal fun localRuntimeInstallAgents(ids: Array<String>?): Set<LocalAgent> =
  *
  * A foreground service only stops the app from being killed; it does nothing to stop the device
  * from suspending once the screen goes off, and the agent runs as a proot child of this process, so
- * suspending freezes it mid-run - the symptom being work that "stopped by itself" in the background.
- * The states that carry no running process - stopped, broken, never installed, unsupported - hold
- * nothing, since keeping a dead runtime's device awake only costs battery.
+ * suspending mid-run freezes it - the symptom being work that "stopped by itself" in the
+ * background. [Ready][LocalRuntimeStatus.Ready] on its own used to be enough to hold the lock,
+ * which meant the device could never sleep for as long as the runtime was simply up - the common
+ * case, since nothing stops it once started. It now only qualifies while [hasActiveWork] says real
+ * work (a chat run, a scheduled run, a runtime operation, a live ADB link - see
+ * [com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker]) is actually in flight. The
+ * bounded, self-limiting states - installing, starting, updating - stay unconditional: a boot or
+ * install that gets frozen mid-way is broken, not idle. States with no running process - stopped,
+ * broken, never installed, unsupported - hold nothing, since keeping a dead runtime's device awake
+ * only costs battery.
  */
-internal fun localRuntimeNeedsWakeLock(status: LocalRuntimeStatus): Boolean =
+internal fun localRuntimeNeedsWakeLock(
+    status: LocalRuntimeStatus,
+    hasActiveWork: Boolean,
+): Boolean =
     when (status) {
         is LocalRuntimeStatus.Installing,
         is LocalRuntimeStatus.Starting,
         is LocalRuntimeStatus.Updating,
-        is LocalRuntimeStatus.Ready,
         -> true
+        is LocalRuntimeStatus.Ready -> hasActiveWork
         LocalRuntimeStatus.NotInstalled,
         is LocalRuntimeStatus.Stopped,
         is LocalRuntimeStatus.Broken,
         is LocalRuntimeStatus.UnsupportedAbi,
         -> false
     }
+
+private const val WATCHDOG_ACTIVE_INTERVAL_MILLIS = 5_000L
+private const val WATCHDOG_IDLE_INTERVAL_MILLIS = 60_000L
+
+/** How long a [LocalRuntimeStatus.Ready], work-free, backgrounded runtime may sit before it stops. */
+internal const val IDLE_STOP_TIMEOUT_MILLIS = 15 * 60 * 1000L
+
+/**
+ * How long the watchdog should sleep before its next tick.
+ *
+ * An idle, work-free [Ready][LocalRuntimeStatus.Ready] runtime backs off to a much slower poll: with
+ * no wake lock held (see [localRuntimeNeedsWakeLock]) the device is free to suspend, so there is
+ * nothing productive a 5-second tick buys that a 60-second one does not - the runtime is not going
+ * anywhere on its own while genuinely idle. Every other state keeps the tight interval: a bounded
+ * operation in progress needs its wake lock re-armed well before the timeout, and a stopped/broken
+ * runtime needs the auto-restart check to notice quickly.
+ */
+internal fun watchdogIntervalMillis(
+    status: LocalRuntimeStatus,
+    hasActiveWork: Boolean,
+): Long =
+    if (status is LocalRuntimeStatus.Ready && !hasActiveWork) {
+        WATCHDOG_IDLE_INTERVAL_MILLIS
+    } else {
+        WATCHDOG_ACTIVE_INTERVAL_MILLIS
+    }
+
+/**
+ * Whether the local runtime should be shut down after sitting idle for too long.
+ *
+ * Scheduled runs restart the runtime on demand
+ * ([com.yugahashimoto.andcode.feature.schedule.ScheduleExecutionService.ensureLocalRuntimeReady])
+ * and opening the app restarts it via `RuntimeAutoStartInitializer`, so nothing the user asked for
+ * is lost by stopping here - it only costs a start-up delay the next time work actually arrives.
+ * Restricted to [Ready][LocalRuntimeStatus.Ready] so an install, update, rollback or restore -
+ * every one of which holds its own lease through
+ * [com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker] and therefore already fails
+ * [hasActiveWork] - is never caught mid-operation even if this were checked at the wrong moment.
+ */
+internal fun shouldStopIdleRuntime(
+    status: LocalRuntimeStatus,
+    hasActiveWork: Boolean,
+    appInForeground: Boolean,
+    idleForMillis: Long,
+    timeoutMillis: Long,
+): Boolean =
+    status is LocalRuntimeStatus.Ready &&
+        !hasActiveWork &&
+        !appInForeground &&
+        idleForMillis >= timeoutMillis
 
 internal class RestartBackoff(
     private val nowMillis: () -> Long = System::currentTimeMillis,
@@ -135,15 +198,28 @@ class LocalRuntimeService : Service() {
     private var exitMonitorJob: Job? = null
 
     @Volatile private var autoRestartEnabled = false
+    private lateinit var app: AndCodeApplication
     private lateinit var manager: LocalRuntimeManager
+    private lateinit var runtimeWork: RuntimeWorkTracker
+    private lateinit var appForeground: AppForeground
     private val backoff = RestartBackoff()
     private var inForeground = false
     private var wakeLock: PowerManager.WakeLock? = null
     private var shuttingDown = false
 
+    /**
+     * When the [shouldStopIdleRuntime] condition first became true; `null` while it does not
+     * currently hold. Read and written only from [startWatchdog]'s own coroutine, so it needs no
+     * synchronization of its own.
+     */
+    private var idleSinceMillis: Long? = null
+
     override fun onCreate() {
         super.onCreate()
-        manager = (application as AndCodeApplication).localRuntimeManager
+        app = application as AndCodeApplication
+        manager = app.localRuntimeManager
+        runtimeWork = app.runtimeWork
+        appForeground = app.appForeground
         createChannel()
         // The platform can refuse the foreground promotion for a service the app started while it
         // was in the background. Giving up beats being killed for never calling startForeground.
@@ -152,15 +228,22 @@ class LocalRuntimeService : Service() {
                 .onFailure { error -> Log.w(TAG, "Could not enter the foreground", error) }
                 .isSuccess
         if (!inForeground) return
-        syncWakeLock(manager.status())
+        syncWakeLock(manager.status(), runtimeWork.active.value)
         scope.launch {
             manager.state.collectLatest { status ->
                 getSystemService(NotificationManager::class.java)
                     .notify(NOTIFICATION_ID, notification(status))
-                syncWakeLock(status)
                 if (status is LocalRuntimeStatus.Ready) {
                     backoff.reset()
                 }
+            }
+        }
+        // A separate collector from the one above: a chat starting or ending while the status
+        // itself does not change (Ready the whole time) must still re-arm or drop the wake lock
+        // immediately, not wait for the next incidental status update.
+        scope.launch {
+            combine(manager.state, runtimeWork.active, ::Pair).collectLatest { (status, hasActiveWork) ->
+                syncWakeLock(status, hasActiveWork)
             }
         }
         manager.setOnExit { exitCode, pid, uptime ->
@@ -256,9 +339,17 @@ class LocalRuntimeService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Runs [block] under a `"runtime-op"` [RuntimeWorkTracker] lease.
+     *
+     * Every install, start, update, rollback and restore passes through here, and every one of
+     * them is real work the device must not suspend through - the difference from a chat session is
+     * only that nothing else already tracks it, since it never touches
+     * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository].
+     */
     private fun launchOperation(block: suspend () -> Unit) {
         operation?.cancel()
-        operation = scope.launch(Dispatchers.IO) { block() }
+        operation = scope.launch(Dispatchers.IO) { runtimeWork.withLease(RUNTIME_OPERATION_LEASE_TAG) { block() } }
     }
 
     private fun startWatchdog() {
@@ -267,13 +358,19 @@ class LocalRuntimeService : Service() {
             scope.launch(Dispatchers.IO) {
                 val watchdog = LocalRuntimeWatchdog()
                 while (isActive) {
-                    delay(WATCHDOG_INTERVAL_MILLIS)
+                    delay(watchdogIntervalMillis(manager.status(), runtimeWork.active.value))
                     val status = manager.status()
+                    val hasActiveWork = runtimeWork.active.value
                     // Re-arms the wake lock's timeout well inside it, so a run lasting hours keeps
-                    // the CPU up while a service that died without onDestroy still lets it lapse.
-                    // Ahead of the auto-restart check so that a runtime left running by a path that
-                    // never enables it - an unknown action, a stop that threw - still stays awake.
-                    syncWakeLock(status)
+                    // the CPU up while a service that died without onDestroy still lets it lapse -
+                    // still comfortably inside the 10-minute timeout even at the 60-second idle
+                    // interval. Ahead of the auto-restart check so that a runtime left running by a
+                    // path that never enables it - an unknown action, a stop that threw - still
+                    // stays awake.
+                    syncWakeLock(status, hasActiveWork)
+
+                    if (checkIdleStop(status, hasActiveWork)) return@launch
+
                     if (!autoRestartEnabled) continue
                     if (watchdog.observe(status)) {
                         manager.ensureRunning()
@@ -283,15 +380,51 @@ class LocalRuntimeService : Service() {
     }
 
     /**
-     * Holds or drops the CPU wake lock to match [status]; see [localRuntimeNeedsWakeLock].
+     * Tracks how long the idle-stop condition has held and, once [shouldStopIdleRuntime] agrees it
+     * has held long enough, performs the same shutdown the [LocalRuntimeServiceCommand.Stop] path
+     * does. Returns true when it stopped the runtime, so the watchdog loop can end its own tick
+     * loop instead of running once more against a service already on its way down.
+     *
+     * The setting is read fresh on every tick rather than cached, so flipping it in Settings takes
+     * effect on the very next check instead of needing the service to restart.
+     */
+    private fun checkIdleStop(
+        status: LocalRuntimeStatus,
+        hasActiveWork: Boolean,
+    ): Boolean {
+        val appInForeground = appForeground.foreground.value
+        val now = System.currentTimeMillis()
+        val idleNow = status is LocalRuntimeStatus.Ready && !hasActiveWork && !appInForeground
+        idleSinceMillis = if (idleNow) idleSinceMillis ?: now else null
+        val idleForMillis = idleSinceMillis?.let { now - it } ?: 0L
+
+        if (!app.settings.localRuntimeIdleStopEnabled) return false
+        if (!shouldStopIdleRuntime(status, hasActiveWork, appInForeground, idleForMillis, IDLE_STOP_TIMEOUT_MILLIS)) {
+            return false
+        }
+        autoRestartEnabled = false
+        launchOperation {
+            manager.stop()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+        return true
+    }
+
+    /**
+     * Holds or drops the CPU wake lock to match [status] and [hasActiveWork]; see
+     * [localRuntimeNeedsWakeLock].
      *
      * Synchronized because both the status collector on the main thread and the watchdog on an IO
      * one call it. The lock is not reference counted, so an acquire on a status that already holds
      * it only pushes the timeout back rather than stacking a release debt.
      */
     @Synchronized
-    private fun syncWakeLock(status: LocalRuntimeStatus) {
-        if (shuttingDown || !localRuntimeNeedsWakeLock(status)) {
+    private fun syncWakeLock(
+        status: LocalRuntimeStatus,
+        hasActiveWork: Boolean,
+    ) {
+        if (shuttingDown || !localRuntimeNeedsWakeLock(status, hasActiveWork)) {
             releaseWakeLock()
             return
         }
@@ -425,9 +558,9 @@ class LocalRuntimeService : Service() {
         private const val TAG = "LocalRuntimeService"
         private const val CHANNEL_ID = "local_opencode_runtime"
         private const val NOTIFICATION_ID = 4107
-        private const val WATCHDOG_INTERVAL_MILLIS = 5_000L
         private const val WAKELOCK_TAG = "opencode:runtime"
         private const val WAKELOCK_TIMEOUT_MILLIS = 10 * 60 * 1000L
+        private const val RUNTIME_OPERATION_LEASE_TAG = "runtime-op"
         const val ACTION_INSTALL_AND_START = "com.yugahashimoto.andcode.local.INSTALL_AND_START"
         const val ACTION_START = "com.yugahashimoto.andcode.local.START"
         const val ACTION_STOP = "com.yugahashimoto.andcode.local.STOP"

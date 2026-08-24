@@ -522,6 +522,8 @@
     <string name="remote_connection_row">远程连接</string>
     <string name="settings_workspace_row">工作区</string>
     <string name="notifications_row">通知</string>
+    <string name="local_runtime_idle_stop_row">停止空闲运行时</string>
+    <string name="local_runtime_idle_stop_row_description">在计划任务运行或您打开应用时会自动重启</string>
     <string name="privacy_row">隐私和数据</string>
     <string name="privacy_stub_body">此功能即将推出。</string>
     <string name="diagnostics_row">诊断和日志</string>

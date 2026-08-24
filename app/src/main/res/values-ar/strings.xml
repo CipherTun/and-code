@@ -527,6 +527,8 @@
     <string name="remote_connection_row">الاتصال عن بُعد</string>
     <string name="settings_workspace_row">مساحة العمل</string>
     <string name="notifications_row">الإشعارات</string>
+    <string name="local_runtime_idle_stop_row">إيقاف بيئة التشغيل الخاملة</string>
+    <string name="local_runtime_idle_stop_row_description">تُعاد تلقائيًا عند تنفيذ جدولة أو عند فتح التطبيق</string>
     <string name="privacy_row">الخصوصية والبيانات</string>
     <string name="privacy_stub_body">هذه الميزة ستتوفر قريبًا.</string>
     <string name="diagnostics_row">التشخيصات والسجلات</string>

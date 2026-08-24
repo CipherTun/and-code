@@ -525,6 +525,8 @@
     <string name="remote_connection_row">Удалённое подключение</string>
     <string name="settings_workspace_row">Рабочее пространство</string>
     <string name="notifications_row">Уведомления</string>
+    <string name="local_runtime_idle_stop_row">Останавливать неактивную среду выполнения</string>
+    <string name="local_runtime_idle_stop_row_description">Автоматически перезапускается при выполнении расписания или при открытии приложения</string>
     <string name="privacy_row">Конфиденциальность и данные</string>
     <string name="privacy_stub_body">Эта функция скоро появится.</string>
     <string name="diagnostics_row">Диагностика и журналы</string>

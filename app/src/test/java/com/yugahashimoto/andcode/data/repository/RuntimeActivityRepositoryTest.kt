@@ -780,6 +780,105 @@ class RuntimeActivityRepositoryTest {
         }
 
     @Test
+    fun `the stall watchdog does not start ticking until a session is running`() =
+        runTest {
+            // Before this, watchForStalls ticked every stallCheckIntervalMillis unconditionally
+            // from the moment the runtime was selected, which alone kept the device from ever
+            // suspending. The schedule must instead be counted from when a session actually starts,
+            // not from watchdog start - proven here by marking the session out of phase with what
+            // the old fixed 0, 100, 200, ... grid would have been.
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target = FakeTarget(requireConnected = false)
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<String>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    onSessionStalled = { sessionId, _, _, _ -> stalled += sessionId },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                // Idle for well over one check interval with nothing to watch.
+                advanceTimeBy(340L)
+                runCurrent()
+
+                repository.markSessionRunning("ses_quiet")
+
+                // A tick landing on the old 0, 100, 200, ... grid (e.g. at 400ms, 50ms after the
+                // session started) must not exist: nothing should be reported before a full
+                // interval measured from the session's own start has elapsed.
+                advanceTimeBy(999L)
+                runCurrent()
+                assertTrue(stalled.isEmpty())
+
+                // The threshold is crossed exactly one interval after the session started (340 +
+                // 1_000 = 1_340), not on some tick inherited from before the session existed.
+                advanceTimeBy(2L)
+                runCurrent()
+                assertEquals(listOf("ses_quiet"), stalled)
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
+    fun `the stall watchdog parks again once no session is left, and resumes fresh for the next one`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val scope = TestScope(dispatcher)
+            val target = FakeTarget(requireConnected = false)
+            val registry =
+                RuntimeRegistry(
+                    store = FakeStore(selectedRuntimeId = target.id),
+                    localTarget = target,
+                    remoteFactory = { error("unused") },
+                )
+            val stalled = mutableListOf<String>()
+            val repository =
+                RuntimeActivityRepository(
+                    registry = registry,
+                    scope = scope,
+                    onSessionStalled = { sessionId, _, _, _ -> stalled += sessionId },
+                    stallThresholdMillis = 1_000L,
+                    stallCheckIntervalMillis = 100L,
+                    now = { testScheduler.currentTime },
+                )
+            try {
+                advanceTimeBy(200L)
+                runCurrent()
+
+                repository.markSessionRunning("ses_a")
+                repository.markSessionAborted("ses_a")
+                // Nothing is active for a long stretch. If the watchdog kept ticking on a schedule
+                // that survived the empty gap instead of parking entirely, the next session below
+                // could inherit a stale countdown and get flagged too early.
+                advanceTimeBy(5_000L)
+                runCurrent()
+                assertTrue(stalled.isEmpty())
+
+                repository.markSessionRunning("ses_b")
+                advanceTimeBy(999L)
+                runCurrent()
+                assertTrue(stalled.isEmpty())
+
+                advanceTimeBy(2L)
+                runCurrent()
+                assertEquals(listOf("ses_b"), stalled)
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    @Test
     fun `a quiet session whose turn had in fact finished is completed rather than flagged`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)

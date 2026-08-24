@@ -11,8 +11,11 @@ import com.yugahashimoto.andcode.core.api.GitHubApiClient
 import com.yugahashimoto.andcode.core.diagnostics.AnalyticsReporter
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
 import com.yugahashimoto.andcode.core.diagnostics.CrashReporter
+import com.yugahashimoto.andcode.core.lifecycle.AppForeground
+import com.yugahashimoto.andcode.core.lifecycle.ProcessLifecycleAppForeground
 import com.yugahashimoto.andcode.core.locale.AppLanguage
 import com.yugahashimoto.andcode.core.notification.RuntimeNotificationHelper
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.core.security.SecretRedaction
 import com.yugahashimoto.andcode.core.storage.DeviceStorage
 import com.yugahashimoto.andcode.core.storage.DeviceStorageAccess
@@ -35,6 +38,7 @@ import com.yugahashimoto.andcode.feature.support.GitHubStarService
 import com.yugahashimoto.andcode.feature.wakeword.VoskModelStore
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
 import com.yugahashimoto.andcode.runtime.local.AdbConnectionManager
+import com.yugahashimoto.andcode.runtime.local.AdbConnectionState
 import com.yugahashimoto.andcode.runtime.local.AdbShellRunner
 import com.yugahashimoto.andcode.runtime.local.AndroidClaudeMessages
 import com.yugahashimoto.andcode.runtime.local.AndroidLocalRuntimeMessages
@@ -65,6 +69,9 @@ import com.yugahashimoto.andcode.startup.RuntimeAutoStartInitializer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -79,6 +86,18 @@ class AndCodeApplication : Application() {
         private set
 
     lateinit var preferences: AppPreferencesRepository
+        private set
+
+    /**
+     * The single source of truth for whether the device may suspend. Created before
+     * [activityRepository] so the bridge from its session state into a lease (wired later in
+     * [onCreate]) always has a tracker to acquire against.
+     */
+    lateinit var runtimeWork: RuntimeWorkTracker
+        private set
+
+    /** Whether an activity of the app is on screen; see [AppForeground]. */
+    lateinit var appForeground: AppForeground
         private set
 
     lateinit var localRuntimeManager: LocalRuntimeManager
@@ -167,6 +186,7 @@ class AndCodeApplication : Application() {
             androidContext(this@AndCodeApplication)
             modules(appModule, viewModelModule)
         }
+        appForeground = ProcessLifecycleAppForeground.install()
         settings = SecureSettingsRepository(this)
         // Analytics is explicitly opt-in; source-code tooling should not silently collect usage data.
         AnalyticsReporter.install(this, settings.analyticsEnabled)
@@ -309,6 +329,14 @@ class AndCodeApplication : Application() {
         // loop is a cheap no-op until the user has connected once, and it self-heals the link
         // whenever the adb server inside the Linux runtime is restarted.
         adbConnectionManager.startAutoReconnect(applicationScope)
+        runtimeWork = RuntimeWorkTracker()
+        // A live wireless-debugging link is another process depending on the runtime staying up,
+        // so it holds the device awake exactly like an active chat or scheduled run does.
+        bridgeLeaseToWork(
+            tag = "adb",
+            hasWork = adbConnectionManager.state.map { it is AdbConnectionState.Connected }.distinctUntilChanged(),
+            scope = applicationScope,
+        )
         runtimeRegistry =
             RuntimeRegistry(
                 store = settings,
@@ -376,6 +404,14 @@ class AndCodeApplication : Application() {
                 unreadStore = settings,
                 messages = AndroidRuntimeActivityMessages(this),
             )
+        // A chat or agent run in flight is real work happening on the runtime's proot process,
+        // so it holds the device awake until the session settles - wired here rather than inside
+        // the repository's own constructor, which has no reason to know about wake locks.
+        bridgeLeaseToWork(
+            tag = "sessions",
+            hasWork = activityRepository.state.map { it.activeSessionIds.isNotEmpty() }.distinctUntilChanged(),
+            scope = applicationScope,
+        )
         githubStarCoordinator.refresh()
         scheduleManager = ScheduleManager(this, scheduleRepository)
         // Re-arm alarms for schedules that were saved in a previous process lifetime.
@@ -385,6 +421,29 @@ class AndCodeApplication : Application() {
         val scheduleBridge = ScheduleBridge(File(runtimeDirectory, "workspace"), AppScheduleStore(scheduleRepository, scheduleManager))
         applicationScope.launch { scheduleBridge.run() }
         scheduleDeferredInitialization()
+    }
+
+    /**
+     * Keeps exactly one [RuntimeWorkTracker] lease under [tag] alive for as long as [hasWork]
+     * reports true, releasing it the instant that flips - the lease's own idempotent release means
+     * a lease this function no longer references is never touched twice.
+     */
+    private fun bridgeLeaseToWork(
+        tag: String,
+        hasWork: Flow<Boolean>,
+        scope: CoroutineScope,
+    ) {
+        scope.launch {
+            var lease: RuntimeWorkTracker.Lease? = null
+            hasWork.collect { active ->
+                if (active) {
+                    if (lease == null) lease = runtimeWork.acquire(tag)
+                } else {
+                    lease?.release()
+                    lease = null
+                }
+            }
+        }
     }
 
     private fun scheduleDeferredInitialization() {

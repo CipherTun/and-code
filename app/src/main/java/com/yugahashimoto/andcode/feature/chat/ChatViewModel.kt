@@ -454,6 +454,14 @@ class ChatViewModel(
     private val streamErrorFlow: Flow<String?>? = null,
     /** Wall clock, replaced in tests by the virtual one the watchdog is advanced against. */
     private val now: () -> Long = System::currentTimeMillis,
+    /**
+     * Suspends until the app is back in the foreground. Gates the connection probe and the stall
+     * watchdog, both of which poll on a fixed interval for as long as a chat is open; without this
+     * they keep doing so while the app is backgrounded, for a result the user cannot see. The
+     * no-op default keeps every existing test - which drives these loops with a virtual clock that
+     * would otherwise never return from a real wait - running unattended.
+     */
+    private val awaitForeground: suspend () -> Unit = {},
 ) : ViewModel() {
     private val _uiState =
         MutableStateFlow(
@@ -500,7 +508,7 @@ class ChatViewModel(
      * they are still open server-side, so without this every refetch would put the card back.
      */
     private val dismissedQuestionIds = mutableSetOf<String>()
-    private val connectionMonitor = ConnectionQualityMonitor(viewModelScope)
+    private val connectionMonitor = ConnectionQualityMonitor(viewModelScope, awaitForeground = awaitForeground)
 
     // The three fields below are read and written only from the main thread: every writer is either
     // a viewModelScope coroutine (main-dispatched) or a UI callback, and [checkForStall] is called
@@ -611,6 +619,7 @@ class ChatViewModel(
                         recordProgress()
                         if (!monitorStalls) return@collectLatest
                         while (true) {
+                            awaitForeground()
                             delay(STALL_CHECK_INTERVAL_MS)
                             // The wait between probes is applied here rather than to the delay
                             // itself, so a run that recovers and goes quiet again is measured on

@@ -206,6 +206,7 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.startup:startup-runtime:1.2.0")

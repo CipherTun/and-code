@@ -13,7 +13,7 @@ class RuntimeAutoStartReceiver : BroadcastReceiver() {
     ) {
         if (!isRuntimeAutoStartBroadcast(intent.action)) return
         val app = context.applicationContext as? AndCodeApplication ?: return
-        RuntimeAutoStartInitializer.restoreIfConfigured(app)
+        RuntimeAutoStartInitializer.restoreIfConfigured(app, RuntimeAutoStartTrigger.BootOrPackageReplaced)
     }
 }
 

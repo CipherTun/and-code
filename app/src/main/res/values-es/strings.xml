@@ -524,6 +524,8 @@
     <string name="remote_connection_row">Conexión remota</string>
     <string name="settings_workspace_row">Espacio de trabajo</string>
     <string name="notifications_row">Notificaciones</string>
+    <string name="local_runtime_idle_stop_row">Detener entorno de ejecución inactivo</string>
+    <string name="local_runtime_idle_stop_row_description">Se reinicia automáticamente cuando se ejecuta una programación o abres la app</string>
     <string name="privacy_row">Privacidad y datos</string>
     <string name="privacy_stub_body">Esta función estará disponible próximamente.</string>
     <string name="diagnostics_row">Diagnósticos y registros</string>

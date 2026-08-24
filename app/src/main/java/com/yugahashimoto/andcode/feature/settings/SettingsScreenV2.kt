@@ -69,6 +69,8 @@ fun SettingsScreenV2(
     onToggleNotifications: (Boolean) -> Unit,
     analyticsEnabled: Boolean = false,
     onToggleAnalytics: (Boolean) -> Unit = {},
+    localRuntimeIdleStopEnabled: Boolean = true,
+    onToggleLocalRuntimeIdleStop: (Boolean) -> Unit = {},
     appVersion: String,
     onOpenDrawer: () -> Unit,
     onOpenAssistantSettings: () -> Unit,
@@ -303,6 +305,14 @@ fun SettingsScreenV2(
                     title = stringResource(R.string.analytics_row),
                     checked = analyticsEnabled,
                     onCheckedChange = onToggleAnalytics,
+                )
+                SettingsDivider()
+                SettingsToggleRow(
+                    icon = Icons.Default.Terminal,
+                    title = stringResource(R.string.local_runtime_idle_stop_row),
+                    subtitle = stringResource(R.string.local_runtime_idle_stop_row_description),
+                    checked = localRuntimeIdleStopEnabled,
+                    onCheckedChange = onToggleLocalRuntimeIdleStop,
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -674,6 +684,7 @@ private fun SettingsToggleRow(
     title: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null,
 ) {
     Row(
         modifier =
@@ -689,11 +700,16 @@ private fun SettingsToggleRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
         )
-        Text(
-            title,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

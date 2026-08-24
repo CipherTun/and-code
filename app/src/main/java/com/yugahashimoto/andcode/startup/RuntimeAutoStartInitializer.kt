@@ -21,7 +21,7 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
         val app = context.applicationContext as AndCodeApplication
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        if (!restoreIfConfigured(app)) return Result(null)
+        if (!restoreIfConfigured(app, RuntimeAutoStartTrigger.AppLaunch)) return Result(null)
 
         var warmupJob: Job? = null
         scope.launch {
@@ -63,7 +63,10 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
          * stop every process belonging to the old APK, so the initializer alone is not a reliable
          * recovery hook.
          */
-        internal fun restoreIfConfigured(app: AndCodeApplication): Boolean {
+        internal fun restoreIfConfigured(
+            app: AndCodeApplication,
+            trigger: RuntimeAutoStartTrigger,
+        ): Boolean {
             val runtimeStatus = app.localRuntimeManager.status()
             val setupConfigured =
                 hasUsableRuntimeSetup(
@@ -79,6 +82,8 @@ class RuntimeAutoStartInitializer : Initializer<RuntimeAutoStartInitializer.Resu
                     onboardingCompleted = app.settings.onboardingCompleted,
                     localRuntimeStatus = runtimeStatus,
                     selectedRuntimeId = app.settings.selectedRuntimeId,
+                    trigger = trigger,
+                    localRuntimeIdleStopEnabled = app.settings.localRuntimeIdleStopEnabled,
                 )
             ) {
                 return false

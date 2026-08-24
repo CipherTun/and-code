@@ -93,7 +93,18 @@ class ScheduleExecutionService : Service() {
         super.onDestroy()
     }
 
+    /**
+     * Holds a [com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker] lease for the whole run.
+     *
+     * This path never touches [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository]
+     * - it drives the runtime directly - so without a lease of its own the wake lock would see no
+     * work in flight and let the device suspend mid-run, freezing the proot agent process.
+     */
     private suspend fun execute(scheduleId: String) {
+        app.runtimeWork.withLease("schedule:$scheduleId") { executeWithRuntimeAwake(scheduleId) }
+    }
+
+    private suspend fun executeWithRuntimeAwake(scheduleId: String) {
         val schedule = app.scheduleRepository.schedule(scheduleId) ?: return
         if (!schedule.enabled) return
         // A previous run of the same schedule may still be in flight (e.g. a run-now while a
