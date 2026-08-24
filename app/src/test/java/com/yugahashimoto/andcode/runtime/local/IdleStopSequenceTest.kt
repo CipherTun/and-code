@@ -7,7 +7,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -79,8 +78,13 @@ class IdleStopSequenceTest {
             assertTrue(events.isEmpty())
         }
 
+    /**
+     * A cancellation landing mid-stop still has to clear the flag: the alternative is a service
+     * that went away with `idleStopInProgress` stuck true, which makes every later foreground
+     * return send ACTION_START at a runtime that never needed restoring.
+     */
     @Test
-    fun `a scope cancelled after the coroutine starts still clears what it set`() =
+    fun `a scope cancelled while stopping still clears what it set`() =
         runTest {
             val events = mutableListOf<String>()
             val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
@@ -88,13 +92,15 @@ class IdleStopSequenceTest {
             scope.launch {
                 runIdleStopSequence(
                     markInProgress = { inProgress -> events += if (inProgress) "mark-true" else "mark-false" },
-                    stop = { events += "stop" },
+                    stop = {
+                        events += "stop"
+                        scope.cancel()
+                    },
                     onStopped = { events += "stopped" },
                 )
             }
             testScheduler.runCurrent()
 
-            assertFalse(events.isEmpty())
             assertEquals(listOf("mark-true", "stop", "mark-false", "stopped"), events)
         }
 }

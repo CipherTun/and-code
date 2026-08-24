@@ -524,13 +524,21 @@ class AndCodeApplication : Application() {
     ) {
         scope.launch {
             var lease: RuntimeWorkTracker.Lease? = null
-            hasWork.collect { active ->
-                if (active) {
-                    if (lease == null) lease = runtimeWork.acquire(tag)
-                } else {
-                    lease?.release()
-                    lease = null
+            try {
+                hasWork.collect { active ->
+                    if (active) {
+                        if (lease == null) lease = runtimeWork.acquire(tag)
+                    } else {
+                        lease?.release()
+                        lease = null
+                    }
                 }
+            } finally {
+                // A held lease outliving its flow would pin runtimeWork.active to true for the rest
+                // of the process - the wake lock held forever, which is the exact symptom this
+                // whole rework exists to remove. Both flows passed in today are StateFlows that
+                // never end, so this is insurance rather than a live path.
+                lease?.release()
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.yugahashimoto.andcode.core.util
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
@@ -29,8 +30,13 @@ class FlowExtTest {
             val scope = TestScope(StandardTestDispatcher(testScheduler))
             val results = mutableListOf<Boolean>()
             try {
+                // Stays open, so this measures the true edge alone rather than also picking up the
+                // closing false an ending upstream would add.
                 scope.launch {
-                    flow { emit(true) }.debounceFalseEdge(GRACE_MILLIS).collect { results += it }
+                    flow {
+                        emit(true)
+                        awaitCancellation()
+                    }.debounceFalseEdge(GRACE_MILLIS).collect { results += it }
                 }
                 runCurrent()
 
@@ -53,6 +59,9 @@ class FlowExtTest {
                     emit(false)
                     delay(5_000L) // well inside the grace window
                     emit(true)
+                    // Stays open, so the recovery is the last thing the assertion sees rather than
+                    // the closing false an ending upstream would add on top of it.
+                    awaitCancellation()
                 }
             try {
                 scope.launch { source.debounceFalseEdge(GRACE_MILLIS).collect { results += it } }
@@ -134,6 +143,28 @@ class FlowExtTest {
                 runCurrent()
 
                 assertEquals(emptyList<Boolean>(), results)
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    /**
+     * An upstream that ends on `true` must still hand its collector the closing `false`. For the
+     * `"sessions"` lease this transform feeds, a `true` nobody ever takes back is a wake lock held
+     * for the rest of the process.
+     */
+    @Test
+    fun `an upstream that ends while true still emits the closing false`() =
+        runTest {
+            val scope = TestScope(StandardTestDispatcher(testScheduler))
+            val results = mutableListOf<Boolean>()
+            try {
+                scope.launch {
+                    flow { emit(true) }.debounceFalseEdge(GRACE_MILLIS).collect { results += it }
+                }
+                runCurrent()
+
+                assertEquals(listOf(true, false), results)
             } finally {
                 scope.cancel()
             }

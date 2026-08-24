@@ -42,7 +42,14 @@ fun Flow<Boolean>.debounceFalseEdge(graceMillis: Long): Flow<Boolean> =
         }
         var current = false
         while (true) {
-            val value = values.receiveCatching().getOrNull() ?: break
+            val value = values.receiveCatching().getOrNull()
+            if (value == null) {
+                // The upstream ended while the last thing seen was `true`. Leaving it at that would
+                // strand every downstream on a `true` that can never be taken back - for the lease
+                // this exists for, a wake lock held for the rest of the process.
+                if (current) send(false)
+                break
+            }
             if (value) {
                 if (!current) {
                     current = true
