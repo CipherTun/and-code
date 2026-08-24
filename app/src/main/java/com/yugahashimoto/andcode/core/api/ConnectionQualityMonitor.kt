@@ -39,6 +39,13 @@ data class ConnectionQuality(
 class ConnectionQualityMonitor(
     private val scope: CoroutineScope,
     private val smoothingFactor: Double = DEFAULT_SMOOTHING_FACTOR,
+    /**
+     * Suspends until the app is back in the foreground. The default no-op keeps every existing
+     * test running unattended forever, the way a virtual test clock expects; the real app wires in
+     * a wait on [com.yugahashimoto.andcode.core.lifecycle.AppForeground], so a backgrounded chat
+     * stops spending battery on a health check nobody can see the result of.
+     */
+    private val awaitForeground: suspend () -> Unit = {},
 ) {
     private val _quality = MutableStateFlow(ConnectionQuality())
     val quality: StateFlow<ConnectionQuality> = _quality.asStateFlow()
@@ -54,6 +61,7 @@ class ConnectionQualityMonitor(
     fun startMonitoring(healthCheck: suspend () -> Unit) {
         scope.launch {
             while (isActive) {
+                awaitForeground()
                 probe(healthCheck)
                 delay(MONITOR_INTERVAL_MS)
             }

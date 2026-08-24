@@ -524,6 +524,8 @@
     <string name="remote_connection_row">Connexion distante</string>
     <string name="settings_workspace_row">Espace de travail</string>
     <string name="notifications_row">Notifications</string>
+    <string name="local_runtime_idle_stop_row">Arrêter l\'environnement d\'exécution inactif</string>
+    <string name="local_runtime_idle_stop_row_description">Redémarre automatiquement lorsqu\'une planification s\'exécute ou que vous ouvrez l\'application, mais pas automatiquement après un redémarrage de l\'appareil</string>
     <string name="privacy_row">Confidentialité et données</string>
     <string name="privacy_stub_body">Cette fonctionnalité sera bientôt disponible.</string>
     <string name="diagnostics_row">Diagnostics et journaux</string>

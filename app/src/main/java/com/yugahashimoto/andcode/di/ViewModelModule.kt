@@ -1,9 +1,11 @@
 package com.yugahashimoto.andcode.di
 
+import com.yugahashimoto.andcode.AndCodeApplication
 import com.yugahashimoto.andcode.feature.activity.ActivityViewModel
 import com.yugahashimoto.andcode.feature.chat.ChatViewModel
 import com.yugahashimoto.andcode.feature.settings.SettingsViewModel
 import com.yugahashimoto.andcode.feature.workspace.WorkspaceViewModel
+import kotlinx.coroutines.flow.first
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
@@ -13,9 +15,15 @@ val viewModelModule =
     module {
 
         viewModel {
+            val app = androidContext().applicationContext as AndCodeApplication
             ChatViewModel(
                 draftRepo = get(),
                 pullRequestStatuses = get(),
+                // Kept in step with the hand-rolled factory in ui/AndCodeApp.kt: both construction
+                // paths have to park the connection probe and stall watchdog while the app is
+                // backgrounded, or whichever one the screen happens to use decides whether those
+                // 30-second loops keep polling out of sight.
+                awaitForeground = { app.appForeground.foreground.first { visible -> visible } },
             )
         }
 

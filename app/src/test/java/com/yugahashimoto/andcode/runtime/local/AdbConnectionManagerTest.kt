@@ -1,5 +1,6 @@
 package com.yugahashimoto.andcode.runtime.local
 
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,7 +44,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore()
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val result = manager.connect(5555)
 
@@ -58,7 +59,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore()
             val runner = FakeShellRunner().apply { connectOk = false }
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val result = manager.connect(5555)
 
@@ -72,7 +73,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             manager.disconnect()
 
@@ -85,7 +86,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val restored = manager.restoreAndReconnect()
 
@@ -98,7 +99,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore()
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val restored = manager.restoreAndReconnect()
 
@@ -111,12 +112,56 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val connected = manager.checkConnection()
 
             assertTrue(connected)
             assertEquals(AdbConnectionState.Connected(5555), manager.state.value)
+        }
+
+    /**
+     * The wake-lock lease has to cover only the shell invocation itself, not the `Connected` state
+     * that follows - a lease held for the whole connected duration would never let the device sleep
+     * for anyone who has ever paired wireless debugging, since startAutoReconnect re-establishes
+     * that state every 30 seconds.
+     */
+    @Test
+    fun `connect holds the adb lease only while the shell command is running`() =
+        runTest {
+            val store = InMemoryAdbConnectionStore()
+            val runtimeWork = RuntimeWorkTracker()
+            var leaseHeldDuringCommand = false
+            val runner =
+                AdbShellRunner { _, _ ->
+                    leaseHeldDuringCommand = runtimeWork.active.value
+                    LocalRuntimeCommandResult(0, "connected to localhost:5555")
+                }
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = runtimeWork)
+
+            manager.connect(5555)
+
+            assertTrue("lease should be held while the shell command runs", leaseHeldDuringCommand)
+            assertFalse("lease should be released once the command completes", runtimeWork.active.value)
+        }
+
+    @Test
+    fun `checkConnection holds the adb lease only while the shell command is running`() =
+        runTest {
+            val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
+            val runtimeWork = RuntimeWorkTracker()
+            var leaseHeldDuringCommand = false
+            val runner =
+                AdbShellRunner { _, _ ->
+                    leaseHeldDuringCommand = runtimeWork.active.value
+                    LocalRuntimeCommandResult(0, "device")
+                }
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = runtimeWork)
+
+            manager.checkConnection()
+
+            assertTrue("lease should be held while the shell command runs", leaseHeldDuringCommand)
+            assertFalse("lease should be released once the command completes", runtimeWork.active.value)
         }
 
     @Test
@@ -128,7 +173,7 @@ class AdbConnectionManagerTest {
                     deviceConnected = false
                     connectOk = true
                 }
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             try {
                 manager.startAutoReconnect(scope, intervalMs = 10)

@@ -524,6 +524,8 @@
     <string name="remote_connection_row">Conexão remota</string>
     <string name="settings_workspace_row">Espaço de trabalho</string>
     <string name="notifications_row">Notificações</string>
+    <string name="local_runtime_idle_stop_row">Parar ambiente de execução ocioso</string>
+    <string name="local_runtime_idle_stop_row_description">Reinicia automaticamente quando um agendamento é executado ou você abre o app, mas não automaticamente após reiniciar o dispositivo</string>
     <string name="privacy_row">Privacidade e dados</string>
     <string name="privacy_stub_body">Este recurso estará disponível em breve.</string>
     <string name="diagnostics_row">Diagnósticos e registros</string>

@@ -2,6 +2,7 @@ package com.yugahashimoto.andcode.feature.workspace
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.runtime.local.LocalRuntimeCommandRunner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,13 @@ data class TerminalUiState(
 
 class TerminalViewModel(
     private val commandRunner: LocalRuntimeCommandRunner,
+    /**
+     * A shell command run here is real work on the runtime's proot process just like a chat turn,
+     * but the terminal never touches
+     * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository] - the only place that
+     * already tracks that as work - so without a lease the device could suspend mid-command.
+     */
+    private val runtimeWork: RuntimeWorkTracker,
 ) : ViewModel() {
     private val _state =
         MutableStateFlow(
@@ -53,14 +61,16 @@ class TerminalViewModel(
 
         viewModelScope.launch {
             val result =
-                withContext(Dispatchers.IO) {
-                    val fullCommand =
-                        if (_state.value.workingDirectory != "/root") {
-                            "cd ${_state.value.workingDirectory} && $trimmed"
-                        } else {
-                            trimmed
-                        }
-                    commandRunner.runShell(fullCommand, timeoutSeconds = 30L)
+                runtimeWork.withLease(TERMINAL_LEASE_TAG) {
+                    withContext(Dispatchers.IO) {
+                        val fullCommand =
+                            if (_state.value.workingDirectory != "/root") {
+                                "cd ${_state.value.workingDirectory} && $trimmed"
+                            } else {
+                                trimmed
+                            }
+                        commandRunner.runShell(fullCommand, timeoutSeconds = 30L)
+                    }
                 }
 
             _state.update { s ->
@@ -127,5 +137,6 @@ class TerminalViewModel(
 
     private companion object {
         const val MAX_SCROLLBACK = 500
+        const val TERMINAL_LEASE_TAG = "terminal"
     }
 }

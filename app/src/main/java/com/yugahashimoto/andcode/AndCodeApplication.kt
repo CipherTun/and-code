@@ -11,11 +11,16 @@ import com.yugahashimoto.andcode.core.api.GitHubApiClient
 import com.yugahashimoto.andcode.core.diagnostics.AnalyticsReporter
 import com.yugahashimoto.andcode.core.diagnostics.CrashLog
 import com.yugahashimoto.andcode.core.diagnostics.CrashReporter
+import com.yugahashimoto.andcode.core.lifecycle.AppForeground
+import com.yugahashimoto.andcode.core.lifecycle.ForegroundReturnDetector
+import com.yugahashimoto.andcode.core.lifecycle.ProcessLifecycleAppForeground
 import com.yugahashimoto.andcode.core.locale.AppLanguage
 import com.yugahashimoto.andcode.core.notification.RuntimeNotificationHelper
+import com.yugahashimoto.andcode.core.runtime.RuntimeWorkTracker
 import com.yugahashimoto.andcode.core.security.SecretRedaction
 import com.yugahashimoto.andcode.core.storage.DeviceStorage
 import com.yugahashimoto.andcode.core.storage.DeviceStorageAccess
+import com.yugahashimoto.andcode.core.util.debounceFalseEdge
 import com.yugahashimoto.andcode.data.connection.SecureSettingsRepository
 import com.yugahashimoto.andcode.data.repository.AndroidRuntimeActivityMessages
 import com.yugahashimoto.andcode.data.repository.AndroidRuntimeCatalogMessages
@@ -33,6 +38,7 @@ import com.yugahashimoto.andcode.feature.schedule.ScheduleManager
 import com.yugahashimoto.andcode.feature.support.GitHubStarCoordinator
 import com.yugahashimoto.andcode.feature.support.GitHubStarService
 import com.yugahashimoto.andcode.feature.wakeword.VoskModelStore
+import com.yugahashimoto.andcode.runtime.LocalRuntimeStatus
 import com.yugahashimoto.andcode.runtime.RuntimeRegistry
 import com.yugahashimoto.andcode.runtime.local.AdbConnectionManager
 import com.yugahashimoto.andcode.runtime.local.AdbShellRunner
@@ -62,9 +68,17 @@ import com.yugahashimoto.andcode.runtime.local.LocalRuntimeUpdater
 import com.yugahashimoto.andcode.runtime.local.VerifiedRuntimeDownloader
 import com.yugahashimoto.andcode.startup.CatalogReconcileInitializer
 import com.yugahashimoto.andcode.startup.RuntimeAutoStartInitializer
+import com.yugahashimoto.andcode.startup.RuntimeAutoStartTrigger
+import com.yugahashimoto.andcode.startup.shouldRestoreOnForegroundReturn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
@@ -80,6 +94,35 @@ class AndCodeApplication : Application() {
 
     lateinit var preferences: AppPreferencesRepository
         private set
+
+    /**
+     * The single source of truth for whether the device may suspend. Created at the very start of
+     * [onCreate] so every collaborator built afterwards - the adb manager, the agent controllers,
+     * the activity repository's bridge - can take it as a plain constructor dependency.
+     */
+    lateinit var runtimeWork: RuntimeWorkTracker
+        private set
+
+    /** Whether an activity of the app is on screen; see [AppForeground]. */
+    lateinit var appForeground: AppForeground
+        private set
+
+    private val mutableIdleStopInProgress = MutableStateFlow(false)
+
+    /**
+     * True for the brief window between [LocalRuntimeService.checkIdleStop] deciding to shut the
+     * idle runtime down and [LocalRuntimeManager.stop] actually finishing. The status is still read
+     * as [LocalRuntimeStatus.Ready] for that whole window - there is no `Stopping` state - so
+     * without this a foreground return landing inside it would fail
+     * [shouldRestoreOnForegroundReturn]'s `Stopped` check and leave the runtime down until the
+     * *next* return instead of this one. Set by [LocalRuntimeService] itself via
+     * [setIdleStopInProgress].
+     */
+    val idleStopInProgress: StateFlow<Boolean> = mutableIdleStopInProgress.asStateFlow()
+
+    fun setIdleStopInProgress(inProgress: Boolean) {
+        mutableIdleStopInProgress.value = inProgress
+    }
 
     lateinit var localRuntimeManager: LocalRuntimeManager
         private set
@@ -167,6 +210,11 @@ class AndCodeApplication : Application() {
             androidContext(this@AndCodeApplication)
             modules(appModule, viewModelModule)
         }
+        appForeground = ProcessLifecycleAppForeground.install()
+        // Created early so every collaborator constructed below - the adb manager, the agent
+        // controllers, the activity repository's bridge - can take it as a plain constructor
+        // dependency instead of a nullable one wired in after the fact.
+        runtimeWork = RuntimeWorkTracker()
         settings = SecureSettingsRepository(this)
         // Analytics is explicitly opt-in; source-code tooling should not silently collect usage data.
         AnalyticsReporter.install(this, settings.analyticsEnabled)
@@ -236,7 +284,7 @@ class AndCodeApplication : Application() {
         claudeCodeTarget = ClaudeCodeTarget(claudeCodeRuntime, claudeMessages)
         antigravityRuntime = AntigravityRuntime(runtimeDirectory, installer::installedRuntime, githubToken = { settings.githubToken })
         antigravityTarget = AntigravityTarget(antigravityRuntime)
-        antigravityController = AntigravityController(installer, antigravityTarget, applicationScope)
+        antigravityController = AntigravityController(installer, antigravityTarget, runtimeWork, applicationScope)
         runtimeMessages = AndroidLocalRuntimeMessages(this)
         gitCloneRepository =
             GitCloneRepository(
@@ -303,11 +351,16 @@ class AndCodeApplication : Application() {
                 shellRunner = AdbShellRunner { command, timeoutSeconds -> commandRunner.runShell(command, timeoutSeconds) },
                 connectionStore = settings,
                 nsdManagerProvider = { getSystemService(Context.NSD_SERVICE) as? NsdManager },
+                runtimeWork = runtimeWork,
                 messages = runtimeMessages,
             )
         // Keep the persisted wireless-debugging link alive for the whole process lifetime. The
         // loop is a cheap no-op until the user has connected once, and it self-heals the link
-        // whenever the adb server inside the Linux runtime is restarted.
+        // whenever the adb server inside the Linux runtime is restarted. The wake-lock lease for
+        // this work is taken inside AdbConnectionManager itself, around each shell invocation - a
+        // live `Connected` state is not leased here, since for anyone who has ever paired wireless
+        // debugging that state is re-established every 30 seconds and would hold the lock forever;
+        // it instead blocks the idle auto-stop directly, in LocalRuntimeService.checkIdleStop.
         adbConnectionManager.startAutoReconnect(applicationScope)
         runtimeRegistry =
             RuntimeRegistry(
@@ -324,6 +377,7 @@ class AndCodeApplication : Application() {
                 runtime = claudeCodeRuntime,
                 installer = installer,
                 scope = applicationScope,
+                runtimeWork = runtimeWork,
                 messages = claudeMessages,
             )
         catalogRepository =
@@ -376,6 +430,23 @@ class AndCodeApplication : Application() {
                 unreadStore = settings,
                 messages = AndroidRuntimeActivityMessages(this),
             )
+        // A chat or agent run in flight is real work happening on the runtime's proot process,
+        // so it holds the device awake until the session settles - wired here rather than inside
+        // the repository's own constructor, which has no reason to know about wake locks.
+        //
+        // debounceFalseEdge rides out a momentary SSE/HTTP blip: activeSessionIds is cleared the
+        // instant the runtime target leaves Connected/Connecting (see RuntimeActivityRepository),
+        // and releasing this lease on that same instant would let the device suspend mid-run and
+        // freeze the proot child - precisely the failure the wake-lock rework exists to prevent.
+        // Only a drop that holds for the whole grace window releases the lease.
+        bridgeLeaseToWork(
+            tag = "sessions",
+            hasWork =
+                activityRepository.state.map { it.activeSessionIds.isNotEmpty() }
+                    .distinctUntilChanged()
+                    .debounceFalseEdge(SESSIONS_LEASE_GRACE_MILLIS),
+            scope = applicationScope,
+        )
         githubStarCoordinator.refresh()
         scheduleManager = ScheduleManager(this, scheduleRepository)
         // Re-arm alarms for schedules that were saved in a previous process lifetime.
@@ -384,7 +455,92 @@ class AndCodeApplication : Application() {
         // The poll loop is a cheap no-op (one directory stat) while no guest has touched the bridge.
         val scheduleBridge = ScheduleBridge(File(runtimeDirectory, "workspace"), AppScheduleStore(scheduleRepository, scheduleManager))
         applicationScope.launch { scheduleBridge.run() }
+        observeForegroundForRuntimeRestart()
         scheduleDeferredInitialization()
+    }
+
+    /**
+     * Restarts the local runtime on every actual entry into the foreground - the app's own cold
+     * start included, not just a later return after the 15-minute idle auto-stop shut it down while
+     * backgrounded (see [LocalRuntimeService.checkIdleStop]).
+     *
+     * This is now the *only* place [RuntimeAutoStartTrigger.AppLaunch] fires from.
+     * [RuntimeAutoStartInitializer.create] used to restore the runtime itself at cold start, but
+     * that runs once per process via [scheduleDeferredInitialization] - including the UI-less
+     * process `BOOT_COMPLETED` creates, where it silently undid
+     * [RuntimeAutoStartReceiver] refusing that same restore under
+     * [RuntimeAutoStartTrigger.BootOrPackageReplaced]. [appForeground] is backed by
+     * [ProcessLifecycleOwner][androidx.lifecycle.ProcessLifecycleOwner], which only ever reports
+     * foreground for an actual activity on screen, so a broadcast-only process never reaches this
+     * collector at all - the runtime now correctly stays down after a reboot when the setting says
+     * so.
+     *
+     * [ForegroundReturnDetector] turns the raw flow into "just entered the foreground" events,
+     * firing on the very first one too now that nothing else covers cold start.
+     * [shouldRestoreOnForegroundReturn] then decides whether to act: a runtime that is
+     * [Stopped][LocalRuntimeStatus.Stopped], or mid-way through the idle auto-stop's own `stop()`
+     * call (see [idleStopInProgress]), is restored; a [Ready][LocalRuntimeStatus.Ready] one or one
+     * mid-install/mid-update is left alone, since [LocalRuntimeService.ACTION_START] cancels
+     * whatever operation is currently in flight and firing it at a healthy runtime would interrupt
+     * real work rather than being the no-op it deserves; and a runtime the user deliberately stopped
+     * - the runtime notification's Stop action,
+     * [com.yugahashimoto.andcode.feature.workspace.WorkspaceViewModel.stopLocalRuntime] - stays down
+     * until an explicit start clears that flag.
+     *
+     * [RuntimeAutoStartInitializer.syncOnboardingCompleted] runs on every entry regardless of that
+     * decision - it used to run unconditionally at cold start too, and a reinstalled APK landing on
+     * a device with the runtime already set up should not be sent back through onboarding just
+     * because [restoreIfConfigured][RuntimeAutoStartInitializer.restoreIfConfigured] itself is
+     * skipped this time.
+     */
+    private fun observeForegroundForRuntimeRestart() {
+        val detector = ForegroundReturnDetector()
+        applicationScope.launch {
+            appForeground.foreground.collect { inForeground ->
+                if (!detector.onForegroundChanged(inForeground)) return@collect
+                RuntimeAutoStartInitializer.syncOnboardingCompleted(this@AndCodeApplication)
+                val shouldRestore =
+                    shouldRestoreOnForegroundReturn(
+                        status = localRuntimeManager.status(),
+                        idleStopInProgress = idleStopInProgress.value,
+                        userStoppedRuntime = settings.localRuntimeStoppedByUser,
+                    )
+                if (shouldRestore) {
+                    RuntimeAutoStartInitializer.restoreIfConfigured(this@AndCodeApplication, RuntimeAutoStartTrigger.AppLaunch)
+                }
+            }
+        }
+    }
+
+    /**
+     * Keeps exactly one [RuntimeWorkTracker] lease under [tag] alive for as long as [hasWork]
+     * reports true, releasing it the instant that flips - the lease's own idempotent release means
+     * a lease this function no longer references is never touched twice.
+     */
+    private fun bridgeLeaseToWork(
+        tag: String,
+        hasWork: Flow<Boolean>,
+        scope: CoroutineScope,
+    ) {
+        scope.launch {
+            var lease: RuntimeWorkTracker.Lease? = null
+            try {
+                hasWork.collect { active ->
+                    if (active) {
+                        if (lease == null) lease = runtimeWork.acquire(tag)
+                    } else {
+                        lease?.release()
+                        lease = null
+                    }
+                }
+            } finally {
+                // A held lease outliving its flow would pin runtimeWork.active to true for the rest
+                // of the process - the wake lock held forever, which is the exact symptom this
+                // whole rework exists to remove. Both flows passed in today are StateFlows that
+                // never end, so this is insurance rather than a live path.
+                lease?.release()
+            }
+        }
     }
 
     private fun scheduleDeferredInitialization() {
@@ -394,5 +550,14 @@ class AndCodeApplication : Application() {
             AppInitializer.getInstance(this)
                 .initializeComponent(RuntimeAutoStartInitializer::class.java)
         }
+    }
+
+    private companion object {
+        /**
+         * How long [debounceFalseEdge] rides out a drop to "no active sessions" before releasing
+         * the `"sessions"` wake-lock lease. Long enough to survive a transient SSE/HTTP blip during
+         * a long agent run, short enough that a genuine end still releases the lock promptly.
+         */
+        private const val SESSIONS_LEASE_GRACE_MILLIS = 60_000L
     }
 }

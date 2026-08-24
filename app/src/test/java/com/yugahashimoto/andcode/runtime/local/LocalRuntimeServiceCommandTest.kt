@@ -73,14 +73,14 @@ class LocalRuntimeServiceCommandTest {
     }
 
     /**
-     * A state with a live process behind it has to keep the device out of suspend: the agent is a
-     * proot child of this process, so a screen-off suspend freezes a run that is still going.
+     * A bounded, self-limiting state - a boot or install in progress - has to keep the device out
+     * of suspend regardless of whether any work has been observed yet: getting frozen mid-way is a
+     * broken state, not an idle one.
      */
     @Test
-    fun `a running runtime keeps the CPU awake`() {
-        assertTrue(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Ready(version = "1.0.0", port = 4096)))
-        assertTrue(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Starting(version = "1.0.0", port = 4096)))
-        assertTrue(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Installing(progress = 0.5f, step = "unpacking")))
+    fun `an installing, starting or updating runtime keeps the CPU awake regardless of active work`() {
+        assertTrue(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Starting(version = "1.0.0", port = 4096), hasActiveWork = false))
+        assertTrue(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Installing(progress = 0.5f, step = "unpacking"), hasActiveWork = false))
         assertTrue(
             localRuntimeNeedsWakeLock(
                 LocalRuntimeStatus.Updating(
@@ -89,16 +89,62 @@ class LocalRuntimeServiceCommandTest {
                     progress = null,
                     step = "downloading",
                 ),
+                hasActiveWork = false,
             ),
         )
     }
 
     /** Keeping a runtime that holds no process awake would only cost battery. */
     @Test
-    fun `a runtime with nothing running lets the device sleep`() {
-        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.NotInstalled))
-        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Stopped(version = "1.0.0", port = 4096)))
-        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Broken(reason = "missing rootfs")))
-        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.UnsupportedAbi(abi = "x86")))
+    fun `a runtime with nothing running lets the device sleep regardless of active work`() {
+        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.NotInstalled, hasActiveWork = true))
+        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Stopped(version = "1.0.0", port = 4096), hasActiveWork = true))
+        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Broken(reason = "missing rootfs"), hasActiveWork = true))
+        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.UnsupportedAbi(abi = "x86"), hasActiveWork = true))
+    }
+
+    /**
+     * `Ready` alone used to be enough to hold the wake lock, which meant the device could never
+     * suspend for as long as the runtime was simply up. It now only holds the lock while there is
+     * work in flight - a chat run, a scheduled run, a runtime operation or a live ADB link.
+     */
+    @Test
+    fun `a ready runtime with active work stays awake`() {
+        assertTrue(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Ready(version = "1.0.0", port = 4096), hasActiveWork = true))
+    }
+
+    @Test
+    fun `a ready runtime with nothing in flight lets the device sleep`() {
+        assertFalse(localRuntimeNeedsWakeLock(LocalRuntimeStatus.Ready(version = "1.0.0", port = 4096), hasActiveWork = false))
+    }
+
+    /**
+     * Every command a user reaches through the workspace screen that leaves the runtime running -
+     * plus the schedule's on-demand start, which resolves to [LocalRuntimeServiceCommand.Start].
+     * Without clearing the flag here, a deliberate restart right after a deliberate stop would
+     * still read as "leave it down" on the next foreground return.
+     */
+    @Test
+    fun `an explicit start clears the user-stopped flag`() {
+        assertTrue(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Start))
+        assertTrue(clearsUserStoppedFlag(LocalRuntimeServiceCommand.InstallAndStart))
+        assertTrue(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Restart))
+        assertTrue(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Reinstall))
+        assertTrue(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Update))
+        assertTrue(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Rollback))
+    }
+
+    /**
+     * A stop is exactly what should set the flag (done separately in the service, since it needs
+     * the settings write), and the rest leave no runtime to restore. Restore in particular is the
+     * system re-delivering a null-action intent, not a user or schedule action, so it must not
+     * override a deliberate stop.
+     */
+    @Test
+    fun `commands that are not an explicit start leave the user-stopped flag alone`() {
+        assertFalse(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Stop))
+        assertFalse(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Restore))
+        assertFalse(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Delete))
+        assertFalse(clearsUserStoppedFlag(LocalRuntimeServiceCommand.Ignore))
     }
 }

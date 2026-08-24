@@ -26,8 +26,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -208,35 +210,48 @@ class RuntimeActivityRepository(
      * arrives, and the user finds out by giving up and looking. This asks the runtime what became
      * of such a session, settles it when it turns out to be over, and otherwise says out loud that
      * it is stuck.
+     *
+     * The timed probe only runs while [RuntimeActivityState.activeSessionIds] is non-empty - this is
+     * how the user learns a background run died, so unlike the app's other poll loops it must NOT be
+     * gated on app foreground, only on there being something to watch. Ticking unconditionally every
+     * [stallCheckIntervalMillis] forever, as this used to, kept the device from ever suspending.
      */
     private suspend fun watchForStalls(target: RuntimeTarget) {
-        while (true) {
-            delay(stallCheckIntervalMillis)
-            val active = mutableState.value.activeSessionIds
-            synchronized(activityLock) {
-                reportedStalls.retainAll(active)
-                lastActivityAt.keys.retainAll(active)
-            }
-            for (sessionId in active) {
-                if (now() - lastActivitySince(sessionId) < stallThresholdMillis) continue
-                if (synchronized(activityLock) { sessionId in reportedStalls }) continue
-                try {
-                    diagnoseSilentSession(target, sessionId)
-                } catch (cancellation: CancellationException) {
-                    throw cancellation
-                } catch (error: Exception) {
-                    // This watchdog shares a scope with the event stream. A diagnosis that throws —
-                    // a runtime call, or the notification the verdict posts — would otherwise take
-                    // the whole runtime's event handling down with it, which is a wildly
-                    // disproportionate price for a session that could not be diagnosed.
-                    //
-                    // The claim on the session is given back, so "reported once" does not come to
-                    // mean "reported never" for a stall whose notification happened to fail.
-                    synchronized(activityLock) { reportedStalls -= sessionId }
-                    appendLog(messages.eventStalled, error.safeMessage(), sessionId)
+        mutableState
+            .map { it.activeSessionIds.isNotEmpty() }
+            .distinctUntilChanged()
+            .collectLatest { hasActiveSessions ->
+                if (!hasActiveSessions) return@collectLatest
+                while (true) {
+                    delay(stallCheckIntervalMillis)
+                    val active = mutableState.value.activeSessionIds
+                    synchronized(activityLock) {
+                        reportedStalls.retainAll(active)
+                        lastActivityAt.keys.retainAll(active)
+                    }
+                    for (sessionId in active) {
+                        if (now() - lastActivitySince(sessionId) < stallThresholdMillis) continue
+                        if (synchronized(activityLock) { sessionId in reportedStalls }) continue
+                        try {
+                            diagnoseSilentSession(target, sessionId)
+                        } catch (cancellation: CancellationException) {
+                            throw cancellation
+                        } catch (error: Exception) {
+                            // This watchdog shares a scope with the event stream. A diagnosis that
+                            // throws — a runtime call, or the notification the verdict posts — would
+                            // otherwise take the whole runtime's event handling down with it, which
+                            // is a wildly disproportionate price for a session that could not be
+                            // diagnosed.
+                            //
+                            // The claim on the session is given back, so "reported once" does not
+                            // come to mean "reported never" for a stall whose notification happened
+                            // to fail.
+                            synchronized(activityLock) { reportedStalls -= sessionId }
+                            appendLog(messages.eventStalled, error.safeMessage(), sessionId)
+                        }
+                    }
                 }
             }
-        }
     }
 
     private suspend fun diagnoseSilentSession(

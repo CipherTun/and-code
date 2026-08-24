@@ -48,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -55,6 +56,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -122,6 +125,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -308,6 +312,10 @@ fun AndCodeApp(
                             app.activityRepository.state
                                 .map { it.streamError }
                                 .distinctUntilChanged(),
+                        // Parks the connection probe and stall watchdog while the app is
+                        // backgrounded - neither loop's result is visible to anyone until it is
+                        // foreground again.
+                        awaitForeground = { app.appForeground.foreground.first { visible -> visible } },
                     )
                 },
         )
@@ -932,11 +940,17 @@ fun AndCodeApp(
                     // A pull request is usually merged or closed on GitHub, not from here, so the
                     // badges are refreshed while the chat is on screen. The repository decides what
                     // is actually stale, so this only costs a request when something can change.
+                    // repeatOnLifecycle stops the loop the instant the app leaves STARTED (backed
+                    // out to another app, screen off) and restarts it fresh on return, rather than
+                    // polling GitHub for badges nobody can see.
                     if (chatState.pullRequests.isNotEmpty()) {
-                        LaunchedEffect(Unit) {
-                            while (true) {
-                                delay(PULL_REQUEST_REFRESH_INTERVAL_MS)
-                                chatViewModel.refreshPullRequests()
+                        val lifecycleOwner = LocalLifecycleOwner.current
+                        LaunchedEffect(lifecycleOwner) {
+                            lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                                while (true) {
+                                    delay(PULL_REQUEST_REFRESH_INTERVAL_MS)
+                                    chatViewModel.refreshPullRequests()
+                                }
                             }
                         }
                     }
@@ -1225,7 +1239,12 @@ fun AndCodeApp(
                 githubConfigured = !app.settings.githubToken.isNullOrBlank(),
                 onClone = { url ->
                     val name = url.trim().removeSuffix("/").removeSuffix(".git").substringAfterLast('/')
-                    withContext(Dispatchers.IO) { app.gitCloneRepository.clone(url, name) }
+                    // A clone can run for as long as the repository takes to fetch, entirely on the
+                    // runtime's proot process, so it needs its own lease the same way an install or
+                    // scheduled run does - nothing else already tracks this as active work.
+                    app.runtimeWork.withLease("git-clone") {
+                        withContext(Dispatchers.IO) { app.gitCloneRepository.clone(url, name) }
+                    }
                 },
                 onListRepos = { settingsViewModel.listGitHubRepos() },
                 onCloned = { serverPath ->

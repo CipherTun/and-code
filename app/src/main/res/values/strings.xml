@@ -536,6 +536,8 @@
     <string name="settings_workspace_row">Workspace</string>
     <string name="notifications_row">Notifications</string>
     <string name="analytics_row" translatable="false">Anonymous usage analytics</string>
+    <string name="local_runtime_idle_stop_row">Stop idle runtime</string>
+    <string name="local_runtime_idle_stop_row_description">Restarts automatically when a schedule runs or you open the app, but not automatically after a device restart</string>
     <string name="schedule_run_interrupted" translatable="false">Run interrupted before completion</string>
     <string name="schedule_completion_timeout" translatable="false">Scheduled run timed out</string>
     <string name="schedule_event_stream_ended" translatable="false">Runtime event stream ended unexpectedly</string>

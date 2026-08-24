@@ -68,6 +68,8 @@ fun NavGraphBuilder.settingsNavGraph(
             onToggleNotifications = onToggleNotifications,
             analyticsEnabled = preferences().analyticsEnabled,
             onToggleAnalytics = appPreferences::setAnalyticsEnabled,
+            localRuntimeIdleStopEnabled = preferences().localRuntimeIdleStopEnabled,
+            onToggleLocalRuntimeIdleStop = appPreferences::setLocalRuntimeIdleStopEnabled,
             appVersion = appVersion,
             onOpenDrawer = onOpenDrawer,
             onOpenAssistantSettings = onOpenAssistantSettings,

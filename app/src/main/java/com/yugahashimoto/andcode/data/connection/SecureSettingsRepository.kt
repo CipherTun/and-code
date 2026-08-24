@@ -415,6 +415,29 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         get() = preferences.getBoolean(KEY_ANALYTICS_ENABLED, false)
         set(value) = preferences.edit().putBoolean(KEY_ANALYTICS_ENABLED, value).apply()
 
+    /**
+     * Stopping an idle runtime is opt-out, not opt-in: it is what stops the wake lock loop from
+     * draining the battery of anyone who never touches this setting.
+     */
+    var localRuntimeIdleStopEnabled: Boolean
+        get() = preferences.getBoolean(KEY_LOCAL_RUNTIME_IDLE_STOP_ENABLED, true)
+        set(value) = preferences.edit().putBoolean(KEY_LOCAL_RUNTIME_IDLE_STOP_ENABLED, value).apply()
+
+    /**
+     * Whether the runtime is down because the user asked for it to be, not because the idle
+     * auto-stop caught it work-free and backgrounded. Set when [LocalRuntimeServiceCommand.Stop]
+     * runs - the runtime notification's Stop action and
+     * [com.yugahashimoto.andcode.feature.workspace.WorkspaceViewModel.stopLocalRuntime] both reach
+     * it - and cleared by any explicit start
+     * ([LocalRuntimeServiceCommand.Start], [LocalRuntimeServiceCommand.InstallAndStart],
+     * [LocalRuntimeServiceCommand.Restart]). Consulted by
+     * [com.yugahashimoto.andcode.startup.shouldRestoreOnForegroundReturn] so a deliberate stop is not
+     * silently undone the next time the app is opened.
+     */
+    var localRuntimeStoppedByUser: Boolean
+        get() = preferences.getBoolean(KEY_LOCAL_RUNTIME_STOPPED_BY_USER, false)
+        set(value) = preferences.edit().putBoolean(KEY_LOCAL_RUNTIME_STOPPED_BY_USER, value).apply()
+
     var collapsedSidebarSections: Set<String>
         get() = preferences.getStringSet(KEY_COLLAPSED_SIDEBAR_SECTIONS, emptySet()).orEmpty()
         set(value) = preferences.edit().putStringSet(KEY_COLLAPSED_SIDEBAR_SECTIONS, value).apply()
@@ -501,6 +524,8 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         private const val KEY_LANGUAGE = "language"
         private const val KEY_LIVE_TRANSCRIPT_ENABLED = "live_transcript_enabled"
         private const val KEY_ANALYTICS_ENABLED = "analytics_enabled"
+        private const val KEY_LOCAL_RUNTIME_IDLE_STOP_ENABLED = "local_runtime_idle_stop_enabled"
+        private const val KEY_LOCAL_RUNTIME_STOPPED_BY_USER = "local_runtime_stopped_by_user"
         private const val KEY_COLLAPSED_SIDEBAR_SECTIONS = "collapsed_sidebar_sections"
     }
 }
