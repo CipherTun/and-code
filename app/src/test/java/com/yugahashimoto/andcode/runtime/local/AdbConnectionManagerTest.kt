@@ -44,7 +44,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore()
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val result = manager.connect(5555)
 
@@ -59,7 +59,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore()
             val runner = FakeShellRunner().apply { connectOk = false }
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val result = manager.connect(5555)
 
@@ -73,7 +73,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             manager.disconnect()
 
@@ -86,7 +86,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val restored = manager.restoreAndReconnect()
 
@@ -99,7 +99,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore()
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val restored = manager.restoreAndReconnect()
 
@@ -112,7 +112,7 @@ class AdbConnectionManagerTest {
         runTest {
             val store = InMemoryAdbConnectionStore().apply { saveConnectedPort(5555) }
             val runner = FakeShellRunner()
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
 
             val connected = manager.checkConnection()
 
@@ -173,7 +173,7 @@ class AdbConnectionManagerTest {
                     deviceConnected = false
                     connectOk = true
                 }
-            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null })
+            val manager = AdbConnectionManager(runner, store, nsdManagerProvider = { null }, runtimeWork = RuntimeWorkTracker())
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             try {
                 manager.startAutoReconnect(scope, intervalMs = 10)

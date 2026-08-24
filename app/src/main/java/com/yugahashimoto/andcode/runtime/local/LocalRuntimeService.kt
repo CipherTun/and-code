@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -54,6 +55,34 @@ internal fun localRuntimeServiceCommand(action: String?): LocalRuntimeServiceCom
         LocalRuntimeService.ACTION_RESTART -> LocalRuntimeServiceCommand.Restart
         null -> LocalRuntimeServiceCommand.Restore
         else -> LocalRuntimeServiceCommand.Ignore
+    }
+
+/**
+ * Whether [command] is an explicit request to have the runtime running, and should therefore clear
+ * [com.yugahashimoto.andcode.data.connection.SecureSettingsRepository.localRuntimeStoppedByUser].
+ *
+ * [LocalRuntimeServiceCommand.Restore] is deliberately excluded: it is the system re-delivering a
+ * null-action intent to a service the OS restarted on its own, not something a user or the schedule
+ * path asked for, so it must not override a deliberate stop the way the commands below do.
+ *
+ * Reinstall, update and rollback count too. Each is reached only from the workspace screen and each
+ * leaves the runtime running, so a stale stopped-by-user flag surviving one of them would suppress
+ * the foreground restore for a runtime the user had just asked to be rebuilt.
+ */
+internal fun clearsUserStoppedFlag(command: LocalRuntimeServiceCommand): Boolean =
+    when (command) {
+        LocalRuntimeServiceCommand.Start,
+        LocalRuntimeServiceCommand.InstallAndStart,
+        LocalRuntimeServiceCommand.Restart,
+        LocalRuntimeServiceCommand.Reinstall,
+        LocalRuntimeServiceCommand.Update,
+        LocalRuntimeServiceCommand.Rollback,
+        -> true
+        LocalRuntimeServiceCommand.Stop,
+        LocalRuntimeServiceCommand.Delete,
+        LocalRuntimeServiceCommand.Restore,
+        LocalRuntimeServiceCommand.Ignore,
+        -> false
     }
 
 /**
@@ -209,6 +238,29 @@ internal class RestartBackoff(
     }
 }
 
+/**
+ * Tracks how long [shouldStopIdleRuntime]'s idle condition has continuously held, using
+ * [SystemClock.elapsedRealtime] rather than [System.currentTimeMillis] by default - the latter jumps
+ * with an NTP correction or a manual clock change, which would make "idle for 15 minutes" fire early
+ * or never depending on which way the clock moved, while elapsed-realtime only ever moves forward
+ * with actual device uptime. The clock is injected, and kept in its own class rather than a bare
+ * field on [LocalRuntimeService], so this bookkeeping is testable without a real Android service.
+ */
+internal class IdleStopTracker(private val nowMillis: () -> Long = SystemClock::elapsedRealtime) {
+    /**
+     * When the idle condition first became true; `null` while it does not currently hold. Callers
+     * must serialize their own calls to [update] - this class does no synchronization of its own.
+     */
+    private var idleSinceMillis: Long? = null
+
+    /** Call on every watchdog tick with the current idle condition; returns how long it has held. */
+    fun update(idleNow: Boolean): Long {
+        val now = nowMillis()
+        idleSinceMillis = if (idleNow) idleSinceMillis ?: now else null
+        return idleSinceMillis?.let { now - it } ?: 0L
+    }
+}
+
 class LocalRuntimeService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var operation: Job? = null
@@ -226,11 +278,10 @@ class LocalRuntimeService : Service() {
     private var shuttingDown = false
 
     /**
-     * When the [shouldStopIdleRuntime] condition first became true; `null` while it does not
-     * currently hold. Read and written only from [startWatchdog]'s own coroutine, so it needs no
-     * synchronization of its own.
+     * Read and written only from [startWatchdog]'s own coroutine, so it needs no synchronization of
+     * its own despite [IdleStopTracker] not providing any.
      */
-    private var idleSinceMillis: Long? = null
+    private val idleTracker = IdleStopTracker()
 
     override fun onCreate() {
         super.onCreate()
@@ -288,7 +339,12 @@ class LocalRuntimeService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        when (localRuntimeServiceCommand(intent?.action)) {
+        val command = localRuntimeServiceCommand(intent?.action)
+        // An explicit start always means "the user (or something acting for them) wants this
+        // running" - without clearing the flag here, a deliberate restart from the workspace screen
+        // would still read as "leave it down" the very next time the app comes to the foreground.
+        if (clearsUserStoppedFlag(command)) app.settings.localRuntimeStoppedByUser = false
+        when (command) {
             LocalRuntimeServiceCommand.InstallAndStart -> {
                 autoRestartEnabled = true
                 val agents = localRuntimeInstallAgents(intent?.getStringArrayExtra(EXTRA_AGENTS))
@@ -320,6 +376,10 @@ class LocalRuntimeService : Service() {
             }
             LocalRuntimeServiceCommand.Stop -> {
                 autoRestartEnabled = false
+                // A deliberate stop - the notification's action or WorkspaceViewModel.stopLocalRuntime
+                // - must not be silently undone the next time the app is opened, unlike the idle
+                // auto-stop's own shutdown in checkIdleStop, which never sets this.
+                app.settings.localRuntimeStoppedByUser = true
                 launchOperation {
                     manager.stop()
                     stopForeground(STOP_FOREGROUND_REMOVE)
@@ -417,16 +477,19 @@ class LocalRuntimeService : Service() {
     ): Boolean {
         val appInForeground = appForeground.foreground.value
         val adbConnected = app.adbConnectionManager.state.value is AdbConnectionState.Connected
-        val now = System.currentTimeMillis()
         val idleNow = status is LocalRuntimeStatus.Ready && !hasActiveWork && !appInForeground && !adbConnected
-        idleSinceMillis = if (idleNow) idleSinceMillis ?: now else null
-        val idleForMillis = idleSinceMillis?.let { now - it } ?: 0L
+        val idleForMillis = idleTracker.update(idleNow)
 
         if (!app.settings.localRuntimeIdleStopEnabled) return false
         if (!shouldStopIdleRuntime(status, hasActiveWork, appInForeground, adbConnected, idleForMillis, IDLE_STOP_TIMEOUT_MILLIS)) {
             return false
         }
         autoRestartEnabled = false
+        // Flagged for the whole stop() call, not just after it settles: status is still read as
+        // Ready for that entire window (there is no Stopping state), so a foreground return landing
+        // inside it would otherwise fail AndCodeApplication's "is Stopped" restore check and leave
+        // the runtime down until the *next* return instead of this one.
+        app.setIdleStopInProgress(true)
         // Deliberately not launchOperation: this is the watchdog's own decision, not a user or
         // notification action, so it must not cancel anything already tracked in `operation`, and
         // stopForeground/stopSelf have to run even if manager.stop() throws - otherwise a throwing
@@ -437,6 +500,7 @@ class LocalRuntimeService : Service() {
                 try {
                     manager.stop()
                 } finally {
+                    app.setIdleStopInProgress(false)
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 }

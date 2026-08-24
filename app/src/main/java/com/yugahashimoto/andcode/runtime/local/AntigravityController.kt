@@ -74,8 +74,12 @@ class AntigravityController(
      * [com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository] - the only place that
      * already tracks that as work - so without a lease of their own the device could suspend and
      * freeze either one mid-flight.
+     *
+     * Required rather than defaulted to a fresh [RuntimeWorkTracker] - a default here would let a
+     * future call site forget it and silently disable the lease, exactly the bug the wake lock
+     * rework exists to prevent. Tests that do not care about the lease construct their own tracker.
      */
-    private val runtimeWork: RuntimeWorkTracker = RuntimeWorkTracker(),
+    private val runtimeWork: RuntimeWorkTracker,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
 ) {
     private val mutableState = MutableStateFlow(AntigravityControllerState())

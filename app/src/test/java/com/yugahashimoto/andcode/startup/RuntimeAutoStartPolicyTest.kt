@@ -116,4 +116,61 @@ class RuntimeAutoStartPolicyTest {
         assertTrue(isRuntimeAutoStartBroadcast(Intent.ACTION_MY_PACKAGE_REPLACED))
         assertFalse(isRuntimeAutoStartBroadcast("com.yugahashimoto.andcode.RUN_SCHEDULE"))
     }
+
+    @Test
+    fun `restores a stopped runtime on a foreground return`() {
+        assertTrue(
+            shouldRestoreOnForegroundReturn(
+                status = LocalRuntimeStatus.Stopped("1.18.11", 4097),
+                idleStopInProgress = false,
+                userStoppedRuntime = false,
+            ),
+        )
+    }
+
+    /**
+     * The idle auto-stop's own `manager.stop()` call still reads the status as Ready for its whole
+     * duration - there is no Stopping state - so a return landing in that window has to be treated
+     * the same as an already-Stopped runtime.
+     */
+    @Test
+    fun `restores a runtime whose idle stop is still in flight`() {
+        assertTrue(
+            shouldRestoreOnForegroundReturn(
+                status = LocalRuntimeStatus.Ready("1.18.11", 4097),
+                idleStopInProgress = true,
+                userStoppedRuntime = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `leaves a healthy runtime alone on a foreground return`() {
+        assertFalse(
+            shouldRestoreOnForegroundReturn(
+                status = LocalRuntimeStatus.Ready("1.18.11", 4097),
+                idleStopInProgress = false,
+                userStoppedRuntime = false,
+            ),
+        )
+    }
+
+    /** A deliberate stop must not be second-guessed just because the app was reopened. */
+    @Test
+    fun `does not restore a runtime the user deliberately stopped`() {
+        assertFalse(
+            shouldRestoreOnForegroundReturn(
+                status = LocalRuntimeStatus.Stopped("1.18.11", 4097),
+                idleStopInProgress = false,
+                userStoppedRuntime = true,
+            ),
+        )
+        assertFalse(
+            shouldRestoreOnForegroundReturn(
+                status = LocalRuntimeStatus.Ready("1.18.11", 4097),
+                idleStopInProgress = true,
+                userStoppedRuntime = true,
+            ),
+        )
+    }
 }

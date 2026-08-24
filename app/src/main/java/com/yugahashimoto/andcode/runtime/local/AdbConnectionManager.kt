@@ -56,8 +56,12 @@ class AdbConnectionManager(
      * its whole duration would keep the device awake forever for those users. A live connection
      * still has to block the idle auto-stop, but that is a separate condition threaded through
      * [com.yugahashimoto.andcode.runtime.local.LocalRuntimeService.checkIdleStop], not this lease.
+     *
+     * Required rather than defaulted to a fresh [RuntimeWorkTracker] - a default here would let a
+     * future call site forget it and silently disable the lease, exactly the bug the wake lock
+     * rework exists to prevent. Tests that do not care about the lease construct their own tracker.
      */
-    private val runtimeWork: RuntimeWorkTracker = RuntimeWorkTracker(),
+    private val runtimeWork: RuntimeWorkTracker,
     private val messages: LocalRuntimeMessages = LocalRuntimeMessages,
 ) {
     private val mutableState = MutableStateFlow<AdbConnectionState>(AdbConnectionState.Disconnected)

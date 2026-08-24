@@ -68,10 +68,14 @@ import com.yugahashimoto.andcode.runtime.local.VerifiedRuntimeDownloader
 import com.yugahashimoto.andcode.startup.CatalogReconcileInitializer
 import com.yugahashimoto.andcode.startup.RuntimeAutoStartInitializer
 import com.yugahashimoto.andcode.startup.RuntimeAutoStartTrigger
+import com.yugahashimoto.andcode.startup.shouldRestoreOnForegroundReturn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -101,6 +105,23 @@ class AndCodeApplication : Application() {
     /** Whether an activity of the app is on screen; see [AppForeground]. */
     lateinit var appForeground: AppForeground
         private set
+
+    private val mutableIdleStopInProgress = MutableStateFlow(false)
+
+    /**
+     * True for the brief window between [LocalRuntimeService.checkIdleStop] deciding to shut the
+     * idle runtime down and [LocalRuntimeManager.stop] actually finishing. The status is still read
+     * as [LocalRuntimeStatus.Ready] for that whole window - there is no `Stopping` state - so
+     * without this a foreground return landing inside it would fail
+     * [shouldRestoreOnForegroundReturn]'s `Stopped` check and leave the runtime down until the
+     * *next* return instead of this one. Set by [LocalRuntimeService] itself via
+     * [setIdleStopInProgress].
+     */
+    val idleStopInProgress: StateFlow<Boolean> = mutableIdleStopInProgress.asStateFlow()
+
+    fun setIdleStopInProgress(inProgress: Boolean) {
+        mutableIdleStopInProgress.value = inProgress
+    }
 
     lateinit var localRuntimeManager: LocalRuntimeManager
         private set
@@ -429,28 +450,52 @@ class AndCodeApplication : Application() {
     }
 
     /**
-     * Restarts the local runtime when the app returns to the foreground after the 15-minute idle
-     * auto-stop shut it down while backgrounded (see [LocalRuntimeService.checkIdleStop]).
+     * Restarts the local runtime on every actual entry into the foreground - the app's own cold
+     * start included, not just a later return after the 15-minute idle auto-stop shut it down while
+     * backgrounded (see [LocalRuntimeService.checkIdleStop]).
      *
-     * [RuntimeAutoStartInitializer.create] only runs once per process, at cold start via
-     * [scheduleDeferredInitialization] - it has no hook for a later foreground return, so without
-     * this a runtime the watchdog stopped stays stopped until the process itself is killed and
-     * relaunched, and chat sends silently fail even though the idle-stop setting's own description
-     * promises the runtime restarts when the app is opened.
+     * This is now the *only* place [RuntimeAutoStartTrigger.AppLaunch] fires from.
+     * [RuntimeAutoStartInitializer.create] used to restore the runtime itself at cold start, but
+     * that runs once per process via [scheduleDeferredInitialization] - including the UI-less
+     * process `BOOT_COMPLETED` creates, where it silently undid
+     * [RuntimeAutoStartReceiver] refusing that same restore under
+     * [RuntimeAutoStartTrigger.BootOrPackageReplaced]. [appForeground] is backed by
+     * [ProcessLifecycleOwner][androidx.lifecycle.ProcessLifecycleOwner], which only ever reports
+     * foreground for an actual activity on screen, so a broadcast-only process never reaches this
+     * collector at all - the runtime now correctly stays down after a reboot when the setting says
+     * so.
      *
-     * [ForegroundReturnDetector] filters out the app's own cold-start transition, which the
-     * initializer above already handles, so only an actual return from the background reaches the
-     * check below. That check is guarded on the runtime being
-     * [Stopped][LocalRuntimeStatus.Stopped]: [LocalRuntimeService.ACTION_START] cancels whatever
-     * operation is currently in flight, so firing it at a Ready runtime, or one mid-install or
-     * mid-update, would interrupt real work rather than being the no-op a healthy runtime deserves.
+     * [ForegroundReturnDetector] turns the raw flow into "just entered the foreground" events,
+     * firing on the very first one too now that nothing else covers cold start.
+     * [shouldRestoreOnForegroundReturn] then decides whether to act: a runtime that is
+     * [Stopped][LocalRuntimeStatus.Stopped], or mid-way through the idle auto-stop's own `stop()`
+     * call (see [idleStopInProgress]), is restored; a [Ready][LocalRuntimeStatus.Ready] one or one
+     * mid-install/mid-update is left alone, since [LocalRuntimeService.ACTION_START] cancels
+     * whatever operation is currently in flight and firing it at a healthy runtime would interrupt
+     * real work rather than being the no-op it deserves; and a runtime the user deliberately stopped
+     * - the runtime notification's Stop action,
+     * [com.yugahashimoto.andcode.feature.workspace.WorkspaceViewModel.stopLocalRuntime] - stays down
+     * until an explicit start clears that flag.
+     *
+     * [RuntimeAutoStartInitializer.syncOnboardingCompleted] runs on every entry regardless of that
+     * decision - it used to run unconditionally at cold start too, and a reinstalled APK landing on
+     * a device with the runtime already set up should not be sent back through onboarding just
+     * because [restoreIfConfigured][RuntimeAutoStartInitializer.restoreIfConfigured] itself is
+     * skipped this time.
      */
     private fun observeForegroundForRuntimeRestart() {
         val detector = ForegroundReturnDetector()
         applicationScope.launch {
             appForeground.foreground.collect { inForeground ->
                 if (!detector.onForegroundChanged(inForeground)) return@collect
-                if (localRuntimeManager.status() is LocalRuntimeStatus.Stopped) {
+                RuntimeAutoStartInitializer.syncOnboardingCompleted(this@AndCodeApplication)
+                val shouldRestore =
+                    shouldRestoreOnForegroundReturn(
+                        status = localRuntimeManager.status(),
+                        idleStopInProgress = idleStopInProgress.value,
+                        userStoppedRuntime = settings.localRuntimeStoppedByUser,
+                    )
+                if (shouldRestore) {
                     RuntimeAutoStartInitializer.restoreIfConfigured(this@AndCodeApplication, RuntimeAutoStartTrigger.AppLaunch)
                 }
             }
