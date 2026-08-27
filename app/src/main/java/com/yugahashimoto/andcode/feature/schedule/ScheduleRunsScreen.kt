@@ -148,8 +148,11 @@ private fun RunRow(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val color = statusColor(run.status)
+    // A run skipped before its session existed has no chat behind it; tapping it used to open the
+    // chat on a blank session id, which the runtime answers with a raw request error.
+    val hasSession = run.sessionId.isNotBlank()
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(enabled = hasSession, onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
     ) {
@@ -196,7 +199,7 @@ private fun RunRow(
                     )
                 }
             }
-            if (run.sessionId.isNotBlank()) {
+            if (hasSession) {
                 Text(
                     text = stringResource(R.string.schedule_open_chat),
                     style = MaterialTheme.typography.labelMedium,
