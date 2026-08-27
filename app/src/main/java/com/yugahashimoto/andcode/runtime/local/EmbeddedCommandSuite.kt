@@ -3,7 +3,9 @@ package com.yugahashimoto.andcode.runtime.local
 import android.content.Context
 import java.io.File
 
-/** Resolves the Android-native PRoot launcher and its guest loader binaries packaged as jniLibs. */
+/**
+ * Resolves the Android-native PRoot launcher and its guest loader binaries packaged as jniLibs.
+ */
 class EmbeddedCommandSuite(
     private val context: Context,
     private val runtimeDirectory: File,
@@ -29,22 +31,97 @@ class EmbeddedCommandSuite(
     }
 
     fun ensureInstalled(): Paths {
-        require(abi in SUPPORTED_ABIS) { "Unsupported Android ABI: $abi" }
-        val stateRoot = File(runtimeDirectory, "command-suite").apply { mkdirs() }
-        val home = File(stateRoot, "home").apply { mkdirs() }
-        val tmp = File(stateRoot, "tmp").apply { mkdirs() }
-        val nativeLibraryDirectory = File(context.applicationInfo.nativeLibraryDir)
-        val proot = File(nativeLibraryDirectory, PROOT_LIBRARY_NAME)
-        val loader = File(nativeLibraryDirectory, "libopencode_android_proot_loader.so")
-        val loader32 = File(nativeLibraryDirectory, "libopencode_android_proot_loader32.so")
-        require(proot.isFile && proot.canExecute()) { "Embedded PRoot is unavailable for $abi" }
-        require(loader.isFile && loader.canExecute()) { "Embedded PRoot loader is unavailable for $abi" }
-        require(loader32.isFile && loader32.canExecute()) { "Embedded PRoot 32-bit loader is unavailable for $abi" }
-        return Paths(home, tmp, nativeLibraryDirectory, proot, loader, loader32)
+        require(abi in SUPPORTED_ABIS) {
+            "Unsupported Android ABI: $abi"
+        }
+
+        val stateRoot =
+            File(
+                runtimeDirectory,
+                "command-suite",
+            ).apply {
+                mkdirs()
+            }
+
+        val home =
+            File(
+                stateRoot,
+                "home",
+            ).apply {
+                mkdirs()
+            }
+
+        val tmp =
+            File(
+                stateRoot,
+                "tmp",
+            ).apply {
+                mkdirs()
+            }
+
+        val nativeLibraryDirectory =
+            File(
+                context.applicationInfo.nativeLibraryDir
+            )
+
+        val proot =
+            File(
+                nativeLibraryDirectory,
+                PROOT_LIBRARY_NAME,
+            )
+
+        val loader =
+            File(
+                nativeLibraryDirectory,
+                "libopencode_android_proot_loader.so",
+            )
+
+        val loader32 =
+            File(
+                nativeLibraryDirectory,
+                "libopencode_android_proot_loader32.so",
+            )
+
+        require(
+            proot.isFile &&
+                proot.canExecute()
+        ) {
+            "Embedded PRoot is unavailable for $abi"
+        }
+
+        require(
+            loader.isFile &&
+                loader.canExecute()
+        ) {
+            "Embedded PRoot loader is unavailable for $abi"
+        }
+
+        require(
+            loader32.isFile &&
+                loader32.canExecute()
+        ) {
+            "Embedded PRoot 32-bit loader is unavailable for $abi"
+        }
+
+        return Paths(
+            home,
+            tmp,
+            nativeLibraryDirectory,
+            proot,
+            loader,
+            loader32,
+        )
     }
 
     companion object {
-        const val PROOT_LIBRARY_NAME = "libopencode_android_proot.so"
-        private val SUPPORTED_ABIS = setOf("arm64-v8a", "x86_64")
+        const val PROOT_LIBRARY_NAME =
+            "libopencode_android_proot.so"
+
+        private val SUPPORTED_ABIS =
+            setOf(
+                "armeabi-v7a",
+                "arm64-v8a",
+                "x86_64",
+            )
     }
 }
