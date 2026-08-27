@@ -804,6 +804,12 @@ class ChatViewModel(
         parent: ParentSessionRef? = null,
     ) {
         val currentBackend = backend ?: return
+        // A blank id is not a session: loading it would ask the runtime for `session//message` and
+        // render its parameter error in place of the transcript. Open an empty chat instead.
+        if (sessionId.isBlank()) {
+            newSession()
+            return
+        }
         // Switching away from whatever chat was previously loaded here must drop its running
         // state too — otherwise the composer opens the new chat already stuck on the stop button
         // because the old chat happened to be mid-turn when the user navigated away.

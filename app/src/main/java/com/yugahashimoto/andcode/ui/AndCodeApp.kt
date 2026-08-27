@@ -717,6 +717,8 @@ fun AndCodeApp(
         title: String,
         runtimeId: String?,
     ) {
+        // Nothing to open: a caller with no session would land the chat on a blank id.
+        if (sessionId.isBlank()) return
         if (runtimeId != null && runtimeId != selectedRuntime?.id) {
             app.runtimeRegistry.select(runtimeId)
         }
