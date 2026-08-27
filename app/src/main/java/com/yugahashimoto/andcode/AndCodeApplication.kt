@@ -28,6 +28,7 @@ import com.yugahashimoto.andcode.data.repository.ProviderCatalogCache
 import com.yugahashimoto.andcode.data.repository.PullRequestStatusRepository
 import com.yugahashimoto.andcode.data.repository.RuntimeActivityRepository
 import com.yugahashimoto.andcode.data.repository.RuntimeCatalogRepository
+import com.yugahashimoto.andcode.data.repository.SessionAutoArchiver
 import com.yugahashimoto.andcode.data.schedule.ScheduleRepository
 import com.yugahashimoto.andcode.data.settings.AppPreferencesRepository
 import com.yugahashimoto.andcode.di.appModule
@@ -430,6 +431,13 @@ class AndCodeApplication : Application() {
                 unreadStore = settings,
                 messages = AndroidRuntimeActivityMessages(this),
             )
+        SessionAutoArchiver(
+            registry = runtimeRegistry,
+            catalog = catalogRepository,
+            activeSessionIds = { activityRepository.state.value.activeSessionIds },
+            preferences = preferences.state,
+            scope = applicationScope,
+        ).start()
         // A chat or agent run in flight is real work happening on the runtime's proot process,
         // so it holds the device awake until the session settles - wired here rather than inside
         // the repository's own constructor, which has no reason to know about wake locks.

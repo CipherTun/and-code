@@ -574,6 +574,17 @@
     <string name="send_behavior_queue">排队</string>
     <string name="enter_to_send_row">回车键发送消息</string>
 
+    <string name="section_sessions_settings">会话</string>
+    <string name="auto_archive_stale_row">自动归档不活跃的聊天</string>
+    <string name="auto_archive_stale_row_description">自动归档长时间未更新的聊天</string>
+    <string name="auto_archive_stale_days_row">归档时限</string>
+    <string name="auto_archive_stale_days_value">%1$d 天</string>
+    <string name="auto_archive_stale_days_dialog_title">归档时限（天）</string>
+    <string name="auto_archive_max_sessions_row">限制活跃聊天数量</string>
+    <string name="auto_archive_max_sessions_row_description">活跃聊天数量超过此上限后，将自动归档最旧的聊天</string>
+    <string name="auto_archive_max_sessions_value_row">最大活跃聊天数</string>
+    <string name="auto_archive_max_sessions_dialog_title">最大活跃聊天数</string>
+
     <string name="drawer_archive_session">归档</string>
     <string name="drawer_selected_count">已选 %1$d 项</string>
     <string name="drawer_delete_selected_body">%1$d 个会话将被永久删除。</string>

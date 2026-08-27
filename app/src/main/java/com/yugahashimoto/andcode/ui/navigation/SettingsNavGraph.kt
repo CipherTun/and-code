@@ -107,6 +107,14 @@ fun NavGraphBuilder.settingsNavGraph(
             onSendBehaviorChange = { appPreferences.setSendBehavior(it) },
             enterToSend = preferences().enterToSend,
             onEnterToSendChange = { appPreferences.setEnterToSend(it) },
+            autoArchiveStaleEnabled = preferences().autoArchiveStaleEnabled,
+            onAutoArchiveStaleEnabledChange = appPreferences::setAutoArchiveStaleEnabled,
+            autoArchiveStaleDays = preferences().autoArchiveStaleDays,
+            onAutoArchiveStaleDaysChange = appPreferences::setAutoArchiveStaleDays,
+            autoArchiveMaxSessionsEnabled = preferences().autoArchiveMaxSessionsEnabled,
+            onAutoArchiveMaxSessionsEnabledChange = appPreferences::setAutoArchiveMaxSessionsEnabled,
+            autoArchiveMaxSessions = preferences().autoArchiveMaxSessions,
+            onAutoArchiveMaxSessionsChange = appPreferences::setAutoArchiveMaxSessions,
             wakeWordEnabled = settingsState.wakeWordEnabled,
         )
 

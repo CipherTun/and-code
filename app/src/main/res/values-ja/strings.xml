@@ -586,6 +586,17 @@
     <string name="send_behavior_queue">キュー</string>
     <string name="enter_to_send_row">Enter で送信</string>
 
+    <string name="section_sessions_settings">セッション</string>
+    <string name="auto_archive_stale_row">未更新のチャットを自動アーカイブ</string>
+    <string name="auto_archive_stale_row_description">しばらく更新されていないチャットを自動的にアーカイブします</string>
+    <string name="auto_archive_stale_days_row">アーカイブまでの日数</string>
+    <string name="auto_archive_stale_days_value">%1$d 日</string>
+    <string name="auto_archive_stale_days_dialog_title">アーカイブまでの日数</string>
+    <string name="auto_archive_max_sessions_row">アクティブなチャット数を制限</string>
+    <string name="auto_archive_max_sessions_row_description">アクティブなチャット数がこの上限を超えると、古いものから自動的にアーカイブします</string>
+    <string name="auto_archive_max_sessions_value_row">最大アクティブチャット数</string>
+    <string name="auto_archive_max_sessions_dialog_title">最大アクティブチャット数</string>
+
     <!-- Drawer session actions -->
     <string name="drawer_archive_session">アーカイブ</string>
     <string name="drawer_selected_count">%1$d件選択中</string>

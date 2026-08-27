@@ -576,6 +576,17 @@
     <string name="send_behavior_queue">File d\'attente</string>
     <string name="enter_to_send_row">Entrée envoie le message</string>
 
+    <string name="section_sessions_settings">Sessions</string>
+    <string name="auto_archive_stale_row">Archiver automatiquement les discussions inactives</string>
+    <string name="auto_archive_stale_row_description">Archive les discussions qui n\'ont pas été mises à jour depuis un moment</string>
+    <string name="auto_archive_stale_days_row">Archiver après</string>
+    <string name="auto_archive_stale_days_value">%1$d jours</string>
+    <string name="auto_archive_stale_days_dialog_title">Archiver après (jours)</string>
+    <string name="auto_archive_max_sessions_row">Limiter les discussions actives</string>
+    <string name="auto_archive_max_sessions_row_description">Archive les discussions les plus anciennes lorsque le nombre actif dépasse cette limite</string>
+    <string name="auto_archive_max_sessions_value_row">Nb max. de discussions actives</string>
+    <string name="auto_archive_max_sessions_dialog_title">Nb max. de discussions actives</string>
+
     <string name="drawer_archive_session">Archiver</string>
     <string name="drawer_selected_count">%1$d sélectionné(s)</string>
     <string name="drawer_delete_selected_body">%1$d sessions seront supprimées définitivement.</string>

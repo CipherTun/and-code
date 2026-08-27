@@ -576,6 +576,17 @@
     <string name="send_behavior_queue">Fila</string>
     <string name="enter_to_send_row">Enter envia a mensagem</string>
 
+    <string name="section_sessions_settings">Sessões</string>
+    <string name="auto_archive_stale_row">Arquivar chats inativos automaticamente</string>
+    <string name="auto_archive_stale_row_description">Arquiva chats que não são atualizados há algum tempo</string>
+    <string name="auto_archive_stale_days_row">Arquivar após</string>
+    <string name="auto_archive_stale_days_value">%1$d dias</string>
+    <string name="auto_archive_stale_days_dialog_title">Arquivar após (dias)</string>
+    <string name="auto_archive_max_sessions_row">Limitar chats ativos</string>
+    <string name="auto_archive_max_sessions_row_description">Arquiva os chats mais antigos quando o número de ativos ultrapassa esse limite</string>
+    <string name="auto_archive_max_sessions_value_row">Máx. de chats ativos</string>
+    <string name="auto_archive_max_sessions_dialog_title">Máx. de chats ativos</string>
+
     <string name="drawer_archive_session">Arquivar</string>
     <string name="drawer_selected_count">%1$d selecionado(s)</string>
     <string name="drawer_delete_selected_body">%1$d sessões serão permanentemente excluídas.</string>
