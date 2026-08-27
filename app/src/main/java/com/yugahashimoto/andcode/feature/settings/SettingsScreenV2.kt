@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -106,6 +107,14 @@ fun SettingsScreenV2(
     onSendBehaviorChange: (String) -> Unit = {},
     enterToSend: Boolean = false,
     onEnterToSendChange: (Boolean) -> Unit = {},
+    autoArchiveStaleEnabled: Boolean = false,
+    onAutoArchiveStaleEnabledChange: (Boolean) -> Unit = {},
+    autoArchiveStaleDays: Int = 30,
+    onAutoArchiveStaleDaysChange: (Int) -> Unit = {},
+    autoArchiveMaxSessionsEnabled: Boolean = false,
+    onAutoArchiveMaxSessionsEnabledChange: (Boolean) -> Unit = {},
+    autoArchiveMaxSessions: Int = 50,
+    onAutoArchiveMaxSessionsChange: (Int) -> Unit = {},
     wakeWordEnabled: Boolean = false,
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -113,6 +122,8 @@ fun SettingsScreenV2(
     var showUiFontDialog by remember { mutableStateOf(false) }
     var showCodeFontDialog by remember { mutableStateOf(false) }
     var showSyntaxThemeDialog by remember { mutableStateOf(false) }
+    var showAutoArchiveStaleDaysDialog by remember { mutableStateOf(false) }
+    var showAutoArchiveMaxSessionsDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         CenterAlignedTopAppBar(
@@ -245,6 +256,38 @@ fun SettingsScreenV2(
                     title = stringResource(R.string.enter_to_send_row),
                     checked = enterToSend,
                     onCheckedChange = onEnterToSendChange,
+                )
+            }
+
+            SettingsSection(title = stringResource(R.string.section_sessions_settings)) {
+                SettingsToggleRow(
+                    icon = Icons.Default.Chat,
+                    title = stringResource(R.string.auto_archive_stale_row),
+                    subtitle = stringResource(R.string.auto_archive_stale_row_description),
+                    checked = autoArchiveStaleEnabled,
+                    onCheckedChange = onAutoArchiveStaleEnabledChange,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.Chat,
+                    title = stringResource(R.string.auto_archive_stale_days_row),
+                    value = pluralStringResource(R.plurals.auto_archive_stale_days_value, autoArchiveStaleDays, autoArchiveStaleDays),
+                    onClick = { showAutoArchiveStaleDaysDialog = true },
+                )
+                SettingsDivider()
+                SettingsToggleRow(
+                    icon = Icons.Default.Chat,
+                    title = stringResource(R.string.auto_archive_max_sessions_row),
+                    subtitle = stringResource(R.string.auto_archive_max_sessions_row_description),
+                    checked = autoArchiveMaxSessionsEnabled,
+                    onCheckedChange = onAutoArchiveMaxSessionsEnabledChange,
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Default.Chat,
+                    title = stringResource(R.string.auto_archive_max_sessions_value_row),
+                    value = autoArchiveMaxSessions.toString(),
+                    onClick = { showAutoArchiveMaxSessionsDialog = true },
                 )
             }
 
@@ -550,6 +593,70 @@ fun SettingsScreenV2(
             confirmButton = {
                 TextButton(onClick = { showSyntaxThemeDialog = false }) {
                     Text(stringResource(R.string.close_description))
+                }
+            },
+        )
+    }
+
+    if (showAutoArchiveStaleDaysDialog) {
+        var sliderValue by remember { mutableFloatStateOf(autoArchiveStaleDays.toFloat()) }
+        AlertDialog(
+            onDismissRequest = { showAutoArchiveStaleDaysDialog = false },
+            title = { Text(stringResource(R.string.auto_archive_stale_days_dialog_title)) },
+            text = {
+                Column {
+                    Text(pluralStringResource(R.plurals.auto_archive_stale_days_value, sliderValue.toInt(), sliderValue.toInt()))
+                    Slider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        valueRange = 1f..180f,
+                        steps = 178,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAutoArchiveStaleDaysChange(sliderValue.toInt())
+                    showAutoArchiveStaleDaysDialog = false
+                }) {
+                    Text(stringResource(R.string.close_description))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutoArchiveStaleDaysDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showAutoArchiveMaxSessionsDialog) {
+        var sliderValue by remember { mutableFloatStateOf(autoArchiveMaxSessions.toFloat()) }
+        AlertDialog(
+            onDismissRequest = { showAutoArchiveMaxSessionsDialog = false },
+            title = { Text(stringResource(R.string.auto_archive_max_sessions_dialog_title)) },
+            text = {
+                Column {
+                    Text(sliderValue.toInt().toString())
+                    Slider(
+                        value = sliderValue,
+                        onValueChange = { sliderValue = it },
+                        valueRange = 5f..500f,
+                        steps = 98,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAutoArchiveMaxSessionsChange(sliderValue.toInt())
+                    showAutoArchiveMaxSessionsDialog = false
+                }) {
+                    Text(stringResource(R.string.close_description))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAutoArchiveMaxSessionsDialog = false }) {
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )

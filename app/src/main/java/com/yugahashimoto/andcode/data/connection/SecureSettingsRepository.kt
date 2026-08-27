@@ -442,6 +442,23 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         get() = preferences.getStringSet(KEY_COLLAPSED_SIDEBAR_SECTIONS, emptySet()).orEmpty()
         set(value) = preferences.edit().putStringSet(KEY_COLLAPSED_SIDEBAR_SECTIONS, value).apply()
 
+    /** Off by default: archiving chats on the user's behalf is opt-in, never a surprise. */
+    var autoArchiveStaleEnabled: Boolean
+        get() = preferences.getBoolean(KEY_AUTO_ARCHIVE_STALE_ENABLED, false)
+        set(value) = preferences.edit().putBoolean(KEY_AUTO_ARCHIVE_STALE_ENABLED, value).apply()
+
+    var autoArchiveStaleDays: Int
+        get() = preferences.getInt(KEY_AUTO_ARCHIVE_STALE_DAYS, 30)
+        set(value) = preferences.edit().putInt(KEY_AUTO_ARCHIVE_STALE_DAYS, value).apply()
+
+    var autoArchiveMaxSessionsEnabled: Boolean
+        get() = preferences.getBoolean(KEY_AUTO_ARCHIVE_MAX_SESSIONS_ENABLED, false)
+        set(value) = preferences.edit().putBoolean(KEY_AUTO_ARCHIVE_MAX_SESSIONS_ENABLED, value).apply()
+
+    var autoArchiveMaxSessions: Int
+        get() = preferences.getInt(KEY_AUTO_ARCHIVE_MAX_SESSIONS, 50)
+        set(value) = preferences.edit().putInt(KEY_AUTO_ARCHIVE_MAX_SESSIONS, value).apply()
+
     companion object {
         fun readLanguage(context: Context): String =
             runCatching {
@@ -527,5 +544,9 @@ class SecureSettingsRepository(context: Context) : RuntimeConnectionStore, Unrea
         private const val KEY_LOCAL_RUNTIME_IDLE_STOP_ENABLED = "local_runtime_idle_stop_enabled"
         private const val KEY_LOCAL_RUNTIME_STOPPED_BY_USER = "local_runtime_stopped_by_user"
         private const val KEY_COLLAPSED_SIDEBAR_SECTIONS = "collapsed_sidebar_sections"
+        private const val KEY_AUTO_ARCHIVE_STALE_ENABLED = "auto_archive_stale_enabled"
+        private const val KEY_AUTO_ARCHIVE_STALE_DAYS = "auto_archive_stale_days"
+        private const val KEY_AUTO_ARCHIVE_MAX_SESSIONS_ENABLED = "auto_archive_max_sessions_enabled"
+        private const val KEY_AUTO_ARCHIVE_MAX_SESSIONS = "auto_archive_max_sessions"
     }
 }

@@ -577,6 +577,22 @@
     <string name="send_behavior_queue">В очередь</string>
     <string name="enter_to_send_row">Enter отправляет сообщение</string>
 
+    <string name="section_sessions_settings">Сеансы</string>
+    <string name="auto_archive_stale_row">Автоархивация неактивных чатов</string>
+    <string name="auto_archive_stale_row_description">Архивирует чаты, которые давно не обновлялись</string>
+    <string name="auto_archive_stale_days_row">Архивировать через</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <string name="auto_archive_stale_days_dialog_title">Архивировать через (дней)</string>
+    <string name="auto_archive_max_sessions_row">Ограничить число активных чатов</string>
+    <string name="auto_archive_max_sessions_row_description">Архивирует самые старые чаты, когда их число превышает этот лимит</string>
+    <string name="auto_archive_max_sessions_value_row">Макс. число активных чатов</string>
+    <string name="auto_archive_max_sessions_dialog_title">Макс. число активных чатов</string>
+
     <string name="drawer_archive_session">Архивировать</string>
     <string name="drawer_selected_count">Выбрано: %1$d</string>
     <string name="drawer_delete_selected_body">%1$d сеансов будет удалено безвозвратно.</string>

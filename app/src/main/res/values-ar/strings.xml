@@ -579,6 +579,24 @@
     <string name="send_behavior_queue">قائمة انتظار</string>
     <string name="enter_to_send_row">الإدخال يرسل الرسالة</string>
 
+    <string name="section_sessions_settings">الجلسات</string>
+    <string name="auto_archive_stale_row">أرشفة المحادثات غير النشطة تلقائيًا</string>
+    <string name="auto_archive_stale_row_description">تؤرشف المحادثات التي لم يتم تحديثها منذ فترة</string>
+    <string name="auto_archive_stale_days_row">الأرشفة بعد</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="zero">%1$d يوم</item>
+        <item quantity="one">يوم واحد</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%1$d أيام</item>
+        <item quantity="many">%1$d يومًا</item>
+        <item quantity="other">%1$d يوم</item>
+    </plurals>
+    <string name="auto_archive_stale_days_dialog_title">الأرشفة بعد (أيام)</string>
+    <string name="auto_archive_max_sessions_row">تحديد عدد المحادثات النشطة</string>
+    <string name="auto_archive_max_sessions_row_description">تؤرشف أقدم المحادثات عند تجاوز العدد النشط هذا الحد</string>
+    <string name="auto_archive_max_sessions_value_row">الحد الأقصى للمحادثات النشطة</string>
+    <string name="auto_archive_max_sessions_dialog_title">الحد الأقصى للمحادثات النشطة</string>
+
     <string name="drawer_archive_session">أرشفة</string>
     <string name="drawer_selected_count">%1$d محدد</string>
     <string name="drawer_delete_selected_body">سيتم حذف %1$d جلسة بشكل دائم.</string>

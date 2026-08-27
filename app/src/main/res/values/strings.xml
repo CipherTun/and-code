@@ -598,6 +598,20 @@
     <string name="send_behavior_queue">Queue</string>
     <string name="enter_to_send_row">Enter sends message</string>
 
+    <string name="section_sessions_settings">Sessions</string>
+    <string name="auto_archive_stale_row">Auto-archive inactive chats</string>
+    <string name="auto_archive_stale_row_description">Archives chats that haven\'t been updated in a while</string>
+    <string name="auto_archive_stale_days_row">Archive after</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="auto_archive_stale_days_dialog_title">Archive after (days)</string>
+    <string name="auto_archive_max_sessions_row">Limit active chats</string>
+    <string name="auto_archive_max_sessions_row_description">Archives your oldest chats once the active count passes this limit</string>
+    <string name="auto_archive_max_sessions_value_row">Max active chats</string>
+    <string name="auto_archive_max_sessions_dialog_title">Max active chats</string>
+
     <!-- Drawer session actions -->
     <string name="drawer_archive_session">Archive</string>
     <string name="drawer_selected_count">%1$d selected</string>

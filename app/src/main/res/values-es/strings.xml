@@ -576,6 +576,21 @@
     <string name="send_behavior_queue">Cola</string>
     <string name="enter_to_send_row">Enter envía el mensaje</string>
 
+    <string name="section_sessions_settings">Sesiones</string>
+    <string name="auto_archive_stale_row">Archivar chats inactivos automáticamente</string>
+    <string name="auto_archive_stale_row_description">Archiva los chats que no se han actualizado en un tiempo</string>
+    <string name="auto_archive_stale_days_row">Archivar después de</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <string name="auto_archive_stale_days_dialog_title">Archivar después de (días)</string>
+    <string name="auto_archive_max_sessions_row">Limitar chats activos</string>
+    <string name="auto_archive_max_sessions_row_description">Archiva los chats más antiguos cuando el número activo supera este límite</string>
+    <string name="auto_archive_max_sessions_value_row">Máx. de chats activos</string>
+    <string name="auto_archive_max_sessions_dialog_title">Máx. de chats activos</string>
+
     <string name="drawer_archive_session">Archivar</string>
     <string name="drawer_selected_count">%1$d seleccionado(s)</string>
     <string name="drawer_delete_selected_body">%1$d sesiones se eliminarán permanentemente.</string>
