@@ -367,7 +367,8 @@ class AppPreferencesRepository(
     }
 
     fun setAutoArchiveStaleDays(days: Int) {
-        val clamped = days.coerceIn(1, 365)
+        // Matches the slider range in SettingsScreenV2's dialog - keep the two in sync.
+        val clamped = days.coerceIn(1, 180)
         settings.autoArchiveStaleDays = clamped
         mutableState.update { it.copy(autoArchiveStaleDays = clamped) }
     }
@@ -378,7 +379,8 @@ class AppPreferencesRepository(
     }
 
     fun setAutoArchiveMaxSessions(count: Int) {
-        val clamped = count.coerceIn(5, 1000)
+        // Matches the slider range in SettingsScreenV2's dialog - keep the two in sync.
+        val clamped = count.coerceIn(5, 500)
         settings.autoArchiveMaxSessions = clamped
         mutableState.update { it.copy(autoArchiveMaxSessions = clamped) }
     }

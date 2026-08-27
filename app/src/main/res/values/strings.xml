@@ -602,7 +602,10 @@
     <string name="auto_archive_stale_row">Auto-archive inactive chats</string>
     <string name="auto_archive_stale_row_description">Archives chats that haven\'t been updated in a while</string>
     <string name="auto_archive_stale_days_row">Archive after</string>
-    <string name="auto_archive_stale_days_value">%1$d days</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
     <string name="auto_archive_stale_days_dialog_title">Archive after (days)</string>
     <string name="auto_archive_max_sessions_row">Limit active chats</string>
     <string name="auto_archive_max_sessions_row_description">Archives your oldest chats once the active count passes this limit</string>

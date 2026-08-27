@@ -580,7 +580,11 @@
     <string name="auto_archive_stale_row">Archiver automatiquement les discussions inactives</string>
     <string name="auto_archive_stale_row_description">Archive les discussions qui n\'ont pas été mises à jour depuis un moment</string>
     <string name="auto_archive_stale_days_row">Archiver après</string>
-    <string name="auto_archive_stale_days_value">%1$d jours</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="many">%1$d jours</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
     <string name="auto_archive_stale_days_dialog_title">Archiver après (jours)</string>
     <string name="auto_archive_max_sessions_row">Limiter les discussions actives</string>
     <string name="auto_archive_max_sessions_row_description">Archive les discussions les plus anciennes lorsque le nombre actif dépasse cette limite</string>

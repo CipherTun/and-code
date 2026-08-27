@@ -583,7 +583,14 @@
     <string name="auto_archive_stale_row">أرشفة المحادثات غير النشطة تلقائيًا</string>
     <string name="auto_archive_stale_row_description">تؤرشف المحادثات التي لم يتم تحديثها منذ فترة</string>
     <string name="auto_archive_stale_days_row">الأرشفة بعد</string>
-    <string name="auto_archive_stale_days_value">%1$d يوم</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="zero">%1$d يوم</item>
+        <item quantity="one">يوم واحد</item>
+        <item quantity="two">يومان</item>
+        <item quantity="few">%1$d أيام</item>
+        <item quantity="many">%1$d يومًا</item>
+        <item quantity="other">%1$d يوم</item>
+    </plurals>
     <string name="auto_archive_stale_days_dialog_title">الأرشفة بعد (أيام)</string>
     <string name="auto_archive_max_sessions_row">تحديد عدد المحادثات النشطة</string>
     <string name="auto_archive_max_sessions_row_description">تؤرشف أقدم المحادثات عند تجاوز العدد النشط هذا الحد</string>

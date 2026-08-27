@@ -56,9 +56,11 @@ class SessionAutoArchiver(
 
         val overflow =
             if (prefs.autoArchiveMaxSessionsEnabled) {
-                candidates
-                    .sortedByDescending(::updatedAt)
-                    .drop(prefs.autoArchiveMaxSessions.coerceAtLeast(0))
+                // A running session still occupies one of the allowed slots - it is just never the
+                // one archived to make room, so the cap is honored by keeping fewer of the
+                // archivable candidates rather than by ignoring active sessions altogether.
+                val toKeep = (prefs.autoArchiveMaxSessions - active.size).coerceAtLeast(0)
+                candidates.sortedByDescending(::updatedAt).drop(toKeep)
             } else {
                 emptyList()
             }
@@ -66,14 +68,20 @@ class SessionAutoArchiver(
         val toArchive = (stale + overflow).distinctBy { it.session.id }
         if (toArchive.isEmpty()) return
 
-        toArchive.forEach { alreadyArchived += it.session.id }
         val targets = registry.targets.value
-        supervisorScope {
-            toArchive
-                .mapNotNull { ref -> targets.firstOrNull { it.id == ref.runtimeId }?.let { it to ref.session.id } }
-                .map { (target, sessionId) -> async { runCatching { target.archiveSession(sessionId) } } }
-                .forEach { it.await() }
-        }
+        val archivedIds =
+            supervisorScope {
+                toArchive
+                    .mapNotNull { ref -> targets.firstOrNull { it.id == ref.runtimeId }?.let { it to ref.session.id } }
+                    .map { (target, sessionId) -> async { runCatching { target.archiveSession(sessionId) }.map { sessionId } } }
+                    .mapNotNull { it.await().getOrNull() }
+            }
+        if (archivedIds.isEmpty()) return
+
+        // Only mark ids that actually got archived: a missing target or a failed call must leave
+        // the session eligible again on the next recomputation instead of being silently dropped
+        // for the rest of the process lifetime.
+        alreadyArchived += archivedIds
         catalog.refreshAllSessions()
     }
 

@@ -102,6 +102,34 @@ class SessionAutoArchiverTest {
         }
 
     @Test
+    fun `a running session still counts toward the active cap`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val target =
+                FakeTarget(
+                    "mac",
+                    sessions =
+                        listOf(
+                            session("running", updatedDaysAgo = 1),
+                            session("kept", updatedDaysAgo = 2),
+                            session("archived", updatedDaysAgo = 3),
+                        ),
+                )
+            val registry = registry(target)
+            val catalog = RuntimeCatalogRepository(registry, TestScope(dispatcher))
+            val preferences = fakePreferences(autoArchiveMaxSessionsEnabled = true, autoArchiveMaxSessions = 2)
+            val archiver =
+                SessionAutoArchiver(registry, catalog, activeSessionIds = { setOf("running") }, preferences, TestScope(dispatcher))
+
+            archiver.start()
+            advanceUntilIdle()
+
+            // The cap is 2: "running" occupies one slot without ever being archived, so only one of
+            // the two remaining sessions may stay active and the older one is archived.
+            assertEquals(listOf("archived"), target.archivedIds)
+        }
+
+    @Test
     fun `never archives a session that is actively running`() =
         runTest {
             val dispatcher = StandardTestDispatcher(testScheduler)
@@ -116,6 +144,31 @@ class SessionAutoArchiverTest {
             advanceUntilIdle()
 
             assertTrue(target.archivedIds.isEmpty())
+        }
+
+    @Test
+    fun `a session is retried after a failed archive call instead of being skipped forever`() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val target = FakeTarget("mac", sessions = listOf(session("old", updatedDaysAgo = 90)))
+            target.shouldFail = true
+            val registry = registry(target)
+            val catalog = RuntimeCatalogRepository(registry, TestScope(dispatcher))
+            val preferences = fakePreferences(autoArchiveStaleEnabled = true, autoArchiveStaleDays = 30)
+            val archiver =
+                SessionAutoArchiver(registry, catalog, activeSessionIds = { emptySet() }, preferences, TestScope(dispatcher))
+
+            archiver.start()
+            advanceUntilIdle()
+            assertTrue(target.archivedIds.isEmpty())
+
+            // A settings change (or any other session-list recomputation) gives the failed session
+            // another chance instead of leaving it permanently excluded.
+            target.shouldFail = false
+            preferences.value = preferences.value.copy(autoArchiveStaleDays = 31)
+            advanceUntilIdle()
+
+            assertEquals(listOf("old"), target.archivedIds)
         }
 
     private fun session(
@@ -181,6 +234,7 @@ class SessionAutoArchiverTest {
         override val state = MutableStateFlow<RuntimeState>(RuntimeState.Disconnected)
 
         val archivedIds = mutableListOf<String>()
+        var shouldFail = false
 
         override suspend fun connect(): Result<OpenCodeHealth> = Result.success(OpenCodeHealth(true, "1.0"))
 
@@ -218,6 +272,7 @@ class SessionAutoArchiverTest {
         ): Boolean = true
 
         override suspend fun archiveSession(sessionId: String): OpenCodeSession {
+            if (shouldFail) error("archive failed")
             archivedIds += sessionId
             return sessions.first { it.id == sessionId }
         }

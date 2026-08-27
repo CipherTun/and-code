@@ -580,7 +580,11 @@
     <string name="auto_archive_stale_row">Arquivar chats inativos automaticamente</string>
     <string name="auto_archive_stale_row_description">Arquiva chats que não são atualizados há algum tempo</string>
     <string name="auto_archive_stale_days_row">Arquivar após</string>
-    <string name="auto_archive_stale_days_value">%1$d dias</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="many">%1$d dias</item>
+        <item quantity="other">%1$d dias</item>
+    </plurals>
     <string name="auto_archive_stale_days_dialog_title">Arquivar após (dias)</string>
     <string name="auto_archive_max_sessions_row">Limitar chats ativos</string>
     <string name="auto_archive_max_sessions_row_description">Arquiva os chats mais antigos quando o número de ativos ultrapassa esse limite</string>

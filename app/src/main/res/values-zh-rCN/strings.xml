@@ -578,7 +578,9 @@
     <string name="auto_archive_stale_row">自动归档不活跃的聊天</string>
     <string name="auto_archive_stale_row_description">自动归档长时间未更新的聊天</string>
     <string name="auto_archive_stale_days_row">归档时限</string>
-    <string name="auto_archive_stale_days_value">%1$d 天</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="other">%1$d 天</item>
+    </plurals>
     <string name="auto_archive_stale_days_dialog_title">归档时限（天）</string>
     <string name="auto_archive_max_sessions_row">限制活跃聊天数量</string>
     <string name="auto_archive_max_sessions_row_description">活跃聊天数量超过此上限后，将自动归档最旧的聊天</string>

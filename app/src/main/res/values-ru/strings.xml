@@ -581,7 +581,12 @@
     <string name="auto_archive_stale_row">Автоархивация неактивных чатов</string>
     <string name="auto_archive_stale_row_description">Архивирует чаты, которые давно не обновлялись</string>
     <string name="auto_archive_stale_days_row">Архивировать через</string>
-    <string name="auto_archive_stale_days_value">%1$d дн.</string>
+    <plurals name="auto_archive_stale_days_value">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
     <string name="auto_archive_stale_days_dialog_title">Архивировать через (дней)</string>
     <string name="auto_archive_max_sessions_row">Ограничить число активных чатов</string>
     <string name="auto_archive_max_sessions_row_description">Архивирует самые старые чаты, когда их число превышает этот лимит</string>
